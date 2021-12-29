@@ -164,7 +164,7 @@ func (g gradient) GetIntrinsicSize(_, _ pr.Float) (pr.MaybeFloat, pr.MaybeFloat,
 	return nil, nil, nil
 }
 
-func (g gradient) Draw(dst backend.GraphicTarget, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (g gradient) Draw(dst backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	layout := g.layouter.Layout(pr.Float(concreteWidth), pr.Float(concreteHeight))
 	layout.Reapeating = g.repeating
 
@@ -218,7 +218,7 @@ func reverseFloats(a []pr.Fl) []pr.Fl {
 func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	// Only one color, render the gradient as a solid color
 	if len(self.colors) == 1 {
-		return backend.GradientLayout{ScaleY: 1, GradientInit: backend.GradientInit{Kind: "solid"}, Colors: []parser.RGBA{self.colors[0]}}
+		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{self.colors[0]}}
 	}
 	// (dx, dy) is the unit vector giving the direction of the gradient.
 	// Positive dx: right, positive dy: down.
@@ -273,7 +273,7 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 		// See https://drafts.csswg.org/css-images-3/#repeating-gradients
 		if first == last {
 			color := gradientAverageColor(colors, positions)
-			return backend.GradientLayout{ScaleY: 1, GradientInit: backend.GradientInit{Kind: "solid"}, Colors: []parser.RGBA{color}}
+			return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{color}}
 		}
 
 		// Define defined gradient length and steps between positions
@@ -310,7 +310,7 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 	startX := (pr.Fl(width) - dx*vectorLength) / 2
 	startY := (pr.Fl(height) - dy*vectorLength) / 2
 	points := [6]pr.Fl{startX + dx*first, startY + dy*first, startX + dx*last, startY + dy*last, 0, 0}
-	return backend.GradientLayout{ScaleY: 1, GradientInit: backend.GradientInit{Kind: "linear", Coords: points}, Positions: positions, Colors: colors}
+	return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "linear", Coords: points}, Positions: positions, Colors: colors}
 }
 
 type RadialGradient struct {
@@ -355,7 +355,7 @@ func handleDegenerateRadial(sizeX, sizeY pr.Float) (pr.Float, pr.Float) {
 
 func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	if len(self.colors) == 1 {
-		return backend.GradientLayout{ScaleY: 1, GradientInit: backend.GradientInit{Kind: "solid"}, Colors: []parser.RGBA{self.colors[0]}}
+		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{self.colors[0]}}
 	}
 	originX, centerX_, originY, centerY_ := self.center.OriginX, self.center.Pos[0], self.center.OriginY, self.center.Pos[1]
 	centerX := pr.ResoudPercentage(centerX_.ToValue(), width).V()
@@ -400,7 +400,7 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 			if positions[len(positions)-1] <= 0 {
 				// All stops are negatives,
 				// everything is "padded" with the last color.
-				return backend.GradientLayout{ScaleY: 1, GradientInit: backend.GradientInit{Kind: "solid"}, Colors: []parser.RGBA{self.colors[len(self.colors)-1]}}
+				return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{self.colors[len(self.colors)-1]}}
 			}
 
 			for i, position := range positions {
@@ -436,7 +436,7 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 	// See https://drafts.csswg.org/css-images-3/#repeating-gradients
 	if first == last && self.repeating {
 		color := gradientAverageColor(colors, positions)
-		return backend.GradientLayout{ScaleY: 1, GradientInit: backend.GradientInit{Kind: "solid"}, Colors: []parser.RGBA{color}}
+		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{color}}
 	}
 
 	// Define the coordinates of the gradient circles
@@ -446,7 +446,7 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 		circles, positions, colors = self.repeat(width, height, pr.Float(scaleY), circles, positions, colors)
 	}
 
-	return backend.GradientLayout{ScaleY: scaleY, GradientInit: backend.GradientInit{Kind: "radial", Coords: circles}, Positions: positions, Colors: colors}
+	return backend.GradientLayout{ScaleY: scaleY, GradientKind: backend.GradientKind{Kind: "radial", Coords: circles}, Positions: positions, Colors: colors}
 }
 
 func (r RadialGradient) repeat(width, height, scaleY pr.Float, points [6]pr.Fl, positions []pr.Fl, colors []parser.RGBA) ([6]pr.Fl, []pr.Fl, []parser.RGBA) {

@@ -10,7 +10,6 @@ package backend
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textlayout/pango"
@@ -21,17 +20,6 @@ import (
 )
 
 type Fl = utils.Fl
-
-type Anchor struct {
-	Name string
-	// Origin at the top-left of the page
-	X, Y Fl
-}
-
-type Attachment struct {
-	Title, Description string
-	Content            []byte
-}
 
 // TextDrawing exposes the positionned text glyphs to draw
 // and the associated font, in a backend independent manner
@@ -56,37 +44,7 @@ type TextGlyph struct {
 	XAdvance Fl  // how much to move before drawing
 }
 
-// GlyphExtents exposes glyph metrics, normalized by the font size.
-type GlyphExtents struct {
-	Width  int
-	Y      int
-	Height int
-}
-
-// Font stores some metadata used in the output document.
-type Font struct {
-	Cmap    map[fonts.GID][]rune
-	Extents map[fonts.GID]GlyphExtents
-	Bbox    [4]int
-}
-
-// IsFixedPitch returns true if only one width is used,
-// that is if the font is monospaced.
-func (f *Font) IsFixedPitch() bool {
-	seen := -1
-	for _, w := range f.Extents {
-		if seen == -1 {
-			seen = w.Width
-			continue
-		}
-		if w.Width != seen {
-			return false
-		}
-	}
-	return true
-}
-
-type GradientInit struct {
+type GradientKind struct {
 	// Kind is either:
 	// 	"solid": Colors is then a one element array and Positions and Coords are empty.
 	// 	"linear": Coords is (x0, y0, x1, y1)
@@ -103,80 +61,11 @@ type GradientLayout struct {
 	Positions []Fl
 	Colors    []parser.RGBA
 
-	GradientInit
+	GradientKind
 
 	// used for ellipses radial gradients. 1 otherwise.
 	ScaleY     utils.Fl
 	Reapeating bool
-}
-
-// BookmarkNode exposes the outline hierarchy of the document
-type BookmarkNode struct {
-	Label     string
-	Children  []BookmarkNode
-	Open      bool // state of the outline item
-	PageIndex int  // page index (0-based) to link to
-	X, Y      Fl   // position in the page
-}
-
-// Output is the main target to the laid out document,
-// in a format agnostic way.
-type Output interface {
-	// AddPage creates a new page with the given dimensions and returns
-	// it to be paint on.
-	// The y axis grows downward, meaning bottom > top
-	AddPage(left, top, right, bottom Fl) OutputPage
-
-	// CreateAnchors register a list of anchors per page, which are named targets of internal links.
-	// `anchors` is a 0-based list, meaning anchors in page 1 are at index 0.
-	// The origin of internal link has been be added by `OutputPage.AddInternalLink`.
-	// `CreateAnchors` is called after all the pages have been created and processed
-	CreateAnchors(anchors [][]Anchor)
-
-	// Add global attachments to the file
-	SetAttachments(as []Attachment)
-
-	// Embed a file. Calling this method twice with the same id
-	// won't embed the content twice.
-	// `fileID` will be passed to `OutputPage.AddFileAnnotation`
-	EmbedFile(fileID string, a Attachment)
-
-	// Metadatas
-
-	SetTitle(title string)
-	SetDescription(description string)
-	SetCreator(creator string)
-	SetAuthors(authors []string)
-	SetKeywords(keywords []string)
-	SetProducer(producer string)
-	SetDateCreation(d time.Time)
-	SetDateModification(d time.Time)
-
-	// SetBookmarks setup the document outline
-	SetBookmarks(root []BookmarkNode)
-}
-
-// OutputPage is the target of one laid out page
-type OutputPage interface {
-	// AddInternalLink shows a link on the page, pointing to the
-	// named anchor, which will be registered with `Output.CreateAnchors`
-	AddInternalLink(xMin, yMin, xMax, yMax Fl, anchorName string)
-
-	// AddExternalLink shows a link on the page, pointing to
-	// the given url
-	AddExternalLink(xMin, yMin, xMax, yMax Fl, url string)
-
-	// AddFileAnnotation adds a file annotation on the current page.
-	// The file content has been added with `Output.EmbedFile`.
-	AddFileAnnotation(xMin, yMin, xMax, yMax Fl, fileID string)
-
-	// Adjust the media boxes
-
-	SetMediaBox(left, top, right, bottom Fl)
-	SetTrimBox(left, top, right, bottom Fl)
-	SetBleedBox(left, top, right, bottom Fl)
-
-	OutputGraphic
 }
 
 // RasterImage is an image to be included in the ouput.
@@ -198,7 +87,7 @@ type Image interface {
 	GetIntrinsicSize(imageResolution, fontSize properties.Float) (width, height, ratio properties.MaybeFloat)
 
 	// Draw shall write the image on the given `context`
-	Draw(context GraphicTarget, concreteWidth, concreteHeight Fl, imageRendering string)
+	Draw(context CanvasNoFill, concreteWidth, concreteHeight Fl, imageRendering string)
 }
 
 type BackgroundImageOptions struct {
@@ -263,19 +152,22 @@ type StrokeOptions struct {
 	MiterLimit Fl
 }
 
-// OutputGraphic is a surface and the target of graphic operations
-type OutputGraphic interface {
-	GraphicTarget
+// Canvas represents a 2D surface which is the target of graphic operations.
+type Canvas interface {
+	CanvasNoFill
 
 	// FillWithImage fills the current path using the given image.
-	// Usually, the given image would be painted on an temporary OutputGraphic,
+	// Usually, the given image would be painted on an temporary Canvas,
 	// which would then be used as fill pattern.
 	FillWithImage(img Image, options BackgroundImageOptions)
 }
 
-type GraphicTarget interface {
-	// Returns the current page rectangle
-	GetPageRectangle() (left, top, right, bottom Fl)
+// CanvasNoFill is the same as Canvas but without the `FillWithImage`,
+// to enforce that Image.Draw implementations do not use the FillWithImage
+// method.
+type CanvasNoFill interface {
+	// Returns the current canvas rectangle
+	GetRectangle() (left, top, right, bottom Fl)
 
 	// OnNewStack save the current graphic stack,
 	// execute the given closure, and restore the stack.
@@ -284,10 +176,10 @@ type GraphicTarget interface {
 	// AddOpacityGroup creates a new drawing target with the given
 	// bounding box. The return `OutputGraphic` will be then
 	// passed to `DrawOpacityGroup`
-	AddOpacityGroup(x, y, width, height Fl) OutputGraphic
+	AddOpacityGroup(x, y, width, height Fl) Canvas
 
 	// DrawOpacityGroup draw the given target to the main target, applying the given opacity (in [0,1]).
-	DrawOpacityGroup(opacity Fl, group OutputGraphic)
+	DrawOpacityGroup(opacity Fl, group Canvas)
 
 	// Establishes a new clip region
 	// by intersecting the current clip region

@@ -18,11 +18,11 @@ import (
 
 var outputLog = log.New(io.Discard, "output: ", log.Ltime)
 
-var _ backend.Output = output{}
+var _ backend.Document = output{}
 
 type output struct{}
 
-func (output) AddPage(left, top, right, bottom fl) backend.OutputPage {
+func (output) AddPage(left, top, right, bottom fl) backend.Page {
 	outputLog.Println("AddPage")
 	return outputPage{}
 }
@@ -89,8 +89,8 @@ func (outputPage) AddFileAnnotation(x, y, w, h fl, id string) {
 	outputLog.Println("AddFileAnnotation")
 }
 
-func (outputPage) GetPageRectangle() (left, top, right, bottom fl) {
-	outputLog.Println("GetPageRectangle")
+func (outputPage) GetRectangle() (left, top, right, bottom fl) {
+	outputLog.Println("GetRectangle")
 	return 0, 0, 10, 10
 }
 
@@ -180,12 +180,12 @@ func (outputPage) DrawGradient(gradient backend.GradientLayout, width, height fl
 	outputLog.Println("DrawGradient")
 }
 
-func (outputPage) AddOpacityGroup(x, y, width, height fl) backend.OutputGraphic {
+func (outputPage) AddOpacityGroup(x, y, width, height fl) backend.Canvas {
 	outputLog.Println("AddGroup")
 	return outputPage{}
 }
 
-func (outputPage) DrawOpacityGroup(opacity fl, group backend.OutputGraphic) {
+func (outputPage) DrawOpacityGroup(opacity fl, group backend.Canvas) {
 	outputLog.Println("DrawGroup")
 }
 

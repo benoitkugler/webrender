@@ -15,7 +15,7 @@ To do so, this module uses an abstraction of the output, whose implementation mu
 
 From the lower level to the higher level, this module has the following structure :
 
-- the `css` package provides a CSS parser, with property validation and a CSS selector engine (`selector`).
+- the `css` package provides a CSS parser, with property validation and a CSS selector engine (`css/selector`).
 
 - the `svg` package implements a SVG parser and renderer, supporting CSS styling.
 
@@ -35,4 +35,4 @@ The `html` package implements a static HTML renderer, which works by :
 
 - laying out this tree, that is attributing position and dimensions to the boxes, and performing line, paragraph and page breaks (package `html/layout`)
 
-- drawing the laid out tree to an output. Contrary to the Python library, this step is here performed on an abstract output, which must implement the `backend.Output` interface. This means than the core layout logic could easily be reused for other purposes, such as visualizing html document on a GUI application, or targetting other output file formats.
+- drawing the laid out tree to an output. Contrary to the Python library, this step is here performed on an abstract output, which must implement the `backend.Document` interface. This means than the core layout logic could easily be reused for other purposes, such as visualizing html document on a GUI application, or targetting other output file formats.

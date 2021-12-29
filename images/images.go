@@ -161,7 +161,7 @@ func (r rasterImage) GetIntrinsicSize(imageResolution, _ pr.Float) (width, heigh
 	return r.intrinsicWidth / imageResolution, r.intrinsicHeight / imageResolution, r.intrinsicRatio
 }
 
-func (r rasterImage) Draw(context backend.GraphicTarget, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (r rasterImage) Draw(context backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	hasSize := concreteWidth > 0 && concreteHeight > 0 && r.intrinsicWidth > 0 && r.intrinsicHeight > 0
 	if !hasSize {
 		return
@@ -232,7 +232,7 @@ func (s *SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.May
 	return intrinsicWidth, intrinsicHeight, ratio
 }
 
-func (SVGImage) Draw(context backend.GraphicTarget, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (SVGImage) Draw(context backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	log.Println("SVG rendering not implemented yet")
 	// FIXME:
 	//         try {

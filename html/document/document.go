@@ -237,7 +237,7 @@ func newPage(pageBox *bo.PageBox) Page {
 // scale is the Zoom scale in user units per CSS pixel.
 // clip : whether to clip/cut content outside the page. If false, content can overflow.
 // (leftX=0, topY=0, scale=1, clip=false)
-func (d Page) Paint(dst backend.OutputPage, fc *text.FontConfiguration, leftX, topY, scale fl, clip bool) {
+func (d Page) Paint(dst backend.Page, fc *text.FontConfiguration, leftX, topY, scale fl, clip bool) {
 	dst.OnNewStack(func() {
 		// Make (0, 0) the top-left corner and make user units CSS pixels
 		dst.Transform(mt.New(scale, 0, 0, scale, leftX, topY))
@@ -400,7 +400,7 @@ func (d Document) makeBookmarkTree() []backend.BookmarkNode {
 }
 
 // Include hyperlinks in current PDF page.
-func (d Document) addHyperlinks(links []Link, context backend.OutputPage, scale mt.Transform) {
+func (d Document) addHyperlinks(links []Link, context backend.Page, scale mt.Transform) {
 	for _, link := range links {
 		linkType, linkTarget, rectangle := link.Type, link.Target, link.Rectangle
 		xMin, yMin := scale.TransformPoint(rectangle[0], rectangle[1])
@@ -474,7 +474,7 @@ func getFilenameFromResult(rawurl string) string {
 //
 // `attachments` is an optional list of additional file attachments for the
 // generated PDF document, added to those collected from the metadata.
-func (d *Document) Write(target backend.Output, zoom pr.Fl, attachments []backend.Attachment) {
+func (d *Document) Write(target backend.Document, zoom pr.Fl, attachments []backend.Attachment) {
 	// 0.75 = 72 PDF point per inch / 96 CSS pixel per inch
 	scale := zoom * 0.75
 
@@ -534,7 +534,7 @@ func (d *Document) Write(target backend.Output, zoom pr.Fl, attachments []backen
 	target.SetDateModification(d.Metadata.Modified)
 }
 
-func (d *Document) embedFileAnnotations(pagedLinks [][]Link, context backend.Output) {
+func (d *Document) embedFileAnnotations(pagedLinks [][]Link, context backend.Document) {
 	// A single link can be split in multiple regions.
 	for _, rl := range pagedLinks {
 		for _, link := range rl {
@@ -548,7 +548,7 @@ func (d *Document) embedFileAnnotations(pagedLinks [][]Link, context backend.Out
 	}
 }
 
-func (bleed Bleed) setMediaBoxes(mediaBox [4]fl, target backend.OutputPage) {
+func (bleed Bleed) setMediaBoxes(mediaBox [4]fl, target backend.Page) {
 	bleed.Top *= 0.75
 	bleed.Bottom *= 0.75
 	bleed.Left *= 0.75

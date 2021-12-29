@@ -61,7 +61,7 @@ func (svg *SVGImage) DisplayedSize() (width, height Value) {
 
 // Draw draws the parsed SVG image into the given `dst` output,
 // with the given `width` and `height`.
-func (svg *SVGImage) Draw(dst backend.OutputGraphic, width, height Fl) {
+func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
 	var ctx drawingDims
 	ctx.concreteWidth, ctx.concreteHeight = width, height
 	if vb := svg.ViewBox; vb != nil {
@@ -75,7 +75,7 @@ func (svg *SVGImage) Draw(dst backend.OutputGraphic, width, height Fl) {
 
 // if paint is false, only the path operations are executed, not the actual filling or drawing
 // moreover, no new graphic stack is created
-func (svg *SVGImage) drawNode(dst backend.OutputGraphic, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDims, paint bool) {
 	dims.fontSize = node.attributes.fontSize.Resolve(dims.fontSize, dims.fontSize)
 
 	paintTask := func() {
@@ -86,7 +86,7 @@ func (svg *SVGImage) drawNode(dst backend.OutputGraphic, node *svgNode, dims dra
 
 		// create sub group for opacity
 		opacity := node.attributes.opacity
-		var originalDst backend.OutputGraphic
+		var originalDst backend.Canvas
 		if paint && 0 <= opacity && opacity < 1 {
 			originalDst = dst
 			var x, y, width, height Fl = 0, 0, dims.concreteWidth, dims.concreteHeight
@@ -150,12 +150,12 @@ func (svg *SVGImage) drawNode(dst backend.OutputGraphic, node *svgNode, dims dra
 }
 
 // vertices are the resolved vertices computed when drawing the shape
-func (svg *SVGImage) drawMarkers(dst backend.GraphicTarget, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawMarkers(dst backend.CanvasNoFill, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
 	// FIXME:
 	log.Println("drawing markers is not implemented")
 }
 
-func applyTransform(dst backend.GraphicTarget, transforms []transform, dims drawingDims) {
+func applyTransform(dst backend.CanvasNoFill, transforms []transform, dims drawingDims) {
 	if len(transforms) == 0 { // do not apply a useless identity transform
 		return
 	}
@@ -170,7 +170,7 @@ func applyTransform(dst backend.GraphicTarget, transforms []transform, dims draw
 	}
 }
 
-func applyFilters(dst backend.GraphicTarget, filters []filter, node *svgNode, dims drawingDims) {
+func applyFilters(dst backend.CanvasNoFill, filters []filter, node *svgNode, dims drawingDims) {
 	for _, filter := range filters {
 		switch filter := filter.(type) {
 		case filterOffset:
@@ -190,7 +190,7 @@ func applyFilters(dst backend.GraphicTarget, filters []filter, node *svgNode, di
 	}
 }
 
-func applyClipPath(dst backend.GraphicTarget, clipPath clipPath, node *svgNode, dims drawingDims) {
+func applyClipPath(dst backend.CanvasNoFill, clipPath clipPath, node *svgNode, dims drawingDims) {
 	// old_ctm = self.stream.ctm
 	if clipPath.isUnitsBBox {
 		x, y := dims.point(node.attributes.x, node.attributes.y)
@@ -212,7 +212,7 @@ func applyClipPath(dst backend.GraphicTarget, clipPath clipPath, node *svgNode, 
 	//     self.stream.transform(*(old_ctm @ new_ctm.invert).values)
 }
 
-func applyMask(dst backend.GraphicTarget, mask mask, node *svgNode, dims drawingDims) {
+func applyMask(dst backend.CanvasNoFill, mask mask, node *svgNode, dims drawingDims) {
 	// mask._etree_node.tag = 'g'
 
 	widthRef, heightRef := dims.innerWidth, dims.innerHeight

@@ -38,7 +38,7 @@ type drawable interface {
 	// Draws the node onto `dst` with the given dimensions.
 	// It should return the vertices of the path for path, line, polyline and polygon elements
 	// or nil
-	draw(dst backend.GraphicTarget, attrs *attributes, dims drawingDims) []vertex
+	draw(dst backend.CanvasNoFill, attrs *attributes, dims drawingDims) []vertex
 
 	// computes the bounding box of the node, or returns false
 	// if the node has no valid bounding box, like empty paths.
@@ -77,7 +77,7 @@ func newLine(node *cascadedNode, _ *svgContext) (drawable, error) {
 
 func atan2(x, y Fl) Fl { return Fl(math.Atan2(float64(x), float64(y))) }
 
-func (l line) draw(dst backend.GraphicTarget, _ *attributes, dims drawingDims) []vertex {
+func (l line) draw(dst backend.CanvasNoFill, _ *attributes, dims drawingDims) []vertex {
 	x1, y1 := dims.point(l.x1, l.y1)
 	x2, y2 := dims.point(l.x2, l.y2)
 	dst.MoveTo(x1, y1)
@@ -121,7 +121,7 @@ func newRect(node *cascadedNode, _ *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (r rect) draw(dst backend.GraphicTarget, attrs *attributes, dims drawingDims) []vertex {
+func (r rect) draw(dst backend.CanvasNoFill, attrs *attributes, dims drawingDims) []vertex {
 	width, height := dims.point(attrs.width, attrs.height)
 	if width <= 0 || height <= 0 { // nothing to draw
 		return nil
@@ -196,7 +196,7 @@ func parsePoly(node *cascadedNode) (polyline, error) {
 	return out, nil
 }
 
-func (r polyline) draw(dst backend.GraphicTarget, _ *attributes, _ drawingDims) []vertex {
+func (r polyline) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) []vertex {
 	if len(r.points) == 0 {
 		return nil
 	}
@@ -263,7 +263,7 @@ func newEllipse(node *cascadedNode, _ *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (e ellipse) draw(dst backend.GraphicTarget, _ *attributes, dims drawingDims) []vertex {
+func (e ellipse) draw(dst backend.CanvasNoFill, _ *attributes, dims drawingDims) []vertex {
 	rx, ry := dims.point(e.rx, e.ry)
 	if rx == 0 || ry == 0 {
 		return nil
@@ -294,7 +294,7 @@ func newPath(node *cascadedNode, context *svgContext) (drawable, error) {
 	return path(out), err
 }
 
-func (p path) draw(dst backend.GraphicTarget, _ *attributes, _ drawingDims) []vertex {
+func (p path) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) []vertex {
 	for _, item := range p {
 		item.draw(dst)
 	}
@@ -340,7 +340,7 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (img image) draw(dst backend.GraphicTarget, _ *attributes, _ drawingDims) []vertex {
+func (img image) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) []vertex {
 	// FIXME: support nested images
 	log.Println("nested image are not supported")
 	return nil

@@ -172,7 +172,7 @@ func lighten(color Color) Color {
 }
 
 type drawContext struct {
-	dst   backend.OutputGraphic
+	dst   backend.Canvas
 	fonts *text.FontConfiguration
 }
 
@@ -353,7 +353,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 // ``widths`` is a tuple of the inner widths (top, right, bottom, left) from
 // the border box. Radii are adjusted from these values. Default is (0, 0, 0,
 // 0).
-func roundedBoxPath(context backend.OutputGraphic, radii bo.RoundedBox) {
+func roundedBoxPath(context backend.Canvas, radii bo.RoundedBox) {
 	x, y, w, h, tl, tr, br, bl := pr.Fl(radii.X), pr.Fl(radii.Y), pr.Fl(radii.Width), pr.Fl(radii.Height), radii.TopLeft, radii.TopRight, radii.BottomRight, radii.BottomLeft
 	if (tl[0] == 0 || tl[1] == 0) && (tr[0] == 0 || tr[1] == 0) &&
 		(br[0] == 0 || br[1] == 0) && (bl[0] == 0 || bl[1] == 0) {
@@ -438,7 +438,7 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 					ctx.dst.Rectangle(ptx, pty, ptw, pth)
 					ctx.dst.Clip(false)
 				}
-				ctx.dst.Rectangle(ctx.dst.GetPageRectangle())
+				ctx.dst.Rectangle(ctx.dst.GetRectangle())
 				ctx.dst.SetColorRgba(bg.Color, false)
 				ctx.dst.Fill(false)
 			})
@@ -578,7 +578,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 
 	if repeatX == "no-repeat" && repeatY == "no-repeat" {
 		// PDF patterns always repeat, use a big number to hide repetition
-		_, _, w, h := ctx.dst.GetPageRectangle()
+		_, _, w, h := ctx.dst.GetRectangle()
 		repeatWidth = 2 * w
 		repeatHeight = 2 * h
 	}
@@ -594,7 +594,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	}
 	ctx.dst.OnNewStack(func() {
 		if layer.Unbounded {
-			x1, y1, x2, y2 := ctx.dst.GetPageRectangle()
+			x1, y1, x2, y2 := ctx.dst.GetRectangle()
 			ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
 		} else {
 			ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
@@ -714,7 +714,7 @@ func (ctx drawContext) drawBorder(box_ Box) {
 // Clip one segment of box border (border_widths=nil, radii=nil).
 // The strategy is to remove the zones not needed because of the style or the
 // side before painting.
-func clipBorderSegment(context backend.OutputGraphic, style pr.String, width fl, side string,
+func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side string,
 	borderBox pr.Rectangle, borderWidths *pr.Rectangle, radii *[4]bo.Point) {
 
 	bbx, bby, bbw, bbh := borderBox.Unpack()

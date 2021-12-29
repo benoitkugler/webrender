@@ -79,7 +79,7 @@ func (dims drawingDims) resolveDashes(dashArray []Value, dashOffset Value) ([]Fl
 }
 
 // paint by filling and stroking the given node onto the graphic target
-func (svg *SVGImage) paintNode(dst backend.GraphicTarget, node *svgNode, dims drawingDims) {
+func (svg *SVGImage) paintNode(dst backend.CanvasNoFill, node *svgNode, dims drawingDims) {
 	// TODO: handle text
 	// if node.tag in ('text', 'textPath', 'a') and not text:
 	// return
@@ -115,7 +115,7 @@ func (svg *SVGImage) paintNode(dst backend.GraphicTarget, node *svgNode, dims dr
 
 // apply the given painter to the graphic target
 // opacity is an additional opacity factor
-func (svg *SVGImage) applyPainter(dst backend.GraphicTarget, pt painter, opacity Fl, dims drawingDims, stroke bool) {
+func (svg *SVGImage) applyPainter(dst backend.CanvasNoFill, pt painter, opacity Fl, dims drawingDims, stroke bool) {
 	if !pt.valid {
 		return
 	}

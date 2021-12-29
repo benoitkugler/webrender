@@ -399,7 +399,7 @@ func TestLinearGradient(t *testing.T) {
 		result := layer.Image.(images.LinearGradient).Layout(400, 300)
 		tu.AssertEqual(t, result.ScaleY, pr.Fl(1), "result[0]")
 		tu.AssertEqual(t, result.Kind, type_, "result[1]")
-		approxEqualSlice(t, result.GradientInit.Coords[:], init[:], gradientCss+": Data")
+		approxEqualSlice(t, result.GradientKind.Coords[:], init[:], gradientCss+": Data")
 		tu.AssertEqual(t, result.Positions, positions, "Positions")
 		tu.AssertEqual(t, len(result.Colors) >= len(colors), true, "colors length")
 		for i := range colors {
@@ -460,7 +460,7 @@ func TestRadialGradient(t *testing.T) {
 			centerX, centerY, radius0, radius1 := init[0], init[1], init[2], init[3]
 			init = [6]pr.Fl{centerX, centerY / scaleY, radius0, centerX, centerY / scaleY, radius1}
 		}
-		approxEqualSlice(t, result.GradientInit.Coords[:], init[:], "Data for "+gradientCss)
+		approxEqualSlice(t, result.GradientKind.Coords[:], init[:], "Data for "+gradientCss)
 		tu.AssertEqual(t, result.Positions, positions, "Positions for "+gradientCss)
 		tu.AssertEqual(t, len(result.Colors) >= len(colors), true, "colors length")
 		for i := range colors {
