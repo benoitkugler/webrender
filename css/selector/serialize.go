@@ -43,7 +43,13 @@ func (c attrSelector) String() string {
 	} else if c.operation != "" {
 		val = fmt.Sprintf(`"%s"`, val)
 	}
-	return fmt.Sprintf(`[%s%s%s]`, c.key, c.operation, val)
+
+	ignoreCase := ""
+	if c.ignoreCase {
+		ignoreCase = " i"
+	}
+
+	return fmt.Sprintf(`[%s%s%s%s]`, c.key, c.operation, val, ignoreCase)
 }
 
 func (c relativePseudoClassSelector) String() string {
