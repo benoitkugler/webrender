@@ -1,7 +1,9 @@
 package parser
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -22,16 +24,20 @@ type nestedBlock struct {
 	endChar byte
 }
 
+func tokenizeString(css string, skipComments bool) []Token {
+	return Tokenize([]byte(css), skipComments)
+}
+
 // Tokenize parses a list of component values.
 // If `skipComments` is true, ignore CSS comments :
 // the return values (and recursively its blocks and functions)
 // will not contain any `Comment` object.
-func Tokenize(css string, skipComments bool) []Token {
+func Tokenize(css []byte, skipComments bool) []Token {
 	// This turns out to be faster than a regexp:
-	css = strings.ReplaceAll(css, "\u0000", "\uFFFD")
-	css = strings.ReplaceAll(css, "\r\n", "\n")
-	css = strings.ReplaceAll(css, "\r", "\n")
-	css = strings.ReplaceAll(css, "\f", "\n")
+	css = bytes.ReplaceAll(css, []byte("\u0000"), []byte("\uFFFD"))
+	css = bytes.ReplaceAll(css, []byte("\r\n"), []byte("\n"))
+	css = bytes.ReplaceAll(css, []byte("\r"), []byte("\n"))
+	css = bytes.ReplaceAll(css, []byte("\f"), []byte("\n"))
 
 	length := len(css)
 	tokenStartPos, pos := 0, 0
@@ -44,10 +50,10 @@ func Tokenize(css string, skipComments bool) []Token {
 
 mainLoop:
 	for pos < length {
-		newline := strings.LastIndex(css[tokenStartPos:pos], "\n")
+		newline := bytes.LastIndexByte(css[tokenStartPos:pos], '\n')
 		if newline != -1 {
 			newline += tokenStartPos
-			line += 1 + strings.Count(css[tokenStartPos:newline], "\n")
+			line += 1 + bytes.Count(css[tokenStartPos:newline], []byte{'\n'})
 			lastNewline = newline
 		}
 		// First character in a line is in column 1.
@@ -67,7 +73,7 @@ mainLoop:
 				}
 			}
 			value := css[tokenStartPos:pos]
-			*ts = append(*ts, WhitespaceToken{position: tokenPos, Value: value})
+			*ts = append(*ts, WhitespaceToken{position: tokenPos, Value: string(value)})
 			continue
 		case 'U', 'u':
 			if pos+2 < length && css[pos+1] == '+' && strings.ContainsRune("0123456789abcdefABCDEF?", rune(css[pos+2])) {
@@ -81,7 +87,7 @@ mainLoop:
 				continue
 			}
 		}
-		if strings.HasPrefix(css[pos:], "-->") { // Check before identifiers
+		if bytes.HasPrefix(css[pos:], []byte("-->")) { // Check before identifiers
 			*ts = append(*ts, LiteralToken{position: tokenPos, Value: "-->"})
 			pos += 3
 			continue
@@ -95,7 +101,7 @@ mainLoop:
 			pos += 1 // Skip the "("
 			if utils.AsciiLower(value) == "url" {
 				urlPos := pos
-				for urlPos < length && strings.ContainsRune(" \n\t", rune(css[urlPos])) {
+				for urlPos < length && (css[urlPos] == ' ' || css[urlPos] == '\n' || css[urlPos] == '\t') {
 					urlPos += 1
 				}
 				if urlPos >= length || (css[urlPos] != '"' && css[urlPos] != '\'') {
@@ -132,9 +138,9 @@ mainLoop:
 		}
 
 		value := css[pos:]
-		match := numberRe.FindStringIndex(value)
+		match := numberRe.FindIndex(value)
 		if match != nil {
-			repr := css[pos+match[0] : pos+match[1]]
+			repr := string(css[pos+match[0] : pos+match[1]])
 			pos += match[1]
 			value, _ := strconv.ParseFloat(repr, 32)
 			if value == 0 {
@@ -164,21 +170,23 @@ mainLoop:
 		case '@':
 			pos += 1
 			if pos < length && isIdentStart(css, pos) {
-				value, pos = consumeIdent(css, pos)
-				*ts = append(*ts, AtKeywordToken{position: tokenPos, Value: LowerableString(value)})
+				var ident string
+				ident, pos = consumeIdent(css, pos)
+				*ts = append(*ts, AtKeywordToken{position: tokenPos, Value: LowerableString(ident)})
 			} else {
 				*ts = append(*ts, LiteralToken{position: tokenPos, Value: "@"})
 			}
 		case '#':
 			pos += 1
 			if pos < length {
-				r, _ := utf8.DecodeRuneInString(css[pos:])
-				if strings.ContainsRune("0123456789abcdefghijklmnopqrstuvwxyz-_ABCDEFGHIJKLMNOPQRSTUVWXYZ", r) ||
+				r, _ := utf8.DecodeRune(css[pos:])
+				if ('0' <= r && r <= '9' || 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || r == '-' || r == '_') ||
 					r > 0x7F || // Non-ASCII
-					(r == '\\' && !strings.HasPrefix(css[pos:], "\\\n")) { // Valid escape
+					(r == '\\' && !bytes.HasPrefix(css[pos:], []byte("\\\n"))) { // Valid escape
 					isIdentifier := isIdentStart(css, pos)
-					value, pos = consumeIdent(css, pos)
-					*ts = append(*ts, HashToken{position: tokenPos, Value: value, IsIdentifier: isIdentifier})
+					var ident string
+					ident, pos = consumeIdent(css, pos)
+					*ts = append(*ts, HashToken{position: tokenPos, Value: ident, IsIdentifier: isIdentifier})
 					continue
 				}
 			}
@@ -215,45 +223,48 @@ mainLoop:
 			*ts = append(*ts, ParseError{position: tokenPos, Kind: string(rune(c)), Message: "Unmatched " + string(rune(c))})
 			pos += 1
 		case '\'', '"':
-			var addValue bool
-			value, pos, addValue, err = consumeQuotedString(css, pos)
+			var (
+				quotedString string
+				addValue     bool
+			)
+			quotedString, pos, addValue, err = consumeQuotedString(css, pos)
 			if addValue {
-				*ts = append(*ts, StringToken{position: tokenPos, Value: value, isError: err != nil})
+				*ts = append(*ts, StringToken{position: tokenPos, Value: quotedString, isError: err != nil})
 			}
 			if err != nil {
 				*ts = append(*ts, ParseError{position: tokenPos, Kind: err.Error(), Message: "bad string token"})
 			}
 		default:
 			switch {
-			case strings.HasPrefix(css[pos:], "/*"): // Comment
-				index := strings.Index(css[pos+2:], "*/")
+			case bytes.HasPrefix(css[pos:], []byte("/*")): // Comment
+				index := bytes.Index(css[pos+2:], []byte("*/"))
 				pos += 2 + index
 				if index == -1 {
 					if !skipComments {
-						*ts = append(*ts, Comment{position: tokenPos, Value: css[tokenStartPos+2:]})
+						*ts = append(*ts, Comment{position: tokenPos, Value: string(css[tokenStartPos+2:])})
 					}
 					break mainLoop
 				}
 				if !skipComments {
-					*ts = append(*ts, Comment{position: tokenPos, Value: css[tokenStartPos+2 : pos]})
+					*ts = append(*ts, Comment{position: tokenPos, Value: string(css[tokenStartPos+2 : pos])})
 				}
 				pos += 2
-			case strings.HasPrefix(css[pos:], "<!--"):
+			case bytes.HasPrefix(css[pos:], []byte("<!--")):
 				*ts = append(*ts, LiteralToken{position: tokenPos, Value: "<!--"})
 				pos += 4
-			case strings.HasPrefix(css[pos:], "||"):
+			case bytes.HasPrefix(css[pos:], []byte("||")):
 				*ts = append(*ts, LiteralToken{position: tokenPos, Value: "||"})
 				pos += 2
-			case strings.ContainsRune("~|^$*", rune(c)):
+			case c == '~' || c == '|' || c == '^' || c == '$' || c == '*':
 				pos += 1
-				if strings.HasPrefix(css[pos:], "=") {
+				if bytes.HasPrefix(css[pos:], []byte{'='}) {
 					pos += 1
 					*ts = append(*ts, LiteralToken{position: tokenPos, Value: string(rune(c)) + "="})
 				} else {
 					*ts = append(*ts, LiteralToken{position: tokenPos, Value: string(rune(c))})
 				}
 			default:
-				r, w := utf8.DecodeRuneInString(css[pos:])
+				r, w := utf8.DecodeRune(css[pos:])
 				pos += w
 				*ts = append(*ts, LiteralToken{position: tokenPos, Value: string(r)})
 			}
@@ -268,14 +279,14 @@ const (
 )
 
 // Return true if the given character is a name-start code point.
-func isNameStart(css string, pos int) bool {
+func isNameStart(css []byte, pos int) bool {
 	// https://www.w3.org/TR/css-syntax-3/#name-start-code-point
-	c, _ := utf8.DecodeRuneInString(css[pos:])
-	return c > 0x7F || strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", c)
+	c, _ := utf8.DecodeRune(css[pos:])
+	return c > 0x7F || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_'
 }
 
 // Return true if the given position is the start of a CSS identifier.
-func isIdentStart(css string, pos int) bool {
+func isIdentStart(css []byte, pos int) bool {
 	// https://www.w3.org/TR/css-syntax-3/#would-start-an-identifier
 	if isNameStart(css, pos) {
 		return true
@@ -284,57 +295,57 @@ func isIdentStart(css string, pos int) bool {
 		// Name-start code point
 		nameStart := pos < len(css) && (isNameStart(css, pos) || css[pos] == '-')
 		// Valid escape
-		validEscape := css[pos] == '\\' && !strings.HasPrefix(css[pos:], "\\\n")
+		validEscape := css[pos] == '\\' && !bytes.HasPrefix(css[pos:], []byte("\\\n"))
 		return nameStart || validEscape
 	} else if css[pos] == '\\' {
-		return !strings.HasPrefix(css[pos:], "\\\n")
+		return !bytes.HasPrefix(css[pos:], []byte("\\\n"))
 	}
 	return false
 }
 
-func consumeIdent(value string, pos int) (string, int) {
+func consumeIdent(value []byte, pos int) (string, int) {
 	// http://dev.w3.org/csswg/css-syntax/#consume-a-name
-	var chunks []string
-	length := len(value)
+	var chunks strings.Builder
+	L := len(value)
 	startPos := pos
-	for pos < length {
-		c, w := utf8.DecodeRuneInString(value[pos:])
+	for pos < L {
+		c, w := utf8.DecodeRune(value[pos:])
 		if strings.ContainsRune("abcdefghijklmnopqrstuvwxyz-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", c) || c > 0x7F {
 			pos += w
-		} else if c == '\\' && !strings.HasPrefix(value[pos:], "\\\n") {
+		} else if c == '\\' && !bytes.HasPrefix(value[pos:], []byte("\\\n")) {
 			// Valid escape
-			chunks = append(chunks, value[startPos:pos])
+			chunks.Write(value[startPos:pos])
 			var car string
 			car, pos = consumeEscape(value, pos+w)
-			chunks = append(chunks, car)
+			chunks.WriteString(car)
 			startPos = pos
 		} else {
 			break
 		}
 	}
-	chunks = append(chunks, value[startPos:pos])
-	return strings.Join(chunks, ""), pos
+	chunks.Write(value[startPos:pos])
+	return chunks.String(), pos
 }
 
 // Return the range
 // http://dev.w3.org/csswg/css-syntax/#consume-a-unicode-range-token
-func consumeUnicodeRange(css string, pos int) (start, end int64, newPos int, err error) {
+func consumeUnicodeRange(css []byte, pos int) (start, end int64, newPos int, err error) {
 	length := len(css)
 	startPos := pos
 	maxPos := utils.MinInt(pos+6, length)
 	var _start, _end string
 	for pos < maxPos {
-		r, w := utf8.DecodeRuneInString(css[pos:])
+		r, w := utf8.DecodeRune(css[pos:])
 		if !strings.ContainsRune(charUnicodeRange, r) {
 			break
 		}
 		pos += w
 	}
-	_start = css[startPos:pos]
+	_start = string(css[startPos:pos])
 	questionMarks := 0
 	// Same maxPos as before: total of hex digits && question marks <= 6
 	for pos < maxPos {
-		r, w := utf8.DecodeRuneInString(css[pos:])
+		r, w := utf8.DecodeRune(css[pos:])
 		if r != '?' {
 			break
 		}
@@ -350,13 +361,13 @@ func consumeUnicodeRange(css string, pos int) (start, end int64, newPos int, err
 		startPos = pos
 		maxPos = utils.MinInt(pos+6, length)
 		for pos < maxPos {
-			r, w := utf8.DecodeRuneInString(css[pos:])
+			r, w := utf8.DecodeRune(css[pos:])
 			if !strings.ContainsRune(charUnicodeRange, r) {
 				break
 			}
 			pos += w
 		}
-		_end = css[startPos:pos]
+		_end = string(css[startPos:pos])
 	} else {
 		_end = _start
 	}
@@ -370,7 +381,7 @@ func consumeUnicodeRange(css string, pos int) (start, end int64, newPos int, err
 }
 
 // http://dev.w3.org/csswg/css-syntax/#consume-a-url-token
-func consumeUrl(css string, pos int) (value string, newPos int, addValue bool, err error) {
+func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, err error) {
 	length := len(css)
 	// Skip whitespace
 	for pos < length && strings.ContainsRune(" \n\t", rune(css[pos])) {
@@ -385,31 +396,31 @@ func consumeUrl(css string, pos int) (value string, newPos int, addValue bool, e
 	} else if c == ')' {
 		return "", pos + 1, true, nil
 	} else {
-		var chunks []string
+		var chunks strings.Builder
 		startPos := pos
 	mainLoop:
 		for {
 			if pos >= length { // EOF
-				chunks = append(chunks, css[startPos:pos])
-				return strings.Join(chunks, ""), pos, true, errors.New("eof-in-url")
+				chunks.Write(css[startPos:pos])
+				return chunks.String(), pos, true, errors.New("eof-in-url")
 			}
-			c, w := utf8.DecodeRuneInString(css[pos:])
+			c, w := utf8.DecodeRune(css[pos:])
 			switch {
 			case c == ')':
-				chunks = append(chunks, css[startPos:pos])
+				chunks.Write(css[startPos:pos])
 				pos += w
-				return strings.Join(chunks, ""), pos, true, nil
+				return chunks.String(), pos, true, nil
 			case c == ' ' || c == '\n' || c == '\t':
-				chunks = append(chunks, css[startPos:pos])
-				value = strings.Join(chunks, "")
+				chunks.Write(css[startPos:pos])
+				value = chunks.String()
 				pos += w
 				break mainLoop
-			case c == '\\' && !strings.HasPrefix(css[pos:], "\\\n"):
+			case c == '\\' && !bytes.HasPrefix(css[pos:], []byte("\\\n")):
 				// Valid escape
-				chunks = append(chunks, css[startPos:pos])
+				chunks.Write(css[startPos:pos])
 				var cs string
 				cs, pos = consumeEscape(css, pos+w)
-				chunks = append(chunks, cs)
+				chunks.WriteString(cs)
 				startPos = pos
 			default:
 				pos += w
@@ -424,7 +435,7 @@ func consumeUrl(css string, pos int) (value string, newPos int, addValue bool, e
 
 	if err == nil {
 		for pos < length {
-			r, w := utf8.DecodeRuneInString(css[pos:])
+			r, w := utf8.DecodeRune(css[pos:])
 			if strings.ContainsRune(" \n\t", r) {
 				pos += w
 			} else {
@@ -445,13 +456,13 @@ func consumeUrl(css string, pos int) (value string, newPos int, addValue bool, e
 
 	// http://dev.w3.org/csswg/css-syntax/#consume-the-remnants-of-a-bad-url0
 	for pos < length {
-		if strings.HasPrefix(css[pos:], "\\)") {
+		if bytes.HasPrefix(css[pos:], []byte("\\)")) {
 			pos += 2
 		} else if css[pos] == ')' {
 			pos += 1
 			break
 		} else {
-			_, w := utf8.DecodeRuneInString(css[pos:])
+			_, w := utf8.DecodeRune(css[pos:])
 			pos += w
 		}
 	}
@@ -460,27 +471,27 @@ func consumeUrl(css string, pos int) (value string, newPos int, addValue bool, e
 
 // Returns unescapedValue
 // http://dev.w3.org/csswg/css-syntax/#consume-a-string-token
-func consumeQuotedString(css string, pos int) (string, int, bool, error) {
+func consumeQuotedString(css []byte, pos int) (string, int, bool, error) {
 	quote := rune(css[pos])
 	if quote != '"' && quote != '\'' {
 		log.Fatal("first char should be a quote")
 	}
 	pos += 1
-	var chunks []string
+	var chunks strings.Builder
 	length := len(css)
 	startPos := pos
 	hasBroken := false
 mainLoop:
 	for pos < length {
-		c, w := utf8.DecodeRuneInString(css[pos:])
+		c, w := utf8.DecodeRune(css[pos:])
 		switch c {
 		case quote:
-			chunks = append(chunks, css[startPos:pos])
+			chunks.Write(css[startPos:pos])
 			pos += w
 			hasBroken = true
 			break mainLoop
 		case '\\':
-			chunks = append(chunks, css[startPos:pos])
+			chunks.Write(css[startPos:pos])
 			pos += w
 			if pos < length {
 				if css[pos] == '\n' { // Ignore escaped newlines
@@ -488,7 +499,7 @@ mainLoop:
 				} else {
 					var cs string
 					cs, pos = consumeEscape(css, pos)
-					chunks = append(chunks, cs)
+					chunks.WriteString(cs)
 				}
 			} // else: Escaped EOF, do nothing
 			startPos = pos
@@ -500,21 +511,22 @@ mainLoop:
 	}
 	var err error
 	if !hasBroken {
-		chunks = append(chunks, css[startPos:pos])
+		chunks.Write(css[startPos:pos])
 		err = errors.New("eof-in-string")
 	}
-	return strings.Join(chunks, ""), pos, true, err
+	return chunks.String(), pos, true, err
 }
 
 // Return (unescapedChar, newPos).
 // Assumes a valid escape: pos is just after '\' and not followed by '\n'.
-func consumeEscape(css string, pos int) (string, int) {
+func consumeEscape(css []byte, pos int) (string, int) {
 	// http://dev.w3.org/csswg/css-syntax/#consume-an-escaped-character
-	hexMatch := hexEscapeRe.FindStringSubmatch(css[pos:])
+	hexMatch := hexEscapeRe.FindSubmatch(css[pos:])
 	if len(hexMatch) >= 2 {
-		codepoint, err := strconv.ParseInt(hexMatch[1], 16, 0)
+		codepoint, err := strconv.ParseInt(string(hexMatch[1]), 16, 0)
 		if err != nil {
-			log.Fatalf("codepoint should be valid hexadecimal, got %s", hexMatch[0])
+			// the regexp ensure its a valid hex number
+			panic(fmt.Sprintf("codepoint should be valid hexadecimal, got %s", hexMatch[0]))
 		}
 		char := "\uFFFD"
 		if 0 < codepoint && codepoint <= unicode.MaxRune {
@@ -522,7 +534,7 @@ func consumeEscape(css string, pos int) (string, int) {
 		}
 		return char, pos + len(hexMatch[0])
 	} else if pos < len(css) {
-		r, w := utf8.DecodeRuneInString(css[pos:])
+		r, w := utf8.DecodeRune(css[pos:])
 		return string(r), pos + w
 	} else {
 		return "\uFFFD", pos

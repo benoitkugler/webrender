@@ -225,7 +225,7 @@ func buildSVGTree(svg io.Reader, baseURL string) (*svgContext, error) {
 		// Apply style
 		var normalAttr, importantAttr []declaration
 		if styleAttr := attrs["style"]; styleAttr != "" {
-			normalAttr, importantAttr = parseDeclarations(parser.Tokenize(styleAttr, false))
+			normalAttr, importantAttr = parseDeclarations(parser.Tokenize([]byte(styleAttr), false))
 		}
 		delete(attrs, "style") // not useful anymore
 

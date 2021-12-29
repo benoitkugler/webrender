@@ -11,6 +11,9 @@ import (
 )
 
 var (
+	// ColorKeywords maps color names to RGBA values
+	ColorKeywords = map[string]Color{}
+
 	hashRegexps = []hashRegexp{
 		{multiplier: 2., regexp: regexp.MustCompile("(?i)^([\\da-f])([\\da-f])([\\da-f])$")},
 		{multiplier: 1., regexp: regexp.MustCompile("(?i)^([\\da-f]{2})([\\da-f]{2})([\\da-f]{2})$")},
@@ -192,9 +195,6 @@ var (
 		"currentcolor": {Type: ColorCurrentColor},
 		"transparent":  {Type: ColorRGBA, RGBA: RGBA{R: 0., G: 0., B: 0., A: 0.}},
 	}
-
-	// RGBA namedtuples of (r, g, b, a) in 0..1 or a string marker
-	ColorKeywords = map[string]Color{}
 )
 
 func init() {

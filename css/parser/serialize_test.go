@@ -8,15 +8,15 @@ import (
 func TestSerialization(t *testing.T) {
 	inputs, resJson := loadJson("component_value_list.json")
 	runTest(t, inputs, resJson, func(css string) []Token {
-		parsed := Tokenize(css, true)
-		return Tokenize(Serialize(parsed), true)
+		parsed := tokenizeString(css, true)
+		return tokenizeString(Serialize(parsed), true)
 	})
 }
 
 func TestIdentifiers(t *testing.T) {
 	source := "\fezeze"
-	ref := Tokenize(source, false)
-	resToTest := Tokenize(Serialize(ref), false)
+	ref := tokenizeString(source, false)
+	resToTest := tokenizeString(Serialize(ref), false)
 	res, err := marshalJSON(resToTest)
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestSkip(t *testing.T) {
     `
 	noWs := ParseStylesheetBytes([]byte(source), false, true)
 	noComment := ParseStylesheetBytes([]byte(source), true, false)
-	default_ := Tokenize(source, false)
+	default_ := tokenizeString(source, false)
 	if Serialize(noWs) == source {
 		t.Fail()
 	}
@@ -56,7 +56,7 @@ func TestSkip(t *testing.T) {
 
 func TestCommentEof(t *testing.T) {
 	source := "/* foo "
-	parsed := Tokenize(source, false)
+	parsed := tokenizeString(source, false)
 	if Serialize(parsed) != "/* foo */" {
 		t.Fail()
 	}
@@ -64,7 +64,7 @@ func TestCommentEof(t *testing.T) {
 
 func TestParseDeclarationValueColor(t *testing.T) {
 	source := "color:#369"
-	declaration := ParseOneDeclaration2(source, false)
+	declaration := parseOneDeclarationString(source, false)
 	decl, ok := declaration.(Declaration)
 	if !ok || (ParseColor(decl.Value[0]).RGBA != RGBA{R: 0.2, G: 0.4, B: 0.6, A: 1}) {
 		t.Fail()
@@ -92,7 +92,7 @@ func TestSerializeDeclarations(t *testing.T) {
 
 func TestBackslashDelim(t *testing.T) {
 	source := "\\\nfoo"
-	tokens := Tokenize(source, false)
+	tokens := tokenizeString(source, false)
 	if len(tokens) != 3 {
 		t.Fatalf("bad token length : expected 3 got %d", len(tokens))
 	}
@@ -112,10 +112,10 @@ func TestBackslashDelim(t *testing.T) {
 func TestDataurl(t *testing.T) {
 	input := `@import "data:text/css;charset=utf-16le;base64,\
 				bABpAHsAYwBvAGwAbwByADoAcgBlAGQAfQA=";`
-	fmt.Println(Serialize(Tokenize(input, true)))
+	fmt.Println(Serialize(tokenizeString(input, true)))
 }
 
 func TestDebug(t *testing.T) {
-	ls := Tokenize(`.foo\:bar`, false)
+	ls := tokenizeString(`.foo\:bar`, false)
 	fmt.Println(Serialize(ls))
 }

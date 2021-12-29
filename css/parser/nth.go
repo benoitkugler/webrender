@@ -8,11 +8,6 @@ import (
 
 var nDashDigitRe = regexp.MustCompile("^n(-[0-9]+)$")
 
-func parseNthString(css string) *[2]int {
-	l := Tokenize(css, true)
-	return ParseNth(l)
-}
-
 // Parse `<An+B> <http://dev.w3.org/csswg/css-syntax-3/#anb>`_,
 // as found in `:nth-child()
 // <http://dev.w3.org/csswg/selectors/#nth-child-pseudo>`
@@ -98,7 +93,7 @@ func matchInt(s string) (bool, int) {
 	return false, 0
 }
 
-func parseB(tokens *tokenIterator, a int) *[2]int {
+func parseB(tokens *TokenIterator, a int) *[2]int {
 	token := nextSignificant(tokens)
 	if token == nil {
 		return &[2]int{a, 0}
@@ -115,7 +110,7 @@ func parseB(tokens *tokenIterator, a int) *[2]int {
 	return nil
 }
 
-func parseSignlessB(tokens *tokenIterator, a, bSign int) *[2]int {
+func parseSignlessB(tokens *TokenIterator, a, bSign int) *[2]int {
 	token := nextSignificant(tokens)
 	if number, ok := token.(NumberToken); ok && number.IsInteger && !strings.Contains("-+", number.Representation[0:1]) {
 		return parseEnd(tokens, a, bSign*number.IntValue())
@@ -123,7 +118,7 @@ func parseSignlessB(tokens *tokenIterator, a, bSign int) *[2]int {
 	return nil
 }
 
-func parseEnd(tokens *tokenIterator, a, b int) *[2]int {
+func parseEnd(tokens *TokenIterator, a, b int) *[2]int {
 	if nextSignificant(tokens) == nil {
 		return &[2]int{a, b}
 	}

@@ -8,23 +8,23 @@ import (
 
 // ---------------- Parsing ----------------------------------------------------
 
-type tokenIterator struct {
+type TokenIterator struct {
 	tokens []Token
 	index  int
 }
 
-func NewTokenIterator(tokens []Token) *tokenIterator {
-	return &tokenIterator{
+func NewTokenIterator(tokens []Token) *TokenIterator {
+	return &TokenIterator{
 		tokens: tokens,
 	}
 }
 
-func (it tokenIterator) HasNext() bool {
+func (it TokenIterator) HasNext() bool {
 	return it.index < len(it.tokens)
 }
 
 // Next returns the next token or nil at the end
-func (it *tokenIterator) Next() (t Token) {
+func (it *TokenIterator) Next() (t Token) {
 	if it.HasNext() {
 		t = it.tokens[it.index]
 		it.index += 1
@@ -36,7 +36,7 @@ func (it *tokenIterator) Next() (t Token) {
 //     :param tokens: An *iterator* yielding :term:`component values`.
 //     :returns: A :term:`component value`, || :obj:`None`.
 //
-func nextSignificant(tokens *tokenIterator) Token {
+func nextSignificant(tokens *TokenIterator) Token {
 	for tokens.HasNext() {
 		token := tokens.Next()
 		switch token.(type) {
@@ -67,11 +67,11 @@ func ParseOneComponentValue(input []Token) Token {
 // If `skipComments`,  ignore all CSS comments.
 //   skipComments = false
 func parseOneComponentValueString(css string, skipComments bool) Token {
-	l := Tokenize(css, skipComments)
+	l := tokenizeString(css, skipComments)
 	return ParseOneComponentValue(l)
 }
 
-// Parse a single :diagram:`declaration`.
+// Parse a single `declaration`.
 // This is used e.g. for a declaration in an `@supports
 // <http://dev.w3.org/csswg/css-conditional/#at-supports>`_ test.
 // Any whitespace or comment before the ``:`` colon is dropped.
@@ -84,10 +84,10 @@ func ParseOneDeclaration(input []Token) Token {
 	return parseDeclaration(firstToken, tokens)
 }
 
-//     If  `skipComments`, ignore all CSS comments.
+// If  `skipComments`, ignore all CSS comments.
 // skipComments=false
-func ParseOneDeclaration2(css string, skipComments bool) Token {
-	l := Tokenize(css, skipComments)
+func parseOneDeclarationString(css string, skipComments bool) Token {
+	l := tokenizeString(css, skipComments)
 	return ParseOneDeclaration(l)
 }
 
@@ -95,7 +95,7 @@ func ParseOneDeclaration2(css string, skipComments bool) Token {
 //     Consume :obj:`tokens` until the end of the declaration or the first error.
 //     :param firstToken: The first :term:`component value` of the rule.
 //     :param tokens: An *iterator* yielding :term:`component values`.
-func parseDeclaration(firstToken Token, tokens *tokenIterator) Token {
+func parseDeclaration(firstToken Token, tokens *TokenIterator) Token {
 	name, ok := firstToken.(IdentToken)
 	if !ok {
 		return ParseError{
@@ -160,7 +160,7 @@ func parseDeclaration(firstToken Token, tokens *tokenIterator) Token {
 }
 
 // Like :func:`parseDeclaration`, but stop at the first ``;``.
-func consumeDeclarationInList(firstToken Token, tokens *tokenIterator) Token {
+func consumeDeclarationInList(firstToken Token, tokens *TokenIterator) Token {
 	var otherDeclarationTokens []Token
 	for tokens.HasNext() {
 		token := tokens.Next()
@@ -172,7 +172,7 @@ func consumeDeclarationInList(firstToken Token, tokens *tokenIterator) Token {
 	return parseDeclaration(firstToken, NewTokenIterator(otherDeclarationTokens))
 }
 
-// Parse a :diagram:`declaration list` (which may also contain at-rules).
+// Parse a `declaration list` (which may also contain at-rules).
 // This is used e.g. for the `QualifiedRule.content`
 // of a style rule or ``@page`` rule, or for the ``style`` attribute of an HTML element.
 // In contexts that don’t expect any at-rule, all :class:`AtRule` objects should simply be rejected as invalid.
@@ -212,16 +212,13 @@ func ParseDeclarationList(input []Token, skipComments, skipWhitespace bool) []To
 
 // ParseDeclarationListString tokenizes `css` and calls `ParseDeclarationList`.
 func ParseDeclarationListString(css string, skipComments, skipWhitespace bool) []Token {
-	l := Tokenize(css, skipComments)
+	l := tokenizeString(css, skipComments)
 	return ParseDeclarationList(l, skipComments, skipWhitespace)
 }
 
-// Parse a single :diagram:`qualified rule` or :diagram:`at-rule`.
-// This would be used e.g. by `insertRule()
-// <http://dev.w3.org/csswg/cssom/#dom-cssstylesheet-insertrule>`
-// in an implementation of CSSOM.
+// Parse a single `qualified rule` or `at-rule`.
 // Any whitespace or comment before or after the rule is dropped.
-func ParseOneRule(input []Token) Token {
+func parseOneRule(input []Token) Token {
 	tokens := NewTokenIterator(input)
 	first := nextSignificant(tokens)
 	if first == nil {
@@ -239,15 +236,15 @@ func ParseOneRule(input []Token) Token {
 	return rule
 }
 
-// Parse a non-top-level :diagram:`rule list`.
+// Parse a non-top-level `rule list`.
 // This is used for parsing the `AtRule.content`
 // of nested rules like ``@media``.
 // This differs from :func:`ParseStylesheet` in that
 // top-level ``<!--`` and ``-->`` tokens are not ignored.
-// :param skipComments:
+// skipComments:
 //     Ignore CSS comments at the top-level of the list.
 //     If the input is a string, ignore all comments.
-// :param skipWhitespace:
+// skipWhitespace:
 //     Ignore whitespace at the top-level of the list.
 //     Whitespace is still preserved
 //     in the `QualifiedRule.prelude`
@@ -276,7 +273,7 @@ func ParseRuleList(input []Token, skipComments, skipWhitespace bool) []Token {
 
 // ParseRuleListString tokenizes `css` and calls `ParseRuleListString`.
 func ParseRuleListString(css string, skipComments, skipWhitespace bool) []Token {
-	l := Tokenize(css, skipComments)
+	l := tokenizeString(css, skipComments)
 	return ParseRuleList(l, skipComments, skipWhitespace)
 }
 
@@ -317,7 +314,7 @@ func ParseStylesheet(input []Token, skipComments, skipWhitespace bool) []Token {
 
 // ParseStylesheetBytes tokenizes `input` and calls `ParseStylesheet`.
 func ParseStylesheetBytes(input []byte, skipComments, skipWhitespace bool) []Token {
-	l := Tokenize(string(input), skipComments)
+	l := Tokenize(input, skipComments)
 	return ParseStylesheet(l, skipComments, skipWhitespace)
 }
 
@@ -325,7 +322,7 @@ func ParseStylesheetBytes(input []byte, skipComments, skipWhitespace bool) []Tok
 // Consume just enough of :obj:`tokens` for this rule.
 // :param firstToken: The first :term:`component value` of the rule.
 // :param tokens: An *iterator* yielding :term:`component values`.
-func consumeRule(_firstToken Token, tokens *tokenIterator) Token {
+func consumeRule(_firstToken Token, tokens *TokenIterator) Token {
 	var (
 		prelude []Token
 		block   CurlyBracketsBlock
@@ -366,7 +363,7 @@ func consumeRule(_firstToken Token, tokens *tokenIterator) Token {
 // Consume just enough of :obj:`tokens` for this rule.
 // :param atKeyword: The :class:`AtKeywordToken` object starting this rule.
 // :param tokens: An *iterator* yielding :term:`component values`.
-func consumeAtRule(atKeyword AtKeywordToken, tokens *tokenIterator) AtRule {
+func consumeAtRule(atKeyword AtKeywordToken, tokens *TokenIterator) AtRule {
 	var (
 		prelude []Token
 		content *[]Token

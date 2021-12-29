@@ -65,7 +65,7 @@ func runTestOneToken(t *testing.T, css, resJson []string, fn func(input string) 
 func TestComponentValueList(t *testing.T) {
 	inputs, resJson := loadJson("component_value_list.json")
 	runTest(t, inputs, resJson, func(s string) []Token {
-		return Tokenize(s, true)
+		return tokenizeString(s, true)
 	})
 }
 
@@ -86,7 +86,7 @@ func TestDeclarationList(t *testing.T) {
 func TestOneDeclaration(t *testing.T) {
 	inputs, resJson := loadJson("one_declaration.json")
 	runTestOneToken(t, inputs, resJson, func(s string) jsonisable {
-		return ParseOneDeclaration2(s, true)
+		return parseOneDeclarationString(s, true)
 	})
 }
 
@@ -107,8 +107,8 @@ func TestRuleList(t *testing.T) {
 func TestOneRule(t *testing.T) {
 	inputs, resJson := loadJson("one_rule.json")
 	runTestOneToken(t, inputs, resJson, func(input string) jsonisable {
-		l := Tokenize(input, true)
-		return ParseOneRule(l)
+		l := tokenizeString(input, true)
+		return parseOneRule(l)
 	})
 }
 
@@ -119,11 +119,16 @@ func TestColor3(t *testing.T) {
 	})
 }
 
+func parseNthString(css string) *[2]int {
+	l := tokenizeString(css, true)
+	return ParseNth(l)
+}
+
 func TestNth(t *testing.T) {
 	inputs, resJson := loadJson("An+B.json")
 	runTestOneToken(t, inputs, resJson, func(s string) jsonisable {
 		l := parseNthString(s)
-		if len(l) == 2 {
+		if l != nil {
 			return jsonList{myInt(l[0]), myInt(l[1])}
 		}
 		var out jsonList
