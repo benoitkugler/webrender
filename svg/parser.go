@@ -184,25 +184,37 @@ func (v Value) Resolve(fontSize, percentageReference Fl) Fl {
 // values are appended to points, which is returned
 func parsePoints(dataPoints string, points []Fl) ([]Fl, error) {
 	lastIndex := -1
-	lr := ' '
+	previousRune := ' '
+	seenDot := false
 	for i, r := range dataPoints {
-		if !unicode.IsNumber(r) && r != '.' && !(r == '-' && lr == 'e') && r != 'e' {
+		if !unicode.IsNumber(r) && (r != '.' || seenDot) && !(r == '-' && previousRune == 'e') && r != 'e' {
 			if lastIndex != -1 {
 				value, err := strconv.ParseFloat(dataPoints[lastIndex:i], 32)
 				if err != nil {
 					return nil, err
 				}
 				points = append(points, Fl(value))
+
+				if r != '.' {
+					seenDot = false // reset the . tracking
+				}
 			}
-			if r == '-' {
+
+			if r == '-' || r == '.' {
 				lastIndex = i
 			} else {
 				lastIndex = -1
 			}
-		} else if lastIndex == -1 {
-			lastIndex = i
+		} else {
+			if lastIndex == -1 {
+				lastIndex = i
+			}
+			if r == '.' {
+				seenDot = true
+			}
 		}
-		lr = r
+
+		previousRune = r
 	}
 	if lastIndex != -1 && lastIndex != len(dataPoints) {
 		value, err := strconv.ParseFloat(dataPoints[lastIndex:], 32)
