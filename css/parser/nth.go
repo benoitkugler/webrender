@@ -8,20 +8,20 @@ import (
 
 var nDashDigitRe = regexp.MustCompile("^n(-[0-9]+)$")
 
-func ParseNth2(css string) []int {
+func parseNthString(css string) *[2]int {
 	l := Tokenize(css, true)
 	return ParseNth(l)
 }
 
 // Parse `<An+B> <http://dev.w3.org/csswg/css-syntax-3/#anb>`_,
-//     as found in `:nth-child()
-//     <http://dev.w3.org/csswg/selectors/#nth-child-pseudo>`
-//     and related Selector pseudo-classes.
-//     Although tinycss2 does not include a full Selector parser,
-//     this bit of syntax is included as it is particularly tricky to define
-//     on top of a CSS tokenizer.
-//     Returns  ``(a, b)`` slice of integers or nil
-func ParseNth(input []Token) []int {
+// as found in `:nth-child()
+// <http://dev.w3.org/csswg/selectors/#nth-child-pseudo>`
+// and related Selector pseudo-classes.
+// Although tinycss2 does not include a full Selector parser,
+// this bit of syntax is included as it is particularly tricky to define
+// on top of a CSS tokenizer.
+// Returns  [a, b] or nil
+func ParseNth(input []Token) *[2]int {
 	tokens := NewTokenIterator(input)
 	token_ := nextSignificant(tokens)
 	if token_ == nil {
@@ -98,10 +98,10 @@ func matchInt(s string) (bool, int) {
 	return false, 0
 }
 
-func parseB(tokens *tokenIterator, a int) []int {
+func parseB(tokens *tokenIterator, a int) *[2]int {
 	token := nextSignificant(tokens)
 	if token == nil {
-		return []int{a, 0}
+		return &[2]int{a, 0}
 	}
 	lit, ok := token.(LiteralToken)
 	if ok && lit.Value == "+" {
@@ -115,7 +115,7 @@ func parseB(tokens *tokenIterator, a int) []int {
 	return nil
 }
 
-func parseSignlessB(tokens *tokenIterator, a, bSign int) []int {
+func parseSignlessB(tokens *tokenIterator, a, bSign int) *[2]int {
 	token := nextSignificant(tokens)
 	if number, ok := token.(NumberToken); ok && number.IsInteger && !strings.Contains("-+", number.Representation[0:1]) {
 		return parseEnd(tokens, a, bSign*number.IntValue())
@@ -123,9 +123,9 @@ func parseSignlessB(tokens *tokenIterator, a, bSign int) []int {
 	return nil
 }
 
-func parseEnd(tokens *tokenIterator, a, b int) []int {
+func parseEnd(tokens *tokenIterator, a, b int) *[2]int {
 	if nextSignificant(tokens) == nil {
-		return []int{a, b}
+		return &[2]int{a, b}
 	}
 	return nil
 }

@@ -784,8 +784,8 @@ var selectorTests = []selectorTest{
 	},
 }
 
-func setup(selector, testHTML string) (Selector, *html.Node, error) {
-	s, err := Compile(selector)
+func setup(selector, testHTML string) (SelectorGroup, *html.Node, error) {
+	s, err := ParseGroup(selector)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error compiling %q: %s", selector, err)
 	}
@@ -805,7 +805,7 @@ func TestSelectors(t *testing.T) {
 			continue
 		}
 
-		matches := s.MatchAll(doc)
+		matches := MatchAll(doc, s)
 		if len(matches) != len(test.results) {
 			t.Errorf("selector %s wanted %d elements, got %d instead", test.selector, len(test.results), len(matches))
 			continue
@@ -818,7 +818,7 @@ func TestSelectors(t *testing.T) {
 			}
 		}
 
-		firstMatch := s.MatchFirst(doc)
+		firstMatch := MatchFirst(doc, s)
 		if len(test.results) == 0 {
 			if firstMatch != nil {
 				t.Errorf("MatchFirst: selector %s want nil, got %s", test.selector, nodeString(firstMatch))
@@ -878,7 +878,7 @@ func TestMatchers(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(matches, Selector(s.Match).Filter(matches)) {
+		if !reflect.DeepEqual(matches, Filter(matches, s)) {
 			t.Fatalf("inconsistent Filter result")
 		}
 	}
@@ -886,8 +886,8 @@ func TestMatchers(t *testing.T) {
 
 type testPseudo struct {
 	HTML, selector string
-	spec           Specificity
 	pseudo         string
+	spec           Specificity
 }
 
 var testsPseudo = []testPseudo{
@@ -925,14 +925,14 @@ var testsPseudo = []testPseudo{
 
 func TestPseudoElement(t *testing.T) {
 	for _, test := range testsPseudo {
-		s, err := ParseWithPseudoElement(test.selector)
+		s, err := Parse(test.selector)
 		if err != nil {
 			t.Fatalf("error compiling %q: %s", test.selector, err)
 		}
 
-		if _, err = Parse(test.selector); err == nil {
-			t.Fatalf("selector %s with pseudo-element should not compile", test.selector)
-		}
+		// if _, err = Parse(test.selector); err == nil {
+		// 	t.Fatalf("selector %s with pseudo-element should not compile", test.selector)
+		// }
 
 		doc, err := html.Parse(strings.NewReader(test.HTML))
 		if err != nil {
@@ -975,7 +975,7 @@ func TestShakespeare(t *testing.T) {
 		if err != nil {
 			t.Errorf("invalid selector %s", selector)
 		}
-		if l := len(Selector(sel.Match).MatchAll(body)); l != expected {
+		if l := len(MatchAll(body, sel)); l != expected {
 			t.Errorf("%s -> expected %d, got %d", selector, expected, l)
 		}
 	}

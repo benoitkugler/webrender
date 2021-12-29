@@ -122,7 +122,7 @@ func TestColor3(t *testing.T) {
 func TestNth(t *testing.T) {
 	inputs, resJson := loadJson("An+B.json")
 	runTestOneToken(t, inputs, resJson, func(s string) jsonisable {
-		l := ParseNth2(s)
+		l := parseNthString(s)
 		if len(l) == 2 {
 			return jsonList{myInt(l[0]), myInt(l[1])}
 		}

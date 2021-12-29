@@ -49,7 +49,7 @@ var dom = MustParseHTML(doc)
 func BenchmarkMatchAll(b *testing.B) {
 	var matches []*html.Node
 	for i := 0; i < b.N; i++ {
-		matches = selector.MatchAll(dom)
+		matches = MatchAll(dom, selector)
 	}
 	_ = matches
 }

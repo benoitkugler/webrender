@@ -28,25 +28,9 @@ type Sel interface {
 	PseudoElement() string
 }
 
-// Parse parses a selector. Use `ParseWithPseudoElement`
-// if you need support for pseudo-elements.
-func Parse(sel string) (Sel, error) {
-	p := &parser{s: sel}
-	compiled, err := p.parseSelector()
-	if err != nil {
-		return nil, err
-	}
-
-	if p.i < len(sel) {
-		return nil, fmt.Errorf("parsing %q: %d bytes left over", sel, len(sel)-p.i)
-	}
-
-	return compiled, nil
-}
-
-// ParseWithPseudoElement parses a single selector,
+// Parse parses a single selector,
 // with support for pseudo-element.
-func ParseWithPseudoElement(sel string) (Sel, error) {
+func Parse(sel string) (Sel, error) {
 	p := &parser{s: sel, acceptPseudoElements: true}
 	compiled, err := p.parseSelector()
 	if err != nil {
@@ -61,25 +45,8 @@ func ParseWithPseudoElement(sel string) (Sel, error) {
 }
 
 // ParseGroup parses a selector, or a group of selectors separated by commas.
-// Use `ParseGroupWithPseudoElements`
-// if you need support for pseudo-elements.
-func ParseGroup(sel string) (SelectorGroup, error) {
-	p := &parser{s: sel}
-	compiled, err := p.parseSelectorGroup()
-	if err != nil {
-		return nil, err
-	}
-
-	if p.i < len(sel) {
-		return nil, fmt.Errorf("parsing %q: %d bytes left over", sel, len(sel)-p.i)
-	}
-
-	return compiled, nil
-}
-
-// ParseGroupWithPseudoElements parses a selector, or a group of selectors separated by commas.
 // It supports pseudo-elements.
-func ParseGroupWithPseudoElements(sel string) (SelectorGroup, error) {
+func ParseGroup(sel string) (SelectorGroup, error) {
 	p := &parser{s: sel, acceptPseudoElements: true}
 	compiled, err := p.parseSelectorGroup()
 	if err != nil {
@@ -93,26 +60,9 @@ func ParseGroupWithPseudoElements(sel string) (SelectorGroup, error) {
 	return compiled, nil
 }
 
-// A Selector is a function which tells whether a node matches or not.
-//
-// This type is maintained for compatibility; I recommend using the newer and
-// more idiomatic interfaces Sel and Matcher.
-type Selector func(*html.Node) bool
-
-// Compile parses a selector and returns, if successful, a Selector object
-// that can be used to match against html.Node objects.
-func Compile(sel string) (Selector, error) {
+// MustCompile is like ParseGroup, but panics instead of returning an error.
+func MustCompile(sel string) SelectorGroup {
 	compiled, err := ParseGroup(sel)
-	if err != nil {
-		return nil, err
-	}
-
-	return Selector(compiled.Match), nil
-}
-
-// MustCompile is like Compile, but panics instead of returning an error.
-func MustCompile(sel string) Selector {
-	compiled, err := Compile(sel)
 	if err != nil {
 		panic(err)
 	}
@@ -121,17 +71,17 @@ func MustCompile(sel string) Selector {
 
 // MatchAll returns a slice of the nodes that match the selector,
 // from n and its children.
-func (s Selector) MatchAll(n *html.Node) []*html.Node {
-	return s.matchAllInto(n, nil)
+func MatchAll(n *html.Node, m Matcher) []*html.Node {
+	return matchAllInto(n, nil, m)
 }
 
-func (s Selector) matchAllInto(n *html.Node, storage []*html.Node) []*html.Node {
-	if s(n) {
+func matchAllInto(n *html.Node, storage []*html.Node, m Matcher) []*html.Node {
+	if m.Match(n) {
 		storage = append(storage, n)
 	}
 
 	for child := n.FirstChild; child != nil; child = child.NextSibling {
-		storage = s.matchAllInto(child, storage)
+		storage = matchAllInto(child, storage, m)
 	}
 
 	return storage
@@ -154,19 +104,14 @@ func QueryAll(n *html.Node, m Matcher) []*html.Node {
 	return queryInto(n, m, nil)
 }
 
-// Match returns true if the node matches the selector.
-func (s Selector) Match(n *html.Node) bool {
-	return s(n)
-}
-
 // MatchFirst returns the first node that matches s, from n and its children.
-func (s Selector) MatchFirst(n *html.Node) *html.Node {
-	if s.Match(n) {
+func MatchFirst(n *html.Node, m Matcher) *html.Node {
+	if m.Match(n) {
 		return n
 	}
 
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		m := s.MatchFirst(c)
+		m := MatchFirst(c, m)
 		if m != nil {
 			return m
 		}
@@ -187,16 +132,6 @@ func Query(n *html.Node, m Matcher) *html.Node {
 	}
 
 	return nil
-}
-
-// Filter returns the nodes in nodes that match the selector.
-func (s Selector) Filter(nodes []*html.Node) (result []*html.Node) {
-	for _, n := range nodes {
-		if s(n) {
-			result = append(result, n)
-		}
-	}
-	return result
 }
 
 // Filter returns the nodes that match m.
@@ -275,8 +210,8 @@ func (c idSelector) PseudoElement() string {
 }
 
 type attrSelector struct {
-	key, val, operation string
 	regexp              *regexp.Regexp
+	key, val, operation string
 	ignoreCase          bool
 }
 
@@ -490,8 +425,8 @@ func (c neverMatchSelector) PseudoElement() string {
 }
 
 type compoundSelector struct {
-	selectors     []Sel
 	pseudoElement string
+	selectors     []Sel
 }
 
 // Matches elements if each sub-selectors matches.
@@ -526,8 +461,8 @@ func (c compoundSelector) PseudoElement() string {
 
 type combinedSelector struct {
 	first      Sel
-	combinator byte
 	second     Sel
+	combinator byte
 }
 
 func (t combinedSelector) Match(n *html.Node) bool {

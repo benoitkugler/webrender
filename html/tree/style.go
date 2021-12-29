@@ -547,7 +547,7 @@ func pageMatchT(selectorPageType pageSelector, pageType utils.PageElement) bool 
 func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, urlFetcher utils.UrlFetcher, baseUrl string,
 	fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, pageRules *[]PageRule) (out []CSS) {
 	sel := selector.MustCompile("style, link")
-	for _, _element := range sel.MatchAll((*html.Node)(wrapperElement)) {
+	for _, _element := range selector.MatchAll((*html.Node)(wrapperElement), sel) {
 		element := (*utils.HTMLNode)(_element)
 		mimeType := element.Get("type")
 		if mimeType == "" {
@@ -1138,7 +1138,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 			declarations := validation.PreprocessDeclarations(baseUrl, parser.ParseDeclarationList(*rule.Content, false, false))
 			if len(declarations) > 0 {
 				prelude := parser.Serialize(*rule.Prelude)
-				selector, err := selector.ParseGroupWithPseudoElements(prelude)
+				selector, err := selector.ParseGroup(prelude)
 				if err != nil {
 					log.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
 					continue

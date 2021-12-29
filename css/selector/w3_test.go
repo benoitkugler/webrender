@@ -21,7 +21,7 @@ func TestInvalidSelectors(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, test := range tests {
-		_, err := ParseGroupWithPseudoElements(test.Selector)
+		_, err := ParseGroup(test.Selector)
 		if err == nil {
 			t.Fatalf("%s -> expected error on invalid selector : %s", test.Name, test.Selector)
 		}
@@ -77,7 +77,7 @@ func TestValidSelectors(t *testing.T) {
 			t.Logf("skiped test %s", test.Name)
 			continue
 		}
-		sels, err := ParseGroupWithPseudoElements(test.Selector)
+		sels, err := ParseGroup(test.Selector)
 		if err != nil {
 			t.Fatalf("%s -> unable to parse valid selector : %s : %s", test.Name, test.Selector, err)
 		}
@@ -86,7 +86,7 @@ func TestValidSelectors(t *testing.T) {
 			if sel.PseudoElement() != "" {
 				continue // pseudo element doesn't count as a match in this test since they are not part of the document
 			}
-			for _, node := range Selector(sel.Match).MatchAll(doc) {
+			for _, node := range MatchAll(doc, sel) {
 				matchingNodes[node] = true
 			}
 		}

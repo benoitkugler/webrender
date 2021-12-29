@@ -118,7 +118,7 @@ func parseStylesheets(stylesheets [][]byte, url string) (matcher, matcher) {
 		for _, rule := range findStylesheetsRules(stylesheet, url) {
 			normalDeclarations, importantDeclarations := parseDeclarations(*rule.Content)
 			prelude := parser.Serialize(*rule.Prelude)
-			selector, err := selector.ParseGroupWithPseudoElements(prelude)
+			selector, err := selector.ParseGroup(prelude)
 			if err != nil {
 				log.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
 				continue

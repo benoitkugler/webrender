@@ -21,13 +21,13 @@ func TestSerialize(t *testing.T) {
 	}
 
 	for _, test := range testSer {
-		s, err := ParseGroupWithPseudoElements(test)
+		s, err := ParseGroup(test)
 		if err != nil {
 			t.Fatalf("error compiling %q: %s", test, err)
 		}
 
 		serialized := s.String()
-		s2, err := ParseGroupWithPseudoElements(serialized)
+		s2, err := ParseGroup(serialized)
 		if err != nil {
 			t.Errorf("error compiling %q: %s %T (original : %s)", serialized, err, s, test)
 		}
