@@ -96,9 +96,6 @@ func FetchSource(input ContentInput, baseUrl string, urlFetcher UrlFetcher,
 			if err != nil {
 				return Source{}, err
 			}
-			if err = result.Content.Close(); err != nil {
-				return Source{}, err
-			}
 			return Source{Content: decoded, BaseUrl: baseUrl}, nil
 		}
 	case InputReader:

@@ -17,6 +17,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/benoitkugler/webrender/css/counters"
 	"github.com/benoitkugler/webrender/html/layout/text"
@@ -604,6 +605,19 @@ func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, url
 	return out
 }
 
+// Return True if all characters in S are digits and there is at least one character in S, False otherwise.
+func isDigit(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
 // Yield ``specificity, (Element, declaration, BaseUrl)`` rules.
 // Rules from "style" attribute are returned with specificity
 // ``(1, 0, 0)``.
@@ -711,7 +725,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 			}
 			if element.Get("cellpadding") != "" {
 				cellpadding := element.Get("cellpadding")
-				if utils.IsDigit(cellpadding) {
+				if isDigit(cellpadding) {
 					cellpadding += "px"
 				}
 				// TODO: don't match subtables cells
@@ -726,7 +740,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 			}
 			if element.Get("hspace") != "" {
 				hspace := element.Get("hspace")
-				if utils.IsDigit(hspace) {
+				if isDigit(hspace) {
 					hspace += "px"
 				}
 				out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element,
@@ -734,7 +748,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 			}
 			if element.Get("vspace") != "" {
 				vspace := element.Get("vspace")
-				if utils.IsDigit(vspace) {
+				if isDigit(vspace) {
 					vspace += "px"
 				}
 				out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element,
@@ -742,14 +756,14 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 			}
 			if element.Get("width") != "" {
 				styleAttribute = fmt.Sprintf("width:%s", element.Get("width"))
-				if utils.IsDigit(element.Get("width")) {
+				if isDigit(element.Get("width")) {
 					styleAttribute += "px"
 				}
 				out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
 			}
 			if element.Get("height") != "" {
 				styleAttribute = fmt.Sprintf("height:%s", element.Get("height"))
-				if utils.IsDigit(element.Get("height")) {
+				if isDigit(element.Get("height")) {
 					styleAttribute += "px"
 				}
 				out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
@@ -787,7 +801,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 			if element.DataAtom == atom.Tr || element.DataAtom == atom.Td || element.DataAtom == atom.Th {
 				if element.Get("height") != "" {
 					styleAttribute = fmt.Sprintf("height:%s", element.Get("height"))
-					if utils.IsDigit(element.Get("height")) {
+					if isDigit(element.Get("height")) {
 						styleAttribute += "px"
 					}
 					out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
@@ -795,7 +809,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				if element.DataAtom == atom.Td || element.DataAtom == atom.Th {
 					if element.Get("width") != "" {
 						styleAttribute = fmt.Sprintf("width:%s", element.Get("width"))
-						if utils.IsDigit(element.Get("width")) {
+						if isDigit(element.Get("width")) {
 							styleAttribute += "px"
 						}
 						out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
@@ -811,7 +825,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 		case atom.Col:
 			if element.Get("width") != "" {
 				styleAttribute = fmt.Sprintf("width:%s", element.Get("width"))
-				if utils.IsDigit(element.Get("width")) {
+				if isDigit(element.Get("width")) {
 					styleAttribute += "px"
 				}
 				out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
@@ -837,7 +851,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 
 			if element.Get("width") != "" {
 				styleAttribute = fmt.Sprintf("width:%s", element.Get("width"))
-				if utils.IsDigit(element.Get("width")) {
+				if isDigit(element.Get("width")) {
 					styleAttribute += "px"
 				}
 				out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
@@ -854,7 +868,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				}
 				if element.Get("hspace") != "" {
 					hspace := element.Get("hspace")
-					if utils.IsDigit(hspace) {
+					if isDigit(hspace) {
 						hspace += "px"
 					}
 					out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element,
@@ -862,7 +876,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				}
 				if element.Get("vspace") != "" {
 					vspace := element.Get("vspace")
-					if utils.IsDigit(vspace) {
+					if isDigit(vspace) {
 						vspace += "px"
 					}
 					out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element,
@@ -872,14 +886,14 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				// lot of W3C tests rely on this attribute being applied to img
 				if element.Get("width") != "" {
 					styleAttribute = fmt.Sprintf("width:%s", element.Get("width"))
-					if utils.IsDigit(element.Get("width")) {
+					if isDigit(element.Get("width")) {
 						styleAttribute += "px"
 					}
 					out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})
 				}
 				if element.Get("height") != "" {
 					styleAttribute = fmt.Sprintf("height:%s", element.Get("height"))
-					if utils.IsDigit(element.Get("height")) {
+					if isDigit(element.Get("height")) {
 						styleAttribute += "px"
 					}
 					out = append(out, styleAttrSpec{specificity: specificity, styleAttr: checkStyleAttribute(element, styleAttribute)})

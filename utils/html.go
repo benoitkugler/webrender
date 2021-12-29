@@ -78,14 +78,14 @@ func (h HTMLNode) HasAttr(name string) bool {
 // Iter return an iterator over the html tree.
 // If tags are given, only the node matching them
 // will be returned by the iterator.
-func (h *HTMLNode) Iter(tags ...atom.Atom) HtmlIterator {
+func (h *HTMLNode) Iter(tags ...atom.Atom) HTMLIterator {
 	return NewHtmlIterator((*html.Node)(h), tags...)
 }
 
 // ------------------------------------ html walk utilities ------------------------------------
 
-// HtmlIterator simplify the (depth first) walk on an HTML tree.
-type HtmlIterator struct {
+// HTMLIterator simplify the (depth first) walk on an HTML tree.
+type HTMLIterator struct {
 	tagsMap map[atom.Atom]bool // if nil, means all
 	result  *html.Node         // valid element to return
 	toVisit []*html.Node
@@ -93,23 +93,24 @@ type HtmlIterator struct {
 
 // NewHtmlIterator use `root` as start point.
 // If `tags` is given, only node matching one of them are returned.
-func NewHtmlIterator(root *html.Node, tags ...atom.Atom) HtmlIterator {
+func NewHtmlIterator(root *html.Node, tags ...atom.Atom) HTMLIterator {
 	tagsMap := make(map[atom.Atom]bool)
 	for _, tag := range tags {
 		tagsMap[tag] = true
 	}
-	return HtmlIterator{toVisit: []*html.Node{root}, tagsMap: tagsMap}
+	return HTMLIterator{toVisit: []*html.Node{root}, tagsMap: tagsMap}
 }
 
 // pop the stack
-func (h *HtmlIterator) popNode() *html.Node {
+func (h *HTMLIterator) popNode() *html.Node {
 	L := len(h.toVisit) - 1
 	next := h.toVisit[L]
 	h.toVisit = h.toVisit[:L]
 	return next
 }
 
-func (h *HtmlIterator) HasNext() bool {
+// HasNext returns true if a node still has to be visited.
+func (h *HTMLIterator) HasNext() bool {
 	if h.result != nil { // empty the stack
 		return true
 	}
@@ -135,7 +136,7 @@ func (h *HtmlIterator) HasNext() bool {
 	return h.HasNext()
 }
 
-func (h *HtmlIterator) Next() *HTMLNode {
+func (h *HTMLIterator) Next() *HTMLNode {
 	out := (*HTMLNode)(h.result)
 	h.result = nil
 	return out

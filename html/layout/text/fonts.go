@@ -130,11 +130,11 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 		return "", fmt.Errorf("Failed to load font at: %s", err)
 	}
 	fontFilename := escapeXML(url.String)
+
 	content, err := ioutil.ReadAll(result.Content)
 	if err != nil {
 		return "", fmt.Errorf("Failed to load font at %s", url.String)
 	}
-	result.Content.Close()
 
 	faces, format := fc.ReadFontFile(bytes.NewReader(content))
 	if format == "" {

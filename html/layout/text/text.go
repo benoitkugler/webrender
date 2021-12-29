@@ -48,7 +48,7 @@ func CreateLayout(text string, style pr.StyleAccessor, context TextLayoutContext
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
 		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
 		// signed integer. Treat bigger values same as None: unconstrained width.
-		layout.Layout.SetWidth(pango.Unit(utils.PangoUnitsFromFloat(utils.Maxs(0, pr.Fl(maxWidth)))))
+		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(utils.Maxs(0, pr.Fl(maxWidth)))))
 	}
 
 	layout.SetText(text)
@@ -337,7 +337,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 		// Is it really OK to remove hyphenation for word-break ?
 		hyphenated = false
 		layout.SetText(string(text))
-		layout.Layout.SetWidth(pango.Unit(utils.PangoUnitsFromFloat(maxWidthV)))
+		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(maxWidthV)))
 		layout.Layout.SetWrap(pango.WRAP_CHAR)
 		firstLine, index = layout.GetFirstLine()
 		resumeIndex = index
@@ -390,7 +390,7 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 	}
 
 	width, height := lineSize(firstLine, style.GetLetterSpacing())
-	baseline := utils.PangoUnitsToFloat(layout.Layout.GetBaseline())
+	baseline := PangoUnitsToFloat(layout.Layout.GetBaseline())
 	return Splitted{Layout: layout, Length: length, ResumeAt: resumeAt, Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline)}
 }
 
@@ -537,7 +537,7 @@ func ExRatio(style pr.ElementStyle, context TextLayoutContext) pr.Float {
 
 	var inkExtents pango.Rectangle
 	line.GetExtents(&inkExtents, nil)
-	heightAboveBaseline := utils.PangoUnitsToFloat(inkExtents.Y)
+	heightAboveBaseline := PangoUnitsToFloat(inkExtents.Y)
 
 	// Zero means some kind of failure, fallback is 0.5.
 	// We round to try keeping exact values that were altered by Pango.

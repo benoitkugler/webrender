@@ -139,7 +139,7 @@ type rasterImage struct {
 	optimizeSize    bool
 }
 
-func newRasterImage(imageConfig image.Config, content io.ReadCloser, mimeType string, id int, optimizeSize bool) rasterImage {
+func newRasterImage(imageConfig image.Config, content io.Reader, mimeType string, id int, optimizeSize bool) rasterImage {
 	self := rasterImage{}
 	self.optimizeSize = optimizeSize
 	self.image.Content = content

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"testing"
 
 	"golang.org/x/net/html/charset"
@@ -226,10 +225,9 @@ var labels = map[string]string{
 
 func TestEncoding(t *testing.T) {
 	for k := range labels {
-		enc, name := charset.Lookup(k)
+		enc, _ := charset.Lookup(k)
 		if enc == nil {
 			t.Fatal("unknwon encoding", k)
 		}
-		fmt.Println(k, enc, name)
 	}
 }

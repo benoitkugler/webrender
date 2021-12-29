@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/webrender/version"
 )
 
@@ -172,13 +171,8 @@ func ensureUrl(urlS string) (string, error) {
 	return PathToURL(urlS)
 }
 
-type content interface {
-	io.Closer
-	fonts.Resource
-}
-
 type RemoteRessource struct {
-	Content content
+	Content *bytes.Reader
 
 	// Optionnals values
 
@@ -199,27 +193,6 @@ type RemoteRessource struct {
 }
 
 type UrlFetcher = func(url string) (RemoteRessource, error)
-
-type BytesCloser bytes.Reader
-
-func (g *BytesCloser) Read(p []byte) (n int, err error) {
-	return (*bytes.Reader)(g).Read(p)
-}
-
-func (g *BytesCloser) ReadAt(p []byte, off int64) (n int, err error) {
-	return (*bytes.Reader)(g).ReadAt(p, off)
-}
-
-func (g *BytesCloser) Seek(off int64, whence int) (n int64, err error) {
-	return (*bytes.Reader)(g).Seek(off, whence)
-}
-
-func (BytesCloser) Close() error { return nil }
-
-// NewBytesCloser is a bytes.Reader with a Close method.
-func NewBytesCloser(data []byte) *BytesCloser {
-	return (*BytesCloser)(bytes.NewReader(data))
-}
 
 // Fetch an external resource such as an image or stylesheet.
 func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
@@ -244,13 +217,12 @@ func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
 	urlTarget = data.String()
 
 	if data.Scheme == "file" {
-		var f content
-		f, err = os.Open(data.Path)
+		f, err := os.ReadFile(data.Path)
 		if err != nil {
 			return RemoteRessource{}, fmt.Errorf("local file not found : %s", err)
 		}
 		return RemoteRessource{
-			Content:       f,
+			Content:       bytes.NewReader(f),
 			Filename:      filepath.Base(data.Path),
 			MimeType:      mime.TypeByExtension(filepath.Ext(data.Path)),
 			RedirectedUrl: urlTarget,
@@ -304,7 +276,7 @@ func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
 	if _, err := io.Copy(&buf, r); err != nil {
 		return RemoteRessource{}, err
 	}
-	result.Content = (*BytesCloser)(bytes.NewReader(buf.Bytes()))
+	result.Content = bytes.NewReader(buf.Bytes())
 
 	return result, nil
 }
@@ -333,7 +305,7 @@ func (d dataURI) toResource(urlTarget string) (RemoteRessource, error) {
 		d.data = dbuf[:n]
 	}
 	return RemoteRessource{
-		Content:          (*BytesCloser)(bytes.NewReader(d.data)),
+		Content:          bytes.NewReader(d.data),
 		MimeType:         d.mimeType,
 		RedirectedUrl:    urlTarget,
 		ProtocolEncoding: d.params["charset"],

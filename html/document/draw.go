@@ -1262,16 +1262,16 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	metrics := textbox.PangoLayout.Metrics
 
 	if utils.Set(decoration).Has("overline") {
-		thickness = utils.PangoUnitsToFloat((metrics.UnderlineThickness))
-		offsetY = textbox.Baseline.V() - pr.Float(utils.PangoUnitsToFloat(metrics.Ascent)) + pr.Float(thickness)/2
+		thickness = text.PangoUnitsToFloat((metrics.UnderlineThickness))
+		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.Ascent)) + pr.Float(thickness)/2
 	}
 	if utils.Set(decoration).Has("underline") {
-		thickness = utils.PangoUnitsToFloat((metrics.UnderlineThickness))
-		offsetY = textbox.Baseline.V() - pr.Float(utils.PangoUnitsToFloat(metrics.UnderlinePosition)) + pr.Float(thickness)/2
+		thickness = text.PangoUnitsToFloat((metrics.UnderlineThickness))
+		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.UnderlinePosition)) + pr.Float(thickness)/2
 	}
 	if utils.Set(decoration).Has("line-through") {
-		thickness = utils.PangoUnitsToFloat((metrics.StrikethroughThickness))
-		offsetY = textbox.Baseline.V() - pr.Float(utils.PangoUnitsToFloat(metrics.StrikethroughPosition))
+		thickness = text.PangoUnitsToFloat((metrics.StrikethroughThickness))
+		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.StrikethroughPosition))
 	}
 
 	if !decoration.IsNone() {
@@ -1287,7 +1287,7 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 	if textOverflow == "ellipsis" || blockEllipsis.Name != "none" {
 		// assert textbox.PangoLayout.maxWidth is not nil
 		maxWidth := textbox.PangoLayout.MaxWidth.V()
-		layout.SetWidth(pango.Unit(utils.PangoUnitsFromFloat(pr.Fl(maxWidth))))
+		layout.SetWidth(pango.Unit(text.PangoUnitsFromFloat(pr.Fl(maxWidth))))
 		if textOverflow == "ellipsis" {
 			layout.SetEllipsize(pango.ELLIPSIZE_END)
 		} else {
@@ -1370,26 +1370,26 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 				x1, y1, x2, y2 := inkRect.X, -inkRect.Y-inkRect.Height,
 					inkRect.X+inkRect.Width, -inkRect.Y
 				if int(x1) < outFont.Bbox[0] {
-					outFont.Bbox[0] = int(utils.PangoUnitsToFloat(x1*1000) / fontSize)
+					outFont.Bbox[0] = int(text.PangoUnitsToFloat(x1*1000) / fontSize)
 				}
 				if int(y1) < outFont.Bbox[1] {
-					outFont.Bbox[1] = int(utils.PangoUnitsToFloat(y1*1000) / fontSize)
+					outFont.Bbox[1] = int(text.PangoUnitsToFloat(y1*1000) / fontSize)
 				}
 				if int(x2) > outFont.Bbox[2] {
-					outFont.Bbox[2] = int(utils.PangoUnitsToFloat(x2*1000) / fontSize)
+					outFont.Bbox[2] = int(text.PangoUnitsToFloat(x2*1000) / fontSize)
 				}
 				if int(y2) > outFont.Bbox[3] {
-					outFont.Bbox[3] = int(utils.PangoUnitsToFloat(y2*1000) / fontSize)
+					outFont.Bbox[3] = int(text.PangoUnitsToFloat(y2*1000) / fontSize)
 				}
 				outFont.Extents[outGlyph.Glyph] = backend.GlyphExtents{
-					Width:  int(utils.PangoUnitsToFloat(logicalRect.Width*1000) / fontSize),
-					Y:      int(utils.PangoUnitsToFloat(logicalRect.Y*1000) / fontSize),
-					Height: int(utils.PangoUnitsToFloat(logicalRect.Height*1000) / fontSize),
+					Width:  int(text.PangoUnitsToFloat(logicalRect.Width*1000) / fontSize),
+					Y:      int(text.PangoUnitsToFloat(logicalRect.Y*1000) / fontSize),
+					Height: int(text.PangoUnitsToFloat(logicalRect.Height*1000) / fontSize),
 				}
 			}
 
 			// Kerning, word spacing, letter spacing
-			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - utils.PangoUnitsToFloat(width*1000)/fontSize + outGlyph.Offset)
+			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - text.PangoUnitsToFloat(width*1000)/fontSize + outGlyph.Offset)
 
 			// Mapping between glyphs and characters
 			startPos := runStart + glyphString.LogClusters[i] // Positions of the glyphs in the UTF-8 string
