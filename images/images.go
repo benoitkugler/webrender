@@ -2,12 +2,10 @@
 package images
 
 import (
-	"bytes"
 	"fmt"
 	"hash/fnv"
 	"image"
 	"io"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -175,29 +173,22 @@ type SVGImage struct {
 	icon       *svg.SVGImage
 	urlFetcher utils.UrlFetcher
 	baseUrl    string
-	svgData    []byte
-	width      float64
-	height     float64
 }
 
 func (SVGImage) isImage() {}
 
 func NewSVGImage(svgData io.Reader, baseUrl string, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
 	self := new(SVGImage)
-	// Don’t pass data URIs to CairoSVG.
-	// They are useless for relative URIs anyway.
+	// don’t pass data URIs: they are useless for relative URIs anyway.
 	if !strings.HasPrefix(strings.ToLower(baseUrl), "data:") {
 		self.baseUrl = baseUrl
 	}
-	content, err := ioutil.ReadAll(svgData)
-	if err != nil {
-		return nil, imageLoadingError(err)
-	}
-	self.svgData = content
+
 	self.urlFetcher = urlFetcher
 
-	// FIXME: imageLoader
-	self.icon, err = svg.Parse(bytes.NewReader(self.svgData), self.baseUrl, nil)
+	var err error
+	// FIXME: imageLoader : for now, nested image are not supported
+	self.icon, err = svg.Parse(svgData, self.baseUrl, nil)
 	if err != nil {
 		return nil, imageLoadingError(err)
 	}
@@ -232,24 +223,6 @@ func (s *SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.May
 	return intrinsicWidth, intrinsicHeight, ratio
 }
 
-func (SVGImage) Draw(context backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
-	log.Println("SVG rendering not implemented yet")
-	// FIXME:
-	//         try {
-	//             svg = ScaledSVGSurface(
-	//                 cairosvg.parser.Tree(
-	//                     bytestring=self.svgData, url=self.baseUrl,
-	//                     urlFetcher=self.CairosvgUrlFetcher),
-	//                 output=nil, dpi=96, outputWidth=concreteWidth,
-	//                 outputHeight=concreteHeight)
-	//             if svg.width && svg.height {
-	//                 context.scale(
-	//                     concreteWidth / svg.width, concreteHeight / svg.height)
-	//                 context.setSourceSurface(svg.cairo)
-	//                 context.paint()
-	//             }
-	//         } except Exception as e {
-	//             LOGGER.error(
-	//                 "Failed to draw an SVG image at %s : %s", self.baseUrl, e)
-	//         }
+func (img *SVGImage) Draw(dst backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+	img.icon.Draw(dst, concreteWidth, concreteHeight)
 }
