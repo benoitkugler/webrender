@@ -179,7 +179,7 @@ type CanvasNoFill interface {
 	AddOpacityGroup(x, y, width, height Fl) Canvas
 
 	// DrawOpacityGroup draw the given target to the main target, applying the given opacity (in [0,1]).
-	DrawOpacityGroup(opacity Fl, group Canvas)
+	DrawOpacityGroup(opacity Fl, group CanvasNoFill)
 
 	// Establishes a new clip region
 	// by intersecting the current clip region
