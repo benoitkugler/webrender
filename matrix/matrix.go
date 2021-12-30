@@ -137,6 +137,8 @@ func (T *Transform) Scale(sx, sy fl) {
 // first rotate the coordinates by `radians`,
 // then apply the original transformation to the coordinates.
 //
+// This is equivalent to computing T x Rotation(radians)
+//
 // This changes the matrix in-place.
 func (T *Transform) Rotate(radians fl) {
 	mult(*T, Rotation(radians), T)
