@@ -78,7 +78,7 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 		default:
 			panic(fmt.Sprintf("unexpected name for CSS transform property : %s", name))
 		}
-		matrix.Mult(rightMat) // same as matrix = mt.Mul(matrix, rightMat)
+		matrix.RightMultBy(rightMat) // same as matrix = mt.Mul(matrix, rightMat)
 	}
 	matrix.Translate(-originX, -originY) // same as matrix = mt.Mul(matrix, mt.New(1, 0, 0, 1, -originX, -originY))
 	return matrix, true
@@ -87,10 +87,10 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 // Apply a transformation matrix to an axis-aligned rectangle
 // and return its axis-aligned bounding box as ``(x_min, y_min, x_max, y_max)``
 func rectangleAabb(matrix mt.Transform, posX, posY, width, height fl) [4]fl {
-	x1, y1 := matrix.TransformPoint(posX, posY)
-	x2, y2 := matrix.TransformPoint(posX+width, posY)
-	x3, y3 := matrix.TransformPoint(posX, posY+height)
-	x4, y4 := matrix.TransformPoint(posX+width, posY+height)
+	x1, y1 := matrix.Apply(posX, posY)
+	x2, y2 := matrix.Apply(posX+width, posY)
+	x3, y3 := matrix.Apply(posX, posY+height)
+	x4, y4 := matrix.Apply(posX+width, posY+height)
 	boxX1 := utils.Mins(x1, x2, x3, x4)
 	boxY1 := utils.Mins(y1, y2, y3, y4)
 	boxX2 := utils.Maxs(x1, x2, x3, x4)
@@ -166,7 +166,7 @@ func gatherLinksAndBookmarks(box_ bo.Box, bookmarks *[]bookmarkData, links *[]Li
 			*links = append(*links, linkS)
 		}
 		if matrix != nil && (hasBookmark || hasAnchor) {
-			posX, posY = matrix.TransformPoint(posX, posY)
+			posX, posY = matrix.Apply(posX, posY)
 		}
 		if hasBookmark {
 			*bookmarks = append(*bookmarks, bookmarkData{
@@ -403,8 +403,8 @@ func (d Document) makeBookmarkTree() []backend.BookmarkNode {
 func (d Document) addHyperlinks(links []Link, context backend.Page, scale mt.Transform) {
 	for _, link := range links {
 		linkType, linkTarget, rectangle := link.Type, link.Target, link.Rectangle
-		xMin, yMin := scale.TransformPoint(rectangle[0], rectangle[1])
-		xMax, yMax := scale.TransformPoint(rectangle[2], rectangle[3])
+		xMin, yMin := scale.Apply(rectangle[0], rectangle[1])
+		xMax, yMax := scale.Apply(rectangle[2], rectangle[3])
 		if linkType == "external" {
 			context.AddExternalLink(xMin, yMin, xMax, yMax, linkTarget)
 		} else if linkType == "internal" {
@@ -418,7 +418,7 @@ func (d Document) addHyperlinks(links []Link, context backend.Page, scale mt.Tra
 
 func (d *Document) scaleAnchors(anchors []backend.Anchor, matrix mt.Transform) {
 	for i, a := range anchors {
-		anchors[i].X, anchors[i].Y = matrix.TransformPoint(a.X, a.Y)
+		anchors[i].X, anchors[i].Y = matrix.Apply(a.X, a.Y)
 	}
 }
 

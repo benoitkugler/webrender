@@ -535,29 +535,29 @@ type transform struct {
 	args [6]Value // the actual number of arguments depends on kind
 }
 
-// right multiply `mat` to apply the transformation, after resolving units
+// right multiply to `mat` to apply the transformation, after resolving units
 func (tr transform) applyTo(mat *matrix.Transform, dims drawingDims) {
 	switch tr.kind {
 	case rotate:
 		angle := dims.length(tr.args[0])
-		mat.RightMult(matrix.Rotation(angle * math.Pi / 180))
+		mat.Rotate(angle * math.Pi / 180)
 	case rotateWithOrigin:
 		x, y := dims.length(tr.args[1]), dims.length(tr.args[2])
 		angle := dims.length(tr.args[0])
-		mat.RightMult(matrix.Translation(x, y))
-		mat.RightMult(matrix.Rotation(angle * math.Pi / 180))
-		mat.RightMult(matrix.Translation(-x, -y))
+		mat.Translate(x, y)
+		mat.Rotate(angle * math.Pi / 180)
+		mat.Translate(-x, -y)
 	case translate:
 		x, y := dims.length(tr.args[0]), dims.length(tr.args[1])
-		mat.RightMult(matrix.Translation(x, y))
+		mat.Translate(x, y)
 	case skew:
 		thetaX, thetaY := dims.length(tr.args[0]), dims.length(tr.args[1])
-		mat.RightMult(matrix.Skew(thetaX*math.Pi/180, thetaY*math.Pi/180))
+		mat.Skew(thetaX*math.Pi/180, thetaY*math.Pi/180)
 	case scale:
 		sx, sy := dims.length(tr.args[0]), dims.length(tr.args[1])
-		mat.RightMult(matrix.Scaling(sx, sy))
+		mat.Scale(sx, sy)
 	case customMatrix:
-		mat.RightMult(matrix.New(
+		mat.RightMultBy(matrix.New(
 			dims.length(tr.args[0]),
 			dims.length(tr.args[1]),
 			dims.length(tr.args[2]),

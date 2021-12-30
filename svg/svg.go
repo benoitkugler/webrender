@@ -244,11 +244,10 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 		// draw marker path
 		for _, child := range marker.children {
 			dst.OnNewStack(func() {
-				// TODO: check matrix operation order
-				mat := matrix.Scaling(scaleX, scaleY)
-				mat.Rotate(angle)
-				mat.Translate(vertex.x, vertex.y)
-				mat.Translate(translateX, translateY)
+				mat := matrix.Rotation(angle)
+				mat.LeftMultBy(matrix.Scaling(scaleX, scaleY))
+				mat.LeftMultBy(matrix.Translation(vertex.x, vertex.y))
+				mat.LeftMultBy(matrix.Translation(translateX, translateY))
 				dst.Transform(mat)
 
 				overflow := marker.overflow
