@@ -16,7 +16,7 @@ func parseIcon(t *testing.T, iconPath string) {
 
 	img, err := Parse(f, "", nil)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(iconPath, err)
 	}
 
 	img.Draw(outputPage{}, 100, 100) // just check for crashes

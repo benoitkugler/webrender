@@ -4,15 +4,16 @@ package svg
 // adapted from https://github.com/srwiley/oksvg
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"math"
-	"unicode"
 
 	"github.com/benoitkugler/webrender/backend"
 )
 
-var errParamMismatch = errors.New("svg path: param mismatch")
+func errParamMismatch(op byte) error {
+	return fmt.Errorf("svg path: param mismatch for operator %s", string(op))
+}
 
 type vertex struct {
 	x, y Fl // point position
@@ -118,11 +119,12 @@ func (c *pathParser) reset() {
 // parsePath translates the svgPath description string into a path.
 func (c *pathParser) parsePath(svgPath string) ([]pathItem, error) {
 	c.reset()
+	data := []byte(svgPath)
 	lastIndex := -1
-	for i, v := range svgPath {
-		if unicode.IsLetter(v) && v != 'e' {
+	for i, v := range data {
+		if ('a' <= v && v <= 'z' || 'A' <= v && v <= 'Z') && v != 'e' {
 			if lastIndex != -1 {
-				if err := c.addSeg([]byte(svgPath[lastIndex:i])); err != nil {
+				if err := c.addSeg(data[lastIndex:i]); err != nil {
 					return nil, err
 				}
 			}
@@ -130,7 +132,7 @@ func (c *pathParser) parsePath(svgPath string) ([]pathItem, error) {
 		}
 	}
 	if lastIndex != -1 {
-		if err := c.addSeg([]byte(svgPath[lastIndex:])); err != nil {
+		if err := c.addSeg(data[lastIndex:]); err != nil {
 			return nil, err
 		}
 	}
@@ -200,9 +202,9 @@ func (c *pathParser) hasSetsOrMore(sz int, rel bool) bool {
 
 // getPoints reads a set of floating point values from the SVG format number string,
 // and add them to the cursor's points slice.
-func (c *pathParser) getPoints(dataPoints []byte) (err error) {
+func (c *pathParser) getPoints(dataPoints []byte, operation byte) (err error) {
 	c.points = c.points[:0]
-	c.points, err = parsePoints(string(dataPoints), c.points)
+	c.points, err = parsePoints(string(dataPoints), c.points, operation == 'a' || operation == 'A')
 	return err
 }
 
@@ -227,19 +229,21 @@ func (c *pathParser) reflectControlCube() {
 // addSeg decodes an SVG segment string into equivalent raster path commands saved
 // in the cursor's Path
 func (c *pathParser) addSeg(segString []byte) error {
+	op := segString[0]
+
 	// Parse the string describing the numeric points in SVG format
-	if err := c.getPoints(segString[1:]); err != nil {
+	if err := c.getPoints(segString[1:], op); err != nil {
 		return err
 	}
-	l := len(c.points)
-	k := segString[0]
+
+	L := len(c.points)
 	rel := false
-	switch k {
+	switch op {
 	case 'z':
 		fallthrough
 	case 'Z':
-		if len(c.points) != 0 {
-			return errParamMismatch
+		if L != 0 {
+			return errParamMismatch(op)
 		}
 		if c.inPath {
 			c.close()
@@ -252,133 +256,133 @@ func (c *pathParser) addSeg(segString []byte) error {
 		fallthrough
 	case 'M':
 		if !c.hasSetsOrMore(2, rel) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
 		c.pathStartX, c.pathStartY = c.points[0], c.points[1]
 		c.inPath = true
 		c.moveTo(c.pathStartX, c.pathStartY)
-		for i := 2; i < l-1; i += 2 {
+		for i := 2; i < L-1; i += 2 {
 			c.lineTo(c.points[i], c.points[i+1])
 		}
-		c.currentX = c.points[l-2]
-		c.currentY = c.points[l-1]
+		c.currentX = c.points[L-2]
+		c.currentY = c.points[L-1]
 	case 'l':
 		rel = true
 		fallthrough
 	case 'L':
 		if !c.hasSetsOrMore(2, rel) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
-		for i := 0; i < l-1; i += 2 {
+		for i := 0; i < L-1; i += 2 {
 			c.lineTo(c.points[i], c.points[i+1])
 		}
-		c.currentX = c.points[l-2]
-		c.currentY = c.points[l-1]
+		c.currentX = c.points[L-2]
+		c.currentY = c.points[L-1]
 	case 'v':
 		c.valsToAbs(c.currentY)
 		fallthrough
 	case 'V':
 		if !c.hasSetsOrMore(1, false) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
 		for _, p := range c.points {
 			c.lineTo(c.currentX, p)
 		}
-		c.currentY = c.points[l-1]
+		c.currentY = c.points[L-1]
 	case 'h':
 		c.valsToAbs(c.currentX)
 		fallthrough
 	case 'H':
 		if !c.hasSetsOrMore(1, false) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
 		for _, p := range c.points {
 			c.lineTo(p, c.currentY)
 		}
-		c.currentX = c.points[l-1]
+		c.currentX = c.points[L-1]
 	case 'q':
 		rel = true
 		fallthrough
 	case 'Q':
 		if !c.hasSetsOrMore(4, rel) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
-		for i := 0; i < l-3; i += 4 {
+		for i := 0; i < L-3; i += 4 {
 			c.quadTo(
 				c.points[i], c.points[i+1],
 				c.points[i+2], c.points[i+3],
 			)
 		}
-		c.cntlPtX, c.cntlPtY = c.points[l-4], c.points[l-3]
-		c.currentX = c.points[l-2]
-		c.currentY = c.points[l-1]
+		c.cntlPtX, c.cntlPtY = c.points[L-4], c.points[L-3]
+		c.currentX = c.points[L-2]
+		c.currentY = c.points[L-1]
 	case 't':
 		rel = true
 		fallthrough
 	case 'T':
 		if !c.hasSetsOrMore(2, rel) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
-		for i := 0; i < l-1; i += 2 {
+		for i := 0; i < L-1; i += 2 {
 			c.reflectControlQuad()
 			c.quadTo(
 				c.cntlPtX, c.cntlPtY,
 				c.points[i], c.points[i+1],
 			)
-			c.lastKey = k
+			c.lastKey = op
 		}
 	case 'c':
 		rel = true
 		fallthrough
 	case 'C':
 		if !c.hasSetsOrMore(6, rel) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
-		for i := 0; i < l-5; i += 6 {
+		for i := 0; i < L-5; i += 6 {
 			c.cubicTo(
 				c.points[i], c.points[i+1],
 				c.points[i+2], c.points[i+3],
 				c.points[i+4], c.points[i+5],
 			)
 		}
-		c.cntlPtX, c.cntlPtY = c.points[l-4], c.points[l-3]
-		c.currentX = c.points[l-2]
-		c.currentY = c.points[l-1]
+		c.cntlPtX, c.cntlPtY = c.points[L-4], c.points[L-3]
+		c.currentX = c.points[L-2]
+		c.currentY = c.points[L-1]
 	case 's':
 		rel = true
 		fallthrough
 	case 'S':
 		if !c.hasSetsOrMore(4, rel) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
-		for i := 0; i < l-3; i += 4 {
+		for i := 0; i < L-3; i += 4 {
 			c.reflectControlCube()
 			c.cubicTo(
 				c.cntlPtX, c.cntlPtY,
 				c.points[i], c.points[i+1],
 				c.points[i+2], c.points[i+3],
 			)
-			c.lastKey = k
+			c.lastKey = op
 			c.cntlPtX, c.cntlPtY = c.points[i], c.points[i+1]
 			c.currentX = c.points[i+2]
 			c.currentY = c.points[i+3]
 		}
 	case 'a', 'A':
 		if !c.hasSetsOrMore(7, false) {
-			return errParamMismatch
+			return errParamMismatch(op)
 		}
-		for i := 0; i < l-6; i += 7 {
-			if k == 'a' {
+		for i := 0; i < L-6; i += 7 {
+			if op == 'a' {
 				c.points[i+5] += c.currentX
 				c.points[i+6] += c.currentY
 			}
 			c.addArcFromA(c.points[i:])
 		}
 	default:
-		log.Println("Ignoring svg command " + string(k))
+		log.Println("Ignoring svg command " + string(op))
 	}
 	// So we know how to extend some segment types
-	c.lastKey = k
+	c.lastKey = op
 	return nil
 }
 

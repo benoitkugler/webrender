@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -102,130 +101,70 @@ func (v Value) Resolve(fontSize, percentageReference Fl) Fl {
 	}
 }
 
-// // convert the unite to pixels. Return true if it is a %
-// func parseUnit(s string) (Fl, bool, error) {
-// 	value, err := parseValue(s)
-// 	return value.v * toPx[value.u], value.u == Perc, err
-// }
-
-// type percentageReference uint8
-
-// const (
-// 	widthPercentage percentageReference = iota
-// 	heightPercentage
-// 	diagPercentage
-// )
-
-// // resolveUnit converts a length with a unit into its value in 'px'
-// // percentage are supported, and refer to the viewBox
-// // `asPerc` is only applied when `s` contains a percentage.
-// func (viewBox Bounds) resolveUnit(s string, asPerc percentageReference) (Fl, error) {
-// 	value, isPercentage, err := parseUnit(s)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	if isPercentage {
-// 		w, h := viewBox.W, viewBox.H
-// 		switch asPerc {
-// 		case widthPercentage:
-// 			return value / 100 * w, nil
-// 		case heightPercentage:
-// 			return value / 100 * h, nil
-// 		case diagPercentage:
-// 			normalizedDiag := math.Sqrt(w*w+h*h) / root2
-// 			return value / 100 * normalizedDiag, nil
-// 		}
-// 	}
-// 	return value, nil
-// }
-
-// // parseUnit converts a length with a unit into its value in 'px'
-// // percentage are supported, and refer to the current ViewBox
-// func (c *iconCursor) parseUnit(s string, asPerc percentageReference) (Fl, error) {
-// 	return c.icon.ViewBox.resolveUnit(s, asPerc)
-// }
-
-// func readFraction(v string) (f Fl, err error) {
-// 	v = strings.TrimSpace(v)
-// 	d := 1.0
-// 	if strings.HasSuffix(v, "%") {
-// 		d = 100
-// 		v = strings.TrimSuffix(v, "%")
-// 	}
-// 	f, err = parseBasicFloat(v)
-// 	f /= d
-// 	return
-// }
-
-// func readAppendFloat(numStr string, points []Fl) ([]Fl, error) {
-// 	fmt.Println(numStr)
-// 	last := 0
-// 	isFirst := true
-// 	for i, n := range numStr {
-// 		if n == '.' {
-// 			if isFirst {
-// 				isFirst = false
-// 				continue
-// 			}
-// 			f, err := parseBasicFloat(numStr[last:i])
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			points = append(points, f)
-// 			last = i
-// 		}
-// 	}
-// 	f, err := parseBasicFloat(numStr[last:])
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	points = append(points, f)
-// 	return points, nil
-// }
+// returns the index of the end of the first number starting at pos
+// it is assumed that data[pos] is not a whitespace
+// if isFlag is true only "0" or "1" are allowed,
+// meaning for instance that 12 is parsed are 1 2, not 12.
+func consumeNumber(data []byte, pos int, isFlag bool) int {
+	if isFlag {
+		return pos + 1
+	}
+	start := data[pos]
+	seenDot := start == '.'
+	pos++
+	for ; pos < len(data); pos++ {
+		c := data[pos]
+		switch c {
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			continue
+		case '.':
+			if seenDot { // .5.5 is interpreted as 0.5 0.5
+				return pos
+			}
+			// else continue: floating point
+			seenDot = true
+		case '-':
+			// new number, expected on exponents
+			if data[pos-1] == 'e' || data[pos-1] == 'E' {
+				continue
+			}
+			return pos
+		default:
+			// accept numbers and exponents
+			if c == 'e' || c == 'E' {
+				continue
+			}
+			return pos
+		}
+	}
+	return pos
+}
 
 // parsePoints reads a set of floating point values from the SVG format number string.
 // units are not supported.
-// values are appended to points, which is returned
-func parsePoints(dataPoints string, points []Fl) ([]Fl, error) {
-	lastIndex := -1
-	previousRune := ' '
-	seenDot := false
-	for i, r := range dataPoints {
-		if !unicode.IsNumber(r) && (r != '.' || seenDot) && !(r == '-' && previousRune == 'e') && r != 'e' {
-			if lastIndex != -1 {
-				value, err := strconv.ParseFloat(dataPoints[lastIndex:i], 32)
-				if err != nil {
-					return nil, err
-				}
-				points = append(points, Fl(value))
+// to reduce allocations, values are appended to `points`, which is supposed to have 0 length,
+// and is returned
+// isEllipticalArc should be true for 'A' and 'a' commands, and is required
+// to handle special case in number parsing
+func parsePoints(dataPoints string, points []Fl, isEllipticalArc bool) ([]Fl, error) {
+	data := []byte(dataPoints)
 
-				if r != '.' {
-					seenDot = false // reset the . tracking
-				}
-			}
+	for pos := 0; pos < len(data); {
+		c := data[pos]
+		if '0' <= c && c <= '9' || c == '.' || c == '-' || c == 'e' || c == 'E' {
+			// for elliptical arc, arguments 4 and 5 are flags
+			isFlag := isEllipticalArc && (len(points) == 3 || len(points) == 4)
 
-			if r == '-' || r == '.' {
-				lastIndex = i
-			} else {
-				lastIndex = -1
+			endNumber := consumeNumber(data, pos, isFlag)
+			value, err := strconv.ParseFloat(dataPoints[pos:endNumber], 32)
+			if err != nil {
+				return nil, err
 			}
+			points = append(points, Fl(value))
+			pos = endNumber
 		} else {
-			if lastIndex == -1 {
-				lastIndex = i
-			}
-			if r == '.' {
-				seenDot = true
-			}
+			pos++ // skip "whitespaces"
 		}
-
-		previousRune = r
-	}
-	if lastIndex != -1 && lastIndex != len(dataPoints) {
-		value, err := strconv.ParseFloat(dataPoints[lastIndex:], 32)
-		if err != nil {
-			return nil, err
-		}
-		points = append(points, Fl(value))
 	}
 	return points, nil
 }
@@ -283,7 +222,7 @@ func parseURL(url_ string) (*url.URL, error) {
 }
 
 func parseViewbox(attr string) (Rectangle, error) {
-	points, err := parsePoints(attr, nil)
+	points, err := parsePoints(attr, nil, false)
 	if err != nil {
 		return Rectangle{}, err
 	}
@@ -304,7 +243,7 @@ func parseTransform(attr string) (out []transform, err error) {
 
 		d := strings.Split(t, "(")
 		if len(d) != 2 || d[1] == "" {
-			return nil, errParamMismatch // badly formed transformation
+			return nil, fmt.Errorf("invalid transformation: %s", t) // badly formed transformation
 		}
 		points, err := parseValues(d[1])
 		if err != nil {
@@ -323,7 +262,7 @@ func parseTransform(attr string) (out []transform, err error) {
 			} else if L == 3 {
 				tr.kind = rotateWithOrigin
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		case "translate":
 			if L == 1 {
@@ -332,19 +271,19 @@ func parseTransform(attr string) (out []transform, err error) {
 			} else if L == 2 {
 				tr.kind = translate
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		case "skew":
 			if L == 2 {
 				tr.kind = skew
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		case "skewx":
 			if L == 1 {
 				tr.kind = skew
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		case "skewy":
 			if L == 1 {
@@ -352,7 +291,7 @@ func parseTransform(attr string) (out []transform, err error) {
 				tr.args[1] = tr.args[0]
 				tr.args[0] = Value{0, Px}
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		case "scale":
 			if L == 1 {
@@ -361,16 +300,16 @@ func parseTransform(attr string) (out []transform, err error) {
 			} else if L == 2 {
 				tr.kind = scale
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		case "matrix":
 			if L == 6 {
 				tr.kind = customMatrix
 			} else {
-				return nil, errParamMismatch
+				return nil, fmt.Errorf("invalid transformation: %s", t)
 			}
 		default:
-			return nil, errParamMismatch
+			return nil, fmt.Errorf("invalid transformation: %s", t)
 		}
 
 		out = append(out, tr)

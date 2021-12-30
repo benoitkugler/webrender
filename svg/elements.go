@@ -181,7 +181,7 @@ func newPolygon(node *cascadedNode, _ *svgContext) (drawable, error) {
 func parsePoly(node *cascadedNode) (polyline, error) {
 	var out polyline
 
-	pts, err := parsePoints(node.attrs["points"], nil)
+	pts, err := parsePoints(node.attrs["points"], nil, false)
 	if err != nil {
 		return out, err
 	}

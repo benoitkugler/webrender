@@ -64,7 +64,7 @@ func (svg *SVGImage) ViewBox() *Rectangle { return svg.root.viewbox }
 
 // Draw draws the parsed SVG image into the given `dst` output,
 // with the given `width` and `height`.
-func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
+func (svg *SVGImage) Draw(dst backend.CanvasNoFill, width, height Fl) {
 	var dims drawingDims
 
 	dims.concreteWidth, dims.concreteHeight = width, height
@@ -84,7 +84,7 @@ func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
 
 // if paint is false, only the path operations are executed, not the actual filling or drawing
 // moreover, no new graphic stack is created
-func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawNode(dst backend.CanvasNoFill, node *svgNode, dims drawingDims, paint bool) {
 	dims.fontSize = node.attributes.fontSize.Resolve(dims.fontSize, dims.fontSize)
 
 	paintTask := func() {
@@ -95,7 +95,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// create sub group for opacity
 		opacity := node.attributes.opacity
-		var originalDst backend.Canvas
+		var originalDst backend.CanvasNoFill
 		if paint && 0 <= opacity && opacity < 1 {
 			originalDst = dst
 			var x, y, width, height Fl = 0, 0, dims.concreteWidth, dims.concreteHeight
@@ -159,7 +159,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 }
 
 // vertices are the resolved vertices computed when drawing the shape
-func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawMarkers(dst backend.CanvasNoFill, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
 	const (
 		start uint8 = iota
 		mid
@@ -607,16 +607,17 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 // process a node to be displayed by building its content
 func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNode) (*svgNode, error) {
 	out := svgNode{children: children}
+
+	err := node.attrs.parseCommonAttributes(&out.attributes)
+	if err != nil {
+		return nil, err
+	}
+
 	builder := elementBuilders[node.tag]
 	if builder == nil {
 		// this node is not drawn, return an empty node
 		// with its children
 		return &out, nil
-	}
-
-	err := node.attrs.parseCommonAttributes(&out.attributes)
-	if err != nil {
-		return nil, err
 	}
 
 	out.graphicContent, err = builder(node, tree)

@@ -11,27 +11,39 @@ import (
 
 func Test_parsePoints(t *testing.T) {
 	tests := []struct {
-		dataPoints string
-		wantPoints []Fl
-		wantErr    bool
+		dataPoints      string
+		isEllipticalArc bool
+		wantPoints      []Fl
+		wantErr         bool
 	}{
-		{".4 0 .5.3.3.6", []Fl{0.4, 0, 0.5, 0.3, 0.3, 0.6}, false},
-		{".2-.3.7-.5 1.1-.5", []Fl{0.2, -0.3, 0.7, -0.5, 1.1, -0.5}, false},
-		{"50 160 55 180.2 70 180", []Fl{50, 160, 55, 180.2, 70, 180}, false},
-		{"153.423,21.442,12.3e5,", []Fl{153.423, 21.442, 12.3e5}, false},
-		{"-11.231-1.388-22.118-3.789-32.621", []Fl{-11.231, -1.388, -22.118, -3.789, -32.621}, false},
-		{"7px 8% 10 px 72pt", []Fl{7, 8, 10, 72}, false}, // units are ignored
-		{"15,45.7e", nil, true},
-		{"50,0 21,90 98,35 2,35 79,90", []Fl{50, 0, 21, 90, 98, 35, 2, 35, 79, 90}, false},
+		{"", false, nil, false},
+		{"000", false, []Fl{0}, false},
+		{"5 5 0 000-10", true, []Fl{5, 5, 0, 0, 0, 0, -10}, false},
+		{"5 5 0 00-5 5", true, []Fl{5, 5, 0, 0, 0, -5, 5}, false},
+		{"5 5 0 005 5", true, []Fl{5, 5, 0, 0, 0, 5, 5}, false},
+		{"2.61 2.61 0 01-2.6 2.6", true, []Fl{2.61, 2.61, 0, 0, 1, -2.6, 2.6}, false},
+		{"2.61 2.61 0 012.6-2.6", false, []Fl{2.61, 2.61, 0, 12.6, -2.6}, false},
+		{"2.61 2.61 0 012.6-2.6", true, []Fl{2.61, 2.61, 0, 0, 1, 2.6, -2.6}, false},
+		{"-1.845,0-3.608,0.292-5.322,0.717", false, []Fl{-1.845, 0, -3.608, 0.292, -5.322, 0.717}, false},
+		{" 138, 090,  269, 075, 259, 147", false, []Fl{138, 90, 269, 75, 259, 147}, false},
+		{".4 0 .5.3.3.6", false, []Fl{0.4, 0, 0.5, 0.3, 0.3, 0.6}, false},
+		{".2-.3.7-.5 1.1-.5", false, []Fl{0.2, -0.3, 0.7, -0.5, 1.1, -0.5}, false},
+		{"50 160 55 180.2 70 180", false, []Fl{50, 160, 55, 180.2, 70, 180}, false},
+		{"153.423,21.442,12.3e5,", false, []Fl{153.423, 21.442, 12.3e5}, false},
+		{"3e-2,", false, []Fl{3e-2}, false},
+		{"-11.231-1.388-22.118-3.789-32.621", false, []Fl{-11.231, -1.388, -22.118, -3.789, -32.621}, false},
+		{"7px 8% 10 px 72pt", false, []Fl{7, 8, 10, 72}, false}, // units are ignored
+		{"15,45.7e", false, nil, true},
+		{"50,0 21,90 98,35 2,35 79,90", false, []Fl{50, 0, 21, 90, 98, 35, 2, 35, 79, 90}, false},
 	}
 	for _, tt := range tests {
-		gotPoints, err := parsePoints(tt.dataPoints, nil)
+		gotPoints, err := parsePoints(tt.dataPoints, nil, tt.isEllipticalArc)
 		if (err != nil) != tt.wantErr {
-			t.Errorf("getPoints() error = %v, wantErr %v", err, tt.wantErr)
+			t.Fatalf("getPoints() error = %v, wantErr %v", err, tt.wantErr)
 			return
 		}
 		if !reflect.DeepEqual(gotPoints, tt.wantPoints) {
-			t.Errorf("getPoints() = %v, want %v", gotPoints, tt.wantPoints)
+			t.Fatalf("getPoints() = %v, want %v", gotPoints, tt.wantPoints)
 		}
 	}
 }

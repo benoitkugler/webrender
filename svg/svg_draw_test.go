@@ -103,7 +103,7 @@ func (outputPage) AddOpacityGroup(x, y, width, height fl) backend.Canvas {
 	return outputPage{}
 }
 
-func (outputPage) DrawOpacityGroup(opacity fl, group backend.Canvas) {
+func (outputPage) DrawOpacityGroup(opacity fl, group backend.CanvasNoFill) {
 	outputLog.Println("DrawGroup")
 }
 
