@@ -1,6 +1,7 @@
 package svg
 
 import (
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
@@ -36,14 +37,14 @@ func TestHandleText(t *testing.T) {
 				fill="none" stroke-width="2" />
 		</svg>
 		`
-	img, err := buildSVGTree(strings.NewReader(input), "")
+	img, err := Parse(strings.NewReader(input), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(img.defs) != 1 {
+	if len(img.definitions.nodes) != 1 {
 		t.Fatal("defs")
 	}
-	if c, has := img.defs["ReferencedText"]; !has || len(c.children) != 0 {
+	if c, has := img.definitions.nodes["ReferencedText"]; !has || len(c.children) != 0 {
 		t.Fatal("defs circle")
 	}
 }
@@ -106,7 +107,7 @@ func TestClipPath(t *testing.T) {
 	}
 	cp := out.definitions.clipPaths["myClip"]
 	if len(cp.children) != 1 {
-		t.Fatal()
+		t.Fatalf("wrong number of clip path children %v", cp.children)
 	}
 	if _, ok := cp.children[0].graphicContent.(ellipse); !ok {
 		t.Fatal()
@@ -266,6 +267,48 @@ func TestGradient(t *testing.T) {
 	}
 	if _, ok = g4.kind.(gradientRadial); !ok {
 		t.Fatal()
+	}
+}
+
+func randAttributes() nodeAttributes {
+	keys := [...]string{
+		"x", "y", "width", "height",
+		"viewBox",
+		"font-size",
+		"stroke-width",
+		"opacity",
+		"stroke-opacity",
+		"fill-opacity",
+		"transform",
+		"stroke",
+		"fill",
+		"fill-rull",
+		"stroke-dashoffset",
+		"stroke-dasharray",
+
+		"filter",
+		"clip-path",
+		"mask",
+
+		"marker",
+		"marker-start",
+		"marker-mid",
+		"marker-end",
+
+		"display",
+		"visibility",
+	}
+	key := keys[rand.Int31n(int32(len(keys)))]
+	var buf [100]byte
+	rand.Read(buf[:])
+	return nodeAttributes{key: string(buf[:])}
+}
+
+func TestInvalidAttributes(t *testing.T) {
+	var out attributes
+	for range [100]int{} {
+		a := randAttributes()
+		a.parseCommonAttributes(&out) // only check for crash
 	}
 }
 

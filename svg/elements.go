@@ -414,12 +414,13 @@ func newClipPath(node *cascadedNode, children []*svgNode) clipPath {
 type marker struct {
 	viewbox *Rectangle
 
-	preserveAspectRatio preserveAspectRatio // default to "xMidYMid"
+	children []*svgNode
 
 	overflow string // default to "hidden"
-	orient   Value  // angle or "auto" or "auto-start-reverse"
 
-	children []*svgNode
+	preserveAspectRatio preserveAspectRatio // default to "xMidYMid"
+
+	orient Value // angle or "auto" or "auto-start-reverse"
 
 	markerWidth, markerHeight Value
 	refX, refY                Value

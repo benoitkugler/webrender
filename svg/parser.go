@@ -382,16 +382,19 @@ func parseTransform(attr string) (out []transform, err error) {
 
 type preserveAspectRatio struct {
 	xPosition, yPosition string
+	none                 bool // align == "none"
 	slice                bool // meet or slice
 }
 
 func parsePreserveAspectRatio(s string) (out preserveAspectRatio) {
 	out.xPosition, out.yPosition = "min", "min"
 	aspectRatio := strings.Split(s, " ")
-	if align := aspectRatio[0]; align != "none" || len(align) >= 5 {
+	align := aspectRatio[0]
+	if align != "none" || len(align) >= 5 {
 		out.xPosition = strings.ToLower(align[1:4])
 		out.yPosition = strings.ToLower(align[5:])
 	}
+	out.none = align == "none"
 	out.slice = len(aspectRatio) >= 2 && aspectRatio[1] == "slice"
 	return out
 }

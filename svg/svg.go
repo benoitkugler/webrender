@@ -25,6 +25,7 @@ type definitions struct {
 	masks        map[string]mask
 	paintServers map[string]paintServer
 	markers      map[string]*marker
+	nodes        map[string]*svgNode
 }
 
 func newDefinitions() definitions {
@@ -34,6 +35,7 @@ func newDefinitions() definitions {
 		masks:        make(map[string]mask),
 		paintServers: make(map[string]paintServer),
 		markers:      make(map[string]*marker),
+		nodes:        make(map[string]*svgNode),
 	}
 }
 
@@ -63,15 +65,21 @@ func (svg *SVGImage) ViewBox() *Rectangle { return svg.root.viewbox }
 // Draw draws the parsed SVG image into the given `dst` output,
 // with the given `width` and `height`.
 func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
-	var ctx drawingDims
-	ctx.concreteWidth, ctx.concreteHeight = width, height
+	var dims drawingDims
+
+	dims.concreteWidth, dims.concreteHeight = width, height
+
 	if vb := svg.ViewBox(); vb != nil {
-		ctx.innerWidth, ctx.innerHeight = vb.Width, vb.Height
+		dims.innerWidth, dims.innerHeight = vb.Width, vb.Height
 	} else {
-		ctx.innerWidth, ctx.innerHeight = width, height
+		dims.innerWidth, dims.innerHeight = width, height
 	}
-	ctx.fontSize = defaultFontSize
-	ctx.setupDiagonal()
+
+	dims.fontSize = defaultFontSize
+
+	dims.setupDiagonal()
+
+	svg.drawNode(dst, svg.root, dims, true)
 }
 
 // if paint is false, only the path operations are executed, not the actual filling or drawing
@@ -132,8 +140,8 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		}
 
 		// draw markers
-		if vertices != nil {
-			// svg.drawMarkers(dst, vertices, node, dims, paint)
+		if len(vertices) != 0 {
+			svg.drawMarkers(dst, vertices, node, dims, paint)
 		}
 
 		// apply opacity group and restore original target
@@ -187,12 +195,13 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 
 		// calculate position, scale and clipping
 		var (
-			clipBox                                *Rectangle
-			scaleX, scaleY, translateX, translateY Fl
+			clipBox        *Rectangle
+			scaleX, scaleY Fl
 		)
 		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
+		translateX, translateY := dims.point(marker.refX, marker.refY)
 		if vb := node.attributes.viewbox; vb != nil {
-			scaleX, scaleY, translateX, translateY = marker.preserveAspectRatio.resolveTransforms(dims, markerWidth, markerHeight, nil)
+			scaleX, scaleY, translateX, translateY = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
 
 			clipViewbox := *vb
 			if marker.viewbox != nil {
@@ -221,7 +230,6 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 			} else {
 				scaleX, scaleY = 1, 1
 			}
-			translateX, translateY = dims.point(marker.refX, marker.refY)
 			clipBox = nil
 		}
 
@@ -266,55 +274,54 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 }
 
 // compute scale and translation needed to preserve ratio
-func (pr preserveAspectRatio) resolveTransforms(dims drawingDims, width, height Fl, viewbox *Rectangle) (scaleX, scaleY, translateX, translateY Fl) {
-	// FIXME:
-	// viewbox = viewbox or node.get_viewbox()
-	// if viewbox:
-	//     viewbox_width, viewbox_height = viewbox[2:]
-	// elif svg.tree == node:
-	//     viewbox_width, viewbox_height = svg.get_intrinsic_size(font_size)
-	//     if None in (viewbox_width, viewbox_height):
+// translate is optinional
+func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Rectangle, translate *point) (scaleX, scaleY, translateX, translateY Fl) {
+	if viewbox == nil {
+		return 1, 1, 0, 0
+	}
+	// }else if svg.tree == node{
+	//     viewboxWidth, viewboxHeight = svg.get_intrinsic_size(font_size)
+	//     if None in (viewboxWidth, viewboxHeight):
 	//         return 1, 1, 0, 0
-	// else:
-	//     return 1, 1, 0, 0
+	viewboxWidth, viewboxHeight := viewbox.Width, viewbox.Height
 
-	// scale_x = width / viewbox_width if viewbox_width else 1
-	// scale_y = height / viewbox_height if viewbox_height else 1
+	scaleX, scaleY = 1, 1
+	if viewboxWidth != 0 {
+		scaleX = width / viewboxWidth
+	}
+	if viewboxHeight != 0 {
+		scaleY = height / viewboxHeight
+	}
 
-	// aspect_ratio = node.get('preserveAspectRatio', 'xMidYMid').split()
-	// align = aspect_ratio[0]
-	// if align == 'none':
-	//     x_position = 'min'
-	//     y_position = 'min'
-	// else:
-	//     meet_or_slice = aspect_ratio[1] if len(aspect_ratio) > 1 else None
-	//     if meet_or_slice == 'slice':
-	//         scale_value = max(scale_x, scale_y)
-	//     else:
-	//         scale_value = min(scale_x, scale_y)
-	//     scale_x = scale_y = scale_value
-	//     x_position = align[1:4].lower()
-	//     y_position = align[5:].lower()
+	if !pr.none {
+		if pr.slice {
+			scaleX = utils.MaxF(scaleX, scaleY)
+		} else {
+			scaleX = utils.MaxF(scaleX, scaleY)
+		}
+		scaleY = scaleX
+	}
 
-	// if node.tag == 'marker':
-	//     translate_x, translate_y = svg.point(
-	//         node.get('refX'), node.get('refY', '0'), font_size)
-	// else:
-	//     translate_x = 0
-	//     if x_position == 'mid':
-	//         translate_x = (width - viewbox_width * scale_x) / 2
-	//     elif x_position == 'max':
-	//         translate_x = width - viewbox_width * scale_x
+	if translate != nil {
+		translateX, translateY = translate.x, translate.y
+	} else {
+		if pr.xPosition == "mid" {
+			translateX = (width - viewboxWidth*scaleX) / 2
+		} else if pr.xPosition == "max" {
+			translateX = width - viewboxWidth*scaleX
+		}
 
-	//     translate_y = 0
-	//     if y_position == 'mid':
-	//         translate_y += (height - viewbox_height * scale_y) / 2
-	//     elif y_position == 'max':
-	//         translate_y += height - viewbox_height * scale_y
+		if pr.yPosition == "mid" {
+			translateY += (height - viewboxHeight*scaleY) / 2
+		} else if pr.yPosition == "max" {
+			translateY += height - viewboxHeight*scaleY
+		}
+	}
 
-	// if viewbox:
-	//     translate_x -= viewbox[0] * scale_x
-	//     translate_y -= viewbox[1] * scale_y
+	if viewbox != nil {
+		translateX -= viewbox.X * scaleX
+		translateY -= viewbox.Y * scaleY
+	}
 
 	return
 }
@@ -471,11 +478,15 @@ type drawingDims struct {
 
 	// cached value of norm(innerWidth, innerHeight) / sqrt(2)
 	innerDiagonal Fl
+
+	// cached value of norm(concreteWidth, concreteHeight) / sqrt(2)
+	normalizedDiagonal Fl
 }
 
-// update `innerDiagonal` from `innerWidth` and `innerHeight`.
+// update `innerDiagonal` and `normalizedDiagonal`
 func (dims *drawingDims) setupDiagonal() {
 	dims.innerDiagonal = Fl(math.Hypot(float64(dims.innerWidth), float64(dims.innerHeight)) / math.Sqrt2)
+	dims.normalizedDiagonal = Fl(math.Hypot(float64(dims.concreteWidth), float64(dims.concreteHeight)) / math.Sqrt2)
 }
 
 // resolve the size of an x/y or width/height couple.
@@ -525,13 +536,16 @@ type attributes struct {
 }
 
 func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgNode, error) {
-	children := make([]*svgNode, len(node.children))
-	for i, c := range node.children {
-		var err error
-		children[i], err = tree.processNode(c, defs)
+	var children []*svgNode
+	for _, c := range node.children {
+		child, err := tree.processNode(c, defs)
 		if err != nil {
 			return nil, err
 		}
+		if child == nil {
+			continue // do not add useless node to the tree
+		}
+		children = append(children, child)
 	}
 
 	// actual processing of the node, with the following cases
@@ -576,7 +590,15 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 		// children has been processed and registred,
 		// so we discard the node, which is not needed anymore
 	default:
-		return tree.processGraphicNode(node, children)
+		out, err := tree.processGraphicNode(node, children)
+		if err != nil {
+			return nil, err
+		}
+		// register node with id
+		if id != "" {
+			defs.nodes[id] = out
+		}
+		return out, nil
 	}
 
 	return nil, nil

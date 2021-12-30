@@ -14,25 +14,27 @@ func parseIcon(t *testing.T, iconPath string) {
 	}
 	defer f.Close()
 
-	_, err = Parse(f, "", nil)
+	img, err := Parse(f, "", nil)
 	if err != nil {
 		t.Error(err)
 	}
+
+	img.Draw(outputPage{}, 100, 100) // just check for crashes
 }
 
-func TestCorpus(t *testing.T) {
+func corpusFiles() (out []string) {
 	for _, p := range []string{
 		"beach", "cape", "iceberg", "island",
 		"mountains", "sea", "trees", "village",
 	} {
-		parseIcon(t, "testdata/landscapeIcons/"+p+".svg")
+		out = append(out, "testdata/landscapeIcons/"+p+".svg")
 	}
 
 	for _, p := range []string{
 		"astronaut", "jupiter", "lander", "school-bus", "telescope", "content-cut-light", "defs",
 		"24px",
 	} {
-		parseIcon(t, "testdata/testIcons/"+p+".svg")
+		out = append(out, "testdata/testIcons/"+p+".svg")
 	}
 
 	for _, p := range []string{
@@ -45,8 +47,16 @@ func TestCorpus(t *testing.T) {
 		"TestShapes4.svg",
 		"TestShapes5.svg",
 		"TestShapes6.svg",
+		"go-logo-blue.svg",
 	} {
-		parseIcon(t, "testdata/"+p)
+		out = append(out, "testdata/"+p)
+	}
+	return out
+}
+
+func TestCorpus(t *testing.T) {
+	for _, file := range corpusFiles() {
+		parseIcon(t, file)
 	}
 }
 
@@ -108,18 +118,22 @@ func TestParseDefs(t *testing.T) {
 	<use x="5" y="5" href="#myCircle" fill="url('#myGradient')" />
 	</svg>
 	`
-	img, err := buildSVGTree(strings.NewReader(input), "")
+	img, err := Parse(strings.NewReader(input), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(img.defs) != 2 {
+	if len(img.definitions.nodes) != 1 {
 		t.Fatal("defs")
 	}
-	if c, has := img.defs["myCircle"]; !has || len(c.children) != 0 {
+	if c, has := img.definitions.nodes["myCircle"]; !has || len(c.children) != 0 {
 		t.Fatal("defs circle")
 	}
-	if c, has := img.defs["myGradient"]; !has || len(c.children) != 2 {
-		t.Fatal("defs gradient")
+
+	if len(img.definitions.paintServers) != 1 {
+		t.Fatal("defs")
+	}
+	if _, has := img.definitions.paintServers["myGradient"]; !has {
+		t.Fatal("defs circle")
 	}
 }
 

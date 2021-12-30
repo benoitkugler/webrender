@@ -19,8 +19,6 @@ import (
 // svgContext is an intermediated representation of an SVG file,
 // where CSS has been applied, and text has been processed
 type svgContext struct {
-	defs map[string]*cascadedNode // TODO: replace by typed elements and delete field
-
 	root *cascadedNode // with tag svg
 
 	baseURL     string
@@ -30,13 +28,10 @@ type svgContext struct {
 	pathParser pathParser
 }
 
-func newSVGContext() *svgContext {
-	return &svgContext{
-		defs: make(map[string]*cascadedNode),
-	}
-}
-
 // cascadedNode is a node in an SVG document.
+// we use this intermediate representation to
+// ease the cascading of the properties
+// and the text handling
 type cascadedNode struct {
 	tag      string
 	text     []byte
@@ -200,7 +195,7 @@ func buildSVGTree(svg io.Reader, baseURL string) (*svgContext, error) {
 	normalMatcher, importantMatcher := parseStylesheets(stylesheets, baseURL)
 
 	// build the SVG tree and apply style attribute
-	out := newSVGContext()
+	var out svgContext
 
 	// may return nil to discard the node
 	var buildTree func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode
@@ -274,18 +269,13 @@ func buildSVGTree(svg io.Reader, baseURL string) (*svgContext, error) {
 			handleText(nodeSVG, true, true, trefs)
 		}
 
-		// register the node used as "defs"
-		if id := attrs["id"]; id != "" {
-			out.defs[id] = nodeSVG
-		}
-
 		return nodeSVG
 	}
 
 	out.root = buildTree((*html.Node)(svgRoot), nil)
 	out.baseURL = baseURL
 
-	return out, nil
+	return &out, nil
 }
 
 var (
