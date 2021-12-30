@@ -55,6 +55,35 @@ func (pi pathItem) draw(dst backend.CanvasNoFill) {
 	}
 }
 
+// returns the end of the segment
+func (pi pathItem) endPoint() point {
+	switch pi.op {
+	case moveTo, lineTo:
+		return pi.args[0]
+	case cubicTo:
+		return pi.args[2]
+	default:
+		panic("unreachable")
+	}
+}
+
+// return the angle at the end of the segment
+func (pi pathItem) endAngle(startPoint point) Fl {
+	switch pi.op {
+	case moveTo:
+		return 0
+	case lineTo:
+		endPoint := pi.args[0]
+		return atan2(endPoint.x-startPoint.x, endPoint.y-startPoint.y)
+	case cubicTo:
+		startPoint = pi.args[1]
+		endPoint := pi.args[2]
+		return atan2(endPoint.x-startPoint.x, endPoint.y-startPoint.y)
+	default:
+		panic("unreachable")
+	}
+}
+
 // convert to a cubic
 // CP1 = QP0 + 2/3 *(QP1-QP0)
 // CP2 = QP2 + 2/3 *(QP1-QP2)

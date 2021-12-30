@@ -37,6 +37,10 @@ const (
 	Em
 	// Special case : relative to the font size
 	Ex
+
+	// special values for internal use
+	auto
+	autoStartReverse
 )
 
 var units = [...]string{Px: "px", Cm: "cm", Mm: "mm", Pt: "pt", In: "in", Q: "Q", Pc: "pc", Perc: "%", Em: "em", Ex: "ex"}
@@ -374,4 +378,37 @@ func parseTransform(attr string) (out []transform, err error) {
 	}
 
 	return out, nil
+}
+
+type preserveAspectRatio struct {
+	xPosition, yPosition string
+	slice                bool // meet or slice
+}
+
+func parsePreserveAspectRatio(s string) (out preserveAspectRatio) {
+	out.xPosition, out.yPosition = "min", "min"
+	aspectRatio := strings.Split(s, " ")
+	if align := aspectRatio[0]; align != "none" || len(align) >= 5 {
+		out.xPosition = strings.ToLower(align[1:4])
+		out.yPosition = strings.ToLower(align[5:])
+	}
+	out.slice = len(aspectRatio) >= 2 && aspectRatio[1] == "slice"
+	return out
+}
+
+// accepts angle or "auto" or "auto-start-reverse"
+// the angle is expressed in degrees
+// the empty is matched to a 0 angle
+func parseOrientation(attr string) (Value, error) {
+	switch attr {
+	case "":
+		return Value{}, nil
+	case "auto":
+		return Value{U: auto}, nil
+	case "auto-start-reverse":
+		return Value{U: autoStartReverse}, nil
+	default:
+		f, err := strconv.ParseFloat(attr, 32)
+		return Value{V: Fl(f)}, err
+	}
 }

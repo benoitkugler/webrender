@@ -203,16 +203,10 @@ func (r polyline) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) [
 	p1, points := r.points[0], r.points[1:]
 	dst.MoveTo(p1.x, p1.y)
 
+	// use 0 as the angle for the first point
+	vertices := []vertex{{p1.x, p1.y, 0}}
+
 	oldPoint := p1
-
-	var angle Fl
-	if len(r.points) != 0 {
-		next := points[1]
-		angle = atan2(next.x-oldPoint.x, next.y-oldPoint.y)
-	} // else use 0 as angle
-	vertices := []vertex{{p1.x, p1.y, angle}}
-	// FIXME: angle computation
-
 	for _, point := range points {
 		dst.LineTo(point.x, point.y)
 		angle := atan2(point.x-oldPoint.x, point.y-oldPoint.y)
@@ -295,10 +289,17 @@ func newPath(node *cascadedNode, context *svgContext) (drawable, error) {
 }
 
 func (p path) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) []vertex {
+	var (
+		startPoint point
+		out        []vertex
+	)
 	for _, item := range p {
 		item.draw(dst)
+		angle := item.endAngle(startPoint)
+		startPoint = item.endPoint() // update the starting point
+		out = append(out, vertex{startPoint.x, startPoint.y, angle})
 	}
-	return nil // FIXME:
+	return out
 }
 
 // <image> tag
@@ -341,7 +342,7 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 }
 
 func (img image) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) []vertex {
-	// FIXME: support nested images
+	// TODO: support nested images
 	log.Println("nested image are not supported")
 	return nil
 }
@@ -413,9 +414,10 @@ func newClipPath(node *cascadedNode, children []*svgNode) clipPath {
 type marker struct {
 	viewbox *Rectangle
 
-	preserveAspectRatio string // default to "xMidYMid"
-	overflow            string // default to "hidden"
-	orient              string // angle or "auto" or "auto-start-reverse"
+	preserveAspectRatio preserveAspectRatio // default to "xMidYMid"
+
+	overflow string // default to "hidden"
+	orient   Value  // angle or "auto" or "auto-start-reverse"
 
 	children []*svgNode
 
@@ -425,22 +427,28 @@ type marker struct {
 	isUnitsUserSpace bool
 }
 
-func newMarker(node *cascadedNode, children []*svgNode) (out marker, err error) {
-	out = marker{
+func newMarker(node *cascadedNode, children []*svgNode) (out *marker, err error) {
+	out = &marker{
 		children:         children,
 		isUnitsUserSpace: node.attrs["markerUnits"] == "userSpaceOnUse",
-		orient:           node.attrs["orient"],
 	}
 
 	out.viewbox, err = node.attrs.viewBox()
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 
-	out.preserveAspectRatio = "xMidYMid"
-	if s, has := node.attrs["preserveAspectRatio"]; has {
-		out.preserveAspectRatio = s
+	out.orient, err = parseOrientation(node.attrs["orient"])
+	if err != nil {
+		return nil, err
 	}
+
+	preserveAspectRatio := "xMidYMid"
+	if s, has := node.attrs["preserveAspectRatio"]; has {
+		preserveAspectRatio = s
+	}
+	out.preserveAspectRatio = parsePreserveAspectRatio(preserveAspectRatio)
+
 	out.overflow = "hidden"
 	if s, has := node.attrs["overflow"]; has {
 		out.overflow = s
@@ -455,20 +463,20 @@ func newMarker(node *cascadedNode, children []*svgNode) (out marker, err error) 
 	}
 	out.markerWidth, err = parseValue(mw)
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 	out.markerHeight, err = parseValue(mh)
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 
 	out.refX, err = parseValue(node.attrs["refX"])
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 	out.refY, err = parseValue(node.attrs["refY"])
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 
 	return out, nil

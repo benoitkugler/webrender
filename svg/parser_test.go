@@ -221,3 +221,28 @@ func Test_parseTransform(t *testing.T) {
 		}
 	}
 }
+
+func Test_parseOrientation(t *testing.T) {
+	tests := []struct {
+		args    string
+		want    Value
+		wantErr bool
+	}{
+		{"auto", Value{U: auto}, false},
+		{"auto-start-reverse", Value{U: autoStartReverse}, false},
+		{"30", Value{V: 30}, false},
+		{"30.2", Value{V: 30.2}, false},
+		{"tre", Value{}, true},
+		{"", Value{}, false},
+	}
+	for _, tt := range tests {
+		got, err := parseOrientation(tt.args)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("parseOrientation() error = %v, wantErr %v", err, tt.wantErr)
+			return
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("parseOrientation() = %v, want %v", got, tt.want)
+		}
+	}
+}

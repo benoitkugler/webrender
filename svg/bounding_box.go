@@ -27,6 +27,27 @@ func (node *svgNode) resolveBoundingBox(dims drawingDims, withStroke bool) (Rect
 	return bbox, true
 }
 
+// compute the union of all the node bounding boxes or return false if
+// no one is valid
+func boundingBoxUnion(nodes []*svgNode, dims drawingDims) (Rectangle, bool) {
+	foundValid := false
+	out := Rectangle{}
+	for _, node := range nodes {
+		bb, ok := node.resolveBoundingBox(dims, true)
+		if !ok {
+			continue
+		}
+
+		if !foundValid { // start with this box
+			out = bb
+			foundValid = true
+		} else { // perform the union
+			out.union(bb)
+		}
+	}
+	return out, foundValid
+}
+
 type Rectangle struct {
 	X, Y, Width, Height Fl
 }

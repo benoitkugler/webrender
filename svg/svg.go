@@ -12,6 +12,7 @@ import (
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/matrix"
+	"github.com/benoitkugler/webrender/utils"
 )
 
 // convert from an svg tree to the final form
@@ -23,7 +24,7 @@ type definitions struct {
 	clipPaths    map[string]clipPath
 	masks        map[string]mask
 	paintServers map[string]paintServer
-	markers      map[string]marker
+	markers      map[string]*marker
 }
 
 func newDefinitions() definitions {
@@ -32,7 +33,7 @@ func newDefinitions() definitions {
 		clipPaths:    make(map[string]clipPath),
 		masks:        make(map[string]mask),
 		paintServers: make(map[string]paintServer),
-		markers:      make(map[string]marker),
+		markers:      make(map[string]*marker),
 	}
 }
 
@@ -40,9 +41,6 @@ type SVGImage struct {
 	root *svgNode
 
 	definitions definitions
-
-	// ViewBox is the optional value of the "viewBox" attribute
-	ViewBox *Rectangle
 }
 
 // DisplayedSize returns the value of the "width" and "height" attributes
@@ -59,12 +57,15 @@ func (svg *SVGImage) DisplayedSize() (width, height Value) {
 	return w, h
 }
 
+// ViewBox returns the optional value of the "viewBox" attribute
+func (svg *SVGImage) ViewBox() *Rectangle { return svg.root.viewbox }
+
 // Draw draws the parsed SVG image into the given `dst` output,
 // with the given `width` and `height`.
 func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
 	var ctx drawingDims
 	ctx.concreteWidth, ctx.concreteHeight = width, height
-	if vb := svg.ViewBox; vb != nil {
+	if vb := svg.ViewBox(); vb != nil {
 		ctx.innerWidth, ctx.innerHeight = vb.Width, vb.Height
 	} else {
 		ctx.innerWidth, ctx.innerHeight = width, height
@@ -132,7 +133,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// draw markers
 		if vertices != nil {
-			svg.drawMarkers(dst, vertices, node, dims, paint)
+			// svg.drawMarkers(dst, vertices, node, dims, paint)
 		}
 
 		// apply opacity group and restore original target
@@ -150,9 +151,173 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 }
 
 // vertices are the resolved vertices computed when drawing the shape
-func (svg *SVGImage) drawMarkers(dst backend.CanvasNoFill, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
+	const (
+		start uint8 = iota
+		mid
+		end
+	)
+	commonMarker := svg.definitions.markers[node.markerID]
+
+	// [start, mid, end] defautling to the common marker
+	markers := [3]*marker{commonMarker, commonMarker, commonMarker}
+
+	if marker := svg.definitions.markers[node.markerStartID]; marker != nil {
+		markers[start] = marker
+	}
+	if marker := svg.definitions.markers[node.markerMidID]; marker != nil {
+		markers[mid] = marker
+	}
+	if marker := svg.definitions.markers[node.markerEndID]; marker != nil {
+		markers[end] = marker
+	}
+
+	for i, vertex := range vertices {
+		position := mid
+		if i == 0 {
+			position = start
+		} else if i == len(vertices)-1 {
+			position = end
+		}
+
+		marker := markers[position]
+		if marker == nil {
+			continue
+		}
+
+		// calculate position, scale and clipping
+		var (
+			clipBox                                *Rectangle
+			scaleX, scaleY, translateX, translateY Fl
+		)
+		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
+		if vb := node.attributes.viewbox; vb != nil {
+			scaleX, scaleY, translateX, translateY = marker.preserveAspectRatio.resolveTransforms(dims, markerWidth, markerHeight, nil)
+
+			clipViewbox := *vb
+			if marker.viewbox != nil {
+				clipViewbox = *marker.viewbox
+			}
+
+			xPosition, yPosition := marker.preserveAspectRatio.xPosition, marker.preserveAspectRatio.yPosition
+
+			if xPosition == "mid" {
+				clipViewbox.X += (clipViewbox.Width - markerWidth/scaleX) / 2
+			} else if xPosition == "max" {
+				clipViewbox.X += clipViewbox.Width - markerWidth/scaleX
+			}
+
+			if yPosition == "mid" {
+				clipViewbox.Y += (clipViewbox.Height - markerHeight/scaleY) / 2
+			} else if yPosition == "max" {
+				clipViewbox.Y += clipViewbox.Height - markerHeight/scaleY
+			}
+
+			clipBox = &Rectangle{clipViewbox.X, clipViewbox.Y, markerWidth / scaleX, markerHeight / scaleY}
+		} else {
+			if box, ok := boundingBoxUnion(marker.children, dims); ok {
+				scaleX = utils.MinF(markerWidth/box.Width, markerHeight/box.Height)
+				scaleY = scaleX
+			} else {
+				scaleX, scaleY = 1, 1
+			}
+			translateX, translateY = dims.point(marker.refX, marker.refY)
+			clipBox = nil
+		}
+
+		// scale
+		if !marker.isUnitsUserSpace {
+			scale := dims.length(node.attributes.strokeWidth)
+			scaleX *= scale
+			scaleY *= scale
+		}
+
+		// override angle
+		angle := vertex.angle
+		nodeAngle := marker.orient
+		if nodeAngle.U != auto && nodeAngle.U != autoStartReverse {
+			angle = nodeAngle.V * math.Pi / 180 // convert from degrees to radians
+		} else if nodeAngle.U == autoStartReverse && position == start {
+			angle += math.Pi
+		}
+
+		// draw marker path
+		for _, child := range marker.children {
+			dst.OnNewStack(func() {
+				// TODO: check matrix operation order
+				mat := matrix.Scaling(scaleX, scaleY)
+				mat.Rotate(angle)
+				mat.Translate(vertex.x, vertex.y)
+				mat.Translate(translateX, translateY)
+				dst.Transform(mat)
+
+				overflow := marker.overflow
+				if clipBox != nil && (overflow == "hidden" || overflow == "scroll") {
+					dst.OnNewStack(func() {
+						dst.Rectangle(clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height)
+					})
+					dst.Clip(false)
+				}
+
+				svg.drawNode(dst, child, dims, paint)
+			})
+		}
+
+	}
+}
+
+// compute scale and translation needed to preserve ratio
+func (pr preserveAspectRatio) resolveTransforms(dims drawingDims, width, height Fl, viewbox *Rectangle) (scaleX, scaleY, translateX, translateY Fl) {
 	// FIXME:
-	log.Println("drawing markers is not implemented")
+	// viewbox = viewbox or node.get_viewbox()
+	// if viewbox:
+	//     viewbox_width, viewbox_height = viewbox[2:]
+	// elif svg.tree == node:
+	//     viewbox_width, viewbox_height = svg.get_intrinsic_size(font_size)
+	//     if None in (viewbox_width, viewbox_height):
+	//         return 1, 1, 0, 0
+	// else:
+	//     return 1, 1, 0, 0
+
+	// scale_x = width / viewbox_width if viewbox_width else 1
+	// scale_y = height / viewbox_height if viewbox_height else 1
+
+	// aspect_ratio = node.get('preserveAspectRatio', 'xMidYMid').split()
+	// align = aspect_ratio[0]
+	// if align == 'none':
+	//     x_position = 'min'
+	//     y_position = 'min'
+	// else:
+	//     meet_or_slice = aspect_ratio[1] if len(aspect_ratio) > 1 else None
+	//     if meet_or_slice == 'slice':
+	//         scale_value = max(scale_x, scale_y)
+	//     else:
+	//         scale_value = min(scale_x, scale_y)
+	//     scale_x = scale_y = scale_value
+	//     x_position = align[1:4].lower()
+	//     y_position = align[5:].lower()
+
+	// if node.tag == 'marker':
+	//     translate_x, translate_y = svg.point(
+	//         node.get('refX'), node.get('refY', '0'), font_size)
+	// else:
+	//     translate_x = 0
+	//     if x_position == 'mid':
+	//         translate_x = (width - viewbox_width * scale_x) / 2
+	//     elif x_position == 'max':
+	//         translate_x = width - viewbox_width * scale_x
+
+	//     translate_y = 0
+	//     if y_position == 'mid':
+	//         translate_y += (height - viewbox_height * scale_y) / 2
+	//     elif y_position == 'max':
+	//         translate_y += height - viewbox_height * scale_y
+
+	// if viewbox:
+	//     translate_x -= viewbox[0] * scale_x
+	//     translate_y -= viewbox[1] * scale_y
+
+	return
 }
 
 func applyTransform(dst backend.CanvasNoFill, transforms []transform, dims drawingDims) {
@@ -274,15 +439,9 @@ func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader) (*SVGImage, e
 
 	tree.imageLoader = imageLoader
 
-	// Build the drawable items by parsing attributes
-	vb, err := tree.root.attrs.viewBox()
-	if err != nil {
-		return nil, err
-	}
-
 	var out SVGImage
 	out.definitions = newDefinitions()
-	out.ViewBox = vb
+	// Build the drawable items by parsing attributes
 	out.root, err = tree.processNode(tree.root, out.definitions)
 	if err != nil {
 		return nil, err
@@ -341,10 +500,12 @@ type box struct {
 // attributes stores the SVG attributes
 // shared by all node types in the final rendering tree
 type attributes struct {
+	viewbox *Rectangle
+
 	transforms []transform
 
-	clipPathID, maskID, filterID              string
-	marker, markerStart, markerMid, markerEnd string
+	clipPathID, maskID, filterID                      string
+	markerID, markerStartID, markerMidID, markerEndID string
 
 	dashArray []Value
 
@@ -471,6 +632,10 @@ func (na nodeAttributes) parseCommonAttributes(out *attributes) error {
 	if err != nil {
 		return err
 	}
+	out.viewbox, err = na.viewBox()
+	if err != nil {
+		return err
+	}
 	out.fontSize, err = na.fontSize()
 	if err != nil {
 		return err
@@ -528,10 +693,10 @@ func (na nodeAttributes) parseCommonAttributes(out *attributes) error {
 	out.clipPathID = parseURLFragment(na["clip-path"])
 	out.maskID = parseURLFragment(na["mask"])
 
-	out.marker = parseURLFragment(na["marker"])
-	out.markerStart = parseURLFragment(na["marker-start"])
-	out.markerMid = parseURLFragment(na["marker-mid"])
-	out.markerEnd = parseURLFragment(na["marker-end"])
+	out.markerID = parseURLFragment(na["marker"])
+	out.markerStartID = parseURLFragment(na["marker-start"])
+	out.markerMidID = parseURLFragment(na["marker-mid"])
+	out.markerEndID = parseURLFragment(na["marker-end"])
 
 	out.display = na.display()
 	out.visible = na.visible()

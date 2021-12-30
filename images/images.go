@@ -216,7 +216,7 @@ func (s *SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.May
 	}
 
 	if intrinsicWidth == nil || intrinsicHeight == nil {
-		viewbox := s.icon.ViewBox
+		viewbox := s.icon.ViewBox()
 		if viewbox != nil && viewbox.Width != 0 && viewbox.Height != 0 {
 			ratio = pr.Float(viewbox.Width / viewbox.Height)
 			if pr.Is(intrinsicWidth) {
