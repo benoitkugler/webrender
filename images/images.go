@@ -14,6 +14,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/svg"
 	"github.com/benoitkugler/webrender/utils"
+	"golang.org/x/net/html"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -32,7 +33,7 @@ type Image interface {
 
 var (
 	_ Image = rasterImage{}
-	_ Image = &SVGImage{}
+	_ Image = SVGImage{}
 	_ Image = LinearGradient{}
 	_ Image = RadialGradient{}
 )
@@ -88,9 +89,9 @@ func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMim
 	var errSvg error
 	// Try to rely on given mimetype for SVG
 	if mimeType == "image/svg+xml" {
-		var svgIm *SVGImage
+		var svgIm SVGImage
 		svgIm, errSvg = NewSVGImage(content.Content, url, fetcher)
-		if svgIm != nil {
+		if errSvg == nil {
 			img = svgIm
 		}
 	}
@@ -170,32 +171,42 @@ func (r rasterImage) Draw(context backend.CanvasNoFill, concreteWidth, concreteH
 }
 
 type SVGImage struct {
-	icon       *svg.SVGImage
-	urlFetcher utils.UrlFetcher
-	baseUrl    string
+	icon *svg.SVGImage
 }
 
 func (SVGImage) isImage() {}
 
-func NewSVGImage(svgData io.Reader, baseUrl string, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
-	self := new(SVGImage)
+func NewSVGImage(svgData io.Reader, baseURL string, urlFetcher utils.UrlFetcher) (SVGImage, error) {
 	// don’t pass data URIs: they are useless for relative URIs anyway.
-	if !strings.HasPrefix(strings.ToLower(baseUrl), "data:") {
-		self.baseUrl = baseUrl
+	if strings.HasPrefix(strings.ToLower(baseURL), "data:") {
+		baseURL = ""
 	}
-
-	self.urlFetcher = urlFetcher
 
 	var err error
 	// FIXME: imageLoader : for now, nested image are not supported
-	self.icon, err = svg.Parse(svgData, self.baseUrl, nil)
+	icon, err := svg.Parse(svgData, baseURL, nil)
 	if err != nil {
-		return nil, imageLoadingError(err)
+		return SVGImage{}, imageLoadingError(err)
 	}
-	return self, nil
+	return SVGImage{icon: icon}, nil
 }
 
-func (s *SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.MaybeFloat, pr.MaybeFloat) {
+func NewSVGImageFromNode(node *html.Node, baseURL string) (SVGImage, error) {
+	// don’t pass data URIs: they are useless for relative URIs anyway.
+	if strings.HasPrefix(strings.ToLower(baseURL), "data:") {
+		baseURL = ""
+	}
+
+	var err error
+	// FIXME: imageLoader : for now, nested image are not supported
+	icon, err := svg.ParseNode(node, baseURL, nil)
+	if err != nil {
+		return SVGImage{}, imageLoadingError(err)
+	}
+	return SVGImage{icon: icon}, nil
+}
+
+func (s SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.MaybeFloat, pr.MaybeFloat) {
 	width, height := s.icon.DisplayedSize()
 
 	var intrinsicWidth, intrinsicHeight, ratio pr.MaybeFloat
@@ -223,6 +234,6 @@ func (s *SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.May
 	return intrinsicWidth, intrinsicHeight, ratio
 }
 
-func (img *SVGImage) Draw(dst backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (img SVGImage) Draw(dst backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	img.icon.Draw(dst, concreteWidth, concreteHeight)
 }
