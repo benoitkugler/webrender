@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/webrender/images"
+	"github.com/benoitkugler/webrender/logger"
 
 	"github.com/benoitkugler/webrender/utils"
 
@@ -25,6 +26,7 @@ var HTMLHandlers = map[string]handlerFunction{
 	"th":       handleTd,
 	"td":       handleTd,
 	"a":        handleA,
+	"svg":      handleSVG,
 }
 
 // HandleElement handle HTML elements that need special care.
@@ -202,4 +204,15 @@ func handleTd(element *utils.HTMLNode, box Box, _ Gifu, _ string) []Box {
 func handleA(element *utils.HTMLNode, box Box, _ Gifu, _ string) []Box {
 	box.Box().IsAttachment = utils.ElementHasLinkType(element, "attachment")
 	return []Box{box}
+}
+
+// handle the inline <svg> elements
+// Return either an image or the fallback content.
+func handleSVG(element *utils.HTMLNode, box Box, _ Gifu, baseUrl string) []Box {
+	img, err := images.NewSVGImageFromNode((*html.Node)(element), baseUrl)
+	if err != nil {
+		logger.WarningLogger.Printf("Failed to load inline SVG: %s", err)
+		return nil
+	}
+	return []Box{makeReplacedBox(element, box, img)}
 }
