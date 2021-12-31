@@ -74,8 +74,13 @@ func FloatModulo(x Fl, i int) Fl {
 	return Fl(modLikePython(int(x2), i)) + diff
 }
 
+// RoundPrec rounds f with n digits precision
+func RoundPrec(f Fl, n int) Fl {
+	n10 := math.Pow10(n)
+	return Fl(math.Round(float64(f)*n10) / n10)
+}
+
 // Round rounds f with 6 digits precision
 func Round(f Fl) Fl {
-	n := math.Pow10(6)
-	return Fl(math.Round(float64(f)*n) / n)
+	return RoundPrec(f, 6)
 }
