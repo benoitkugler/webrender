@@ -13,6 +13,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
+	"golang.org/x/net/html"
 )
 
 // convert from an svg tree to the final form
@@ -432,13 +433,24 @@ func applyMask(dst backend.CanvasNoFill, mask mask, node *svgNode, dims drawingD
 // ImageLoader is used to resolve and process image url found in SVG files.
 type ImageLoader = func(url string) (backend.Image, error)
 
-// Parse parsed the given SVG data. Warnings are
+// Parse parsed the given SVG source data. Warnings are
 // logged for unsupported elements.
 // An error is returned for invalid documents.
 // `baseURL` is used as base path for url resources.
 // `imageLoader` is required to handle inner images.
 func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader) (*SVGImage, error) {
-	tree, err := buildSVGTree(svg, baseURL)
+	root, err := html.Parse(svg)
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseNode(root, baseURL, imageLoader)
+}
+
+// ParseNode is the same as Parse but works with an already parsed
+// svg input.
+func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader) (*SVGImage, error) {
+	tree, err := buildSVGTree(root, baseURL)
 	if err != nil {
 		return nil, err
 	}
