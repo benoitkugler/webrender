@@ -2,11 +2,11 @@ package svg
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -343,7 +343,7 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 
 func (img image) draw(dst backend.CanvasNoFill, _ *attributes, _ drawingDims) []vertex {
 	// TODO: support nested images
-	log.Println("nested image are not supported")
+	logger.WarningLogger.Println("nested image are not supported")
 	return nil
 }
 
@@ -387,7 +387,7 @@ func newFilter(node *cascadedNode) (out []filter, err error) {
 			}
 			out = append(out, fi)
 		default:
-			log.Printf("unsupported filter element: %s", child.tag)
+			logger.WarningLogger.Printf("unsupported filter element: %s", child.tag)
 		}
 	}
 

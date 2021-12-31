@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"reflect"
@@ -82,17 +81,17 @@ func main() {
 	code_ITF += "}"
 
 	if err := ioutil.WriteFile(OUT_1, []byte(code_1+code_ITF), os.ModePerm); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	if err := ioutil.WriteFile(OUT_2, []byte(code_2), os.ModePerm); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	if err := exec.Command("goimports", "-w", OUT_1).Run(); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	if err := exec.Command("goimports", "-w", OUT_2).Run(); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	fmt.Println("Generated", OUT_1, OUT_2)
 }

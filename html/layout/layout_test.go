@@ -3,7 +3,6 @@ package layout
 import (
 	"fmt"
 	"io"
-	"log"
 	"testing"
 
 	fc "github.com/benoitkugler/textlayout/fontconfig"
@@ -29,12 +28,12 @@ func init() {
 	// fmt.Println("Scanning fonts...")
 	// _, err := fc.ScanAndCache(fontmapCache)
 	// if err != nil {
-	// 	log.Fatal(err)
+	// 	panic(err)
 	// }
 
 	fs, err := fc.LoadFontsetFile(fontmapCache)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	fontconfig = text.NewFontConfiguration(fcfonts.NewFontMap(fc.Standard.Copy(), fs))
 }

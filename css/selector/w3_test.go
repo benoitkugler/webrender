@@ -3,7 +3,6 @@ package selector
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -31,11 +30,11 @@ func TestInvalidSelectors(t *testing.T) {
 func parseReference(filename string) *html.Node {
 	f, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	node, err := html.Parse(f)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return node
 }

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -28,8 +27,8 @@ func TestReW3CDate(t *testing.T) {
 			t.Fatalf("date %s not matching", date)
 		}
 
-		if parseW3cDate("test", date).IsZero() {
-			t.Fatalf("date %s not parsed", date)
+		if _, err := parseW3cDate("test", date); err != nil {
+			t.Fatalf("date %s not parsed: %s", date, err)
 		}
 	}
 }
@@ -40,11 +39,10 @@ func TestWalkHtml(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(root.FirstChild)
 	iter := NewHtmlIterator(root.FirstChild)
 	for iter.HasNext() {
-		n := iter.Next()
-		fmt.Printf("%p %v %s\n", n, n.DataAtom, n.Data)
+		_ = iter.Next()
+		// fmt.Printf("%p %v %s\n", n, n.DataAtom, n.Data)
 	}
 }
 

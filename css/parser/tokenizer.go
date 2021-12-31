@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -471,11 +470,9 @@ func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, e
 
 // Returns unescapedValue
 // http://dev.w3.org/csswg/css-syntax/#consume-a-string-token
+// css[pos] is assumed to be a quote
 func consumeQuotedString(css []byte, pos int) (string, int, bool, error) {
 	quote := rune(css[pos])
-	if quote != '"' && quote != '\'' {
-		log.Fatal("first char should be a quote")
-	}
 	pos += 1
 	var chunks strings.Builder
 	length := len(css)

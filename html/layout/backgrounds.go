@@ -2,7 +2,6 @@ package layout
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strings"
 
@@ -37,8 +36,7 @@ func boxRectangle(box bo.BoxFields, whichRectangle string) [4]pr.Float {
 			box.Height.V(),
 		}
 	default:
-		log.Fatalf("unexpected whichRectangle : %s", whichRectangle)
-		return [4]pr.Float{}
+		panic(fmt.Sprintf("unexpected whichRectangle : %s", whichRectangle))
 	}
 }
 
@@ -208,7 +206,8 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 		case "content-box":
 			clippedBoxes = []bo.RoundedBox{box.RoundedContentBox()}
 		default:
-			log.Fatalf("unexpected clip : %s", clip)
+			// see validation
+			panic(fmt.Sprintf("unexpected clip : %s", clip))
 		}
 	}
 

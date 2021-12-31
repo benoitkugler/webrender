@@ -2,7 +2,6 @@ package layout
 
 import (
 	"fmt"
-	"log"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
@@ -101,7 +100,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		horizontalDelta = 0
 		verticalDelta = 0
 	default:
-		log.Fatalf("invalid box sizing %s", box.Style.GetBoxSizing())
+		panic(fmt.Sprintf("invalid box sizing %s", box.Style.GetBoxSizing()))
 	}
 
 	// Keep at least min* >= 0 to prevent funny output in case box.Width or

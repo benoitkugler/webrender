@@ -2,11 +2,11 @@ package layout
 
 import (
 	"fmt"
-	"log"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -100,6 +100,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 				if pageBreak == "page" || pageBreak == "recto" || pageBreak == "verso" || pageBreak == "left" || pageBreak == "right" {
 					nextPage.Break = pageBreak
 					resumeAt = tree.ResumeStack{indexRow: nil}
+					fmt.Println("break 1")
 					break
 				}
 			}
@@ -129,7 +130,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 					// entierly. Subsequent cells in the same row have greater
 					// gridX, so they are beyond too.
 					ignoredCells := row.Children[indexCell:]
-					log.Printf("This table row has more columns than the table, ignored %d cells: %v",
+					logger.WarningLogger.Printf("This table row has more columns than the table, ignored %d cells: %v",
 						len(ignoredCells), ignoredCells)
 					break
 				}
@@ -349,6 +350,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 				} else {
 					return nil, nil, nextPage
 				}
+
 				break
 			}
 
@@ -456,6 +458,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 				break
 			}
 		}
+
 		return newTableChildren, resumeAt, nextPage, positionY
 	}
 

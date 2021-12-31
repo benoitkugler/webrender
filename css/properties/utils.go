@@ -1,7 +1,7 @@
 package properties
 
 import (
-	"log"
+	"fmt"
 	"math"
 
 	"github.com/benoitkugler/webrender/css/parser"
@@ -120,19 +120,19 @@ func (c ContentProperty) AsLeader() string {
 }
 
 func (c ContentProperty) AsCounter() (counterName string, counterStyle CounterStyleID) {
-	value, _ := c.Content.(Counters)
+	value := c.Content.(Counters)
 	return value.Name, value.Style
 }
 
 func (c ContentProperty) AsCounters() (counterName, separator string, counterStyle CounterStyleID) {
-	value, _ := c.Content.(Counters)
+	value := c.Content.(Counters)
 	return value.Name, value.Separator, value.Style
 }
 
 func (c ContentProperty) AsStrings() []string {
 	value, ok := c.Content.(Strings)
 	if !ok {
-		log.Fatalf("invalid content (expected []string): %v", c.Content)
+		panic(fmt.Sprintf("invalid content (expected []string): %v", c.Content))
 	}
 	return value
 }
@@ -140,7 +140,7 @@ func (c ContentProperty) AsStrings() []string {
 func (c ContentProperty) AsTargetCounter() (anchorToken ContentProperty, counterName, counterStyle string) {
 	value, _ := c.Content.(SContentProps)
 	if len(value) != 3 {
-		log.Fatalf("invalid content (expected 3-list of String or ContentProperty): %v", c.Content)
+		panic(fmt.Sprintf("invalid content (expected 3-list of String or ContentProperty): %v", c.Content))
 	}
 	return value[0].ContentProperty, value[1].String, value[2].String
 }
@@ -148,7 +148,7 @@ func (c ContentProperty) AsTargetCounter() (anchorToken ContentProperty, counter
 func (c ContentProperty) AsTargetCounters() (anchorToken ContentProperty, counterName string, separator ContentProperty, counterStyle string) {
 	value, _ := c.Content.(SContentProps)
 	if len(value) != 4 {
-		log.Fatalf("invalid content (expected 4-list of String or ContentProperty): %v", c.Content)
+		panic(fmt.Sprintf("invalid content (expected 4-list of String or ContentProperty): %v", c.Content))
 	}
 	return value[0].ContentProperty, value[1].String, value[2].ContentProperty, value[3].String
 }
@@ -156,7 +156,7 @@ func (c ContentProperty) AsTargetCounters() (anchorToken ContentProperty, counte
 func (c ContentProperty) AsTargetText() (anchorToken ContentProperty, textStyle string) {
 	value, _ := c.Content.(SContentProps)
 	if len(value) != 2 {
-		log.Fatalf("invalid content (expected 2-list of String or ContentProperty): %v", c.Content)
+		panic(fmt.Sprintf("invalid content (expected 2-list of String or ContentProperty): %v", c.Content))
 	}
 	return value[0].ContentProperty, value[1].String
 }

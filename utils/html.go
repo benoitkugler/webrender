@@ -2,13 +2,13 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/benoitkugler/webrender/logger"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -355,11 +355,19 @@ func GetHtmlMetadata(wrapperElement *HTMLNode, baseUrl string) DocumentMetadata 
 				}
 			case "dcterms.created":
 				if created.IsZero() {
-					created = parseW3cDate(name, content)
+					var err error
+					created, err = parseW3cDate(name, content)
+					if err != nil {
+						logger.WarningLogger.Println(err)
+					}
 				}
 			case "dcterms.modified":
 				if modified.IsZero() {
-					modified = parseW3cDate(name, content)
+					var err error
+					modified, err = parseW3cDate(name, content)
+					if err != nil {
+						logger.WarningLogger.Println(err)
+					}
 				}
 			}
 		case atom.Link:
@@ -367,7 +375,7 @@ func GetHtmlMetadata(wrapperElement *HTMLNode, baseUrl string) DocumentMetadata 
 				url := element.GetUrlAttribute("href", baseUrl, false)
 				attTitle := element.Get("title")
 				if url == "" {
-					log.Println("Missing href in <link rel='attachment'>")
+					logger.WarningLogger.Println("Missing href in <link rel='attachment'>")
 				} else {
 					attachments = append(attachments, Attachment{URL: url, Title: attTitle})
 				}
@@ -441,17 +449,16 @@ func toInt(s string, defaut ...int) int {
 	}
 	out, err := strconv.Atoi(s)
 	if err != nil {
-		log.Fatalf("unexpected string for int : %s", s)
+		panic(fmt.Sprintf("unexpected string for int : %s", s))
 	}
 	return out
 }
 
 // http://www.w3.org/TR/NOTE-datetime
-func parseW3cDate(metaName, str string) time.Time {
+func parseW3cDate(metaName, str string) (time.Time, error) {
 	match := w3CDateRe.FindStringSubmatch(str)
 	if len(match) == 0 {
-		log.Printf("Invalid %s date: %s", metaName, str)
-		return time.Time{}
+		return time.Time{}, fmt.Errorf("Invalid %s date: %s", metaName, str)
 	}
 	year := toInt(match[W3CDateReGroupsIndexes["year"]])
 	month := toInt(match[W3CDateReGroupsIndexes["month"]], 1)
@@ -462,14 +469,14 @@ func parseW3cDate(metaName, str string) time.Time {
 	var tzHour, tzMinute int
 	if match[W3CDateReGroupsIndexes["hour"]] != "" {
 		if match[W3CDateReGroupsIndexes["minute"]] == "" {
-			log.Fatalf("minute shouldn't be empty when hour is present")
+			return time.Time{}, fmt.Errorf("minute shouldn't be empty when hour is present")
 		}
 		if match[W3CDateReGroupsIndexes["tzHour"]] != "" {
 			if !(strings.HasPrefix(match[W3CDateReGroupsIndexes["tzHour"]], "+") || strings.HasPrefix(match[W3CDateReGroupsIndexes["tzHour"]], "-")) {
-				log.Fatalf("tzHour should start by + or -, got %s", match[W3CDateReGroupsIndexes["tzHour"]])
+				return time.Time{}, fmt.Errorf("tzHour should start by + or -, got %s", match[W3CDateReGroupsIndexes["tzHour"]])
 			}
 			if match[W3CDateReGroupsIndexes["tzMinute"]] == "" {
-				log.Fatalf("tzMinute shouldn't be empty when tzHour is present")
+				return time.Time{}, fmt.Errorf("tzMinute shouldn't be empty when tzHour is present")
 			}
 			tzHour = toInt(match[W3CDateReGroupsIndexes["tzHour"]])
 			tzMinute = toInt(match[W3CDateReGroupsIndexes["tzMinute"]])
@@ -479,5 +486,5 @@ func parseW3cDate(metaName, str string) time.Time {
 	if tzHour != 0 || tzMinute != 0 {
 		loc = time.FixedZone("w3c", tzHour*3600+tzMinute*60)
 	}
-	return time.Date(year, time.Month(month), day, hour, minute, second, 0, loc)
+	return time.Date(year, time.Month(month), day, hour, minute, second, 0, loc), nil
 }

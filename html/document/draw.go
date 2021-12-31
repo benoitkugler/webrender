@@ -2,7 +2,6 @@ package document
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/html/tree"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 
 	"github.com/benoitkugler/webrender/html/layout"
@@ -124,7 +124,7 @@ func hsv2rgb(hue, saturation, value fl) (r, g, b fl) {
 	case 300 <= hue && hue < 360:
 		return c + m, m, x + m
 	default:
-		log.Fatalf("invalid hue %f", hue)
+		logger.WarningLogger.Printf("invalid hue %f", hue)
 		return 0, 0, 0
 	}
 }
@@ -265,7 +265,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			if mat.Determinant() != 0 {
 				ctx.dst.Transform(mat)
 			} else {
-				log.Printf("non invertible transformation matrix %v\n", mat)
+				logger.WarningLogger.Printf("non invertible transformation matrix %v\n", mat)
 				return
 			}
 		}
@@ -466,12 +466,12 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 			}
 			svg, err := formatSVG(svg, svgArgs{Width: width, Height: height, Bleed: bleed, HalfBleed: halfBleed})
 			if err != nil {
-				log.Println(err)
+				logger.WarningLogger.Println(err)
 				return
 			}
 			image, err := images.NewSVGImage(strings.NewReader(svg), "", nil)
 			if err != nil {
-				log.Println(err)
+				logger.WarningLogger.Println(err)
 				return
 			}
 
@@ -1016,8 +1016,11 @@ func boolToInt(b bool) int {
 
 // Draw borders of table cells when they collapse.
 func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
+	fmt.Println("draw collapsed")
 	var rowHeights, rowPositions []pr.Float
+	fmt.Println(len(table.Children))
 	for _, rowGroup := range table.Children {
+		fmt.Println(len(rowGroup.Box().Children))
 		for _, row := range rowGroup.Box().Children {
 			rowHeights = append(rowHeights, row.Box().Height.V())
 			rowPositions = append(rowPositions, row.Box().PositionY)
@@ -1067,6 +1070,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 	footerRowsOffset := originalGridHeight - gridHeight
 
 	rowNumber := func(y int, horizontal bool) int {
+		// fmt.Println(headerRows, footerRows, y, horizontal)
 		// Examples in comments for 2 headers rows, 5 body rows, 3 footer rows
 		if headerRows != 0 && y < (headerRows+boolToInt(horizontal)) {
 			// Row in header: y < 2 for vertical, y < 3 for horizontal
@@ -1140,12 +1144,12 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		})
 	}
 
-	for x := 0; x < gridWidth; x += 1 {
+	for x := 0; x < gridWidth; x++ {
 		addHorizontal(x, 0)
 	}
-	for y := 0; y < gridHeight; y += 1 {
+	for y := 0; y < gridHeight; y++ {
 		addVertical(0, y)
-		for x := 0; x < gridWidth; x += 1 {
+		for x := 0; x < gridWidth; x++ {
 			addVertical(x+1, y)
 			addHorizontal(x, y+1)
 		}

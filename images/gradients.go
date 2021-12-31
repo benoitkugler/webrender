@@ -2,7 +2,6 @@ package images
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strings"
 
@@ -146,9 +145,6 @@ type gradient struct {
 
 func newGradient(colorStops []pr.ColorStop, repeating bool) gradient {
 	self := gradient{}
-	if len(colorStops) == 0 {
-		log.Fatalf("expected non empty colorStops slice")
-	}
 	self.colors = make([]Color, len(colorStops))
 	self.stopPositions = make([]pr.Dimension, len(colorStops))
 	for i, v := range colorStops {

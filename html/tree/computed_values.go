@@ -2,12 +2,12 @@ package tree
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/html/layout/text"
+	"github.com/benoitkugler/webrender/logger"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -136,13 +136,13 @@ var (
 
 func init() {
 	if pr.InitialValues.GetBorderTopWidth().Value != BorderWidthKeywords["medium"] {
-		log.Fatal("border-top-width and medium should be the same !")
+		panic("border-top-width and medium should be the same !")
 	}
 
 	// In "portrait" orientation.
 	for _, size := range pr.PageSizes {
 		if size[0].Value > size[1].Value {
-			log.Fatal("page size should be in portrait orientation")
+			panic("page size should be in portrait orientation")
 		}
 	}
 
@@ -212,7 +212,7 @@ func computeVariable(varData pr.VarData, name string, computed map[string]pr.Val
 
 	// See https://drafts.csswg.org/css-variables/#invalid-variables
 	if newValue.IsNone() {
-		log.Printf(`Unsupported computed value "%s" set in variable %s "
+		logger.WarningLogger.Printf(`Unsupported computed value "%s" set in variable %s "
                 "for property %s.`, parser.Serialize(computedValue), strings.ReplaceAll(varData.Name, "_", "-"), strings.ReplaceAll(name, "_", "-"))
 
 		if _, in := pr.Inherited[name]; in && parentStyle != nil {
@@ -550,7 +550,7 @@ func contentList(computer *ComputedStyle, values pr.ContentProperties) (pr.Conte
 		case "attr()":
 			attr, ok := value.Content.(pr.AttrData)
 			if !ok || attr.TypeOrUnit != "string" {
-				log.Fatalf("invalid attr() property : %v", value.Content)
+				panic(fmt.Sprintf("invalid attr() property : %v", value.Content))
 			}
 			var err error
 			computedValue, err = computeAttrFunction(computer, attr)
@@ -581,7 +581,7 @@ func contentList(computer *ComputedStyle, values pr.ContentProperties) (pr.Conte
 			}
 		}
 		if computedValue.IsNone() {
-			log.Printf("Unable to compute %v's value for content: %v\n", computer.element, value)
+			logger.WarningLogger.Printf("Unable to compute %v's value for content: %v\n", computer.element, value)
 		} else {
 			computedValues = append(computedValues, computedValue)
 		}
@@ -594,7 +594,7 @@ func bookmarkLabel(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.
 	if value, ok := _value.(pr.ContentProperties); ok {
 		out, err := contentList(computer, value)
 		if err != nil {
-			log.Printf("error computing bookmark-label : %s\n", err)
+			logger.WarningLogger.Printf("error computing bookmark-label : %s\n", err)
 			return pr.ContentProperties{}
 		}
 		return out
@@ -610,7 +610,7 @@ func stringSet(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssP
 		for i, sset := range stringset.Contents {
 			v, err := contentList(computer, sset.Contents)
 			if err != nil {
-				log.Printf("error computing string-set : %s \n", err)
+				logger.WarningLogger.Printf("error computing string-set : %s \n", err)
 				return pr.StringSet{}
 			}
 			out[i] = pr.SContent{String: sset.String, Contents: v}
@@ -634,7 +634,7 @@ func content(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssPro
 		}
 		props, err := contentList(computer, value.Contents)
 		if err != nil {
-			log.Printf("error computing content : %s\n", err)
+			logger.WarningLogger.Printf("error computing content : %s\n", err)
 			return pr.SContent{}
 		}
 		return pr.SContent{Contents: props}

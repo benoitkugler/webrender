@@ -2,7 +2,6 @@ package text
 
 import (
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/benoitkugler/textlayout/fontconfig"
@@ -29,12 +28,12 @@ func init() {
 	// fmt.Println("Scanning fonts...")
 	// _, err := fontconfig.ScanAndCache(fontmapCache)
 	// if err != nil {
-	// 	log.Fatal(err)
+	// 	panic(err)
 	// }
 
 	fs, err := fontconfig.LoadFontsetFile(fontmapCache)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	fontmap = fcfonts.NewFontMap(fontconfig.Standard, fs)
 }

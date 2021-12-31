@@ -14,7 +14,6 @@ package tree
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"unicode"
@@ -155,7 +154,7 @@ func (self *StyleFor) SetComputedStyles(element, parent Element,
 	)
 	if element == root && pseudoType == "" {
 		if node, ok := parent.(*utils.HTMLNode); parent != nil && (ok && node != nil) {
-			log.Fatal("parent should be nil here")
+			panic("parent should be nil here")
 		}
 		rootStyle = pr.Properties{
 			// When specified on the font-size property of the Root Element, the
@@ -164,7 +163,7 @@ func (self *StyleFor) SetComputedStyles(element, parent Element,
 		}
 	} else {
 		if parent == nil {
-			log.Fatal("parent shouldn't be nil here")
+			panic("parent shouldn't be nil here")
 		}
 		parentStyle = self.computedStyles[parent.ToKey("")]
 		rootStyle = self.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}].(*ComputedStyle).dict
@@ -400,7 +399,7 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 			if varData, ok := v.Content.(pr.VarData); ok {
 				newValue, alreadyComputedValue = computeVariable(varData, key, c.variables, c.baseUrl, c.parentStyle)
 				if newValue.Default != 0 {
-					log.Printf("invalid default in content: %v", newValue)
+					logger.WarningLogger.Printf("invalid default in content: %v", newValue)
 					newValue.Default = 0
 				}
 				newValue, _ := newValue.ToCSS().(pr.SContent)
@@ -421,7 +420,7 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 		newValue = value.ToCascaded()
 	}
 	if newValue.Default != 0 {
-		log.Printf("invalid default after variable resolution: %v", newValue)
+		logger.WarningLogger.Printf("invalid default after variable resolution: %v", newValue)
 		newValue.Default = 0
 	}
 
@@ -580,7 +579,7 @@ func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, url
 			css, err := NewCSS(utils.InputString(content), baseUrl, urlFetcher, false, deviceMediaType,
 				fontConfig, nil, pageRules, counterStyle)
 			if err != nil {
-				log.Printf("Invalid style %s : %s \n", content, err)
+				logger.WarningLogger.Printf("Invalid style %s : %s \n", content, err)
 			} else {
 				out = append(out, css)
 			}
@@ -594,7 +593,7 @@ func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, url
 					css, err := NewCSS(utils.InputUrl(href), "", urlFetcher, true, deviceMediaType,
 						fontConfig, nil, pageRules, counterStyle)
 					if err != nil {
-						log.Printf("Failed to load stylesheet at %s : %s \n", href, err)
+						logger.WarningLogger.Printf("Failed to load stylesheet at %s : %s \n", href, err)
 					} else {
 						out = append(out, css)
 					}
@@ -698,7 +697,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				}
 				sizeI, err := strconv.Atoi(size)
 				if err != nil {
-					log.Printf("Invalid value for size: %s \n", size)
+					logger.WarningLogger.Printf("Invalid value for size: %s \n", size)
 				} else {
 					fontSizes := map[int]string{
 						1: "x-small",
@@ -836,7 +835,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				var err error
 				size, err = strconv.Atoi(element.Get("size"))
 				if err != nil {
-					log.Printf("Invalid value for size: %s \n", element.Get("size"))
+					logger.WarningLogger.Printf("Invalid value for size: %s \n", element.Get("size"))
 				}
 			}
 			if element.HasAttr("color") || element.HasAttr("noshade") {
@@ -939,7 +938,7 @@ func declarationPrecedence(origin string, importance bool) uint8 {
 		return 4
 	} else {
 		if origin != "user" {
-			log.Fatalf("origin should be 'user' got %s", origin)
+			logger.WarningLogger.Printf("origin should be 'user' got %s", origin)
 		}
 		return 5
 	}
@@ -1154,7 +1153,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				prelude := parser.Serialize(*rule.Prelude)
 				selector, err := selector.ParseGroup(prelude)
 				if err != nil {
-					log.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
+					logger.WarningLogger.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
 					continue
 				}
 				for _, sel := range selector {
@@ -1164,7 +1163,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 					}
 				}
 				if err != nil {
-					log.Println(err)
+					logger.WarningLogger.Println(err)
 					continue
 				}
 				*matcher = append(*matcher, match{selector: selector, declarations: declarations})
@@ -1176,7 +1175,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 			switch rule.AtKeyword.Lower() {
 			case "import":
 				if ignoreImports {
-					log.Printf("@import rule '%s' not at the beginning of the whole rule was ignored. \n",
+					logger.WarningLogger.Printf("@import rule '%s' not at the beginning of the whole rule was ignored. \n",
 						parser.Serialize(*rule.Prelude))
 					continue
 				}
@@ -1195,7 +1194,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				}
 				media := parseMediaQuery(tokens[1:])
 				if media == nil {
-					log.Printf("Invalid media type '%s' the whole @import rule was ignored. \n",
+					logger.WarningLogger.Printf("Invalid media type '%s' the whole @import rule was ignored. \n",
 						parser.Serialize(*rule.Prelude))
 					continue
 				}
@@ -1207,13 +1206,13 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 					_, err := NewCSS(utils.InputUrl(url), "", urlFetcher, false,
 						deviceMediaType, fontConfig, matcher, pageRules, counterStyle)
 					if err != nil {
-						log.Printf("Failed to load stylesheet at %s : %s \n", url, err)
+						logger.WarningLogger.Printf("Failed to load stylesheet at %s : %s \n", url, err)
 					}
 				}
 			case "media":
 				media := parseMediaQuery(*rule.Prelude)
 				if media == nil {
-					log.Printf("Invalid media type '%s' the whole @media rule was ignored. \n",
+					logger.WarningLogger.Printf("Invalid media type '%s' the whole @media rule was ignored. \n",
 						parser.Serialize(*rule.Prelude))
 					continue
 				}
@@ -1228,7 +1227,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 			case "page":
 				data := parsePageSelectors(rule.QualifiedRule)
 				if data == nil {
-					log.Printf("Unsupported @page selector '%s', the whole @page rule was ignored. \n",
+					logger.WarningLogger.Printf("Unsupported @page selector '%s', the whole @page rule was ignored. \n",
 						parser.Serialize(*rule.Prelude))
 					continue
 				}
@@ -1267,11 +1266,11 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				content := parser.ParseDeclarationList(*rule.Content, false, false)
 				ruleDescriptors := validation.PreprocessFontFaceDescriptors(baseUrl, content)
 				if ruleDescriptors.Src == nil {
-					log.Printf(`Missing src descriptor in "@font-face" rule at %d:%d`+"\n",
+					logger.WarningLogger.Printf(`Missing src descriptor in "@font-face" rule at %d:%d`+"\n",
 						rule.Position().Line, rule.Position().Column)
 				}
 				if ruleDescriptors.FontFamily == "" {
-					log.Printf(`Missing font-family descriptor in "@font-face" rule at %d:%d`+"\n",
+					logger.WarningLogger.Printf(`Missing font-family descriptor in "@font-face" rule at %d:%d`+"\n",
 						rule.Position().Line, rule.Position().Column)
 				}
 				if ruleDescriptors.Src != nil && ruleDescriptors.FontFamily != "" && fontConfig != nil {
@@ -1284,7 +1283,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 			case "counter-style":
 				name := validation.ParseCounterStyleName(*rule.Prelude, counterStyle)
 				if name == "" {
-					log.Printf(`Invalid counter style name %s, the whole @counter-style rule was ignored at %d:%d.`,
+					logger.WarningLogger.Printf(`Invalid counter style name %s, the whole @counter-style rule was ignored at %d:%d.`,
 						parser.Serialize(*rule.Prelude), rule.Position().Line, rule.Position().Column)
 					continue
 				}
@@ -1294,7 +1293,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				desc := validation.PreprocessCounterStyleDescriptors(baseUrl, content)
 
 				if err := desc.Validate(); err != nil {
-					log.Printf("In counter style %s at %d:%d, %s", name, rule.Line, rule.Column, err)
+					logger.WarningLogger.Printf("In counter style %s at %d:%d, %s", name, rule.Line, rule.Column, err)
 					continue
 				}
 

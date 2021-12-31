@@ -3,9 +3,10 @@ package testutils
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"testing"
+
+	"github.com/benoitkugler/webrender/logger"
 )
 
 type capturedLogs struct {
@@ -24,7 +25,7 @@ func (c *capturedLogs) Write(p []byte) (int, error) {
 
 func CaptureLogs() *capturedLogs {
 	out := capturedLogs{}
-	log.SetOutput(&out)
+	logger.WarningLogger.SetOutput(&out)
 	return &out
 }
 
@@ -34,9 +35,10 @@ func (c capturedLogs) Logs() []string {
 
 // CheckEqual compares logs ignoring date time in logged.
 func (c capturedLogs) CheckEqual(refs []string, t *testing.T) {
+	const prefixLength = len("webrender.warning: ")
 	gots := c.Logs()
 	for i, ref := range refs {
-		g := gots[i][20:]
+		g := gots[i][prefixLength:]
 		if g != ref {
 			t.Fatalf("expected \n%s\n got \n%s", ref, g)
 		}

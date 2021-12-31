@@ -2,11 +2,11 @@ package layout
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strings"
 
 	"github.com/benoitkugler/webrender/html/layout/text"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -74,7 +74,7 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 	} else if bo.FlexContainerBoxT.IsInstance(box) {
 		return flexMaxContentWidth(context, box, outer)
 	} else {
-		log.Fatalf("max-content width for %T not handled yet", box)
+		logger.WarningLogger.Printf("max-content width for %T not handled yet", box)
 		return 0
 	}
 }
@@ -243,7 +243,7 @@ func columnGroupContentWidth(box Box) pr.Float {
 	} else if width.Unit == pr.Px {
 		width_ = width.Value
 	} else {
-		log.Fatalf("expected Px got %d", width.Unit)
+		panic(fmt.Sprintf("expected Px got %d", width.Unit))
 	}
 
 	return adjust(box, false, width_, true, true)
@@ -325,7 +325,7 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 			} else {
 				skip, skipStack = skipStack.Unpack()
 				if skipStack != nil {
-					log.Fatalf("expected empty SkipStack, got %v", skipStack)
+					panic(fmt.Sprintf("expected empty SkipStack, got %v", skipStack))
 				}
 			}
 			childText := string([]rune(textBox.Text)[skip:])
@@ -763,7 +763,7 @@ func replacedMinContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		} else if height.Unit == pr.Px {
 			h = height.Value
 		} else {
-			log.Fatalf("expected Px got %d", height.Unit)
+			panic(fmt.Sprintf("expected Px got %d", height.Unit))
 		}
 		if mw := box.Style.GetMaxWidth(); mw.String != "auto" && mw.Unit == pr.Percentage {
 			// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
@@ -798,7 +798,7 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		} else if height.Unit == pr.Px {
 			h = height.Value
 		} else {
-			log.Fatalf("expected Px got %d", height.Unit)
+			panic(fmt.Sprintf("expected Px got %d", height.Unit))
 		}
 
 		image := box.Replacement
@@ -811,7 +811,7 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 	} else if width.Unit == pr.Px {
 		w = width.Value
 	} else {
-		log.Fatalf("expected Px got %d", width.Unit)
+		panic(fmt.Sprintf("expected Px got %d", width.Unit))
 	}
 	return adjust(box, outer, w, true, true)
 }
@@ -885,12 +885,12 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 			oldBox, resume, _ = splitTextBox(context, textBox, nil, resume)
 		}
 		if oldBox == nil {
-			log.Fatalln("oldBox can't be nil")
+			panic("oldBox can't be nil")
 		}
 		strippedBox := textBox.CopyWithText(strippedText)
 		strippedBox, resume, _ = splitTextBox(context, strippedBox, nil, oldResume)
 		if strippedBox == nil || resume != -1 {
-			log.Fatalln("invalid strippedBox or resume")
+			panic("invalid strippedBox or resume")
 		}
 		return oldBox.Box().Width.V() - strippedBox.Box().Width.V()
 	} else {

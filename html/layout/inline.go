@@ -2,11 +2,11 @@ package layout
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"unicode"
 
 	"github.com/benoitkugler/webrender/html/layout/text"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -653,7 +653,8 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, maxY pr
 		firstLetter = '\u2e80'
 		lastLetter = '\u2e80'
 	} else { // pragma: no cover
-		log.Fatalf("Layout for %v not handled yet", box)
+		logger.WarningLogger.Printf("Layout for %v not handled yet", box)
+		return splitedInline{}
 	}
 
 	if debugMode {
@@ -1430,7 +1431,7 @@ func textAlign(context *layoutContext, line_ Box, availableWidth pr.Float, last 
 	} else if align == "end" {
 		return offset
 	} else {
-		log.Printf("align should be center or right, got %s", align)
+		logger.WarningLogger.Printf("align should be center or right, got %s", align)
 		return 0
 	}
 }

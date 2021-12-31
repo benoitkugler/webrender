@@ -2,7 +2,7 @@ package hyphen
 
 import (
 	"embed"
-	"log"
+	"fmt"
 
 	"github.com/benoitkugler/textlayout/language"
 )
@@ -16,6 +16,6 @@ func init() {
 	var err error
 	languages, err = getLanguages(dictionaries)
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Errorf("hyphen: invalid embedded dict: %s", err))
 	}
 }

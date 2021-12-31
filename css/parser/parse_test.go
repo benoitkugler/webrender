@@ -4,29 +4,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"testing"
 )
 
-func loadJson(filename string) ([]string, []string) {
+func loadJson(t *testing.T, filename string) ([]string, []string) {
+	t.Helper()
+
 	b, err := ioutil.ReadFile(filepath.Join("css-parsing-tests", filename))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	var l []interface{}
 	if err = json.Unmarshal(b, &l); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	if len(l)%2 != 0 {
-		log.Fatal("number of tests in list should be even !")
+		t.Fatal("number of tests in list should be even !")
 	}
 	inputs, resJsons := make([]string, len(l)/2), make([]string, len(l)/2)
 	for i := 0; i < len(l); i += 2 {
 		inputs[i/2] = l[i].(string)
 		res, err := json.Marshal(l[i+1])
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
 		resJsons[i/2] = string(res)
 	}
@@ -63,49 +64,49 @@ func runTestOneToken(t *testing.T, css, resJson []string, fn func(input string) 
 }
 
 func TestComponentValueList(t *testing.T) {
-	inputs, resJson := loadJson("component_value_list.json")
+	inputs, resJson := loadJson(t, "component_value_list.json")
 	runTest(t, inputs, resJson, func(s string) []Token {
 		return tokenizeString(s, true)
 	})
 }
 
 func TestOneComponentValue(t *testing.T) {
-	inputs, resJson := loadJson("one_component_value.json")
+	inputs, resJson := loadJson(t, "one_component_value.json")
 	runTestOneToken(t, inputs, resJson, func(input string) jsonisable {
 		return parseOneComponentValueString(input, true)
 	})
 }
 
 func TestDeclarationList(t *testing.T) {
-	inputs, resJson := loadJson("declaration_list.json")
+	inputs, resJson := loadJson(t, "declaration_list.json")
 	runTest(t, inputs, resJson, func(s string) []Token {
 		return ParseDeclarationListString(s, true, true)
 	})
 }
 
 func TestOneDeclaration(t *testing.T) {
-	inputs, resJson := loadJson("one_declaration.json")
+	inputs, resJson := loadJson(t, "one_declaration.json")
 	runTestOneToken(t, inputs, resJson, func(s string) jsonisable {
 		return parseOneDeclarationString(s, true)
 	})
 }
 
 func TestStylesheet(t *testing.T) {
-	inputs, resJson := loadJson("stylesheet.json")
+	inputs, resJson := loadJson(t, "stylesheet.json")
 	runTest(t, inputs, resJson, func(s string) []Token {
 		return ParseStylesheetBytes([]byte(s), true, true)
 	})
 }
 
 func TestRuleList(t *testing.T) {
-	inputs, resJson := loadJson("rule_list.json")
+	inputs, resJson := loadJson(t, "rule_list.json")
 	runTest(t, inputs, resJson, func(s string) []Token {
 		return ParseRuleListString(s, true, true)
 	})
 }
 
 func TestOneRule(t *testing.T) {
-	inputs, resJson := loadJson("one_rule.json")
+	inputs, resJson := loadJson(t, "one_rule.json")
 	runTestOneToken(t, inputs, resJson, func(input string) jsonisable {
 		l := tokenizeString(input, true)
 		return parseOneRule(l)
@@ -113,7 +114,7 @@ func TestOneRule(t *testing.T) {
 }
 
 func TestColor3(t *testing.T) {
-	inputs, resJson := loadJson("color3.json")
+	inputs, resJson := loadJson(t, "color3.json")
 	runTestOneToken(t, inputs, resJson, func(input string) jsonisable {
 		return ParseColorString(input)
 	})
@@ -125,7 +126,7 @@ func parseNthString(css string) *[2]int {
 }
 
 func TestNth(t *testing.T) {
-	inputs, resJson := loadJson("An+B.json")
+	inputs, resJson := loadJson(t, "An+B.json")
 	runTestOneToken(t, inputs, resJson, func(s string) jsonisable {
 		l := parseNthString(s)
 		if l != nil {
@@ -137,14 +138,14 @@ func TestNth(t *testing.T) {
 }
 
 func TestColor3Hsl(t *testing.T) {
-	inputs, resJson := loadJson("color3_hsl.json")
+	inputs, resJson := loadJson(t, "color3_hsl.json")
 	runTestOneToken(t, inputs, resJson, func(input string) jsonisable {
 		return ParseColorString(input)
 	})
 }
 
 func TestColor3Keywords(t *testing.T) {
-	inputs, resJson := loadJson("color3_keywords.json")
+	inputs, resJson := loadJson(t, "color3_keywords.json")
 
 	runTestOneToken(t, inputs, resJson, func(input string) jsonisable {
 		var resToTest jsonList

@@ -3,7 +3,6 @@ package document
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"testing"
 	"text/template"
 
@@ -23,12 +22,12 @@ func init() {
 	// fmt.Println("Scanning fonts...")
 	// _, err := fc.ScanAndCache(fontmapCache)
 	// if err != nil {
-	// 	log.Fatal(err)
+	// 	panic(err)
 	// }
 
 	fs, err := fontconfig.LoadFontsetFile(fontmapCache)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	fc = text.NewFontConfiguration(fcfonts.NewFontMap(fontconfig.Standard.Copy(), fs))
 }

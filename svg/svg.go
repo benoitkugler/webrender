@@ -7,10 +7,10 @@ package svg
 import (
 	"fmt"
 	"io"
-	"log"
 	"math"
 
 	"github.com/benoitkugler/webrender/backend"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -356,7 +356,7 @@ func applyFilters(dst backend.CanvasNoFill, filters []filter, node *svgNode, dim
 			dst.Transform(matrix.New(1, 0, 0, 1, dx, dy))
 		case filterBlend:
 			// TODO:
-			log.Println("blend filter not implemented")
+			logger.WarningLogger.Println("blend filter not implemented")
 		}
 	}
 }
@@ -370,7 +370,7 @@ func applyClipPath(dst backend.CanvasNoFill, clipPath clipPath, node *svgNode, d
 	}
 
 	// FIXME:
-	log.Println("applying clip path is not supported")
+	logger.WarningLogger.Println("applying clip path is not supported")
 	// clip_path._etree_node.tag = 'g'
 	// self.draw_node(clip_path, font_size, fill_stroke=False)
 
@@ -409,7 +409,7 @@ func applyMask(dst backend.CanvasNoFill, mask mask, node *svgNode, dims drawingD
 	}
 
 	// FIXME:
-	log.Println("mask not implemented")
+	logger.WarningLogger.Println("mask not implemented")
 	// alpha_stream = svg.stream.add_group([x, y, width, height])
 	// state = pydyf.Dictionary({
 	//     'Type': '/ExtGState',

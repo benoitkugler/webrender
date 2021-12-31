@@ -6,7 +6,7 @@ import (
 )
 
 func TestSerialization(t *testing.T) {
-	inputs, resJson := loadJson("component_value_list.json")
+	inputs, resJson := loadJson(t, "component_value_list.json")
 	runTest(t, inputs, resJson, func(css string) []Token {
 		parsed := tokenizeString(css, true)
 		return tokenizeString(Serialize(parsed), true)

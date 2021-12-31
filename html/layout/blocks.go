@@ -74,6 +74,7 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, ma
 	blockBox, isBlockBox := box_.(bo.BlockBoxITF)
 	replacedBox, isReplacedBox := box_.(bo.ReplacedBoxITF)
 	if table, ok := box_.(bo.TableBoxITF); ok {
+		// fmt.Println(table.Box().Element.Parent.Parent.Data, table.Box().Element.Parent.Parent.Attr)
 		return tableLayout(context, table, maxPositionY, skipStack, pageIsEmpty, absoluteBoxes, fixedBoxes)
 	} else if isBlockBox {
 		return blockBoxLayout(context, blockBox, maxPositionY, skipStack, containingBlock,

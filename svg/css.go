@@ -1,11 +1,11 @@
 package svg
 
 import (
-	"log"
 	"strings"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/selector"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -64,7 +64,7 @@ func findStylesheetsRules(rules []parser.Token, baseUrl string) (out []parser.Qu
 				}
 				cssContent, resolvedURL, err := fetchURL(url, baseUrl)
 				if err != nil {
-					log.Printf("failed to load stylesheet: %s", err)
+					logger.WarningLogger.Printf("failed to load stylesheet: %s", err)
 					continue
 				}
 
@@ -120,7 +120,7 @@ func parseStylesheets(stylesheets [][]byte, url string) (matcher, matcher) {
 			prelude := parser.Serialize(*rule.Prelude)
 			selector, err := selector.ParseGroup(prelude)
 			if err != nil {
-				log.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
+				logger.WarningLogger.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
 				continue
 			}
 			if len(normalDeclarations) != 0 {

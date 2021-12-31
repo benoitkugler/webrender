@@ -1,10 +1,9 @@
 package tree
 
 import (
-	"log"
-
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/validation"
+	"github.com/benoitkugler/webrender/logger"
 )
 
 // Return the boolean evaluation of `queryList` for the given
@@ -33,7 +32,7 @@ func parseMediaQuery(tokens []Token) []string {
 				}
 			}
 
-			log.Printf("Expected a media type, got %s", parser.Serialize(part))
+			logger.WarningLogger.Printf("Expected a media type, got %s", parser.Serialize(part))
 			return nil
 		}
 		return media

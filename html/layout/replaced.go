@@ -2,7 +2,6 @@ package layout
 
 import (
 	"fmt"
-	"log"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
@@ -99,7 +98,7 @@ func LayoutReplacedBox(box_ bo.ReplacedBoxITF) (drawWidth, drawHeight, positionX
 		} else if objectFit == "none" {
 			drawWidth, drawHeight = intrinsicWidth.V(), intrinsicHeight.V()
 		} else {
-			log.Fatalf("unexpected objectFit %s", objectFit)
+			panic(fmt.Sprintf("unexpected objectFit %s", objectFit))
 		}
 
 		if objectFit == "scale-down" {
@@ -175,13 +174,12 @@ func replacedBoxWidth_(box_ Box, _ *layoutContext, containingBlock containingBlo
 
 var replacedBoxHeight = handleMinMaxHeight(replacedBoxHeight_)
 
-// @handleMinMaxHeight
-//
-//     Compute and set the used height for replaced boxes (inline- or block-level)
+// Compute and set the used height for replaced boxes (inline- or block-level)
+// box_ must be a ReplacedBoxITF
 func replacedBoxHeight_(box_ Box, _ *layoutContext, _ containingBlock) (bool, pr.Float) {
 	box__, ok := box_.(bo.ReplacedBoxITF)
 	if !ok {
-		log.Fatalf("expected ReplacedBox instance, got %s", box_)
+		panic(fmt.Sprintf("expected ReplacedBox instance, got %s", box_))
 	}
 	box := box__.Replaced()
 	// http://www.w3.org/TR/CSS21/visudet.html#inline-replaced-height

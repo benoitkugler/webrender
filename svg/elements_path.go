@@ -5,10 +5,10 @@ package svg
 
 import (
 	"fmt"
-	"log"
 	"math"
 
 	"github.com/benoitkugler/webrender/backend"
+	"github.com/benoitkugler/webrender/logger"
 )
 
 func errParamMismatch(op byte) error {
@@ -379,7 +379,7 @@ func (c *pathParser) addSeg(segString []byte) error {
 			c.addArcFromA(c.points[i:])
 		}
 	default:
-		log.Println("Ignoring svg command " + string(op))
+		logger.WarningLogger.Println("Ignoring svg command " + string(op))
 	}
 	// So we know how to extend some segment types
 	c.lastKey = op

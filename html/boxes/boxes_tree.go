@@ -2,7 +2,6 @@ package boxes
 
 import (
 	"fmt"
-	"log"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/html/layout/text"
@@ -203,7 +202,7 @@ func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, te
 // Return a new TextBox identical to this one except for the text.
 func (b TextBox) CopyWithText(text string) *TextBox {
 	if len(text) == 0 {
-		log.Fatal("empty text")
+		panic("empty text")
 	}
 	newBox := b
 	newBox.Text = text

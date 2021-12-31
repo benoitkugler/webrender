@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"strings"
 
+	"github.com/benoitkugler/webrender/logger"
 	"golang.org/x/net/html/charset"
 )
 
@@ -85,7 +85,7 @@ func FetchSource(input ContentInput, baseUrl string, urlFetcher UrlFetcher,
 			result.RedirectedUrl = string(data)
 		}
 		if checkCssMimeType && result.MimeType != "text/css" {
-			log.Printf("Unsupported stylesheet type %s for %s",
+			logger.WarningLogger.Printf("Unsupported stylesheet type %s for %s",
 				result.MimeType, result.RedirectedUrl)
 			return Source{BaseUrl: baseUrl}, nil
 		} else {

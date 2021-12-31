@@ -5,7 +5,6 @@ package document
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"path"
 
@@ -334,7 +333,7 @@ func (d *Document) resolveLinks() ([][]Link, [][]backend.Anchor) {
 			// linkType, anchorName, rectangle = link
 			if link.Type == "internal" {
 				if !anchors.Has(link.Target) {
-					log.Printf("No anchor #%s for internal URI reference\n", link.Target)
+					logger.WarningLogger.Printf("No anchor #%s for internal URI reference\n", link.Target)
 				} else {
 					pageLinks = append(pageLinks, link)
 				}
@@ -426,7 +425,7 @@ func (d *Document) fetchAttachment(attachmentUrl string) backend.Attachment {
 	// Attachments from document links like <link> or <a> can only be URLs.
 	tmp, err := utils.FetchSource(utils.InputUrl(attachmentUrl), "", d.urlFetcher, false)
 	if err != nil {
-		log.Printf("Failed to load attachment at url %s: %s\n", attachmentUrl, err)
+		logger.WarningLogger.Printf("Failed to load attachment at url %s: %s\n", attachmentUrl, err)
 		return backend.Attachment{}
 	}
 	source, baseurl := tmp.Content, tmp.BaseUrl

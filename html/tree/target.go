@@ -2,9 +2,9 @@ package tree
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -287,7 +287,7 @@ func AnchorNameFromToken(anchorToken pr.ContentProperty) string {
 func (tc *TargetCollector) collectAnchor(anchorName string) {
 	if anchorName != "" {
 		if _, has := tc.TargetLookupItems[anchorName]; has {
-			log.Printf("Anchor defined twice: %s \n", anchorName)
+			logger.WarningLogger.Printf("Anchor defined twice: %s \n", anchorName)
 		} else {
 			tc.TargetLookupItems[anchorName] = newTargetLookupItem(pending)
 		}
@@ -315,7 +315,7 @@ func (tc *TargetCollector) LookupTarget(anchorToken pr.ContentProperty, sourceBo
 	}
 
 	if item.state == undefined {
-		log.Printf("Content discarded: target points to undefined anchor '%s' \n", anchorToken)
+		logger.WarningLogger.Printf("Content discarded: target points to undefined anchor '%s' \n", anchorToken)
 	}
 
 	return item

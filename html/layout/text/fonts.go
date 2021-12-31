@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/benoitkugler/textlayout/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -56,7 +56,7 @@ func (f *FontConfiguration) FontContent(faceID fonts.FaceID) []byte {
 
 	b, err := ioutil.ReadFile(faceID.File)
 	if err != nil {
-		log.Println(err)
+		logger.WarningLogger.Println(err)
 	}
 	return b
 }
@@ -76,14 +76,14 @@ func (f *FontConfiguration) AddFontFace(ruleDescriptors validation.FontFaceDescr
 
 		filename, err := f.loadOneFont(url, ruleDescriptors, urlFetcher)
 		if err != nil {
-			log.Println(err)
+			logger.WarningLogger.Println(err)
 			continue
 		}
 
 		return filename
 	}
 
-	log.Printf("Font-face %s cannot be loaded", ruleDescriptors.FontFamily)
+	logger.WarningLogger.Printf("Font-face %s cannot be loaded", ruleDescriptors.FontFamily)
 	return ""
 }
 

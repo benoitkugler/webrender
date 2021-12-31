@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"log"
+	"fmt"
 	"math"
 	"regexp"
 	"strconv"
@@ -290,7 +290,7 @@ type hashRegexp struct {
 func mustParseHexa(s string) utils.Fl {
 	out, err := strconv.ParseInt(s, 16, 0)
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Sprintf("unexpected error: %s", err))
 	}
 	return utils.Fl(out)
 }

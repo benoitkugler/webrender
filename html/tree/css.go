@@ -2,7 +2,6 @@ package tree
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/benoitkugler/webrender/css/counters"
 	"github.com/benoitkugler/webrender/html/layout/text"
@@ -45,16 +44,16 @@ func init() {
 	var err error
 	TestUAStylesheet, err = NewCSSDefault(utils.InputString(testUACSS))
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
 	}
 	UACounterStyle = make(counters.CounterStyle)
 	Html5UAStylesheet, err = NewCSS(utils.InputString(html5UACSS), "", nil, false, "", nil, nil, nil, UACounterStyle)
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
 	}
 	Html5PHStylesheet, err = NewCSSDefault(utils.InputString(html5PHCSS))
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Sprintf("invalid embedded stylesheet: %s", err))
 	}
 }
 

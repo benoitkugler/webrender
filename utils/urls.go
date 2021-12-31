@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"mime"
 	"net/http"
 	"net/url"
@@ -17,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/version"
 )
 
@@ -24,7 +24,7 @@ import (
 func UrlJoin(baseUrl, urlS string, allowRelative bool, context string) string {
 	out, err := SafeUrljoin(baseUrl, urlS, allowRelative)
 	if err != nil {
-		log.Println(err, context)
+		logger.WarningLogger.Println(err, context)
 	}
 	return out
 }
@@ -88,7 +88,7 @@ func (element HTMLNode) GetUrlAttribute(attrName, baseUrl string, allowRelative 
 func Unquote(s string) string {
 	unescaped, err := url.PathUnescape(s)
 	if err != nil {
-		log.Println(err)
+		logger.WarningLogger.Println(err)
 		return ""
 	}
 	return unescaped
@@ -121,12 +121,12 @@ func GetLinkAttribute(element *HTMLNode, attrName string, baseUrl string) ([2]st
 	if baseUrl != "" {
 		parsed, err := url.Parse(uri)
 		if err != nil {
-			log.Println(err)
+			logger.WarningLogger.Println(err)
 			return [2]string{}, false
 		}
 		baseParsed, err := url.Parse(baseUrl)
 		if err != nil {
-			log.Println(err)
+			logger.WarningLogger.Println(err)
 			return [2]string{}, false
 		}
 		if parsed.Scheme == baseParsed.Scheme && parsed.Host == baseParsed.Host && parsed.Path == baseParsed.Path && parsed.RawQuery == baseParsed.RawQuery {

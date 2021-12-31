@@ -2,12 +2,12 @@ package boxes
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"unicode"
 
 	"github.com/benoitkugler/webrender/images"
+	"github.com/benoitkugler/webrender/logger"
 
 	"github.com/benoitkugler/webrender/css/parser"
 
@@ -210,7 +210,7 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 
 	box, err := makeBox(style, nil, element, "")
 	if err != nil {
-		log.Println(err)
+		logger.WarningLogger.Println(err)
 		return nil
 	}
 
@@ -335,7 +335,7 @@ func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.Pa
 
 	box, err := makeBox(style, nil, element, pseudoType)
 	if err != nil {
-		log.Println(err)
+		logger.WarningLogger.Println(err)
 		return nil
 	}
 
@@ -367,7 +367,7 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 
 	box, err := makeBox(style, nil, element, "marker")
 	if err != nil {
-		log.Println(err)
+		logger.WarningLogger.Println(err)
 		return nil
 	}
 
@@ -559,7 +559,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 			if !inPageContext {
 				// string() is currently only valid in @page context
 				// See https://github.com/Kozea/WeasyPrint/issues/723
-				log.Printf("'string(%s)' is only allowed in page margins", strings.Join(value, " "))
+				logger.WarningLogger.Printf("'string(%s)' is only allowed in page margins", strings.Join(value, " "))
 				continue
 			}
 			if len(value) == 1 {
@@ -657,7 +657,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 		case "element()":
 			value := content.AsStrings()
 			if !inPageContext {
-				log.Printf("element(%s) is only allowed in page margins", strings.Join(value, " "))
+				logger.WarningLogger.Printf("element(%s) is only allowed in page margins", strings.Join(value, " "))
 				continue
 			}
 			if len(value) == 1 {
@@ -859,7 +859,7 @@ func UpdateCounters(state *tree.PageState, style pr.ElementStyle) {
 		values := counterValues[nv.String]
 		if len(values) == 0 {
 			if siblingScopes.Has(nv.String) {
-				log.Println("ci.String shoud'nt be in siblingScopes")
+				logger.WarningLogger.Println("ci.String shoud'nt be in siblingScopes")
 			}
 			siblingScopes.Add(nv.String)
 			values = append(values, 0)
@@ -884,7 +884,7 @@ func UpdateCounters(state *tree.PageState, style pr.ElementStyle) {
 		values := counterValues[ci.String]
 		if len(values) == 0 {
 			if siblingScopes.Has(ci.String) {
-				log.Println("ci.String shoud'nt be in siblingScopes")
+				logger.WarningLogger.Println("ci.String shoud'nt be in siblingScopes")
 			}
 			siblingScopes.Add(ci.String)
 			values = append(values, 0)
@@ -1806,7 +1806,7 @@ func BlockInInline(box Box) Box {
 		var newChild Box
 		if LineBoxT.IsInstance(child) {
 			if len(box.Box().Children) != 1 {
-				log.Fatalf("Line boxes should have no siblings at this stage, got %v.", box.Box().Children)
+				panic(fmt.Sprintf("Line boxes should have no siblings at this stage, got %v.", box.Box().Children))
 			}
 
 			var (
@@ -1875,7 +1875,7 @@ func innerBlockInInline(box Box, skipStack tree.ResumeStack) (Box, Box, tree.Res
 		index := i + skip
 		if BlockLevelBoxT.IsInstance(child) && child.Box().IsInNormalFlow() {
 			if skipStack != nil {
-				log.Fatal("Should not skip here")
+				panic("Should not skip here")
 			}
 			blockLevelBox = child
 			index += 1 // Resume *after* the block
@@ -1886,7 +1886,7 @@ func innerBlockInInline(box Box, skipStack tree.ResumeStack) (Box, Box, tree.Res
 				skipStack = nil
 			} else {
 				if skipStack != nil {
-					log.Fatal("Should not skip here")
+					panic("Should not skip here")
 				}
 				newChild = BlockInInline(child)
 				// blockLevelBox is still None.

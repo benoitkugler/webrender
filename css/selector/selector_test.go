@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -18,10 +17,10 @@ var validSelectors []validSelector
 func init() {
 	c, err := ioutil.ReadFile("test_resources/valid_selectors.json")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	if err = json.Unmarshal(c, &validSelectors); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
@@ -33,7 +32,7 @@ type selectorTest struct {
 func nodeString(n *html.Node) string {
 	buf := bytes.NewBufferString("")
 	if err := html.Render(buf, n); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return buf.String()
 }

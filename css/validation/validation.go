@@ -3,10 +3,10 @@ package validation
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"strings"
 
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
 	"github.com/benoitkugler/webrender/css/parser"
@@ -402,7 +402,7 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 	var out []ValidatedProperty
 	for _, _declaration := range declarations {
 		if errToken, ok := _declaration.(parser.ParseError); ok {
-			log.Printf("Error: %s \n", errToken.Message)
+			logger.WarningLogger.Printf("Error: %s \n", errToken.Message)
 		}
 
 		declaration, ok := _declaration.(parser.Declaration)
@@ -416,7 +416,7 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 		}
 
 		validationError := func(reason string) {
-			log.Printf("Ignored `%s:%s` , %s. \n", declaration.Name, parser.Serialize(declaration.Value), reason)
+			logger.WarningLogger.Printf("Ignored `%s:%s` , %s. \n", declaration.Name, parser.Serialize(declaration.Value), reason)
 		}
 
 		if _, in := pr.NotPrintMedia[name]; in {
@@ -429,11 +429,11 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 			if _, in := proprietary[unprefixedName]; in {
 				name = unprefixedName
 			} else if _, in := unstable[unprefixedName]; in {
-				log.Printf("Deprecated `%s:%s`, prefixes on unstable attributes are deprecated, use `%s` instead. \n",
+				logger.WarningLogger.Printf("Deprecated `%s:%s`, prefixes on unstable attributes are deprecated, use `%s` instead. \n",
 					declaration.Name, parser.Serialize(declaration.Value), unprefixedName)
 				name = unprefixedName
 			} else {
-				log.Printf("Ignored `%s:%s`,prefix on this attribute is not supported, use `%s` instead. \n",
+				logger.WarningLogger.Printf("Ignored `%s:%s`,prefix on this attribute is not supported, use `%s` instead. \n",
 					declaration.Name, parser.Serialize(declaration.Value), unprefixedName)
 				continue
 			}

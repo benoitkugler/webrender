@@ -2,7 +2,6 @@ package layout
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -140,12 +139,16 @@ func (self *horizontalBox) maxContentSize() pr.Float {
 	return self._maxContentSize.V()
 }
 
-func countAuto(values ...pr.MaybeFloat) int {
+func countAuto(v1, v2, v3 pr.MaybeFloat) int {
 	out := 0
-	for _, v := range values {
-		if v != nil && v == pr.Auto {
-			out += 1
-		}
+	if v1 == pr.Auto {
+		out++
+	}
+	if v2 == pr.Auto {
+		out++
+	}
+	if v3 == pr.Auto {
+		out++
 	}
 	return out
 }
@@ -230,8 +233,9 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 		box.marginA = v
 		box.marginB = v
 	}
+
 	if countAuto(box.marginA, box.marginB, box.inner) > 0 {
-		log.Fatalf("unexpected auto value in %v", box)
+		panic(fmt.Sprintf("unexpected auto value in %v", box))
 	}
 
 	boxOriented.restoreBoxAttributes()

@@ -3,11 +3,11 @@ package validation
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"strings"
 
 	"github.com/benoitkugler/webrender/css/counters"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
 	"github.com/benoitkugler/webrender/css/parser"
@@ -510,7 +510,7 @@ func preprocessDescriptors(baseUrl string, descriptors []Token, out parsedDescri
 		name := string(decl.Name)
 		err := out.validateDescriptor(baseUrl, name, tokens)
 		if err != nil {
-			log.Printf("Ignored `%s:%s` at %d:%d, %s.\n",
+			logger.WarningLogger.Printf("Ignored `%s:%s` at %d:%d, %s.\n",
 				name, parser.Serialize(decl.Value), decl.Position().Line, decl.Position().Column, err)
 			continue
 		}
