@@ -361,7 +361,7 @@ func asPixels(v pr.Value, pixelsOnly bool) pr.Value {
 // passing a negative fontSize means null
 // Always returns a Value which is interpreted as float64 if Unit is zero.
 // pixelsOnly=false
-func length2(computer *ComputedStyle, _ string, value pr.Value, fontSize pr.Float, pixelsOnly bool) pr.Value {
+func length2(computer *ComputedStyle, name string, value pr.Value, fontSize pr.Float, pixelsOnly bool) pr.Value {
 	if value.String == "auto" || value.String == "content" {
 		return value
 	}
@@ -369,9 +369,8 @@ func length2(computer *ComputedStyle, _ string, value pr.Value, fontSize pr.Floa
 		return asPixels(pr.ZeroPixels.ToValue(), pixelsOnly)
 	}
 
-	unit := value.Unit
 	var result pr.Float
-	switch unit {
+	switch unit := value.Unit; unit {
 	case pr.Px:
 		return asPixels(value, pixelsOnly)
 	case pr.Pt, pr.Pc, pr.In, pr.Cm, pr.Mm, pr.Q:
@@ -385,7 +384,11 @@ func length2(computer *ComputedStyle, _ string, value pr.Value, fontSize pr.Floa
 		case pr.Ex:
 			result = value.Value * fontSize * text.ExRatio(computer, computer.textContext)
 		case pr.Ch:
-			result = value.Value * text.ChWidth(computer, fontSize, computer.textContext)
+			var letterSpacing pr.Value
+			if name != "letter_spacing" { // avoid infinite recursion
+				letterSpacing = computer.GetLetterSpacing()
+			}
+			result = value.Value * text.ChWidth(computer, fontSize, computer.textContext, letterSpacing)
 		case pr.Em:
 			result = value.Value * fontSize
 		case pr.Rem:
@@ -396,6 +399,7 @@ func length2(computer *ComputedStyle, _ string, value pr.Value, fontSize pr.Floa
 		// A percentage or "auto": no conversion needed.
 		return value
 	}
+
 	return asPixels(pr.Dimension{Value: result, Unit: pr.Px}.ToValue(), pixelsOnly)
 }
 

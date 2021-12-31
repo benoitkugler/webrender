@@ -210,3 +210,14 @@ func TestLayoutFirstLine(t *testing.T) {
 		t.Fatalf("unexpected first line index: %d", index)
 	}
 }
+
+func TestChWidth(t *testing.T) {
+	newStyle := pr.InitialValues.Copy()
+	newStyle.SetFontFamily(pr.Strings{"arial"})
+	newStyle.SetFontSize(pr.FToV(16))
+
+	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	if w := ChWidth(newStyle, 16, ct, pr.FToV(-0.04444)); utils.RoundPrec(pr.Fl(w), 3) != 8.854 {
+		t.Fatalf("unexpected ch width %v", w)
+	}
+}

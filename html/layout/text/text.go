@@ -551,7 +551,7 @@ func ExRatio(style pr.ElementStyle, context TextLayoutContext) pr.Float {
 // ChWidth returns the logical width of the "0" text,
 // without querying WordSpacing or LetterSpacing from the style,
 // so that is may be used to compute these style properties.
-func ChWidth(style pr.ElementStyle, fontSize pr.Float, context TextLayoutContext) pr.Float {
+func ChWidth(style pr.StyleAccessor, fontSize pr.Float, context TextLayoutContext, letterSpacing pr.Value) pr.Float {
 	if context == nil {
 		return 1
 	}
@@ -559,6 +559,6 @@ func ChWidth(style pr.ElementStyle, fontSize pr.Float, context TextLayoutContext
 	layout := NewTextLayout(context, pr.Fl(fontSize), style, 0, nil)
 	layout.Layout.SetText("0")
 	line, _ := layout.GetFirstLine()
-	logicalWidth, _ := lineSize(line, pr.Value{})
+	logicalWidth, _ := lineSize(line, letterSpacing)
 	return pr.Float(logicalWidth)
 }
