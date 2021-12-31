@@ -3,7 +3,6 @@ package svg
 import (
 	"bytes"
 	"errors"
-	"io"
 	"strconv"
 	"strings"
 
@@ -177,12 +176,7 @@ func fetchStyleAndTextRefs(root *utils.HTMLNode) ([][]byte, map[string][]byte) {
 // The stylesheets are processed and applied, the values
 // of the CSS properties begin stored as attributes
 // Inheritable attributes are cascaded and 'inherit' special values are resolved.
-func buildSVGTree(svg io.Reader, baseURL string) (*svgContext, error) {
-	root, err := html.Parse(svg)
-	if err != nil {
-		return nil, err
-	}
-
+func buildSVGTree(root *html.Node, baseURL string) (*svgContext, error) {
 	// extract the root svg node, which is not
 	// always the first one
 	iter := utils.NewHtmlIterator(root, atom.Svg)

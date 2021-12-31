@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
 func parseIcon(t *testing.T, iconPath string) {
@@ -87,7 +89,11 @@ func TestBuildTree(t *testing.T) {
 
 	</svg>
 	`
-	tree, err := buildSVGTree(strings.NewReader(input), "")
+	root, err := html.Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree, err := buildSVGTree(root, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +161,11 @@ func TestTrefs(t *testing.T) {
 	</text>
 	</svg>
 	`
-	img, err := buildSVGTree(strings.NewReader(input), "")
+	root, err := html.Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := buildSVGTree(root, "")
 	if err != nil {
 		t.Fatal(err)
 	}

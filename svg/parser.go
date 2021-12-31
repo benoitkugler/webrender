@@ -148,12 +148,12 @@ func consumeNumber(data []byte, pos int, isFlag bool) int {
 // to handle special case in number parsing
 func parsePoints(dataPoints string, points []Fl, isEllipticalArc bool) ([]Fl, error) {
 	data := []byte(dataPoints)
-
 	for pos := 0; pos < len(data); {
 		c := data[pos]
 		if '0' <= c && c <= '9' || c == '.' || c == '-' || c == 'e' || c == 'E' {
 			// for elliptical arc, arguments 4 and 5 are flags
-			isFlag := isEllipticalArc && (len(points) == 3 || len(points) == 4)
+			// modulo the number of parameters in an elliptical arc command
+			isFlag := isEllipticalArc && (len(points)%7 == 3 || len(points)%7 == 4)
 
 			endNumber := consumeNumber(data, pos, isFlag)
 			value, err := strconv.ParseFloat(dataPoints[pos:endNumber], 32)

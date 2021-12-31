@@ -35,6 +35,7 @@ func Test_parsePoints(t *testing.T) {
 		{"7px 8% 10 px 72pt", false, []Fl{7, 8, 10, 72}, false}, // units are ignored
 		{"15,45.7e", false, nil, true},
 		{"50,0 21,90 98,35 2,35 79,90", false, []Fl{50, 0, 21, 90, 98, 35, 2, 35, 79, 90}, false},
+		{"3.44 3.44 0 01-3.54 2 2.4 2.4 0 00-1.55.5", true, []Fl{3.44, 3.44, 0, 0, 1, -3.54, 2, 2.4, 2.4, 0, 0, 0, -1.55, 0.5}, false},
 	}
 	for _, tt := range tests {
 		gotPoints, err := parsePoints(tt.dataPoints, nil, tt.isEllipticalArc)
