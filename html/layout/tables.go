@@ -103,7 +103,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 				if pageBreak == "page" || pageBreak == "recto" || pageBreak == "verso" || pageBreak == "left" || pageBreak == "right" {
 					nextPage.Break = pageBreak
 					resumeAt = tree.ResumeStack{indexRow: nil}
-					fmt.Println("break 1")
 					break
 				}
 			}
