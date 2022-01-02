@@ -275,6 +275,11 @@ func absoluteLayout(context *layoutContext, placeholder *AbsolutePlaceholder, co
 
 func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*AbsolutePlaceholder) Box {
 	// http://www.w3.org/TR/CSS2/visudet.html#containing-block-details
+
+	if traceMode {
+		traceLogger.DumpTree(box, "absoluteBoxLayout")
+	}
+
 	var containingBlock block
 	cb := cb_.Box()
 	if _, isPageBox := cb_.(*bo.PageBox); isPageBox {

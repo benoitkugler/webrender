@@ -75,8 +75,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 	// Make this a sub-function so that many local variables like rowsX
 	// don't need to be passed as parameters.
 	groupLayout := func(group_ Box, positionY, maxPositionY pr.Float, pageIsEmpty bool, skipStack tree.ResumeStack) (Box, tree.ResumeStack, tree.PageBreak) {
-		fmt.Println("groupLayout")
-
 		var resumeAt tree.ResumeStack
 		nextPage := tree.PageBreak{Break: "any"}
 		originalPageIsEmpty := pageIsEmpty
@@ -99,7 +97,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 		for i, row_ := range group.Children[skip:] {
 			row := row_.Box()
 			indexRow := i + skip
-			fmt.Println("row", indexRow)
 			row.Index = indexRow
 			if len(newGroupChildren) != 0 {
 				pageBreak := blockLevelPageBreak(newGroupChildren[len(newGroupChildren)-1], row_)
@@ -317,7 +314,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 					hasBroken := false
 					for _, cellResumeAt := range values {
 						if !cellResumeAt.Equals(tree.ResumeStack{0: nil}) {
-							fmt.Println("adding row 1")
 							newGroupChildren = append(newGroupChildren, row_)
 							hasBroken = true
 							break outer
@@ -330,7 +326,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 						resumeAt = nil
 					}
 				} else {
-					fmt.Println("adding row 2")
 					newGroupChildren = append(newGroupChildren, row_)
 					break
 				}
@@ -345,7 +340,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 					if pageBreak == "avoid" {
 						newGroupChildrenTmp, resumeAtTmp := findEarlierPageBreak(newGroupChildren, absoluteBoxes, fixedBoxes)
 						if newGroupChildrenTmp != nil || resumeAtTmp != nil {
-							fmt.Println("findEarlierPageBreak")
 							newGroupChildren, resumeAt = newGroupChildrenTmp, resumeAtTmp
 							break
 						}
@@ -363,7 +357,6 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, maxPositionY pr.
 				break
 			}
 
-			fmt.Println("addding row")
 			newGroupChildren = append(newGroupChildren, row_)
 			positionY = nextPositionY
 			pageIsEmpty = false

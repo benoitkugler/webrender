@@ -5,6 +5,7 @@ import (
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
+	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 )
 
 // Resolve percentages into fixed values.
@@ -15,12 +16,19 @@ import (
 func resolveOnePercentage(value pr.Value, propertyName string, referTo pr.Float, mainFlexDirection string) pr.MaybeFloat {
 	// box attributes are used values
 	percent := pr.ResoudPercentage(value, referTo)
-	// setattr(box, propertyName, percent)
+
 	if (propertyName == "min_width" || propertyName == "min_height") && percent == pr.Auto {
 		if mainFlexDirection == "" || propertyName != "min_"+mainFlexDirection {
 			percent = pr.Float(0)
 		}
 	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("resolveOnePercentage %s: %v %s -> %s", propertyName,
+			tracer.FormatMaybeFloat(value.Dimension.Value), tracer.FormatMaybeFloat(referTo),
+			tracer.FormatMaybeFloat(percent)))
+	}
+
 	return percent
 }
 
@@ -40,6 +48,12 @@ func resolvePercentagesBox(box Box, containingBlock containingBlock, mainFlexDir
 // Set used values as attributes of the box object.
 func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirection string) {
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("resolvePercentages: %s %s",
+			tracer.FormatMaybeFloat(cbWidth), tracer.FormatMaybeFloat(cbHeight)))
+	}
+
 	maybeHeight := cbWidth
 	if bo.PageBoxT.IsInstance(box_) {
 		maybeHeight = cbHeight

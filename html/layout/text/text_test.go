@@ -221,3 +221,17 @@ func TestChWidth(t *testing.T) {
 		t.Fatalf("unexpected ch width %v", w)
 	}
 }
+
+func TestSplitFirstLine(t *testing.T) {
+	newStyle := pr.InitialValues.Copy()
+	newStyle.SetFontFamily(pr.Strings{"arial"})
+	newStyle.SetFontSize(pr.FToV(16))
+
+	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+
+	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), 0, false)
+
+	if out.ResumeAt != -1 {
+		t.Fatalf("unexpected resume index %d", out.ResumeAt)
+	}
+}

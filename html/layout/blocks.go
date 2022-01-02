@@ -71,6 +71,10 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, ma
 		defer debugLogger.LineWithDedent("")
 	}
 
+	if traceMode {
+		traceLogger.DumpTree(box_, "blockLevelLayoutSwitch")
+	}
+
 	blockBox, isBlockBox := box_.(bo.BlockBoxITF)
 	replacedBox, isReplacedBox := box_.(bo.ReplacedBoxITF)
 	if table, ok := box_.(bo.TableBoxITF); ok {
@@ -350,7 +354,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Floa
 		child := child_.Box()
 
 		if debugMode {
-			debugLogger.LineWithIndent("Block container layout child %d: %s, in normal flow: %v", i, child_.Type(), child.IsInNormalFlow())
+			debugLogger.LineWithIndent("Block container layout child %d: %s <%s>, in normal flow: %v", i, child_.Type(), child.ElementTag(), child.IsInNormalFlow())
 		}
 
 		child.PositionX = positionX
@@ -381,7 +385,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Floa
 		}
 
 		if debugMode {
-			debugLogger.LineWithDedent("--> block child done (resume at: %s)", resumeAt)
+			debugLogger.LineWithDedent("--> block child done (resume at: %s, positionY: %g)", resumeAt, positionY)
 		}
 
 		if abort {

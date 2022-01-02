@@ -60,6 +60,10 @@ func (l *lineBoxeIterator) Has() bool {
 		debugLogger.Line("getNextLinebox resumeAt: %s", resumeAt)
 	}
 
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("lineBoxeIterator.Has: %s", resumeAt))
+	}
+
 	if line != nil {
 		handleLeader(l.context, line, l.containingBlock)
 		l.positionY = line.Box().PositionY + line.Box().Height.V()
@@ -103,6 +107,10 @@ func iterLineBoxes(context *layoutContext, box *bo.LineBox, positionY, maxY pr.F
 func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, maxY pr.Float, skipStack tree.ResumeStack,
 	containingBlock *bo.BoxFields, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder,
 	firstLetterStyle pr.ElementStyle) (line_ *bo.LineBox, resumeAt tree.ResumeStack) {
+
+	if traceMode {
+		traceLogger.DumpTree(linebox, "getNextLinebox")
+	}
 
 	skipStack, cont := skipFirstWhitespace(linebox, skipStack)
 	if cont {
@@ -584,6 +592,15 @@ type splitedInline struct {
 func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, maxY pr.Float, skipStack tree.ResumeStack,
 	containingBlock *bo.BoxFields, absoluteBoxes, fixedBoxes,
 	linePlaceholders *[]*AbsolutePlaceholder, waitingFloats *[]Box, lineChildren []indexedBox) splitedInline {
+
+	if debugMode {
+		debugLogger.LineWithIndent("Split inline level: %T (maxX: %f, positionX: %f)...", box_, maxX, positionX)
+	}
+
+	if traceMode {
+		traceLogger.DumpTree(box_, "splitInlineLevel")
+	}
+
 	box := box_.Box()
 	resolvePercentagesBox(box_, containingBlock, "")
 	floatWidths := widths{}
@@ -593,10 +610,6 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, maxY pr
 		resumeAt                tree.ResumeStack
 		firstLetter, lastLetter rune
 	)
-
-	if debugMode {
-		debugLogger.LineWithIndent("Split inline level: %T (maxX: %f, positionX: %f)...", box_, maxX, positionX)
-	}
 
 	if textBox, ok := box_.(*bo.TextBox); ok {
 		textBox.PositionX = positionX
@@ -659,6 +672,10 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, maxY pr
 
 	if debugMode {
 		debugLogger.LineWithDedent("--> split inline level %T done (resumeAt :%s)", box_, resumeAt)
+	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("end splitInlineLevel %s", resumeAt))
 	}
 
 	return splitedInline{
@@ -791,8 +808,18 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, maxY pr.F
 	}
 	box := box_.Box()
 
+	isStart := skipStack == nil
+	var skip int
+	if !isStart {
+		skip, skipStack = skipStack.Unpack()
+	}
+
 	if debugMode {
 		debugLogger.LineWithIndent("Split inline box %T (with width %v)", box_, box.Width)
+	}
+
+	if traceMode {
+		traceLogger.DumpTree(box_, fmt.Sprintf("splitInlineBox %d", skip))
 	}
 
 	// In some cases (shrink-to-fit result being the preferred width)
@@ -803,7 +830,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, maxY pr.F
 	// an unexpected line break. The 1e-6 comes from tests.
 	maxX *= 1 + 1e-6
 
-	isStart := skipStack == nil
 	initialPositionX := positionX
 	initialSkipStack := skipStack
 
@@ -815,10 +841,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, maxY pr.F
 		absoluteBoxes = &[]*AbsolutePlaceholder{}
 	}
 
-	var skip int
-	if !isStart {
-		skip, skipStack = skipStack.Unpack()
-	}
 	var (
 		i, floatResumeAt          int
 		L                         = len(box.Children[skip:])
@@ -828,6 +850,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, maxY pr.F
 		preservedLineBreak        = false
 		floatWidths               widths
 	)
+
 	for ; i < L; i++ {
 		index := i + skip
 		child_ := box.Children[index]
@@ -1067,6 +1090,11 @@ func inlineOutOfFlowLayout(context *layoutContext, box Box, containingBlock *bo.
 	lineChildren []indexedBox, waitingChildren *[]indexedBox, waitingFloats *[]Box,
 	absoluteBoxes, fixedBoxes, linePlaceholders *[]*AbsolutePlaceholder, floatWidths *widths,
 	maxX, positionX, maxY pr.Float) {
+
+	if traceMode {
+		traceLogger.DumpTree(box, "inlineOutOfFlowLayout")
+	}
+
 	child := child_.Box()
 	if child.IsAbsolutelyPositioned() {
 		child.PositionX = positionX

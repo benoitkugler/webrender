@@ -79,6 +79,15 @@ func TestWriteDocument(t *testing.T) {
 	finalDoc.Write(output{}, 1, nil)
 }
 
+func TestCrash(t *testing.T) {
+	doc, err := tree.NewHTML(utils.InputFilename("../../resources_test/preserveAspectRatio.html"), "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio", nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalDoc := Render(doc, nil, true, fc)
+	finalDoc.Write(output{}, 1, nil)
+}
+
 func renderUrl(t testing.TB, url string) {
 	doc, err := tree.NewHTML(utils.InputUrl(url), "", nil, "")
 	if err != nil {
@@ -94,7 +103,8 @@ func TestRealPage(t *testing.T) {
 	// renderUrl(t, "https://weasyprint.org/")
 	// renderUrl(t, "https://en.wikipedia.org/wiki/Go_(programming_language)") // rather big document
 	// renderUrl(t, "https://golang.org/doc/go1.17")                           // slow because of text layout
-	renderUrl(t, "https://github.com/Kozea/WeasyPrint")
+	// renderUrl(t, "https://github.com/Kozea/WeasyPrint")
+	renderUrl(t, "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio")
 }
 
 func BenchmarkRender(b *testing.B) {

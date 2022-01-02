@@ -8,10 +8,6 @@ from weasyprint.css.targets import TargetCollector
 import functools
 import json
 
-FILENAME = "resources_test/Wikipedia-Go.html"
-BASE_URL = "https://en.wikipedia.org/wiki/Go_(programming_language)"
-OUTPUT = "resources_test/Wikipedia-Go-expected.json"
-
 
 def tree_to_json(box: boxes.Box) -> str:
     assert box.element_tag == 'html'
@@ -26,7 +22,7 @@ def tree_to_json(box: boxes.Box) -> str:
     return json.dumps(output, indent=2)
 
 
-TEST_UA_STYLESHEET = CSS(filename="style/tree/tests_ua.css")
+TEST_UA_STYLESHEET = CSS(filename="html/tree/tests_ua.css")
 
 
 class FakeHTML(HTML):
@@ -97,10 +93,18 @@ def serializeType(type_name: str) -> int:
         raise TypeError("invalid type: " + type_name)
 
 
+def format_tag(box) -> str:
+    element_tag = box.element_tag
+    if element_tag.startswith("{http://www.w3.org/2000/svg}"):
+        element_tag = element_tag[len("{http://www.w3.org/2000/svg}"):]
+    return element_tag
+
+
 def serialize(box_list: [Box]) -> list:
     """Transform a box list into a structure easier to compare for testing."""
+
     return [{
-        "Tag": box.element_tag,
+        "Tag": format_tag(box),
         "Type": serializeType(type(box).__name__),
         # All concrete boxes are either text, replaced, column or parent.
         "Content":
@@ -116,15 +120,18 @@ def dump_tree(document: FakeHTML) -> str:
     style_for = get_all_computed_styles(document, counter_style=counter_style)
     get_image_from_uri = functools.partial(
         images.get_image_from_uri, cache={}, url_fetcher=document.url_fetcher,
-        optimize_size=())
+        optimize_size=(), context=None)
     target_collector = TargetCollector()
     print("Building tree...")
-    tree = build_formatting_structure(document.etree_element, style_for, get_image_from_uri, BASE_URL,
+    tree = build_formatting_structure(document.etree_element, style_for, get_image_from_uri, document.base_url,
                                       target_collector, counter_style)
     print("Exporting as JSON...")
     return tree_to_json(tree)
 
 
+# OUTPUT = "resources_test/Wikipedia-Go-expected.json"
+# FILENAME = "resources_test/Wikipedia-Go.html"
+# BASE_URL = "https://en.wikipedia.org/wiki/Go_(programming_language)"
 # print("Loading HTML...")
 # document = FakeHTML(filename=FILENAME, base_url=BASE_URL)
 # js = dump_tree(document)
@@ -132,11 +139,20 @@ def dump_tree(document: FakeHTML) -> str:
 #     fp.write(js)
 # print("Done.")
 
+URL = "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio"
+OUTPUT = "resources_test/SVG-expected.json"
+print("Loading HTML...")
+document = FakeHTML(url=URL)
+js = dump_tree(document)
+with open(OUTPUT, "w") as fp:
+    fp.write(js)
+print("Done.")
 
-print(dump_tree(FakeHTML(string="""
-    <style>
-        @page { size: 300px 30px }
-        body { margin: 0; background: #fff }
-    </style>
-    <p><a href="another url"><span>[some url] </span>some content</p>
-    """)))
+
+# print(dump_tree(FakeHTML(string="""
+#     <style>
+#         @page { size: 300px 30px }
+#         body { margin: 0; background: #fff }
+#     </style>
+#     <p><a href="another url"><span>[some url] </span>some content</p>
+#     """)))

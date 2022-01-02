@@ -24,13 +24,26 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 	"github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 	"golang.org/x/net/html"
 )
 
-// if true, print debug information into Stdout
-const debugMode = false
+const (
+	// if true, print debug information into Stdout
+	debugMode = false
+	traceMode = false
+)
 
-var debugLogger testutils.IndentLogger
+var (
+	debugLogger testutils.IndentLogger
+	traceLogger tracer.Tracer
+)
+
+func init() {
+	if traceMode {
+		traceLogger = tracer.NewTracer("/tmp/trace_go.txt")
+	}
+}
 
 type Box = bo.Box
 
