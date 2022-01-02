@@ -61,7 +61,6 @@ var (
 	FontSizeKeywordsOrder = []string{"xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"}
 
 	// http://www.w3.org/TR/css3-page/#size
-	// name=(width in pixels, height in pixels)
 	PageSizes = map[string]Point{
 		"a10":     {Dimension{Value: 26, Unit: Mm}, Dimension{Value: 37, Unit: Mm}},
 		"a9":      {Dimension{Value: 37, Unit: Mm}, Dimension{Value: 52, Unit: Mm}},

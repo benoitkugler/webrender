@@ -26,6 +26,13 @@ func (f special) V() Float {
 	return 0
 }
 
+func (f special) String() string {
+	if f {
+		return "auto"
+	}
+	return "-"
+}
+
 // Return true except for 0 or nil
 func Is(m MaybeFloat) bool {
 	if m == nil {

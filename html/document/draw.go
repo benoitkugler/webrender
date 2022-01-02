@@ -1016,11 +1016,8 @@ func boolToInt(b bool) int {
 
 // Draw borders of table cells when they collapse.
 func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
-	fmt.Println("draw collapsed")
 	var rowHeights, rowPositions []pr.Float
-	fmt.Println(len(table.Children))
 	for _, rowGroup := range table.Children {
-		fmt.Println(len(rowGroup.Box().Children))
 		for _, row := range rowGroup.Box().Children {
 			rowHeights = append(rowHeights, row.Box().Height.V())
 			rowPositions = append(rowPositions, row.Box().PositionY)

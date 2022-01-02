@@ -1491,7 +1491,7 @@ func loadExpected(filename string) ([]SerBox, error) {
 }
 
 func TestRealPage(t *testing.T) {
-	// Requires network
+	// Requires network to load the linked ressources
 
 	// log.Default().SetOutput(io.Discard)
 	got := buildFile(t, utils.InputFilename("../../resources_test/Wikipedia-Go.html"), "https://en.wikipedia.org/wiki/Go_(programming_language)")

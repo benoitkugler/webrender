@@ -1,7 +1,6 @@
 package document
 
 import (
-	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -12,10 +11,7 @@ import (
 	"github.com/benoitkugler/webrender/utils/testutils"
 )
 
-func round(x fl) fl {
-	n := math.Pow10(4)
-	return fl(math.Round(float64(x)*n) / n)
-}
+func round(x fl) fl { return utils.RoundPrec(x, 4) }
 
 // Eliminate errors of floating point arithmetic for metadata.
 func roundMeta(pages []Page) {
