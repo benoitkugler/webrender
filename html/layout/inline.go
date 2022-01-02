@@ -808,6 +808,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, maxY pr.F
 	}
 	box := box_.Box()
 
+	initialSkipStack := skipStack
 	isStart := skipStack == nil
 	var skip int
 	if !isStart {
@@ -831,7 +832,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, maxY pr.F
 	maxX *= 1 + 1e-6
 
 	initialPositionX := positionX
-	initialSkipStack := skipStack
 
 	leftSpacing := box.PaddingLeft.V() + box.MarginLeft.V() + box.BorderLeftWidth.V()
 	rightSpacing := box.PaddingRight.V() + box.MarginRight.V() + box.BorderRightWidth.V()
