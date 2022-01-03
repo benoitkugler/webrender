@@ -220,8 +220,6 @@ func inlineMinContentWidth(context *layoutContext, box_ Box, outer bool, skipSta
 
 	if firstLine {
 		widths = widths[0:1]
-	} else {
-		widths[len(widths)-1] -= trailingWhitespaceSize(context, box_)
 	}
 	return adjust(box_, outer, pr.Maxs(widths...), true, true)
 }
@@ -230,6 +228,8 @@ func inlineMinContentWidth(context *layoutContext, box_ Box, outer bool, skipSta
 // outer=true, isLineStart=false
 func inlineMaxContentWidth(context *layoutContext, box_ Box, outer, isLineStart bool) pr.Float {
 	widths := inlineLineWidths(context, box_, outer, isLineStart, false, nil, false)
+	// Remove trailing space, as split_first_line keeps trailing spaces when
+	// max_width is not set.
 	widths[len(widths)-1] -= trailingWhitespaceSize(context, box_)
 	return adjust(box_, outer, pr.Maxs(widths...), true, true)
 }

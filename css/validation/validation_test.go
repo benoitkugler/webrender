@@ -147,6 +147,35 @@ func TestSpacing(t *testing.T) {
 	assertInvalid(t, "word-spacing: 3", "invalid")
 }
 
+func TestFootnote(t *testing.T) {
+	capt := testutils.CaptureLogs()
+	assertValidDict(t, "footnote-policy: auto", toValidated(pr.Properties{
+		"footnote_policy": pr.String("auto"),
+	}))
+	assertValidDict(t, "footnote-policy: line", toValidated(pr.Properties{
+		"footnote_policy": pr.String("line"),
+	}))
+	assertValidDict(t, "footnote-policy: block", toValidated(pr.Properties{
+		"footnote_policy": pr.String("block"),
+	}))
+
+	assertValidDict(t, "footnote-display: block", toValidated(pr.Properties{
+		"footnote_display": pr.String("block"),
+	}))
+	assertValidDict(t, "footnote-display: inline", toValidated(pr.Properties{
+		"footnote_display": pr.String("inline"),
+	}))
+	assertValidDict(t, "footnote-display: compact", toValidated(pr.Properties{
+		"footnote_display": pr.String("compact"),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "footnote_display: block", "did you mean footnote-display")
+	assertInvalid(t, "footnote-display: 3", "invalid")
+	assertInvalid(t, "footnote-policy: 3", "invalid")
+	assertInvalid(t, "footnote-policy: normal", "invalid")
+}
+
 func TestDecoration(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "text-decoration-line: none", toValidated(pr.Properties{

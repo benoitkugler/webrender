@@ -59,8 +59,8 @@ type BlockLevelBoxITF interface {
 // A replaced element with a ``display`` value of ``block``, ``liste-item`` or
 // ``table`` generates a block-level replaced box.
 type BlockReplacedBoxITF interface {
-	ReplacedBoxITF
 	BlockLevelBoxITF
+	ReplacedBoxITF
 	isBlockReplacedBox()
 }
 
@@ -85,8 +85,8 @@ func (b *FlexBox) Box() *BoxFields   { return &b.BoxFields }
 func (b FlexBox) Copy() Box          { return &b }
 func (FlexBox) IsClassicalBox() bool { return true }
 func (FlexBox) isFlexBox()           {}
-func (FlexBox) isParentBox()         {}
 func (FlexBox) isBlockLevelBox()     {}
+func (FlexBox) isParentBox()         {}
 func (FlexBox) isFlexContainerBox()  {}
 
 func FlexBoxAnonymousFrom(parent Box, children []Box) *FlexBox {
@@ -101,13 +101,29 @@ type FlexContainerBoxITF interface {
 	isFlexContainerBox()
 }
 
+// Box displaying footnotes, as defined in GCPM.
+type FootnoteAreaBoxITF interface {
+	BlockBoxITF
+	isFootnoteAreaBox()
+}
+
+func (FootnoteAreaBox) Type() BoxType        { return FootnoteAreaBoxT }
+func (b *FootnoteAreaBox) Box() *BoxFields   { return &b.BoxFields }
+func (b FootnoteAreaBox) Copy() Box          { return &b }
+func (FootnoteAreaBox) IsClassicalBox() bool { return true }
+func (FootnoteAreaBox) isFootnoteAreaBox()   {}
+func (FootnoteAreaBox) isBlockBox()          {}
+func (FootnoteAreaBox) isParentBox()         {}
+func (FootnoteAreaBox) isBlockContainerBox() {}
+func (FootnoteAreaBox) isBlockLevelBox()     {}
+
 // A box that is both inline-level and a block container.
 // It behaves as inline on the outside and as a block on the inside.
 // A non-replaced element with a 'display' value of 'inline-block' generates
 // an inline-block box.
 type InlineBlockBoxITF interface {
-	BlockContainerBoxITF
 	AtomicInlineLevelBoxITF
+	BlockContainerBoxITF
 	isInlineBlockBox()
 }
 
@@ -133,8 +149,8 @@ func InlineBlockBoxAnonymousFrom(parent Box, children []Box) *InlineBlockBox {
 // A non-replaced element with a ``display`` value of ``inline`` generates an
 // inline box.
 type InlineBoxITF interface {
-	ParentBoxITF
 	InlineLevelBoxITF
+	ParentBoxITF
 	isInlineBox()
 }
 
@@ -143,8 +159,8 @@ func (b *InlineBox) Box() *BoxFields   { return &b.BoxFields }
 func (b InlineBox) Copy() Box          { return &b }
 func (InlineBox) IsClassicalBox() bool { return true }
 func (InlineBox) isInlineBox()         {}
-func (InlineBox) isParentBox()         {}
 func (InlineBox) isInlineLevelBox()    {}
+func (InlineBox) isParentBox()         {}
 
 func InlineBoxAnonymousFrom(parent Box, children []Box) *InlineBox {
 	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil, "", "", nil, nil)
@@ -155,8 +171,8 @@ func InlineBoxAnonymousFrom(parent Box, children []Box) *InlineBox {
 // A box that is both inline-level and a flex container.
 // It behaves as inline on the outside and as a flex container on the inside.
 type InlineFlexBoxITF interface {
-	InlineLevelBoxITF
 	FlexContainerBoxITF
+	InlineLevelBoxITF
 	isInlineFlexBox()
 }
 
@@ -165,8 +181,8 @@ func (b *InlineFlexBox) Box() *BoxFields   { return &b.BoxFields }
 func (b InlineFlexBox) Copy() Box          { return &b }
 func (InlineFlexBox) IsClassicalBox() bool { return true }
 func (InlineFlexBox) isInlineFlexBox()     {}
-func (InlineFlexBox) isParentBox()         {}
 func (InlineFlexBox) isInlineLevelBox()    {}
+func (InlineFlexBox) isParentBox()         {}
 func (InlineFlexBox) isFlexContainerBox()  {}
 
 func InlineFlexBoxAnonymousFrom(parent Box, children []Box) *InlineFlexBox {
@@ -190,8 +206,8 @@ type InlineLevelBoxITF interface {
 // ``inline-table``, or ``inline-block`` generates an inline-level replaced
 // box.
 type InlineReplacedBoxITF interface {
-	ReplacedBoxITF
 	AtomicInlineLevelBoxITF
+	ReplacedBoxITF
 	isInlineReplacedBox()
 }
 
@@ -200,8 +216,8 @@ func (b *InlineReplacedBox) Box() *BoxFields      { return &b.BoxFields }
 func (b InlineReplacedBox) Copy() Box             { return &b }
 func (InlineReplacedBox) IsClassicalBox() bool    { return true }
 func (InlineReplacedBox) isInlineReplacedBox()    {}
-func (InlineReplacedBox) isInlineLevelBox()       {}
 func (InlineReplacedBox) isReplacedBox()          {}
+func (InlineReplacedBox) isInlineLevelBox()       {}
 func (InlineReplacedBox) isAtomicInlineLevelBox() {}
 
 // Box for elements with ``display: inline-table``
@@ -294,8 +310,8 @@ func (ReplacedBox) isReplacedBox()       {}
 
 // Box for elements with ``display: table``
 type TableBoxITF interface {
-	ParentBoxITF
 	BlockLevelBoxITF
+	ParentBoxITF
 	isTableBox()
 	methodsTableBox
 }
@@ -325,9 +341,9 @@ func (b *TableCaptionBox) Box() *BoxFields   { return &b.BoxFields }
 func (b TableCaptionBox) Copy() Box          { return &b }
 func (TableCaptionBox) IsClassicalBox() bool { return true }
 func (TableCaptionBox) isTableCaptionBox()   {}
+func (TableCaptionBox) isBlockBox()          {}
 func (TableCaptionBox) isParentBox()         {}
 func (TableCaptionBox) isBlockContainerBox() {}
-func (TableCaptionBox) isBlockBox()          {}
 func (TableCaptionBox) isBlockLevelBox()     {}
 
 func TableCaptionBoxAnonymousFrom(parent Box, children []Box) *TableCaptionBox {
@@ -460,6 +476,7 @@ const (
 	BoxT
 	FlexBoxT
 	FlexContainerBoxT
+	FootnoteAreaBoxT
 	InlineBlockBoxT
 	InlineBoxT
 	InlineFlexBoxT
@@ -501,6 +518,8 @@ func (t BoxType) IsInstance(box BoxITF) bool {
 		_, isInstance = box.(FlexBoxITF)
 	case FlexContainerBoxT:
 		_, isInstance = box.(FlexContainerBoxITF)
+	case FootnoteAreaBoxT:
+		_, isInstance = box.(FootnoteAreaBoxITF)
 	case InlineBlockBoxT:
 		_, isInstance = box.(InlineBlockBoxITF)
 	case InlineBoxT:
@@ -561,6 +580,8 @@ func (t BoxType) String() string {
 		return "FlexBox"
 	case FlexContainerBoxT:
 		return "FlexContainerBox"
+	case FootnoteAreaBoxT:
+		return "FootnoteAreaBox"
 	case InlineBlockBoxT:
 		return "InlineBlockBox"
 	case InlineBoxT:
@@ -607,6 +628,7 @@ var (
 	_ BlockBoxITF            = (*BlockBox)(nil)
 	_ BlockReplacedBoxITF    = (*BlockReplacedBox)(nil)
 	_ FlexBoxITF             = (*FlexBox)(nil)
+	_ FootnoteAreaBoxITF     = (*FootnoteAreaBox)(nil)
 	_ InlineBlockBoxITF      = (*InlineBlockBox)(nil)
 	_ InlineBoxITF           = (*InlineBox)(nil)
 	_ InlineFlexBoxITF       = (*InlineFlexBox)(nil)

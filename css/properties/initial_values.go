@@ -120,12 +120,14 @@ var InitialValues = Properties{
 	"widows":               Int(2),
 
 	// Generated Content 3 (WD): https://www.w3.org/TR/css-content-3/
-	"bookmark_label": ContentProperties{{Type: "content", Content: String("text")}},
-	"bookmark_level": IntString{String: "none"},
-	"bookmark_state": String("open"),
-	"content":        SContent{String: "normal"},
-	"quotes":         Quotes{Open: []string{"“", "‘"}, Close: []string{"”", "’"}}, // chosen by the user agent
-	"string_set":     StringSet{String: "none"},
+	"bookmark_label":   ContentProperties{{Type: "content", Content: String("text")}},
+	"bookmark_level":   IntString{String: "none"},
+	"bookmark_state":   String("open"),
+	"content":          SContent{String: "normal"},
+	"footnote_display": String("block"),
+	"footnote_policy":  String("auto"),
+	"quotes":           Quotes{Open: []string{"“", "‘"}, Close: []string{"”", "’"}}, // chosen by the user agent
+	"string_set":       StringSet{String: "none"},
 
 	// // Images 3/4 (CR/WD): https://www.w3.org/TR/css4-images/
 	"image_resolution": FToV(1), // dppx

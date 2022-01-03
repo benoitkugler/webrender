@@ -23,7 +23,7 @@ type blockLayout struct {
 // `maxPositionY` is the absolute vertical position (as in
 // ``someBox.PositionY``) of the bottom of the
 // content box of the current page area.
-func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, maxPositionY pr.Float, skipStack tree.ResumeStack,
+func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
 	containingBlock *bo.BoxFields, pageIsEmpty bool, absoluteBoxes,
 	fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, discard bool) (bo.BlockLevelBoxITF, blockLayout) {
 
@@ -57,12 +57,12 @@ func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, maxPosit
 			adjoiningMargins = new([]pr.Float)
 		}
 	}
-	return blockLevelLayoutSwitch(context, box_, maxPositionY, skipStack, containingBlock,
+	return blockLevelLayoutSwitch(context, box_, bottomSpace, skipStack, containingBlock,
 		pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins, discard)
 }
 
 // Call the layout function corresponding to the ``box`` type.
-func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, maxPositionY pr.Float, skipStack tree.ResumeStack,
+func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
 	containingBlock *bo.BoxFields, pageIsEmpty bool, absoluteBoxes,
 	fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, discard bool) (bo.BlockLevelBoxITF, blockLayout) {
 
@@ -79,15 +79,15 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, ma
 	replacedBox, isReplacedBox := box_.(bo.ReplacedBoxITF)
 	if table, ok := box_.(bo.TableBoxITF); ok {
 		// fmt.Println(table.Box().Element.Parent.Parent.Data, table.Box().Element.Parent.Parent.Attr)
-		return tableLayout(context, table, maxPositionY, skipStack, pageIsEmpty, absoluteBoxes, fixedBoxes)
+		return tableLayout(context, table, bottomSpace, skipStack, pageIsEmpty, absoluteBoxes, fixedBoxes)
 	} else if isBlockBox {
-		return blockBoxLayout(context, blockBox, maxPositionY, skipStack, containingBlock,
+		return blockBoxLayout(context, blockBox, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins, discard)
 	} else if isReplacedBox && bo.BlockReplacedBoxT.IsInstance(box_) {
 		b, v := blockReplacedBoxLayout(context, replacedBox, containingBlock)
 		return b.(bo.BlockLevelBoxITF), v // blockReplacedBoxLayout is type stable
 	} else if bo.FlexBoxT.IsInstance(box_) {
-		box_, layout := flexLayout(context, box_, maxPositionY, skipStack, containingBlock,
+		box_, layout := flexLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes)
 		return box_.(bo.BlockLevelBoxITF), layout // flexLayout is type stable
 	} else { // pragma: no cover
@@ -96,19 +96,19 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, ma
 }
 
 // Lay out the block ``box``.
-func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, maxPositionY pr.Float, skipStack tree.ResumeStack,
+func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
 	containingBlock *bo.BoxFields, pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, discard bool) (bo.BlockLevelBoxITF, blockLayout) {
 	box := box_.Box()
 	if box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto" {
-		newBox_, result := columnsLayout(context, box_, maxPositionY, skipStack, containingBlock,
+		newBox_, result := columnsLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins)
 		resumeAt := result.resumeAt
 		if resumeAt == nil {
 			newBox := newBox_.Box()
-			bottomSpacing := newBox.MarginBottom.V() + newBox.PaddingBottom.V() + newBox.BorderBottomWidth.V()
-			if bottomSpacing != 0 {
-				maxPositionY -= bottomSpacing
-				newBox_, result = columnsLayout(context, box_, maxPositionY, skipStack,
+			columnsBottomSpace := newBox.MarginBottom.V() + newBox.PaddingBottom.V() + newBox.BorderBottomWidth.V()
+			if columnsBottomSpace != 0 {
+				bottomSpace += columnsBottomSpace
+				newBox_, result = columnsLayout(context, box_, bottomSpace, skipStack,
 					containingBlock, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins)
 			}
 		}
@@ -118,7 +118,7 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, maxPositionY pr
 	}
 	blockLevelWidth(box_, nil, containingBlock)
 
-	newBox__, result := blockContainerLayout(context, box_, maxPositionY, skipStack, pageIsEmpty,
+	newBox__, result := blockContainerLayout(context, box_, bottomSpace, skipStack, pageIsEmpty,
 		absoluteBoxes, fixedBoxes, adjoiningMargins, discard)
 	newBox, _ := newBox__.(bo.BlockBoxITF) // blockContainerLayout is type stable
 	if newBox != nil && newBox.Box().IsTableWrapper {
@@ -288,16 +288,12 @@ type childrenBlockLevel interface {
 }
 
 // Set the ``box`` height.
-func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Float, skipStack tree.ResumeStack,
+func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStack tree.ResumeStack,
 	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, discard bool) (Box, blockLayout) {
 	box := box_.Box()
 	if !(bo.BlockContainerBoxT.IsInstance(box_) || bo.FlexBoxT.IsInstance(box_)) {
 		panic(fmt.Sprintf("expected BlockContainer or Flex, got %T", box_))
 	}
-
-	// We have to work around floating point rounding errors here.
-	// The 1e-9 value comes from PEP 485.
-	allowedMaxPositionY := maxPositionY * (1 + 1e-9)
 
 	// See http://www.w3.org/TR/CSS21/visuren.html#block-formatting
 	if !bo.BlockBoxT.IsInstance(box_) {
@@ -311,7 +307,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Floa
 	drawBottomDecoration := discard || box.Style.GetBoxDecorationBreak() == "clone"
 
 	if drawBottomDecoration {
-		maxPositionY -= box.PaddingBottom.V() + box.BorderBottomWidth.V() + box.MarginBottom.V()
+		bottomSpace += box.PaddingBottom.V() + box.BorderBottomWidth.V() + box.MarginBottom.V()
 	}
 
 	*adjoiningMargins = append(*adjoiningMargins, box.MarginTop.V())
@@ -365,21 +361,21 @@ func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Floa
 			abort = false
 			var outOfFlowResumeAt tree.ResumeStack
 			stop, resumeAt, newChildren, outOfFlowResumeAt = outOfFlowLayout(context, box, index, child_,
-				newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins, allowedMaxPositionY)
+				newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins, bottomSpace)
 			if outOfFlowResumeAt != nil {
-				context.brokenOutOfFlow = append(context.brokenOutOfFlow, brokenBox{child_, box, outOfFlowResumeAt})
+				context.brokenOutOfFlow = append(context.brokenOutOfFlow, brokenBox{child_, box_, outOfFlowResumeAt})
 			}
 		} else if childLineBox, ok := child_.(*bo.LineBox); ok { // LineBox is a final type
-			abort, stop, resumeAt, positionY, newChildren = lineBoxLayout(context, box, index, childLineBox,
+			abort, stop, resumeAt, positionY, newChildren = lineBoxLayout(context, box_, index, childLineBox,
 				newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins,
-				allowedMaxPositionY, positionY, skipStack, firstLetterStyle)
+				bottomSpace, positionY, skipStack, firstLetterStyle)
 			drawBottomDecoration = drawBottomDecoration || resumeAt == nil
 			adjoiningMargins = new([]pr.Float)
 		} else {
 			var adjoiningMarginsV []pr.Float
 			abort, stop, resumeAt, positionY, adjoiningMarginsV, nextPage, newChildren = inFlowLayout(context, box, index, child_,
 				newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins,
-				allowedMaxPositionY, maxPositionY, positionY, skipStack, firstLetterStyle, collapsingWithChildren, discard)
+				bottomSpace, positionY, skipStack, firstLetterStyle, collapsingWithChildren, discard)
 			skipStack = nil
 			adjoiningMargins = &adjoiningMarginsV
 		}
@@ -468,7 +464,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Floa
 	if newBox.Style.GetPosition().String == "relative" {
 		// New containing block, resolve the layout of the absolute descendants
 		for _, absoluteBox := range *absoluteBoxes {
-			absoluteLayout(context, absoluteBox, newBox_, fixedBoxes)
+			absoluteLayout(context, absoluteBox, newBox_, fixedBoxes, bottomSpace, nil)
 		}
 	}
 
@@ -476,19 +472,19 @@ func blockContainerLayout(context *layoutContext, box_ Box, maxPositionY pr.Floa
 		relativePositioning(child, bo.Point{newBox.Width.V(), newBox.Height.V()})
 	}
 
-	if !bo.BlockBoxT.IsInstance(newBox_) {
+	if establishesFormattingContext(newBox_) {
 		context.finishBlockFormattingContext(newBox_)
 	}
 
-	if resumeAt == nil {
+	if discard || !boxIsFragmented {
 		// After finishBlockFormattingContext which may increment
 		// newBox.Height
 		newBox.Height = pr.Max(pr.Min(newBox.Height.V(), newBox.MaxHeight.V()), newBox.MinHeight.V())
-	} else {
+	} else if bottomSpace > -pr.Inf {
 		// Make the box fill the blank space at the bottom of the page
 		// https://www.w3.org/TR/css-break-3/#box-splitting
-		newBox.Height = maxPositionY - newBox.PositionY - (newBox.MarginHeight() - newBox.Height.V())
-		if box.Style.GetBoxDecorationBreak() == "clone" {
+		newBox.Height = context.pageBottom - bottomSpace - newBox.PositionY - (newBox.MarginHeight() - newBox.Height.V())
+		if drawBottomDecoration {
 			newBox.Height = newBox.Height.V() + box.PaddingBottom.V() + box.BorderBottomWidth.V() + box.MarginBottom.V()
 		}
 	}
@@ -513,7 +509,7 @@ func findLastInFlowChild(children []Box) Box {
 }
 
 func outOfFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ Box, newChildren []Box,
-	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins []pr.Float, allowedMaxPositionY pr.Float) (stop bool, resumeAt tree.ResumeStack, children []Box, outOfFlowLayoutResumeAt tree.ResumeStack) {
+	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins []pr.Float, bottomSpace pr.Float) (stop bool, resumeAt tree.ResumeStack, children []Box, outOfFlowLayoutResumeAt tree.ResumeStack) {
 	child := child_.Box()
 	child.PositionY += collapseMargin(adjoiningMargins)
 
@@ -528,10 +524,10 @@ func outOfFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child
 		}
 	} else if child.IsFloated() {
 		var newChild_ Box
-		newChild_, outOfFlowLayoutResumeAt = floatLayout(context, child_, box, absoluteBoxes, fixedBoxes, allowedMaxPositionY, nil)
+		newChild_, outOfFlowLayoutResumeAt = floatLayout(context, child_, box, absoluteBoxes, fixedBoxes, bottomSpace, nil)
 		newChild := newChild_.Box()
 		// New page if overflow
-		if (pageIsEmpty && len(newChildren) == 0) || !(newChild.PositionY+newChild.Height.V() > allowedMaxPositionY) {
+		if (pageIsEmpty && len(newChildren) == 0) || !(newChild.PositionY+newChild.Height.V() > context.pageBottom-bottomSpace) {
 			asPlaceholder := AbsolutePlaceholder{AliasBox: newChild_}
 			asPlaceholder.Box().Index = index
 			newChildren = append(newChildren, &asPlaceholder)
@@ -553,11 +549,44 @@ func outOfFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child
 	return stop, resumeAt, newChildren, outOfFlowLayoutResumeAt
 }
 
-func lineBoxLayout(context *layoutContext, box *bo.BoxFields, index int, child_ *bo.LineBox, newChildren []Box,
-	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins []pr.Float, maxPositionY, positionY pr.Float,
+func breakLine(box *bo.BoxFields, newChildren *[]Box, iter *lineBoxeIterator,
+	pageIsEmpty bool, index int, skipStack, resumeAt tree.ResumeStack) (bool, bool, tree.ResumeStack) {
+	overOrphans := len(*newChildren) - int(box.Style.GetOrphans())
+	if overOrphans < 0 && !pageIsEmpty {
+		// Reached the bottom of the page before we had
+		// enough lines for orphans, cancel the whole box.
+		return true, false, resumeAt
+	}
+	// How many lines we need on the next page to satisfy widows
+	// -1 for the current line.
+	needed := int(box.Style.GetWidows() - 1)
+	if needed != 0 {
+		for iter.Has() {
+			iter.Next()
+			needed -= 1
+			if needed == 0 {
+				break
+			}
+		}
+	}
+	if needed > overOrphans && !pageIsEmpty {
+		// Total number of lines < orphans + widows
+		return true, false, resumeAt
+	}
+	if needed != 0 && needed <= overOrphans {
+		// Remove lines to keep them for the next page
+		(*newChildren) = (*newChildren)[:len(*newChildren)-needed]
+	}
+	// Page break here, resume before this line
+	return false, true, tree.ResumeStack{index: skipStack}
+}
+
+func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineBox, newChildren []Box,
+	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins []pr.Float, bottomSpace, positionY pr.Float,
 	skipStack tree.ResumeStack, firstLetterStyle pr.ElementStyle) (
 	abort, stop bool, resumeAt tree.ResumeStack, _ pr.Float, _ []Box) {
 
+	box := box_.Box()
 	if len(box.Children) != 1 {
 		panic("line box with siblings before layout")
 	}
@@ -565,9 +594,8 @@ func lineBoxLayout(context *layoutContext, box *bo.BoxFields, index int, child_ 
 		positionY += collapseMargin(adjoiningMargins)
 		adjoiningMargins = nil
 	}
-	newContainingBlock := box
-	linesIterator := iterLineBoxes(context, child_, positionY, maxPositionY, skipStack,
-		newContainingBlock, absoluteBoxes, fixedBoxes, firstLetterStyle)
+	linesIterator := iterLineBoxes(context, child_, positionY, bottomSpace, skipStack,
+		box_, absoluteBoxes, fixedBoxes, firstLetterStyle)
 	for i := 0; linesIterator.Has(); i++ {
 		tmp := linesIterator.Next()
 		line_ := tmp.line
@@ -584,47 +612,48 @@ func lineBoxLayout(context *layoutContext, box *bo.BoxFields, index int, child_ 
 		// Allow overflow if the first line of the page is higher
 		// than the page itself so that we put *something* on this
 		// page and can advance in the context.
-		if newPositionY+offsetY > maxPositionY && (len(newChildren) != 0 || !pageIsEmpty) {
-			overOrphans := len(newChildren) - int(box.Style.GetOrphans())
-			if overOrphans < 0 && !pageIsEmpty {
-				// Reached the bottom of the page before we had
-				// enough lines for orphans, cancel the whole box.
-				abort = true
-				break
-			}
-			// How many lines we need on the next page to satisfy widows
-			// -1 for the current line.
-			needed := int(box.Style.GetWidows() - 1)
-			if needed != 0 {
-				for linesIterator.Has() {
-					linesIterator.Next()
-					needed -= 1
-					if needed == 0 {
-						break
-					}
-				}
-			}
-			if needed > overOrphans && !pageIsEmpty {
-				// Total number of lines < orphans + widows
-				abort = true
-				break
-			}
-			if needed != 0 && needed <= overOrphans {
-				// Remove lines to keep them for the next page
-				newChildren = newChildren[:len(newChildren)-needed]
-			}
-			// Page break here, resume before this line
-			resumeAt = tree.ResumeStack{index: skipStack}
-			stop = true
+		overflow := (len(newChildren) != 0 || !pageIsEmpty) && newPositionY+offsetY > (context.pageBottom-bottomSpace)
+		if overflow {
+			abort, stop, resumeAt = breakLine(box, &newChildren, linesIterator, pageIsEmpty, index, skipStack, resumeAt)
 			break
-
-		} else if pageIsEmpty && newPositionY > maxPositionY {
+		} else if pageIsEmpty && newPositionY > context.pageBottom-bottomSpace {
 			// Remove the top border when a page is empty && the box is
 			// too high to be drawn := range one page
 			newPositionY -= box.MarginTop.V()
 			line_.Translate(line_, 0, -box.MarginTop.V(), false)
 			box.MarginTop = pr.Float(0)
 		}
+
+		if len(context.footnotes) != 0 {
+			breakLinebox := false
+			var footnotes []Box
+			for _, descendant := range bo.Descendants(line_) {
+				if ftn := descendant.Box().Footnote; isInBoxes(ftn, context.footnotes) {
+					footnotes = append(footnotes, ftn)
+				}
+			}
+			for _, footnote := range footnotes {
+				context.layoutFootnote(footnote)
+				overflow = len(context.reportedFootnotes) != 0 || (newPositionY+offsetY >
+					context.pageBottom-bottomSpace)
+				if overflow {
+					context.reportFootnote(footnote)
+					if footnote.Box().Style.GetFootnotePolicy() == "line" {
+						abort, stop, resumeAt = breakLine(
+							box, &newChildren, linesIterator, pageIsEmpty,
+							index, skipStack, resumeAt)
+						breakLinebox = true
+					} else if footnote.Box().Style.GetFootnotePolicy() == "block" {
+						abort, breakLinebox = true, true
+					}
+					break
+				}
+			}
+			if breakLinebox {
+				break
+			}
+		}
+
 		newChildren = append(newChildren, line_)
 		positionY = newPositionY
 		skipStack = resumeAt
@@ -645,7 +674,7 @@ func lineBoxLayout(context *layoutContext, box *bo.BoxFields, index int, child_ 
 }
 
 func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ Box, newChildren []Box,
-	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, allowedMaxPositionY, maxPositionY, positionY pr.Float,
+	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, bottomSpace, positionY pr.Float,
 	skipStack tree.ResumeStack, firstLetterStyle pr.ElementStyle, collapsingWithChildren, discard bool) (
 	abort, stop bool, resumeAt tree.ResumeStack, _ pr.Float, _ []pr.Float, nextPage tree.PageBreak, _ []Box) {
 
@@ -716,7 +745,7 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 		child.FirstLetterStyle = firstLetterStyle
 	}
 
-	newChild_, tmp := blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), maxPositionY, skipStack,
+	newChild_, tmp := blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), bottomSpace, skipStack,
 		newContainingBlock, pageIsEmptyWithNoChildren, absoluteBoxes, fixedBoxes, adjoiningMargins, discard)
 	resumeAt, nextPage = tmp.resumeAt, tmp.nextPage
 	nextAdjoiningMargins, collapsingThrough := tmp.adjoiningMargins, tmp.collapsingThrough
@@ -739,18 +768,18 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 		if !collapsingThrough {
 			newContentPositionY := newChild.ContentBoxY() + newChild.Height.V()
 			newPositionY := newChild.BorderBoxY() + newChild.BorderHeight()
-			if newContentPositionY > allowedMaxPositionY && !pageIsEmptyWithNoChildren {
+			if newContentPositionY > context.pageBottom-bottomSpace && !pageIsEmptyWithNoChildren {
 				// The child content overflows the page area, display it on the
 				// next page.
 				removePlaceholders([]Box{newChild_}, absoluteBoxes, fixedBoxes)
 				newChild_ = nil
-			} else if newPositionY > allowedMaxPositionY && !pageIsEmptyWithNoChildren {
+			} else if newPositionY > context.pageBottom-bottomSpace && !pageIsEmptyWithNoChildren {
 				// The child border/padding overflows the page area, do the
-				// layout again with a lower max_y value.
+				// layout again with a higher bottomSpace value.
 				removePlaceholders([]Box{newChild_}, absoluteBoxes, fixedBoxes)
-				maxPositionY -= newChild.PaddingBottom.V() + newChild.BorderBottomWidth.V()
+				bottomSpace += newChild.PaddingBottom.V() + newChild.BorderBottomWidth.V()
 
-				newChild_, tmp = blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), maxPositionY, skipStack,
+				newChild_, tmp = blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), bottomSpace, skipStack,
 					newContainingBlock, pageIsEmptyWithNoChildren, absoluteBoxes, fixedBoxes, adjoiningMargins, discard)
 				resumeAt, nextPage = tmp.resumeAt, tmp.nextPage
 				nextAdjoiningMargins, collapsingThrough = tmp.adjoiningMargins, tmp.collapsingThrough
@@ -1009,14 +1038,25 @@ func findEarlierPageBreak(children []Box, absoluteBoxes, fixedBoxes *[]*Absolute
 	return newChildren, resumeAt
 }
 
-func removeBox(list *[]*AbsolutePlaceholder, box Box) {
-	out := make([]*AbsolutePlaceholder, 0, len(*list))
-	for _, v := range *list {
-		if v != box {
-			out = append(out, v)
+func removeFromAbsolutes(list *[]*AbsolutePlaceholder, box Box) {
+	b := (*list)[:0]
+	for _, x := range *list {
+		if x != box {
+			b = append(b, x)
 		}
 	}
-	*list = out
+	*list = b
+}
+
+// update boxes in place
+func removeFromBoxes(list *[]Box, box Box) {
+	b := (*list)[:0]
+	for _, x := range *list {
+		if x != box {
+			b = append(b, x)
+		}
+	}
+	*list = b
 }
 
 // For boxes that have been removed in findEarlierPageBreak(),
@@ -1029,9 +1069,9 @@ func removePlaceholders(boxList []Box, absoluteBoxes, fixedBoxes *[]*AbsolutePla
 		}
 		if box.Style.GetPosition().String == "absolute" {
 			// box is not in absoluteBoxes if its parent has position: relative
-			removeBox(absoluteBoxes, box_)
+			removeFromAbsolutes(absoluteBoxes, box_)
 		} else if box.Style.GetPosition().String == "fixed" {
-			removeBox(fixedBoxes, box_)
+			removeFromAbsolutes(fixedBoxes, box_)
 		}
 	}
 }

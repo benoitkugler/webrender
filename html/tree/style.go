@@ -34,7 +34,7 @@ import (
 )
 
 // Reject anything not in here
-var pseudoElements = utils.NewSet("", "before", "after", "marker", "first-line", "first-letter")
+var pseudoElements = utils.NewSet("", "before", "after", "marker", "first-line", "first-letter", "footnote-call", "footnote-marker")
 
 type Token = parser.Token
 

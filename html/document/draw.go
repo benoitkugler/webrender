@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
@@ -1108,10 +1109,14 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 			return
 		}
 		posX := columnPositions[x]
-		posY1 := rowPositions[y] - halfMaxWidth(horizontalBorders,
-			[2][2]int{{y, x - 1}, {y, x}}, false)
-		posY2 := rowPositions[y+1] + halfMaxWidth(horizontalBorders,
-			[2][2]int{{y + 1, x - 1}, {y + 1, x}}, false)
+		posY1 := rowPositions[y]
+		if y != 0 || !table.SkipCellBorderTop {
+			posY1 -= halfMaxWidth(horizontalBorders, [2][2]int{{y, x - 1}, {y, x}}, false)
+		}
+		posY2 := rowPositions[y+1]
+		if y != gridHeight-1 || !table.SkipCellBorderBottom {
+			posY2 += halfMaxWidth(horizontalBorders, [2][2]int{{y + 1, x - 1}, {y + 1, x}}, false)
+		}
 		segments = append(segments, segment{
 			Border: border, side: "left",
 			borderBox: pr.Rectangle{posX - pr.Float(border.Width)/2, posY1, 0, posY2 - posY1},
@@ -1119,6 +1124,13 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 	}
 
 	addHorizontal := func(x, y int) {
+		if y == 0 && table.SkipCellBorderTop {
+			return
+		}
+		if y == gridHeight && table.SkipCellBorderBottom {
+			return
+		}
+
 		yy := rowNumber(y, true)
 		border := horizontalBorders[yy][x]
 		if border.Width == 0 || border.Color.RGBA.A == 0 {
@@ -1359,6 +1371,8 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 			glyph := glyphInfo.Glyph
 
 			if glyph == pango.GLYPH_EMPTY {
+				outGlyph.Offset = pr.Fl(width) / fontSize
+				outGlyph.Glyph = fonts.EmptyGlyph
 				continue
 			}
 

@@ -28,8 +28,8 @@ def get_class_comment(c: type) -> str:
     return "\n".join("// " + line for line in out.split("\n"))
 
 
-def get_parent_classes(class_: type) -> typing.Set[str]:
-    return set(c.__name__ for c in class_.__bases__ if c.__name__ != "object")
+def get_parent_classes(class_: type) -> typing.List[str]:
+    return sorted(set(c.__name__ for c in class_.__bases__ if c.__name__ != "object"))
 
 
 # the root class Box is not returned
@@ -110,7 +110,7 @@ def get_itf_and_type_code(class_: type) -> str:
         itf_code += f"""
         func {class_name}AnonymousFrom(parent Box, children []Box) *{class_name} {{
             style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil, "", "", nil, nil)
-            out := New{class_name}(style, parent.Box().Element, parent.Box().pseudoType, children)
+            out := New{class_name}(style, parent.Box().Element, parent.Box().PseudoType, children)
             return out
         }}
         """

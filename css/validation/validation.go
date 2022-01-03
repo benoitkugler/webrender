@@ -173,6 +173,8 @@ var (
 		"font-style":                 fontStyle,
 		"font-stretch":               fontStretch,
 		"font-weight":                fontWeight,
+		"footnote-display":           footnoteDisplay,
+		"footnote-policy":            footnotePolicy,
 		"image-resolution":           imageResolution,
 		"letter-spacing":             spacing,
 		"word-spacing":               spacing,
@@ -1446,7 +1448,7 @@ func display(tokens []Token, _ string) pr.CssProperty {
 func float(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
-	case "left", "right", "none":
+	case "left", "right", "footnote", "none":
 		return pr.String(keyword)
 	default:
 		return nil
@@ -2284,7 +2286,29 @@ func whiteSpace(tokens []Token, _ string) pr.CssProperty {
 func overflowWrap(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
-	case "normal", "break-word":
+	case "anywhere", "normal", "break-word":
+		return pr.String(keyword)
+	default:
+		return nil
+	}
+}
+
+// Validation for ``footnote-display``.
+func footnoteDisplay(tokens []Token, _ string) pr.CssProperty {
+	keyword := getSingleKeyword(tokens)
+	switch keyword {
+	case "block", "inline", "compact":
+		return pr.String(keyword)
+	default:
+		return nil
+	}
+}
+
+// Validation for ``footnote-policy``.
+func footnotePolicy(tokens []Token, _ string) pr.CssProperty {
+	keyword := getSingleKeyword(tokens)
+	switch keyword {
+	case "auto", "line", "block":
 		return pr.String(keyword)
 	default:
 		return nil

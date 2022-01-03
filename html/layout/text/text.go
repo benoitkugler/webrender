@@ -333,7 +333,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
 	space := maxWidthV - firstLineWidth
 	// If we can break words and the first line is too long
-	if !minimum && overflowWrap == "break-word" && space < 0 {
+	if space < 0 && (overflowWrap == "anywhere" || (overflowWrap == "break-word" && !minimum)) {
 		// Is it really OK to remove hyphenation for word-break ?
 		hyphenated = false
 		layout.SetText(string(text))

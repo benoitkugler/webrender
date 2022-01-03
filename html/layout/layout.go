@@ -64,7 +64,7 @@ func Layout(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, f
 	logger.ProgressLogger.Println("Step 4 - Creating formatting structure")
 
 	rootBox := bo.BuildFormattingStructure(html.Root, context.styleFor, context.getImageFromUri,
-		html.BaseUrl, &context.TargetCollector, counterStyle)
+		html.BaseUrl, &context.TargetCollector, counterStyle, &context.footnotes)
 
 	return layoutDocument(html, rootBox, context, -1)
 }
@@ -98,7 +98,7 @@ func initializePageMaker(context *layoutContext, rootBox bo.BoxFields) {
 	// pageState is prerequisite for filling in missing page based counters
 	// although neither a variable quoteDepth nor counterScopes are needed
 	// in page-boxes -- reusing
-	// `formattingStructure.build.updateCounters()` to avoid redundant
+	// `formattingStructure.bo.updateCounters()` to avoid redundant
 	// code requires a full `state`.
 	// The value of **pages**, of course, is unknown until we return and
 	// might change when "contentChanged" triggers re-pagination...
@@ -132,11 +132,12 @@ func layoutFixedBoxes(context *layoutContext, pages []*bo.PageBox, containingPag
 			// Absolute boxes in fixed boxes are rendered as fixed boxes'
 			// children, even when they are fixed themselves.
 			var absoluteBoxes []*AbsolutePlaceholder
-			out = append(out, absoluteBoxLayout(context, box, containingPage, &absoluteBoxes))
+			b, _ := absoluteBoxLayout(context, box, containingPage, &absoluteBoxes, -pr.Inf, nil)
+			out = append(out, b)
 			for len(absoluteBoxes) != 0 {
 				var newAbsoluteBoxes []*AbsolutePlaceholder
 				for _, absBox := range absoluteBoxes {
-					absoluteLayout(context, absBox, containingPage, &newAbsoluteBoxes)
+					absoluteLayout(context, absBox, containingPage, &newAbsoluteBoxes, -pr.Inf, nil)
 				}
 				absoluteBoxes = newAbsoluteBoxes
 			}
@@ -150,12 +151,16 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 	if maxLoops == -1 {
 		maxLoops = 8 // default value
 	}
-	var pages []*bo.PageBox
+	var (
+		pages             []*bo.PageBox
+		originalFootnotes = append([]Box(nil), context.footnotes...) // copy
+	)
 	actualTotalPages := 0
 
 	for loop := 0; loop < maxLoops; loop += 1 {
 		if loop > 0 {
 			logger.ProgressLogger.Printf("Step 5 - Creating layout - Repagination #%d \n", loop)
+			context.footnotes = append([]Box(nil), originalFootnotes...)
 		}
 
 		initialTotalPages := actualTotalPages
@@ -252,6 +257,7 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 	for i, page := range pages {
 		var rootChildren []Box
 		root := page.Box().Children[0]
+		root, footnoteArea := page.Box().Children[0], page.Box().Children[1]
 		rootChildren = append(rootChildren, layoutFixedBoxes(context, pages[:i], page)...)
 		rootChildren = append(rootChildren, root.Box().Children...)
 		rootChildren = append(rootChildren, layoutFixedBoxes(context, pages[i+1:], page)...)
@@ -260,7 +266,11 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 
 		// pageMaker's pageState is ready for the MarginBoxes
 		state := context.pageMaker[context.currentPage].InitialPageState
-		page.Children = append([]Box{root}, makeMarginBoxes(context, page, state)...)
+		page.Children = []Box{root}
+		if len(footnoteArea.Box().Children) != 0 {
+			page.Children = append(page.Children, footnoteArea)
+		}
+		page.Children = append(page.Children, makeMarginBoxes(context, page, state)...)
 		layoutBackgrounds(page, context.getImageFromUri)
 		out[i] = page
 	}
@@ -271,7 +281,7 @@ var _ text.TextLayoutContext = (*layoutContext)(nil)
 
 type brokenBox struct {
 	box             Box
-	containingBlock *bo.BoxFields
+	containingBlock Box
 	resumeAt        tree.ResumeStack
 }
 
@@ -294,9 +304,18 @@ type layoutContext struct {
 	excludedShapes      *[]*bo.BoxFields
 	excludedShapesLists [][]*bo.BoxFields
 	brokenOutOfFlow     []brokenBox
-	currentPage         int
-	marginClearance     bool
-	forcedBreak         bool
+
+	footnotes            []Box
+	currentPageFootnotes []Box
+	reportedFootnotes    []Box
+	currentFootnoteArea  *bo.FootnoteAreaBox
+	pageFootnotes        map[int]Box
+
+	currentPage int
+	pageBottom  pr.Float
+
+	marginClearance bool
+	forcedBreak     bool
 }
 
 // presentationalHints=false,
@@ -454,4 +473,36 @@ func (self *layoutContext) GetRunningElementFor(page Box, name, keyword string) 
 		}
 	}
 	return nil
+}
+
+func (l *layoutContext) layoutFootnote(footnote Box) {
+	removeFromBoxes(&l.footnotes, footnote)
+	l.currentPageFootnotes = append(l.currentPageFootnotes, footnote)
+	if l.currentFootnoteArea.Height != pr.Auto {
+		l.pageBottom += l.currentFootnoteArea.MarginHeight()
+	}
+	l.currentFootnoteArea.Children = l.currentPageFootnotes
+	footnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(l.currentFootnoteArea)).(bo.BlockLevelBoxITF)
+	footnoteArea, _ = blockLevelLayout(
+		l, footnoteArea, -pr.Inf, nil, &l.currentFootnoteArea.Page.BoxFields,
+		true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
+	l.currentFootnoteArea.Height = footnoteArea.Box().Height
+	l.pageBottom -= footnoteArea.Box().MarginHeight()
+}
+
+func (l *layoutContext) reportFootnote(footnote Box) {
+	removeFromBoxes(&l.currentPageFootnotes, footnote)
+	l.reportedFootnotes = append(l.reportedFootnotes, footnote)
+	l.pageBottom += l.currentFootnoteArea.MarginHeight()
+	l.currentFootnoteArea.Children = l.currentPageFootnotes
+	if len(l.currentFootnoteArea.Children) != 0 {
+		footnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(l.currentFootnoteArea)).(bo.BlockLevelBoxITF)
+		footnoteArea, _ = blockLevelLayout(
+			l, footnoteArea, -pr.Inf, nil,
+			&l.currentFootnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
+		l.currentFootnoteArea.Height = footnoteArea.Box().Height
+		l.pageBottom -= footnoteArea.Box().MarginHeight()
+	} else {
+		l.currentFootnoteArea.Height = pr.Float(0)
+	}
 }

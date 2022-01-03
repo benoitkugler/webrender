@@ -32,6 +32,8 @@ var (
 
 	_ TableBoxITF = (*TableBox)(nil)
 	_ TableBoxITF = (*InlineTableBox)(nil)
+
+	_ BlockLevelBoxITF = (*FootnoteAreaBox)(nil)
 )
 
 //  Test that the "before layout" box tree is correctly constructed.
@@ -41,7 +43,8 @@ func fakeHTML(html *tree.HTML) *tree.HTML {
 	return html
 }
 
-func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils.HTMLNode, *tree.StyleFor, Gifu, string, *tree.TargetCollector, counters.CounterStyle) {
+func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils.HTMLNode,
+	*tree.StyleFor, Gifu, string, *tree.TargetCollector, counters.CounterStyle, *[]Box) {
 	t.Helper()
 
 	html, err := tree.NewHTML(content, baseUrl, utils.DefaultUrlFetcher, "")
@@ -55,12 +58,12 @@ func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils
 		return images.GetImageFromUri(images.NewCache(), document.UrlFetcher, false, url, forcedMimeType)
 	}
 	tr := tree.NewTargetCollector()
-	return document.Root, style, imgFetcher, html.BaseUrl, &tr, cs
+	return document.Root, style, imgFetcher, html.BaseUrl, &tr, cs, new([]Box)
 }
 
 func parse(t *testing.T, htmlContent string) BoxITF {
-	a, b, c, d, e, f := parseBase(t, utils.InputString(htmlContent), baseUrl)
-	boxes := elementToBox(a, b, c, d, e, f, nil)
+	a, b, c, d, e, f, g := parseBase(t, utils.InputString(htmlContent), baseUrl)
+	boxes := elementToBox(a, b, c, d, e, f, nil, g)
 	return boxes[0]
 }
 

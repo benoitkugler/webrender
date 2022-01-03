@@ -422,10 +422,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 				page)
 			bo.ProcessWhitespace(box, false)
 			bo.ProcessTextTransform(box)
-			box_ := bo.AnonymousTableBoxes(box)
-			box_ = bo.FlexBoxes(box_)
-			box_ = bo.InlineInBlock(box_)
-			box_ = bo.BlockInInline(box_)
+			box = bo.CreateAnonymousBox(box).(*bo.MarginBox) // type stable
 		}
 		resolvePercentages(box, containingBlock, "")
 		boxF := box.Box()
@@ -533,7 +530,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 
 // Layout a margin box’s content once the box has dimensions.
 func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
-	newBox_, tmp := blockContainerLayout(context, mBox, pr.Inf, nil, true,
+	newBox_, tmp := blockContainerLayout(context, mBox, -pr.Inf, nil, true,
 		new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
 
 	if tmp.resumeAt != nil {
@@ -640,8 +637,14 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 
 	rootBox.Box().PositionX = page.ContentBoxX()
 	rootBox.Box().PositionY = page.ContentBoxY()
-	pageContentBottom := rootBox.Box().PositionY + page.Height.V()
+	context.pageBottom = rootBox.Box().PositionY + page.Height.V()
 	initialContainingBlock := page
+
+	footnoteAreaStyle := context.styleFor.Get(pageType, "@footnote")
+	footnoteArea := bo.NewFootnoteAreaBox(page, footnoteAreaStyle)
+	resolvePercentages(footnoteArea, bo.MaybePoint{page.Width, page.Height}, "")
+	footnoteArea.PositionX = page.ContentBoxX()
+	footnoteArea.PositionY = context.pageBottom
 
 	var previousResumeAt tree.ResumeStack
 	if pageType.Blank {
@@ -656,6 +659,21 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 	}
 	context.createBlockFormattingContext()
 	context.currentPage = pageNumber
+
+	context.currentPageFootnotes = append([]Box(nil), context.reportedFootnotes...) // copy
+	context.currentFootnoteArea = footnoteArea
+
+	if len(context.reportedFootnotes) != 0 {
+		footnoteArea.Children = context.reportedFootnotes
+		context.reportedFootnotes = nil
+		reportedFootnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(bo.BlockLevelBoxITF)
+		reportedFootnoteArea, _ = blockLevelLayout(
+			context, reportedFootnoteArea, -pr.Inf, nil,
+			&footnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
+		footnoteArea.Height = reportedFootnoteArea.Box().Height
+		context.pageBottom -= reportedFootnoteArea.Box().MarginHeight()
+	}
+
 	var (
 		adjoiningMargins []pr.Float
 		positionedBoxes  []*AbsolutePlaceholder // Mixed absolute and fixed
@@ -665,8 +683,21 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 	for _, v := range context.brokenOutOfFlow {
 		box, containingBlock := v.box, v.containingBlock
 		box.Box().PositionY = 0
-		outOfFlowBox, outOfFlowResumeAt := floatLayout(context, box, containingBlock,
-			&positionedBoxes, &positionedBoxes, pageContentBottom, v.resumeAt)
+
+		var (
+			outOfFlowBox      Box
+			outOfFlowResumeAt tree.ResumeStack
+		)
+		if box.Box().IsFloated() {
+			outOfFlowBox, outOfFlowResumeAt = floatLayout(context, box, containingBlock.Box(),
+				&positionedBoxes, &positionedBoxes, 0, v.resumeAt)
+		} else {
+			if !box.Box().IsAbsolutelyPositioned() {
+				panic("internal error: box should be absolutely positioned")
+			}
+			outOfFlowBox, outOfFlowResumeAt = absoluteBoxLayout(context, box, containingBlock,
+				&positionedBoxes, 0, v.resumeAt)
+		}
 		outOfFlowBoxes = append(outOfFlowBoxes, outOfFlowBox)
 		if outOfFlowResumeAt != nil {
 			brokenOutOfFlow = append(brokenOutOfFlow, brokenBox{box, containingBlock, outOfFlowResumeAt})
@@ -678,7 +709,7 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 		debugLogger.LineWithIndent("Making page...")
 	}
 
-	rootBox, tmp := blockLevelLayout(context, rootBox, pageContentBottom, resumeAt,
+	rootBox, tmp := blockLevelLayout(context, rootBox, 0, resumeAt,
 		&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false)
 	resumeAt = tmp.resumeAt
 	if rootBox == nil {
@@ -691,11 +722,19 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 		}
 	}
 	for i := 0; i < len(positionedBoxes); i++ { // note that positionedBoxes may grow over the loop
-		absoluteLayout(context, positionedBoxes[i], page, &positionedBoxes)
+		absoluteLayout(context, positionedBoxes[i], page, &positionedBoxes, 0, nil)
 	}
+
+	footnoteArea = bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(*bo.FootnoteAreaBox)
+	tmpBox, _ := blockLevelLayout(
+		context, footnoteArea, -pr.Inf, nil, &footnoteArea.Page.BoxFields,
+		true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
+	footnoteArea = tmpBox.(*bo.FootnoteAreaBox)
+	footnoteArea.Translate(footnoteArea, 0, -footnoteArea.MarginHeight(), false)
+
 	context.finishBlockFormattingContext(rootBox)
 
-	page.Children = []Box{rootBox}
+	page.Children = []Box{rootBox, footnoteArea}
 	descendants := bo.Descendants(page)
 
 	// Update page counter values
@@ -852,7 +891,9 @@ func remakePage(index int, context *layoutContext, rootBox bo.BlockLevelBoxITF, 
 			nextPageSide = "right"
 		}
 	}
-	blank := (nextPageSide == "left" && tmp.RightPage) || (nextPageSide == "right" && !tmp.RightPage)
+	blank := (nextPageSide == "left" && tmp.RightPage) || (nextPageSide == "right" && !tmp.RightPage) ||
+		(len(context.reportedFootnotes) != 0 && tmp.InitialResumeAt == nil)
+
 	if blank {
 		nextPageName = ""
 	}
@@ -941,7 +982,7 @@ func makeAllPages(context *layoutContext, rootBox bo.BlockLevelBoxITF, html *tre
 		}
 
 		i += 1
-		if resumeAt == nil {
+		if resumeAt == nil && len(context.reportedFootnotes) == 0 {
 			// Throw away obsolete pages
 			context.pageMaker = context.pageMaker[:i+1]
 			return out

@@ -597,6 +597,20 @@ func (s Properties) SetFontWeight(v IntString) {
 	s["font_weight"] = v
 }
 
+func (s Properties) GetFootnoteDisplay() String {
+	return s["footnote_display"].(String)
+}
+func (s Properties) SetFootnoteDisplay(v String) {
+	s["footnote_display"] = v
+}
+
+func (s Properties) GetFootnotePolicy() String {
+	return s["footnote_policy"].(String)
+}
+func (s Properties) SetFootnotePolicy(v String) {
+	s["footnote_policy"] = v
+}
+
 func (s Properties) GetHeight() Value {
 	return s["height"].(Value)
 }
@@ -1328,6 +1342,12 @@ type StyleAccessor interface {
 
 	GetFontWeight() IntString
 	SetFontWeight(v IntString)
+
+	GetFootnoteDisplay() String
+	SetFootnoteDisplay(v String)
+
+	GetFootnotePolicy() String
+	SetFootnotePolicy(v String)
 
 	GetHeight() Value
 	SetHeight(v Value)

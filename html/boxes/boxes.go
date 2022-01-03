@@ -170,13 +170,15 @@ type BoxFields struct {
 
 	FirstLetterStyle, firstLineStyle pr.ElementStyle
 
-	PositionX, PositionY                                                 pr.Float
-	Width, Height, MinWidth, MaxWidth, MinHeight, MaxHeight              pr.MaybeFloat
-	Top, Bottom, Left, Right                                             pr.MaybeFloat
-	MarginTop, MarginBottom, MarginLeft, MarginRight                     pr.MaybeFloat
-	PaddingTop, PaddingBottom, PaddingLeft, PaddingRight                 pr.MaybeFloat
+	PositionX, PositionY                                    pr.Float
+	Width, Height, MinWidth, MaxWidth, MinHeight, MaxHeight pr.MaybeFloat
+	Top, Bottom, Left, Right                                pr.MaybeFloat
+	MarginTop, MarginBottom, MarginLeft, MarginRight        pr.MaybeFloat
+	PaddingTop, PaddingBottom, PaddingLeft, PaddingRight    pr.MaybeFloat
+	// TODO: use plain float
 	BorderTopWidth, BorderRightWidth, BorderBottomWidth, BorderLeftWidth pr.MaybeFloat
 
+	// TODO: use plain float
 	BorderTopLeftRadius, BorderTopRightRadius, BorderBottomRightRadius, BorderBottomLeftRadius MaybePoint
 
 	ViewportOverflow string
@@ -186,6 +188,8 @@ type BoxFields struct {
 
 	missingLink         tree.Box
 	cachedCounterValues tree.CounterValues
+
+	Footnote Box
 
 	IsHeader, IsFooter bool
 
@@ -271,11 +275,12 @@ func CopyWithChildren(box Box, newChildren []Box) Box {
 	return newBox
 }
 
-func deepcopy(b Box) Box {
+// Returns a deep copy of `b`, copying b and its descendants.
+func Deepcopy(b Box) Box {
 	new := b.Copy()
 	newChildren := make([]Box, len(b.Box().Children))
 	for i, c := range b.Box().Children {
-		newChildren[i] = deepcopy(c)
+		newChildren[i] = Deepcopy(c)
 	}
 	new.Box().Children = newChildren
 	return new
@@ -478,6 +483,11 @@ func (b *BoxFields) IsFloated() bool {
 	return b.Style.GetFloat() != "none"
 }
 
+// Return whether this box is a footnote.
+func (b *BoxFields) IsFootnote() bool {
+	return b.Style.GetFloat() == "footnote"
+}
+
 // Return whether this box is in the absolute positioning scheme.
 func (b *BoxFields) IsAbsolutelyPositioned() bool {
 	pos := b.Style.GetPosition()
@@ -492,7 +502,7 @@ func (b *BoxFields) IsRunning() bool {
 
 // Return whether this box is in normal flow.
 func (b *BoxFields) IsInNormalFlow() bool {
-	return !(b.IsFloated() || b.IsAbsolutelyPositioned() || b.IsRunning())
+	return !(b.IsFloated() || b.IsAbsolutelyPositioned() || b.IsRunning() || b.IsFootnote())
 }
 
 // Start and end page values for named pages

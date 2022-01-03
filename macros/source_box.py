@@ -635,6 +635,19 @@ class MarginBox(BlockContainerBox):
         return f'<{type(self).__name__} {self.at_keyword}>'
 
 
+class FootnoteAreaBox(BlockBox):
+    """Box displaying footnotes, as defined in GCPM."""
+
+    def __init__(self, page, style):
+        self.page = page
+        # Footnote area boxes are not linked to any element.
+        super().__init__(
+            element_tag=None, style=style, element=None, children=[])
+
+    def __repr__(self):
+        return f'<{type(self).__name__} @footnote>'
+
+
 class FlexContainerBox(ParentBox):
     """A box that contains only flex-items."""
 

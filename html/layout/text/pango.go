@@ -407,7 +407,9 @@ func (p *TextLayout) setText(text string, justify bool) {
 		letterSpacing = pr.Fl(ls.Value)
 	}
 
-	if text != "" && (wordSpacing != 0 || letterSpacing != 0) {
+	wordBreaking := p.Style.GetOverflowWrap() == "anywhere" || p.Style.GetOverflowWrap() == "break-word"
+
+	if text != "" && (wordSpacing != 0 || letterSpacing != 0 || wordBreaking) {
 		letterSpacingInt := PangoUnitsFromFloat(letterSpacing)
 		spaceSpacingInt := PangoUnitsFromFloat(wordSpacing) + letterSpacingInt
 		attrList := p.Layout.Attributes
@@ -419,11 +421,23 @@ func (p *TextLayout) setText(text string, justify bool) {
 		}
 
 		textRunes := p.Layout.Text
-		addAttr(0, len(textRunes), letterSpacingInt)
-		for position, c := range textRunes {
-			if c == ' ' {
-				addAttr(position, position+1, spaceSpacingInt)
+
+		if letterSpacing != 0 {
+			addAttr(0, len(textRunes), letterSpacingInt)
+		}
+
+		if wordSpacing != 0 {
+			for position, c := range textRunes {
+				if c == ' ' {
+					addAttr(position, position+1, spaceSpacingInt)
+				}
 			}
+		}
+
+		if wordBreaking {
+			attr := pango.NewAttrInsertHyphens(false)
+			attr.StartIndex, attr.EndIndex = 0, len(textRunes)
+			attrList.Change(attr)
 		}
 
 		p.Layout.SetAttributes(attrList)

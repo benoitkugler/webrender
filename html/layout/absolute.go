@@ -7,6 +7,7 @@ import (
 	pr "github.com/benoitkugler/webrender/css/properties"
 
 	bo "github.com/benoitkugler/webrender/html/boxes"
+	"github.com/benoitkugler/webrender/html/tree"
 )
 
 type AliasBox = bo.Box
@@ -219,7 +220,7 @@ func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 }
 
 // performs either blockContainerLayout or flexLayout on box_
-func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, isBlock bool) Box {
+func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack, isBlock bool) (Box, tree.ResumeStack) {
 	box := box_.Box()
 	cbWidth, cbHeight := containingBlock.Width, containingBlock.Height
 
@@ -233,15 +234,18 @@ func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock bloc
 		tableWrapperWidth(context, box_, bo.MaybePoint{cbWidth, cbHeight})
 	}
 
-	var newBox Box
+	var (
+		newBox Box
+		bl     blockLayout
+	)
 	if isBlock {
-		newBox, _ = blockContainerLayout(context, box_, pr.Inf, nil, false, &absoluteBoxes, fixedBoxes, new([]pr.Float), false)
+		newBox, bl = blockContainerLayout(context, box_, bottomSpace, skipStack, true, &absoluteBoxes, fixedBoxes, new([]pr.Float), false)
 	} else {
-		newBox, _ = flexLayout(context, box_, pr.Inf, nil, containingBlock, false, &absoluteBoxes, fixedBoxes)
+		newBox, bl = flexLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes)
 	}
 
 	for _, childPlaceholder := range absoluteBoxes {
-		absoluteLayout(context, childPlaceholder, newBox, fixedBoxes)
+		absoluteLayout(context, childPlaceholder, newBox, fixedBoxes, bottomSpace, skipStack)
 	}
 
 	if translateBoxWidth {
@@ -253,28 +257,38 @@ func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock bloc
 
 	newBox.Translate(newBox, translateX, translateY, false)
 
-	return newBox
+	return newBox, bl.resumeAt
 }
 
-func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder) Box {
-	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, true)
+func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
+	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, bottomSpace, skipStack, true)
 }
 
-func absoluteFlex(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder) Box {
-	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, false)
+func absoluteFlex(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
+	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, bottomSpace, skipStack, false)
 }
 
 // Set the width of absolute positioned ``box``.
-func absoluteLayout(context *layoutContext, placeholder *AbsolutePlaceholder, containingBlock Box, fixedBoxes *[]*AbsolutePlaceholder) {
+func absoluteLayout(context *layoutContext, placeholder *AbsolutePlaceholder, containingBlock Box,
+	fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) {
 	if placeholder.layoutDone {
 		panic("placeholder can't have its layout done.")
 	}
 	box := placeholder.AliasBox
-	placeholder.setLaidOutBox(absoluteBoxLayout(context, box, containingBlock, fixedBoxes))
+	newBox, resumeAt := absoluteBoxLayout(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
+	placeholder.setLaidOutBox(newBox)
+	if resumeAt != nil {
+		context.brokenOutOfFlow = append(context.brokenOutOfFlow, brokenBox{
+			box:             box,
+			containingBlock: containingBlock,
+			resumeAt:        resumeAt,
+		})
+	}
 }
 
-func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*AbsolutePlaceholder) Box {
-	// http://www.w3.org/TR/CSS2/visudet.html#containing-block-details
+func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*AbsolutePlaceholder,
+	bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
+	// http://www.w3.org/TR/CSS2/visudet.html1#containing-block-details
 
 	if traceMode {
 		traceLogger.DumpTree(box, "absoluteBoxLayout")
@@ -299,11 +313,14 @@ func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*
 
 	context.createBlockFormattingContext()
 	// Absolute tables are wrapped into block boxes
-	var newBox Box
+	var (
+		newBox   Box
+		resumeAt tree.ResumeStack
+	)
 	if bo.BlockBoxT.IsInstance(box) {
-		newBox = absoluteBlock(context, box, containingBlock, fixedBoxes)
+		newBox, resumeAt = absoluteBlock(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
 	} else if bo.FlexContainerBoxT.IsInstance(box) {
-		newBox = absoluteFlex(context, box, containingBlock, fixedBoxes)
+		newBox, resumeAt = absoluteFlex(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
 	} else {
 		if !bo.BlockReplacedBoxT.IsInstance(box) {
 			panic(fmt.Sprintf("box should be a BlockReplaced, got %T", box))
@@ -311,7 +328,7 @@ func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*
 		newBox = absoluteReplaced(box, containingBlock)
 	}
 	context.finishBlockFormattingContext(newBox)
-	return newBox
+	return newBox, resumeAt
 }
 
 func intDiv(a pr.Float, b int) pr.Float {

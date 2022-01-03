@@ -88,28 +88,34 @@ func (r rootStyleFor) Get(element tree.Element, pseudoType string) pr.ElementSty
 	return style
 }
 
+// CreateAnonymousBox create anonymous boxes in box descendants according to layout rules.
+func CreateAnonymousBox(box Box) Box {
+	box = AnonymousTableBoxes(box)
+	box = FlexBoxes(box)
+	box = InlineInBlock(box)
+	box = BlockInInline(box)
+	return box
+}
+
 // Build a formatting structure (box tree) from an element tree.
 func BuildFormattingStructure(elementTree *utils.HTMLNode, styleFor *tree.StyleFor, getImageFromUri Gifu,
-	baseUrl string, targetCollector *tree.TargetCollector, cs counters.CounterStyle) BlockLevelBoxITF {
+	baseUrl string, targetCollector *tree.TargetCollector, cs counters.CounterStyle, footnotes *[]Box) BlockLevelBoxITF {
 
-	boxList := elementToBox(elementTree, styleFor, getImageFromUri, baseUrl, targetCollector, cs, nil)
+	boxList := elementToBox(elementTree, styleFor, getImageFromUri, baseUrl, targetCollector, cs, nil, footnotes)
 
 	var box Box
 	if len(boxList) > 0 {
 		box = boxList[0]
 	} else { //  No root element
 		rsf := rootStyleFor{elementTree: elementTree, StyleFor: *styleFor}
-		box = elementToBox(elementTree, rsf, getImageFromUri, baseUrl, targetCollector, cs, nil)[0]
+		box = elementToBox(elementTree, rsf, getImageFromUri, baseUrl, targetCollector, cs, nil, footnotes)[0]
 	}
 
 	targetCollector.CheckPendingTargets()
 
 	box.Box().IsForRootElement = true
 	// If this is changed, maybe update layout.pages.makeMarginBoxes()
-	box = AnonymousTableBoxes(box)
-	box = FlexBoxes(box)
-	box = InlineInBlock(box)
-	box = BlockInInline(box)
+	box = CreateAnonymousBox(box)
 	box = setViewportOverflow(box)
 	return box.(BlockLevelBoxITF)
 }
@@ -194,7 +200,8 @@ func makeBox(style pr.ElementStyle, content []Box, element *utils.HTMLNode, pseu
 //    ``TextBox``es are anonymous inline boxes:
 //    See http://www.w3.org/TR/CSS21/visuren.html#anonymous
 func elementToBox(element *utils.HTMLNode, styleFor styleForI,
-	getImageFromUri Gifu, baseUrl string, targetCollector *tree.TargetCollector, cs counters.CounterStyle, state *tree.PageState) []Box {
+	getImageFromUri Gifu, baseUrl string, targetCollector *tree.TargetCollector,
+	cs counters.CounterStyle, state *tree.PageState, footnotes *[]Box) []Box {
 
 	if element.Type != html.TextNode && element.Type != html.ElementNode && element.Type != html.DocumentNode {
 		// Here we ignore comments and XML processing instructions.
@@ -208,6 +215,14 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 		return nil
 	}
 
+	if style.GetFloat() == "footnote" {
+		if style.GetFootnoteDisplay() == "block" {
+			style.SetDisplay(pr.Display{"block", "flow"})
+		} else {
+			style.SetDisplay(pr.Display{"inline", "flow"})
+		}
+	}
+
 	box, err := makeBox(style, nil, element, "")
 	if err != nil {
 		logger.WarningLogger.Println(err)
@@ -218,10 +233,12 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 		// use a list to have a shared mutable object
 		state = &tree.PageState{
 			// Shared mutable objects:
-			QuoteDepth:    []int{0},             // single integer
-			CounterValues: tree.CounterValues{}, // name -> stacked/scoped values
+			QuoteDepth: []int{0}, // single integer
+			CounterValues: tree.CounterValues{
+				"footnote": []int{0},
+			}, // name -> stacked/scoped values
 			CounterScopes: []utils.Set{ //  element tree depths -> counter names
-				{},
+				utils.NewSet("footnote"),
 			},
 		}
 	}
@@ -275,7 +292,24 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 				children = append(children, textBox)
 			}
 		} else {
-			children = append(children, elementToBox(childElement, styleFor, getImageFromUri, baseUrl, targetCollector, cs, state)...)
+			childBoxes := elementToBox(childElement, styleFor, getImageFromUri, baseUrl, targetCollector, cs, state, footnotes)
+			if len(childBoxes) != 0 && childBoxes[0].Box().Style.GetFloat() == "footnote" {
+				footnote := childBoxes[0]
+				footnote.Box().Style.SetFloat("none")
+				(*footnotes) = append(*footnotes, footnote)
+				callStyle := styleFor.Get(element, "footnote-call")
+				footnoteCall, err := makeBox(callStyle, nil, element, "footnote-call")
+				if err != nil {
+					logger.WarningLogger.Println(err)
+					return nil
+				}
+				footnoteCall.Box().Children = ContentToBoxes(
+					callStyle, footnoteCall, state.QuoteDepth, state.CounterValues,
+					getImageFromUri, targetCollector, cs, nil, nil)
+				footnoteCall.Box().Footnote = footnote
+				childBoxes = []Box{footnoteCall}
+			}
+			children = append(children, childBoxes...)
 		}
 	}
 	children = append(children, beforeAfterToBox(element, "after", state, styleFor, getImageFromUri, targetCollector, cs)...)
@@ -312,6 +346,19 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 		}
 	}
 
+	if style.GetFloat() == "footnote" {
+		state.CounterValues["footnote"][len(state.CounterValues["footnote"])-1] += 1
+		markerStyle := styleFor.Get(element, "footnote-marker")
+		marker, err := makeBox(markerStyle, nil, element, "footnote-marker")
+		if err != nil {
+			logger.WarningLogger.Println(err)
+			return nil
+		}
+		marker.Box().Children = ContentToBoxes(
+			markerStyle, box, state.QuoteDepth, state.CounterValues, getImageFromUri,
+			targetCollector, cs, nil, nil)
+		box.Box().Children = append([]Box{marker}, box.Box().Children...)
+	}
 	// Specific handling for the element. (eg. replaced element)
 	return handleElement(element, box, getImageFromUri, baseUrl)
 }
@@ -682,7 +729,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 			// 	break
 			// }
 
-			newBox = deepcopy(newBox)
+			newBox = Deepcopy(newBox)
 
 			newBox.Box().Style.SetPosition(pr.BoolString{String: "static"})
 			for _, child := range Descendants(newBox) {
@@ -1699,7 +1746,7 @@ func InlineInBlock(box Box) Box {
 		}
 		if len(newLineChildren) > 0 && childBox.Box().IsAbsolutelyPositioned() {
 			newLineChildren = append(newLineChildren, childBox)
-		} else if InlineLevelBoxT.IsInstance(childBox) || (len(newLineChildren) > 0 && childBox.Box().IsFloated()) {
+		} else if InlineLevelBoxT.IsInstance(childBox) || (len(newLineChildren) > 0 && !childBox.Box().IsInNormalFlow()) {
 			// Do not append white space at the start of a line :
 			// it would be removed during layout.
 			childTextBox, isTextBox := childBox.(*TextBox)

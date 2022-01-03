@@ -77,10 +77,11 @@ type TableBox struct {
 	BoxFields
 	BlockLevelBox
 
-	ColumnWidths, ColumnPositions []pr.Float
-	ColumnGroups                  []Box
-	CollapsedBorderGrid           BorderGrids
-	SkippedRows                   int
+	ColumnWidths, ColumnPositions           []pr.Float
+	ColumnGroups                            []Box
+	CollapsedBorderGrid                     BorderGrids
+	SkippedRows                             int
+	SkipCellBorderTop, SkipCellBorderBottom bool
 }
 
 type InlineTableBox struct {
@@ -122,6 +123,12 @@ type MarginBox struct {
 	BoxFields
 	AtKeyword   string
 	IsGenerated bool
+}
+
+// Box displaying footnotes, as defined in GCPM.
+type FootnoteAreaBox struct {
+	BlockBox
+	Page *PageBox
 }
 
 type FlexBox struct {
@@ -369,6 +376,12 @@ func NewMarginBox(atKeyword string, style pr.ElementStyle) *MarginBox {
 
 func (b *MarginBox) String() string {
 	return fmt.Sprintf("<MarginBox %s>", b.AtKeyword)
+}
+
+func NewFootnoteAreaBox(page *PageBox, style pr.ElementStyle) *FootnoteAreaBox {
+	fields := NewBlockBox(style, nil, "", nil)
+	out := FootnoteAreaBox{BlockBox: *fields, Page: page}
+	return &out
 }
 
 func NewFlexBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) *FlexBox {

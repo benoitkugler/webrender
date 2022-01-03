@@ -1194,6 +1194,34 @@ func (s *AnonymousStyle) SetFontWeight(v pr.IntString) {
 	s.dict["font_weight"] = v
 }
 
+func (s *ComputedStyle) GetFootnoteDisplay() pr.String {
+	return s.Get("footnote_display").(pr.String)
+}
+func (s *ComputedStyle) SetFootnoteDisplay(v pr.String) {
+	s.dict["footnote_display"] = v
+}
+
+func (s *AnonymousStyle) GetFootnoteDisplay() pr.String {
+	return s.Get("footnote_display").(pr.String)
+}
+func (s *AnonymousStyle) SetFootnoteDisplay(v pr.String) {
+	s.dict["footnote_display"] = v
+}
+
+func (s *ComputedStyle) GetFootnotePolicy() pr.String {
+	return s.Get("footnote_policy").(pr.String)
+}
+func (s *ComputedStyle) SetFootnotePolicy(v pr.String) {
+	s.dict["footnote_policy"] = v
+}
+
+func (s *AnonymousStyle) GetFootnotePolicy() pr.String {
+	return s.Get("footnote_policy").(pr.String)
+}
+func (s *AnonymousStyle) SetFootnotePolicy(v pr.String) {
+	s.dict["footnote_policy"] = v
+}
+
 func (s *ComputedStyle) GetHeight() pr.Value {
 	return s.Get("height").(pr.Value)
 }

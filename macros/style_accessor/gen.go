@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	OUT_1 = "style/properties/accessors.go"
-	OUT_2 = "style/tree/accessors.go"
+	OUT_1 = "css/properties/accessors.go"
+	OUT_2 = "html/tree/accessors.go"
 
 	TEMPLATE_1 = `
 	func (s %[1]s) Get%[2]s() %[3]s {
