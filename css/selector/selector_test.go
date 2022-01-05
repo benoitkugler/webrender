@@ -920,6 +920,18 @@ var testsPseudo = []testPseudo{
 		spec:     Specificity{0, 2, 2},
 		pseudo:   "before",
 	},
+	{
+		HTML:     `<html><body><ul><ol><li id="s12" class="red level"></li></ol></ul></body></html>`,
+		selector: "LI.red.level:footnote-call",
+		spec:     Specificity{0, 2, 2},
+		pseudo:   "footnote-call",
+	},
+	{
+		HTML:     `<html><body><ul><ol><li id="s12" class="red level"></li></ol></ul></body></html>`,
+		selector: "LI.red.level:footnote-marker",
+		spec:     Specificity{0, 2, 2},
+		pseudo:   "footnote-marker",
+	},
 }
 
 func TestPseudoElement(t *testing.T) {
@@ -928,10 +940,6 @@ func TestPseudoElement(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error compiling %q: %s", test.selector, err)
 		}
-
-		// if _, err = Parse(test.selector); err == nil {
-		// 	t.Fatalf("selector %s with pseudo-element should not compile", test.selector)
-		// }
 
 		doc, err := html.Parse(strings.NewReader(test.HTML))
 		if err != nil {

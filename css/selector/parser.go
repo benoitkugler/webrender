@@ -470,10 +470,14 @@ func (p *parser) parsePseudoclassSelector() (out Sel, pseudoElement string, err 
 		return
 	}
 	name = toLowerASCII(name)
-	if mustBePseudoElement && (name != "after" && name != "backdrop" && name != "before" &&
-		name != "cue" && name != "first-letter" && name != "first-line" && name != "grammar-error" &&
-		name != "marker" && name != "placeholder" && name != "selection" && name != "spelling-error") {
-		return out, "", fmt.Errorf("unknown pseudoelement :%s", name)
+	if mustBePseudoElement {
+		switch name {
+		case "after", "backdrop", "before", "cue", "first-letter", "first-line", "grammar-error",
+			"marker", "placeholder", "selection", "spelling-error", "footnote-call", "footnote-marker":
+			// OK
+		default:
+			return out, "", fmt.Errorf("unknown pseudo-element :%s", name)
+		}
 	}
 
 	switch name {
@@ -600,7 +604,8 @@ func (p *parser) parsePseudoclassSelector() (out Sel, pseudoElement string, err 
 	case "visited", "hover", "active", "focus", "target":
 		// Not applicable in a static context: never match.
 		out = neverMatchSelector{value: ":" + name}
-	case "after", "backdrop", "before", "cue", "first-letter", "first-line", "grammar-error", "marker", "placeholder", "selection", "spelling-error":
+	case "after", "backdrop", "before", "cue", "first-letter", "first-line",
+		"grammar-error", "marker", "placeholder", "selection", "spelling-error", "footnote-call", "footnote-marker":
 		return nil, name, nil
 	default:
 		return out, "", fmt.Errorf("unknown pseudoclass or pseudoelement :%s", name)
