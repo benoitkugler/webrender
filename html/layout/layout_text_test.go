@@ -877,6 +877,7 @@ func TestOverflowWrap(t *testing.T) {
 		test       func(int) bool
 		fullText   string
 	}{
+		{"anywhere", "aaaaaaaa", func(a int) bool { return a > 1 }, "aaaaaaaa"},
 		{"break-word", "aaaaaaaa", func(a int) bool { return a > 1 }, "aaaaaaaa"},
 		{"normal", "aaaaaaaa", func(a int) bool { return a == 1 }, "aaaaaaaa"},
 		{"break-word", "hyphenations", func(a int) bool { return a > 3 }, "hy-phen-ations"},
@@ -886,7 +887,7 @@ func TestOverflowWrap(t *testing.T) {
       <style>
         @font-face {src: url(weasyprint.otf); font-family: weasyprint}
         body {width: 80px; overflow: hidden; font-family: weasyprint; }
-        span {overflow-wrap: %s; white-space: normal; }
+        span {overflow-wrap: %s; }
       </style>
       <body style="hyphens: auto;" lang="en"><span>%s`, v.wrap, v.text))
 		html := page.Box().Children[0]
@@ -901,6 +902,72 @@ func TestOverflowWrap(t *testing.T) {
 			t.Fatal()
 		}
 		tu.AssertEqual(t, v.fullText, strings.Join(lines, ""), fmt.Sprintf("input %s %s", v.wrap, v.text))
+	}
+}
+
+func TestOverflowWrap_2(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	for _, v := range []struct {
+		wrap, text    string
+		bodyWidth     int
+		expectedWidth pr.Float
+	}{
+		{"anywhere", "aaaaaa", 10, 20},
+		{"anywhere", "aaaaaa", 40, 40},
+		{"break-word", "aaaaaa", 40, 120},
+		{"normal", "aaaaaa", 40, 120},
+	} {
+		page := renderOnePage(t, fmt.Sprintf(`
+		<style>
+		@font-face {src: url(weasyprint.otf); font-family: weasyprint}
+		body {width: %dpx; font-family: weasyprint; font-size: 20px}
+		table {overflow-wrap: %s}
+	  </style>
+	  <table><tr><td>%s`, v.bodyWidth, v.wrap, v.text))
+		html := page.Box().Children[0]
+		body := html.Box().Children[0]
+
+		tableWrapper := body.Box().Children[0]
+		table := tableWrapper.Box().Children[0]
+		rowGroup := table.Box().Children[0]
+		tr := rowGroup.Box().Children[0]
+		td := tr.Box().Children[0]
+		tu.AssertEqual(t, td.Box().Width, v.expectedWidth, fmt.Sprintf("input %s %s", v.wrap, v.text))
+	}
+}
+
+func TestOverflowWrapTrailingSpace(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	for _, v := range []struct {
+		wrap, text    string
+		bodyWidth     int
+		expectedWidth pr.Float
+	}{
+		{"anywhere", "aaaaaa", 10, 20},
+		{"anywhere", "aaaaaa", 40, 40},
+		{"break-word", "aaaaaa", 40, 120},
+		{"normal", "abcdef", 40, 120},
+	} {
+		page := renderOnePage(t, fmt.Sprintf(`
+		<style>
+		@font-face {src: url(weasyprint.otf); font-family: weasyprint}
+		body {width: %dpx; font-family: weasyprint; font-size: 20px}
+		table {overflow-wrap: %s}
+	  </style>
+	  <table><tr><td>%s `, v.bodyWidth, v.wrap, v.text))
+		html := page.Box().Children[0]
+		body := html.Box().Children[0]
+
+		tableWrapper := body.Box().Children[0]
+		table := tableWrapper.Box().Children[0]
+		rowGroup := table.Box().Children[0]
+		tr := rowGroup.Box().Children[0]
+		td := tr.Box().Children[0]
+		tu.AssertEqual(t, td.Box().Width, v.expectedWidth, fmt.Sprintf("input %s %s", v.wrap, v.text))
 	}
 }
 

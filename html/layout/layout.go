@@ -164,7 +164,7 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 		}
 
 		initialTotalPages := actualTotalPages
-		pages = makeAllPages(context, rootBox, doc, pages)
+		pages = context.makeAllPages(rootBox, doc, pages)
 		actualTotalPages = len(pages)
 
 		// Check whether another round is required
@@ -172,9 +172,9 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 		reloopPages := false
 		for _, pageData := range context.pageMaker {
 			// Update pages
-			pageState, remakeState := pageData.InitialPageState, pageData.RemakeState
-			pageCounterValues := pageState.CounterValues
+			pageCounterValues := pageData.InitialPageState.CounterValues
 			pageCounterValues["pages"] = []int{actualTotalPages}
+			remakeState := pageData.RemakeState
 			if remakeState.ContentChanged {
 				reloopContent = true
 			}
@@ -350,30 +350,30 @@ func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
 	return &self
 }
 
-func (self *layoutContext) CurrentPage() int { return self.currentPage }
+func (l *layoutContext) CurrentPage() int { return l.currentPage }
 
-func (self *layoutContext) Fontmap() pango.FontMap { return self.fontConfig.Fontmap }
+func (l *layoutContext) Fontmap() pango.FontMap { return l.fontConfig.Fontmap }
 
-func (self *layoutContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
-	return self.dictionaries
+func (l *layoutContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
+	return l.dictionaries
 }
 
-func (self *layoutContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float {
-	return self.strutLayouts
+func (l *layoutContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float {
+	return l.strutLayouts
 }
 
-func (self *layoutContext) createBlockFormattingContext() {
-	self.excludedShapesLists = append(self.excludedShapesLists, nil)
-	self.excludedShapes = &self.excludedShapesLists[len(self.excludedShapesLists)-1]
+func (l *layoutContext) createBlockFormattingContext() {
+	l.excludedShapesLists = append(l.excludedShapesLists, nil)
+	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
 }
 
-func (self *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
+func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 	// See http://www.w3.org/TR/CSS2/visudet.html#root-height
 	rootBox := rootBox_.Box()
-	if rootBox.Style.GetHeight().String == "auto" && len(*self.excludedShapes) != 0 {
+	if rootBox.Style.GetHeight().String == "auto" && len(*l.excludedShapes) != 0 {
 		boxBottom := rootBox.ContentBoxY() + rootBox.Height.V()
 		maxShapeBottom := boxBottom
-		for _, shape := range *self.excludedShapes {
+		for _, shape := range *l.excludedShapes {
 			v := shape.PositionY + shape.MarginHeight()
 			if v > maxShapeBottom {
 				maxShapeBottom = v
@@ -381,11 +381,11 @@ func (self *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 		}
 		rootBox.Height = rootBox.Height.V() + maxShapeBottom - boxBottom
 	}
-	self.excludedShapesLists = self.excludedShapesLists[:len(self.excludedShapesLists)-1]
-	if L := len(self.excludedShapesLists); L != 0 {
-		self.excludedShapes = &self.excludedShapesLists[L-1]
+	l.excludedShapesLists = l.excludedShapesLists[:len(l.excludedShapesLists)-1]
+	if L := len(l.excludedShapesLists); L != 0 {
+		l.excludedShapes = &l.excludedShapesLists[L-1]
 	} else {
-		self.excludedShapes = nil
+		l.excludedShapes = nil
 	}
 }
 

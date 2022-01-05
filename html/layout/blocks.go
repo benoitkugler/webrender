@@ -296,7 +296,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	}
 
 	// See http://www.w3.org/TR/CSS21/visuren.html#block-formatting
-	if !bo.BlockBoxT.IsInstance(box_) {
+	if establishesFormattingContext(box_) {
 		context.createBlockFormattingContext()
 	}
 

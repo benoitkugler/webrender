@@ -1435,25 +1435,20 @@ func TestNoNewLine(t *testing.T) {
 	body { margin: 0; background: #fff }
 </style>
 <p><a href="another url"><span>[some url] </span>some content</p>
-`), []SerBox{
-		{Tag: "p", Type: 0x2, Content: BC{
-			C: []SerBox{{Tag: "p", Type: 0xf, Content: BC{C: []SerBox{
-				{Tag: "a", Type: 0xa, Content: BC{C: []SerBox{
-					{Tag: "span", Type: 0xa, Content: BC{C: []SerBox{
-						{Tag: "span", Type: 0x1b, Content: BC{Text: "[some url] "}},
+`),
+		[]SerBox{
+			{"p", BlockBoxT, BC{C: []SerBox{
+				{"p", LineBoxT, BC{C: []SerBox{
+					{"a", InlineBoxT, BC{C: []SerBox{
+						{"span", InlineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: `[some url] `}}}}},
+						{"a", TextBoxT, BC{Text: `some content`}},
 					}}},
-					{Tag: "a", Type: 0x1b, Content: BC{Text: "some content"}},
-				}}},
-			}}}},
-		}},
-		{Tag: "body", Type: 0x2, Content: BC{C: []SerBox{
-			{Tag: "body", Type: 0xf, Content: BC{C: []SerBox{
-				{Tag: "a", Type: 0xa, Content: BC{C: []SerBox{
-					{Tag: "a", Type: 0x1b, Content: BC{Text: " "}},
 				}}},
 			}}},
-		}}},
-	})
+			{"body", BlockBoxT, BC{C: []SerBox{
+				{"body", LineBoxT, BC{C: []SerBox{{"a", InlineBoxT, BC{C: []SerBox{{"a", TextBoxT, BC{Text: ` `}}}}}}}},
+			}}},
+		})
 }
 
 func buildFile(t testing.TB, source utils.ContentInput, baseURL string) []SerBox {
@@ -1493,23 +1488,23 @@ func loadExpected(filename string) ([]SerBox, error) {
 	return out, err
 }
 
-func TestRealPage(t *testing.T) {
-	// Requires network to load the linked ressources
+// func TestRealPage(t *testing.T) {
+// 	// Requires network to load the linked ressources
 
-	// log.Default().SetOutput(io.Discard)
-	got := buildFile(t, utils.InputFilename("../../resources_test/Wikipedia-Go.html"), "https://en.wikipedia.org/wiki/Go_(programming_language)")
+// 	// log.Default().SetOutput(io.Discard)
+// 	got := buildFile(t, utils.InputFilename("../../resources_test/Wikipedia-Go.html"), "https://en.wikipedia.org/wiki/Go_(programming_language)")
 
-	expected, err := loadExpected("../../resources_test/Wikipedia-Go-expected.json")
-	if err != nil {
-		t.Fatal(err)
-	}
+// 	expected, err := loadExpected("../../resources_test/Wikipedia-Go-expected.json")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
 
-	if !reflect.DeepEqual(expected, got) {
-		// ioutil.WriteFile("expected.tmp", []byte(fmt.Sprintf("%v", expected)), os.ModePerm)
-		// ioutil.WriteFile("got.tmp", []byte(fmt.Sprintf("%v", got)), os.ModePerm)
-		t.Fatal("diff")
-	}
-}
+// 	if !reflect.DeepEqual(expected, got) {
+// 		// ioutil.WriteFile("expected.tmp", []byte(fmt.Sprintf("%v", expected)), os.ModePerm)
+// 		// ioutil.WriteFile("got.tmp", []byte(fmt.Sprintf("%v", got)), os.ModePerm)
+// 		t.Fatal("diff")
+// 	}
+// }
 
 func BenchmarkRealPage(b *testing.B) {
 	log.Default().SetOutput(io.Discard)

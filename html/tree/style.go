@@ -40,7 +40,7 @@ type Token = parser.Token
 
 // StyleFor provides a convenience function `Get` to get the computed styles for an Element.
 type StyleFor struct {
-	CascadedStyles map[utils.ElementKey]cascadedStyle
+	cascadedStyles map[utils.ElementKey]cascadedStyle
 	computedStyles map[utils.ElementKey]pr.ElementStyle
 	textContext    text.TextLayoutContext
 	sheets         []sheet
@@ -49,7 +49,7 @@ type StyleFor struct {
 func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 	targetColllector *TargetCollector, textContext text.TextLayoutContext) *StyleFor {
 	out := StyleFor{
-		CascadedStyles: map[utils.ElementKey]cascadedStyle{},
+		cascadedStyles: map[utils.ElementKey]cascadedStyle{},
 		computedStyles: map[utils.ElementKey]pr.ElementStyle{},
 		sheets:         sheets,
 		textContext:    textContext,
@@ -59,10 +59,10 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 
 	for _, styleAttr := range findStyleAttributes(html.Root, presentationalHints, html.BaseUrl) {
 		// Element, declarations, BaseUrl = attributes
-		style, ok := out.CascadedStyles[styleAttr.element.ToKey("")]
+		style, ok := out.cascadedStyles[styleAttr.element.ToKey("")]
 		if !ok {
 			style = cascadedStyle{}
-			out.CascadedStyles[styleAttr.element.ToKey("")] = style
+			out.cascadedStyles[styleAttr.element.ToKey("")] = style
 		}
 		for _, decl := range validation.PreprocessDeclarations(styleAttr.baseUrl, styleAttr.declaration) {
 			// name, values, importance = decl
@@ -94,10 +94,10 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 					specificity = selector.Specificity{sh.specificity[0], sh.specificity[1], sh.specificity[2]}
 				}
 				key := element.ToKey(sel.pseudoType)
-				style, in := out.CascadedStyles[key]
+				style, in := out.cascadedStyles[key]
 				if !in {
 					style = cascadedStyle{}
-					out.CascadedStyles[key] = style
+					out.cascadedStyles[key] = style
 				}
 
 				for _, decl := range sel.payload {
@@ -123,7 +123,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 
 	// Only iterate on pseudo-elements that have cascaded styles. (Others
 	// might as well not exist.)
-	for key := range out.CascadedStyles {
+	for key := range out.cascadedStyles {
 		// Element, pseudoType
 		if key.PseudoType != "" && !key.IsPageType() {
 			out.SetComputedStyles(key.Element, key.Element, html.Root,
@@ -133,8 +133,8 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 	}
 	// Clear the cascaded styles, we don't need them anymore. Keep the
 	// dictionary, it is used later for page margins.
-	for k := range out.CascadedStyles {
-		delete(out.CascadedStyles, k)
+	for k := range out.cascadedStyles {
+		delete(out.cascadedStyles, k)
 	}
 	return &out
 }
@@ -144,7 +144,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 // Take the properties left by ``applyStyleRule`` on an Element or
 // pseudo-Element and assign computed values with respect to the cascade,
 // declaration priority (ie. ``!important``) and selector specificity.
-func (self *StyleFor) SetComputedStyles(element, parent Element,
+func (sf *StyleFor) SetComputedStyles(element, parent Element,
 	root *utils.HTMLNode, pseudoType, baseUrl string,
 	targetCollector *TargetCollector) {
 
@@ -165,16 +165,40 @@ func (self *StyleFor) SetComputedStyles(element, parent Element,
 		if parent == nil {
 			panic("parent shouldn't be nil here")
 		}
-		parentStyle = self.computedStyles[parent.ToKey("")]
-		rootStyle = self.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}].(*ComputedStyle).dict
+		parentStyle = sf.computedStyles[parent.ToKey("")]
+		rootStyle = sf.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}].(*ComputedStyle).dict
 	}
 	key := element.ToKey(pseudoType)
-	cascaded, in := self.CascadedStyles[key]
+	cascaded, in := sf.cascadedStyles[key]
 	if !in {
 		cascaded = cascadedStyle{}
 	}
-	self.computedStyles[key] = ComputedFromCascaded(element, cascaded, parentStyle,
-		rootStyle, pseudoType, baseUrl, targetCollector, self.textContext)
+	sf.computedStyles[key] = ComputedFromCascaded(element, cascaded, parentStyle,
+		rootStyle, pseudoType, baseUrl, targetCollector, sf.textContext)
+
+	// The style of marker is deleted when display is different from
+	// list-item.
+	if pseudoType == "" {
+		hasBroken := false
+		for _, pseudo := range [...]string{"", "before", "after"} {
+			key := element.ToKey(pseudo)
+			pseudoStyle := sf.cascadedStyles[key]
+			if display, has := pseudoStyle["display"]; has {
+				if v := display.value; v.SpecialProperty == nil {
+					if c := v.ToCascaded(); c.Default == 0 {
+						if c.ToCSS().(pr.Display).Has("list-item") {
+							hasBroken = true
+							break
+						}
+					}
+				}
+			}
+		}
+		if !hasBroken {
+			key := element.ToKey("marker")
+			delete(sf.cascadedStyles, key)
+		}
+	}
 }
 
 func (s StyleFor) Get(element Element, pseudoType string) pr.ElementStyle {
@@ -212,10 +236,10 @@ func (s StyleFor) addPageDeclarations(page_T utils.PageElement) {
 					if len(sh.specificity) == 3 {
 						specificity = selector.Specificity{sh.specificity[0], sh.specificity[1], sh.specificity[2]}
 					}
-					style, in := s.CascadedStyles[page_T.ToKey(sel.pseudoType)]
+					style, in := s.cascadedStyles[page_T.ToKey(sel.pseudoType)]
 					if !in {
 						style = cascadedStyle{}
-						s.CascadedStyles[page_T.ToKey(sel.pseudoType)] = style
+						s.cascadedStyles[page_T.ToKey(sel.pseudoType)] = style
 					}
 
 					for _, decl := range pageR.declarations {
@@ -1368,7 +1392,7 @@ func (styleFor StyleFor) SetPageComputedStylesT(pageType utils.PageElement, html
 	styleFor.SetComputedStyles(pageType, html.Root, html.Root, "", html.BaseUrl, nil)
 
 	// Apply style for page pseudo-elements (margin boxes)
-	for key := range styleFor.CascadedStyles {
+	for key := range styleFor.cascadedStyles {
 		// Element, pseudoType = key
 		if key.PseudoType != "" && key.PageType == pageType {
 			// The pseudo-Element inherits from the Element.

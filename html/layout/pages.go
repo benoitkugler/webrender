@@ -618,7 +618,7 @@ func pageHeight_(box Box, context *layoutContext, containingBlock containingBloc
 // :param pageNumber: integer, start at 1 for the first page
 // :param resumeAt: as returned by ``makePage()`` for the previous page,
 // 	or ``None`` for the first page.
-func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType utils.PageElement, resumeAt tree.ResumeStack,
+func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType utils.PageElement, resumeAt tree.ResumeStack,
 	pageNumber int, pageState *tree.PageState) (*bo.PageBox, tree.ResumeStack, tree.PageBreak) {
 	style := context.styleFor.Get(pageType, "")
 
@@ -748,7 +748,7 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 
 	// remakeState tells the makeAllPages-loop in layoutDocument()
 	// whether and what to re-make.
-	remakeState := pageMaker[pageNumber-1].RemakeState
+	remakeState := &pageMaker[pageNumber-1].RemakeState
 
 	// Evaluate and cache page values only once (for the first LineBox)
 	// otherwise we suffer endless loops when the target/pseudo-element
@@ -868,14 +868,11 @@ func makePage(context *layoutContext, rootBox bo.BlockLevelBoxITF, pageType util
 // As the function"s name suggests: the plan is not to make all pages
 // repeatedly when a missing counter was resolved, but rather re-make the
 // single page where the ``contentChanged`` happened.
-func remakePage(index int, context *layoutContext, rootBox bo.BlockLevelBoxITF, html *tree.HTML) (*bo.PageBox, tree.ResumeStack) {
-	pageMaker := &context.pageMaker
-	tmp := (*pageMaker)[index]
-	// initialResumeAt, initialNextPage, rightPage, initialPageState,remakeState := tmp
+func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF, html *tree.HTML) (*bo.PageBox, tree.ResumeStack) {
+	tmp := context.pageMaker[index]
 
 	// PageType for current page, values for pageMaker[index + 1].
-	// Don"t modify actual pageMaker[index] values!
-	// TODO: should we store (and reuse) pageType := range the pageMaker?
+	// Don't modify actual pageMaker[index] values!
 	pageState := tmp.InitialPageState.Copy()
 	nextPageName := tmp.InitialNextPage.Page.String
 	first := index == 0
@@ -909,7 +906,7 @@ func remakePage(index int, context *layoutContext, rootBox bo.BlockLevelBoxITF, 
 
 	// makePage wants a pageNumber of index + 1
 	pageNumber := index + 1
-	page, resumeAt, nextPage := makePage(context, rootBox, pageType, tmp.InitialResumeAt,
+	page, resumeAt, nextPage := context.makePage(rootBox, pageType, tmp.InitialResumeAt,
 		pageNumber, &pageState)
 
 	if (nextPage == tree.PageBreak{}) {
@@ -922,13 +919,13 @@ func remakePage(index int, context *layoutContext, rootBox bo.BlockLevelBoxITF, 
 
 	// Check whether we need to append or update the next pageMaker item
 	var pageMakerNextChanged bool
-	if index+1 >= len(*pageMaker) {
+	if index+1 >= len(context.pageMaker) {
 		// New page
 		pageMakerNextChanged = true
 	} else {
 		// Check whether something changed
 		// TODO: Find what we need to compare. Is resumeAt enough?
-		tmp := (*pageMaker)[index+1]
+		tmp := context.pageMaker[index+1]
 		// (nextResumeAt, nextNextPage, nextRightPage,nextPageState, )
 		pageMakerNextChanged = !tmp.InitialResumeAt.Equals(resumeAt) ||
 			tmp.InitialNextPage != nextPage ||
@@ -948,10 +945,10 @@ func remakePage(index int, context *layoutContext, rootBox bo.BlockLevelBoxITF, 
 			InitialResumeAt: resumeAt, InitialNextPage: nextPage, RightPage: rightPage,
 			InitialPageState: pageState, RemakeState: remakeState,
 		}
-		if index+1 >= len(*pageMaker) {
-			*pageMaker = append(*pageMaker, item)
+		if index+1 >= len(context.pageMaker) {
+			context.pageMaker = append(context.pageMaker, item)
 		} else {
-			(*pageMaker)[index+1] = item
+			context.pageMaker[index+1] = item
 		}
 	}
 
@@ -960,7 +957,7 @@ func remakePage(index int, context *layoutContext, rootBox bo.BlockLevelBoxITF, 
 
 // Return a list of laid out pages without margin boxes.
 // Re-make pages only if necessary.
-func makeAllPages(context *layoutContext, rootBox bo.BlockLevelBoxITF, html *tree.HTML, pages []*bo.PageBox) []*bo.PageBox {
+func (context *layoutContext) makeAllPages(rootBox bo.BlockLevelBoxITF, html *tree.HTML, pages []*bo.PageBox) []*bo.PageBox {
 	var out []*bo.PageBox
 	i := 0
 	for {
@@ -973,7 +970,7 @@ func makeAllPages(context *layoutContext, rootBox bo.BlockLevelBoxITF, html *tre
 			logger.ProgressLogger.Printf("Step 5 - Creating layout - Page %d", i+1)
 			// Reset remakeState
 			context.pageMaker[i].RemakeState = tree.RemakeState{}
-			page, resumeAt = remakePage(i, context, rootBox, html)
+			page, resumeAt = context.remakePage(i, rootBox, html)
 			out = append(out, page)
 		} else {
 			logger.ProgressLogger.Printf("Step 5 - Creating layout - Page %d (up-to-date)", i+1)

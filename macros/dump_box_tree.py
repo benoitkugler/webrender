@@ -7,6 +7,7 @@ from weasyprint.css.counters import CounterStyle
 from weasyprint.css.targets import TargetCollector
 import functools
 import json
+from typing import *
 
 
 def tree_to_json(box: boxes.Box) -> str:
@@ -115,7 +116,22 @@ def serialize(box_list: [Box]) -> list:
     } for box in box_list]
 
 
-def dump_tree(document: FakeHTML) -> str:
+def to_go(boxes: List[Any]) -> str:
+    code = "[]serBox{"
+    for box in boxes:
+        tag = box[0]
+        type_ = f"{box[1]}BoxT"
+        if isinstance(box[2], str):
+            content = 'bc{{Text: `{0}`}}'.format(box[2])
+        else:
+            children = to_go(box[2])
+            content = f"bc{{C: {children}}}"
+        code += f"""{{"{tag}", {type_}, {content}}},\n"""
+    code += "}"
+    return code
+
+
+def build_tree(document: FakeHTML) -> Any:
     counter_style = CounterStyle()
     style_for = get_all_computed_styles(document, counter_style=counter_style)
     get_image_from_uri = functools.partial(
@@ -125,6 +141,11 @@ def dump_tree(document: FakeHTML) -> str:
     print("Building tree...")
     tree = build_formatting_structure(document.etree_element, style_for, get_image_from_uri, document.base_url,
                                       target_collector, counter_style)
+    return tree
+
+
+def dump_tree(document: FakeHTML) -> str:
+    tree = build_tree(document)
     print("Exporting as JSON...")
     return tree_to_json(tree)
 
@@ -139,20 +160,20 @@ def dump_tree(document: FakeHTML) -> str:
 #     fp.write(js)
 # print("Done.")
 
-URL = "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio"
-OUTPUT = "resources_test/SVG-expected.json"
-print("Loading HTML...")
-document = FakeHTML(url=URL)
-js = dump_tree(document)
-with open(OUTPUT, "w") as fp:
-    fp.write(js)
-print("Done.")
+# URL = "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio"
+# OUTPUT = "resources_test/SVG-expected.json"
+# print("Loading HTML...")
+# document = FakeHTML(url=URL)
+# js = dump_tree(document)
+# with open(OUTPUT, "w") as fp:
+#     fp.write(js)
+# print("Done.")
 
 
-# print(dump_tree(FakeHTML(string="""
-#     <style>
-#         @page { size: 300px 30px }
-#         body { margin: 0; background: #fff }
-#     </style>
-#     <p><a href="another url"><span>[some url] </span>some content</p>
-#     """)))
+print(to_go(build_tree(FakeHTML(string="""
+    <style>
+        @page { size: 300px 30px }
+        body { margin: 0; background: #fff }
+    </style>
+    <p><a href="another url"><span>[some url] </span>some content</p>
+    """))))
