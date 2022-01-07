@@ -383,6 +383,7 @@ func (p *TextLayout) SetText(text string) { p.setText(text, false) }
 
 // ApplyJustification re-layout the text, applying justification.
 func (p *TextLayout) ApplyJustification() {
+	p.Layout.SetWidth(-1)
 	p.setText(string(p.Layout.Text), true)
 }
 
