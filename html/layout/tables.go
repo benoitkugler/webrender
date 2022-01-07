@@ -367,6 +367,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 						break
 					}
 				}
+
 				if originalPageIsEmpty {
 					resumeAt = tree.ResumeStack{indexRow: nil}
 				} else {
@@ -518,7 +519,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 		// are not rendered. If no row can be rendered because of the header and
 		// the footer, the header and/or the footer are not rendered.
 
-		headerFooterMaxBottomSpace := pr.Inf
+		headerFooterMaxBottomSpace := -pr.Inf
 		if pageIsEmpty {
 			headerFooterMaxBottomSpace = bottomSpace
 		}
@@ -687,6 +688,10 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	if bi := table.Style.GetBreakInside(); resumeAt != nil && !pageIsEmpty && (bi == "avoid" || bi == "avoid-page") {
 		table_ = nil
 		resumeAt = nil
+	}
+
+	if traceMode {
+		traceLogger.DumpTree(table_, "tableLayout-end")
 	}
 
 	return table_, blockLayout{resumeAt: resumeAt, nextPage: nextPage, adjoiningMargins: nil, collapsingThrough: false}
