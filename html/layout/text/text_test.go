@@ -187,12 +187,7 @@ func TestHeightAndBaseline(t *testing.T) {
 	}
 }
 
-func TestLayoutFirstLine(t *testing.T) {
-	newStyle := pr.InitialValues.Copy()
-	newStyle.SetFontFamily(pr.Strings{"weasyprint"})
-	newStyle.SetFontSize(pr.FToV(16))
-	newStyle.SetWhiteSpace("normal")
-
+func newContextWithWeasyFont(t *testing.T) textContext {
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 	fc := NewFontConfiguration(fontmap)
 	url, err := utils.PathToURL("../../../resources_test/weasyprint.otf")
@@ -203,6 +198,16 @@ func TestLayoutFirstLine(t *testing.T) {
 		Src:        []pr.NamedString{{Name: "external", String: url}},
 		FontFamily: "weasyprint",
 	}, utils.DefaultUrlFetcher)
+	return ct
+}
+
+func TestLayoutFirstLine(t *testing.T) {
+	newStyle := pr.InitialValues.Copy()
+	newStyle.SetFontFamily(pr.Strings{"weasyprint"})
+	newStyle.SetFontSize(pr.FToV(16))
+	newStyle.SetWhiteSpace("normal")
+
+	ct := newContextWithWeasyFont(t)
 
 	layout := CreateLayout("a a ", newStyle, ct, pr.Float(63), 0)
 	_, index := layout.GetFirstLine()
