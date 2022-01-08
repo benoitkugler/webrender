@@ -8,6 +8,7 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/svg"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -59,24 +60,6 @@ func processColorStops(gradientLineSize pr.Float, positions_ []pr.Dimension) []p
 		out[i] = pr.Fl(v.V())
 	}
 	return out
-}
-
-// Normalize to [0..1].
-// Write on positions.
-func normalizeStopPostions(positions []pr.Fl) (pr.Fl, pr.Fl) {
-	first := positions[0]
-	last := positions[len(positions)-1]
-	totalLength := last - first
-	if totalLength != 0 {
-		for i, pos := range positions {
-			positions[i] = (pos - first) / totalLength
-		}
-	} else {
-		for i := range positions {
-			positions[i] = 0
-		}
-	}
-	return first, last
 }
 
 // http://dev.w3.org/csswg/css-images-3/#find-the-average-color-of-a-gradient
@@ -193,24 +176,6 @@ func toData(c Color) [6]pr.Fl {
 	return [6]pr.Fl{pr.Fl(c.R), pr.Fl(c.G), pr.Fl(c.B), pr.Fl(c.A), 0, 0}
 }
 
-func reverseColors(a []parser.RGBA) []parser.RGBA {
-	n := len(a)
-	out := make([]parser.RGBA, n)
-	for i := range a {
-		out[n-1-i] = a[i]
-	}
-	return out
-}
-
-func reverseFloats(a []pr.Fl) []pr.Fl {
-	n := len(a)
-	out := make([]pr.Fl, n)
-	for i := range a {
-		out[n-1-i] = a[i]
-	}
-	return out
-}
-
 func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	// Only one color, render the gradient as a solid color
 	if len(self.colors) == 1 {
@@ -251,6 +216,7 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 	colors := self.colors
 	vectorLength := pr.Fl(pr.Abs(width*pr.Float(dx)) + pr.Abs(height*pr.Float(dy)))
 	positions := processColorStops(pr.Float(vectorLength), self.stopPositions)
+
 	if !self.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
 		// extend color stops that are not displayed
@@ -263,50 +229,15 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 			colors = append(colors, colors[len(colors)-1])
 		}
 	}
-	first, last := normalizeStopPostions(positions)
+
+	spread := svg.NoRepeat
 	if self.repeating {
-		// Render as a solid color if the first and last positions are equal
-		// See https://drafts.csswg.org/css-images-3/#repeating-gradients
-		if first == last {
-			color := gradientAverageColor(colors, positions)
-			return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{color}}
-		}
-
-		// Define defined gradient length and steps between positions
-		stopLength := last - first
-		// assert stopLength > 0
-		positionSteps := make([]pr.Fl, len(positions)-1)
-		for i := range positionSteps {
-			positionSteps[i] = positions[i+1] - positions[i]
-		}
-
-		// Create cycles used to add colors
-		nextSteps := append([]pr.Fl{0}, positionSteps...)
-		nextColors := colors
-		previousSteps := append([]pr.Fl{0}, reverseFloats(positionSteps)...)
-		previousColors := reverseColors(colors)
-
-		// Add colors after last step
-		for i := 0; last < vectorLength; i++ {
-			step := nextSteps[i%len(nextSteps)]
-			colors = append(colors, nextColors[i%len(nextColors)])
-			positions = append(positions, positions[len(positions)-1]+step)
-			last += step * stopLength
-		}
-
-		// Add colors before last step
-		for i := 0; first > 0; i++ {
-			step := previousSteps[i%len(previousSteps)]
-			colors = append([]parser.RGBA{previousColors[i%len(previousColors)]}, colors...)
-			positions = append([]pr.Fl{positions[0] - step}, positions...)
-			first -= step * stopLength
-		}
+		spread = svg.Repeat
 	}
-
 	startX := (pr.Fl(width) - dx*vectorLength) / 2
 	startY := (pr.Fl(height) - dy*vectorLength) / 2
-	points := [6]pr.Fl{startX + dx*first, startY + dy*first, startX + dx*last, startY + dy*last, 0, 0}
-	return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "linear", Coords: points}, Positions: positions, Colors: colors}
+
+	return spread.LinearGradient(positions, colors, startX, startY, dx, dy, vectorLength)
 }
 
 type RadialGradient struct {
@@ -426,133 +357,20 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 		}
 	}
 
-	first, last := normalizeStopPostions(positions)
-
-	// Render as a solid color if the first and last positions are the same
-	// See https://drafts.csswg.org/css-images-3/#repeating-gradients
-	if first == last && self.repeating {
-		color := gradientAverageColor(colors, positions)
-		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{color}}
-	}
-
-	// Define the coordinates of the gradient circles
-	circles := [6]pr.Fl{pr.Fl(centerX), pr.Fl(centerY) / scaleY, first, pr.Fl(centerX), pr.Fl(centerY) / scaleY, last}
-
+	spread := svg.NoRepeat
 	if self.repeating {
-		circles, positions, colors = self.repeat(width, height, pr.Float(scaleY), circles, positions, colors)
+		spread = svg.Repeat
 	}
 
-	return backend.GradientLayout{ScaleY: scaleY, GradientKind: backend.GradientKind{Kind: "radial", Coords: circles}, Positions: positions, Colors: colors}
-}
+	// spread.RadialGradient works with absolute lengths: apply scaleY
+	fx := pr.Fl(centerX)
+	fy := pr.Fl(centerY) / scaleY
+	cx, cy := fx, fy
+	var fr, r pr.Fl = 0, 1
+	out := spread.RadialGradient(positions, colors, fx, fy, fr, cx, cy, r, pr.Fl(width)/scaleY, pr.Fl(height)/scaleY)
 
-func (r RadialGradient) repeat(width, height, scaleY pr.Float, points [6]pr.Fl, positions []pr.Fl, colors []parser.RGBA) ([6]pr.Fl, []pr.Fl, []parser.RGBA) {
-	// Keep original lists and values, they’re useful
-	originalColors := append([]parser.RGBA{}, colors...)
-	originalPositions := append([]pr.Fl{}, positions...)
-	gradientLength := points[5] - points[2]
-
-	// Get the maximum distance between the center && the corners, to find
-	// how many times we have to repeat the colors outside
-	maxDistance := pr.Fl(pr.Maxs(
-		pr.Hypot(width-pr.Float(points[0]), height/scaleY-pr.Float(points[1])),
-		pr.Hypot(width-pr.Float(points[0]), -pr.Float(points[1])*scaleY),
-		pr.Hypot(-pr.Float(points[0]), height/scaleY-pr.Float(points[1])),
-		pr.Hypot(-pr.Float(points[0]), -pr.Float(points[1])*scaleY),
-	))
-	repeatAfter := int(math.Ceil(float64((maxDistance - points[5]) / gradientLength)))
-	if repeatAfter > 0 {
-		// Repeat colors and extrapolate positions
-		repeat := 1 + repeatAfter
-		colors = make([]parser.RGBA, len(colors)*repeat)
-		tmpPositions := make([]pr.Fl, 0, len(positions)*repeat)
-		for i := 0; i < repeat; i++ {
-			copy(colors[i*len(originalColors):], originalColors)
-			for _, position := range positions {
-				tmpPositions = append(tmpPositions, pr.Fl(i)+position)
-			}
-		}
-		positions = tmpPositions
-		points[5] = points[5] + gradientLength*pr.Fl(repeatAfter)
-	}
-
-	if points[2] == 0 {
-		// Inner circle has 0 radius, no need to repeat inside, return
-		return points, positions, colors
-	}
-
-	// Find how many times we have to repeat the colors inside
-	repeatBefore := points[2] / gradientLength
-
-	// Set the inner circle size to 0
-	points[2] = 0
-
-	// Find how many times the whole gradient can be repeated
-	fullRepeat := int(repeatBefore)
-	if fullRepeat != 0 {
-		// Repeat colors and extrapolate positions
-		positionsTmp := positions
-		positions = make([]pr.Fl, 0, len(positionsTmp)+len(originalPositions)*fullRepeat)
-		for i := 0; i < fullRepeat; i++ {
-			colors = append(colors, originalColors...)
-			for _, position := range originalPositions {
-				positions = append(positions, pr.Fl(i-fullRepeat)+position)
-			}
-		}
-		positions = append(positions, positionsTmp...)
-	}
-
-	// Find the ratio of gradient that must be added to reach the center
-	partialRepeat := repeatBefore - pr.Fl(fullRepeat)
-	if partialRepeat == 0 {
-		// No partial repeat, return
-		return points, positions, colors
-	}
-
-	// Iterate through positions := range reverse order, from the outer
-	// circle to the original inner circle, to find positions from
-	// the inner circle (including full repeats) to the center
-	// assert (originalPositions[0], originalPositions[-1]) == (0, 1)
-	// assert 0 < partialRepeat < 1
-	reverse := reverseFloats(originalPositions)
-	ratio := 1 - partialRepeat
-	LC, LP := len(originalColors), len(originalPositions)
-
-	for i_, position := range reverse {
-		i := i_ + 1
-		if position == ratio {
-			// The center is a color of the gradient, truncate original
-			// colors and positions and prepend them
-			colors = append(originalColors[LC-i:], colors...)
-			tmp := originalPositions[LP-i:]
-			newPositions := make([]pr.Fl, len(tmp))
-			for j, position := range tmp {
-				newPositions[j] = position - pr.Fl(fullRepeat) - 1
-			}
-			positions = append(newPositions, positions...)
-			return points, positions, colors
-		}
-		if position < ratio {
-			// The center is between two colors of the gradient,
-			// define the center color as the average of these two
-			// gradient colors
-			color := originalColors[LC-i]
-			nextColor := originalColors[LC-(i-1)]
-			nextPosition := originalPositions[LP-(i-1)]
-			averageColors := []parser.RGBA{color, color, nextColor, nextColor}
-			averagePositions := []pr.Fl{position, ratio, ratio, nextPosition}
-			zeroColor := gradientAverageColor(averageColors, averagePositions)
-			colors = append(append([]parser.RGBA{zeroColor}, originalColors[LC-(i-1):]...), colors...)
-			tmp := originalPositions[LP-(i-1):]
-			newPositions := make([]pr.Fl, len(tmp))
-			for j, position := range tmp {
-				newPositions[j] = position - pr.Fl(fullRepeat) - 1
-			}
-			positions = append(append([]pr.Fl{ratio - 1 - pr.Fl(fullRepeat)}, newPositions...), positions...)
-			return points, positions, colors
-		}
-	}
-
-	return points, positions, colors
+	out.ScaleY = scaleY // restore the scale
+	return out
 }
 
 func (self RadialGradient) resolveSize(width, height, centerX, centerY pr.Float) (pr.Float, pr.Float) {

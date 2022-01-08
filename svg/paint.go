@@ -2,10 +2,12 @@ package svg
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
+	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -90,12 +92,12 @@ func (svg *SVGImage) paintNode(dst backend.CanvasNoFill, node *svgNode, dims dra
 
 	// fill
 	if doFill {
-		svg.applyPainter(dst, node.fill, node.fillOpacity, dims, false)
+		svg.applyPainter(dst, node, node.fill, node.fillOpacity, dims, false)
 	}
 
 	// stroke
 	if doStroke {
-		svg.applyPainter(dst, node.stroke, node.strokeOpacity, dims, true)
+		svg.applyPainter(dst, node, node.stroke, node.strokeOpacity, dims, true)
 
 		// stroke options
 		dashes, offset := dims.resolveDashes(node.dashArray, node.dashOffset)
@@ -113,17 +115,20 @@ func (svg *SVGImage) paintNode(dst backend.CanvasNoFill, node *svgNode, dims dra
 	}
 }
 
-// apply the given painter to the graphic target
+// apply the given painter to the given node, outputing the
+// the result in `dst`
 // opacity is an additional opacity factor
-func (svg *SVGImage) applyPainter(dst backend.CanvasNoFill, pt painter, opacity Fl, dims drawingDims, stroke bool) {
+func (svg *SVGImage) applyPainter(dst backend.CanvasNoFill, node *svgNode, pt painter, opacity Fl, dims drawingDims, stroke bool) {
 	if !pt.valid {
 		return
 	}
 
 	// check for a paintServer
 	if ps := svg.definitions.paintServers[pt.refID]; ps != nil {
-		// TODO:
-		return
+		wasPainted := ps.paint(dst, node, opacity, dims, stroke)
+		if wasPainted {
+			return
+		} // else default to a plain color
 	}
 
 	pt.color.A *= opacity // apply the opacity factor
@@ -132,6 +137,7 @@ func (svg *SVGImage) applyPainter(dst backend.CanvasNoFill, pt painter, opacity 
 
 // gradient or pattern
 type paintServer interface { // TODO:
+	paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool
 }
 
 // either linear or radial
@@ -227,7 +233,7 @@ func newGradientRadial(node *cascadedNode) (out gradientRadial, err error) {
 type gradient struct {
 	kind gradientKind
 
-	spreadMethod string // default to "pad"
+	spreadMethod GradientSpread // default to NoRepeat
 
 	positions []Value
 	colors    []parser.RGBA
@@ -262,9 +268,12 @@ func newGradient(node *cascadedNode) (out gradient, err error) {
 	}
 
 	out.isUnitsUserSpace = node.attrs["gradientUnits"] == "userSpaceOnUse"
-	out.spreadMethod = "pad"
-	if sm, has := node.attrs["spreadMethod"]; has {
-		out.spreadMethod = sm
+	switch node.attrs["spreadMethod"] {
+	case "repeat":
+		out.spreadMethod = Repeat
+	case "reflect":
+		out.spreadMethod = Reflect
+		// default NoRepeat
 	}
 
 	out.transforms, err = parseTransform(node.attrs["gradientTransform"])
@@ -290,6 +299,149 @@ func newGradient(node *cascadedNode) (out gradient, err error) {
 	return out, nil
 }
 
+func (gr gradient) paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
+	if len(gr.colors) == 0 {
+		return false
+	}
+
+	if len(gr.colors) == 1 { // actually solid
+		dst.SetColorRgba(gr.colors[0], stroke)
+		return true
+	}
+
+	bbox, ok := node.resolveBoundingBox(dims, stroke)
+	if !ok {
+		return false
+	}
+
+	x, y := bbox.X, bbox.Y
+	width, height := bbox.Width, bbox.Height
+	if gr.isUnitsUserSpace {
+		width, height = dims.innerWidth, dims.innerHeight
+	}
+
+	// resolve positions values
+	positions := make([]Fl, len(gr.positions))
+	var previousPos Fl
+	for i, p := range gr.positions {
+		pos := p.Resolve(dims.fontSize, 1)
+		positions[i] = utils.MaxF(pos, previousPos) // ensure positions is increasing
+		previousPos = pos
+	}
+	colors := append([]parser.RGBA(nil), gr.colors...)
+
+	switch gr.spreadMethod {
+	case Repeat, Reflect:
+		if positions[0] > 0 {
+			positions = append([]Fl{0}, positions...)
+			colors = append([]parser.RGBA{colors[0]}, colors...)
+		}
+		if positions[len(positions)-1] < 1 {
+			positions = append(positions, 1)
+			colors = append(colors, colors[len(colors)-1])
+		}
+	default:
+		// Add explicit colors at boundaries if needed, because PDF doesn’t
+		// extend color stops that are not displayed
+		if positions[0] == positions[1] {
+			if _, isRadial := gr.kind.(gradientRadial); isRadial {
+				// avoid negative radius for radial gradients
+				positions = append([]Fl{0}, positions...)
+			} else {
+				positions = append([]Fl{positions[0] - 1}, positions...)
+			}
+			colors = append([]parser.RGBA{colors[0]}, colors...)
+		}
+		if L := len(positions); positions[L-2] == positions[L-1] {
+			positions = append(positions, positions[L-1]+1)
+			colors = append(colors, colors[len(colors)-1])
+		}
+	}
+
+	var laidOutGradient backend.GradientLayout
+	mt := matrix.Translation(x, y)
+	switch kind := gr.kind.(type) {
+	case gradientLinear:
+		x1 := kind.x1.Resolve(dims.fontSize, 1)
+		y1 := kind.y1.Resolve(dims.fontSize, 1)
+		x2 := kind.x2.Resolve(dims.fontSize, 1)
+		y2 := kind.y2.Resolve(dims.fontSize, 1)
+		if gr.isUnitsUserSpace {
+			x1 -= x
+			y1 -= y
+			x2 -= x
+			y2 -= y
+		} else {
+			length := utils.MinF(width, height)
+			x1 *= length
+			y1 *= length
+			x2 *= length
+			y2 *= length
+
+			// update the transformation matrix
+			var a, d Fl = 1, 1
+			if height < width {
+				a = width / height
+			} else {
+				d = height / width
+			}
+			mt.LeftMultBy(matrix.Scaling(a, d))
+		}
+		vectorLength := utils.Hypot(x2-x1, y2-y1)
+		laidOutGradient = gr.spreadMethod.LinearGradient(positions, colors, x1, y2, x2, y2, vectorLength)
+	case gradientRadial:
+		cx := kind.cx.Resolve(dims.fontSize, 1)
+		cy := kind.cy.Resolve(dims.fontSize, 1)
+		r := kind.r.Resolve(dims.fontSize, 1)
+		fx := kind.fx.Resolve(dims.fontSize, width)
+		fy := kind.fy.Resolve(dims.fontSize, height)
+		fr := kind.fr.Resolve(dims.fontSize, 1)
+		if gr.isUnitsUserSpace {
+			cx -= x
+			cy -= y
+			fx -= x
+			fy -= y
+		} else {
+			length := utils.MinF(width, height)
+			cx *= length
+			cy *= length
+			r *= length
+			fx *= length
+			fy *= length
+			fr *= length
+
+			// update the transformation matrix
+			var a, d Fl = 1, 1
+			if height < width {
+				a = width / height
+			} else {
+				d = height / width
+			}
+			mt.LeftMultBy(matrix.Scaling(a, d))
+		}
+
+		laidOutGradient = gr.spreadMethod.RadialGradient(positions, colors, fx, fy, fr, cx, cy, r, width, height)
+	}
+
+	laidOutGradient.Reapeating = gr.spreadMethod != NoRepeat
+
+	if trs := gr.transforms; len(trs) != 0 {
+		mat := aggregateTransforms(trs, dims.fontSize, dims.normalizedDiagonal)
+		mt.LeftMultBy(mat)
+	}
+
+	if laidOutGradient.Kind == "solid" {
+		dst.Rectangle(0, 0, width, height)
+		dst.SetColorRgba(laidOutGradient.Colors[0], false)
+		dst.Fill(false)
+		return true
+	}
+
+	// TODO: handle transformation
+	dst.DrawGradient(laidOutGradient, width, height)
+	return true
+}
+
 type pattern struct { // TODO:
 	transforms []transform
 
@@ -313,4 +465,9 @@ func newPattern(node *cascadedNode) (out pattern, err error) {
 	}
 
 	return out, nil
+}
+
+func (pt pattern) paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
+	log.Println("painting with pattern is not implemented")
+	return false
 }

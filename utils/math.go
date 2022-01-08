@@ -84,3 +84,8 @@ func RoundPrec(f Fl, n int) Fl {
 func Round(f Fl) Fl {
 	return RoundPrec(f, 6)
 }
+
+// Hypot returns SQRT(a^2 + b^2)
+func Hypot(a, b Fl) Fl {
+	return Fl(math.Hypot(float64(a), float64(b)))
+}

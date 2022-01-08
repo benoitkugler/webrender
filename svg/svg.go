@@ -327,16 +327,23 @@ func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Recta
 	return
 }
 
+// resolve units and compose the transforms
+func aggregateTransforms(transforms []transform, fontSize, diagonal Fl) matrix.Transform {
+	// aggregate the transformations
+	mat := matrix.Identity()
+	for _, transform := range transforms {
+		transform.applyTo(&mat, fontSize, diagonal)
+	}
+	return mat
+}
+
 func applyTransform(dst backend.CanvasNoFill, transforms []transform, dims drawingDims) {
 	if len(transforms) == 0 { // do not apply a useless identity transform
 		return
 	}
 
 	// aggregate the transformations
-	mat := matrix.Identity()
-	for _, transform := range transforms {
-		transform.applyTo(&mat, dims)
-	}
+	mat := aggregateTransforms(transforms, dims.fontSize, dims.innerDiagonal)
 	if mat.Determinant() != 0 {
 		dst.Transform(mat)
 	}

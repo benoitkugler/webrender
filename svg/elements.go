@@ -537,34 +537,34 @@ type transform struct {
 }
 
 // right multiply to `mat` to apply the transformation, after resolving units
-func (tr transform) applyTo(mat *matrix.Transform, dims drawingDims) {
+func (tr transform) applyTo(mat *matrix.Transform, fontSize, diagonal Fl) {
 	switch tr.kind {
 	case rotate:
-		angle := dims.length(tr.args[0])
+		angle := tr.args[0].Resolve(fontSize, diagonal)
 		mat.Rotate(angle * math.Pi / 180)
 	case rotateWithOrigin:
-		x, y := dims.length(tr.args[1]), dims.length(tr.args[2])
-		angle := dims.length(tr.args[0])
+		x, y := tr.args[1].Resolve(fontSize, diagonal), tr.args[2].Resolve(fontSize, diagonal)
+		angle := tr.args[0].Resolve(fontSize, diagonal)
 		mat.Translate(x, y)
 		mat.Rotate(angle * math.Pi / 180)
 		mat.Translate(-x, -y)
 	case translate:
-		x, y := dims.length(tr.args[0]), dims.length(tr.args[1])
+		x, y := tr.args[0].Resolve(fontSize, diagonal), tr.args[1].Resolve(fontSize, diagonal)
 		mat.Translate(x, y)
 	case skew:
-		thetaX, thetaY := dims.length(tr.args[0]), dims.length(tr.args[1])
+		thetaX, thetaY := tr.args[0].Resolve(fontSize, diagonal), tr.args[1].Resolve(fontSize, diagonal)
 		mat.Skew(thetaX*math.Pi/180, thetaY*math.Pi/180)
 	case scale:
-		sx, sy := dims.length(tr.args[0]), dims.length(tr.args[1])
+		sx, sy := tr.args[0].Resolve(fontSize, diagonal), tr.args[1].Resolve(fontSize, diagonal)
 		mat.Scale(sx, sy)
 	case customMatrix:
 		mat.RightMultBy(matrix.New(
-			dims.length(tr.args[0]),
-			dims.length(tr.args[1]),
-			dims.length(tr.args[2]),
-			dims.length(tr.args[3]),
-			dims.length(tr.args[4]),
-			dims.length(tr.args[5]),
+			tr.args[0].Resolve(fontSize, diagonal),
+			tr.args[1].Resolve(fontSize, diagonal),
+			tr.args[2].Resolve(fontSize, diagonal),
+			tr.args[3].Resolve(fontSize, diagonal),
+			tr.args[4].Resolve(fontSize, diagonal),
+			tr.args[5].Resolve(fontSize, diagonal),
 		))
 	}
 }
