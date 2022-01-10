@@ -393,8 +393,9 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 			}
 			mt.LeftMultBy(matrix.Scaling(a, d))
 		}
-		vectorLength := utils.Hypot(x2-x1, y2-y1)
-		laidOutGradient = gr.spreadMethod.LinearGradient(positions, colors, x1, y2, x2, y2, vectorLength)
+		dx, dy := x2-x1, y2-y1
+		vectorLength := utils.Hypot(dx, dy)
+		laidOutGradient = gr.spreadMethod.LinearGradient(positions, colors, x1, y1, dx, dy, vectorLength)
 	case gradientRadial:
 		cx := kind.cx.Resolve(dims.fontSize, 1)
 		cy := kind.cy.Resolve(dims.fontSize, 1)
@@ -443,8 +444,9 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 		return true
 	}
 
-	// TODO: handle transformation
-	dst.DrawGradient(laidOutGradient, width, height)
+	pattern := dst.AddPattern(width, height)
+	pattern.DrawGradient(laidOutGradient, dims.concreteWidth, dims.concreteHeight)
+	dst.SetColorPattern(pattern, width, height, mt, stroke)
 	return true
 }
 
