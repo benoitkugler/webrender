@@ -61,6 +61,11 @@ func (outputPage) Transform(mt matrix.Transform) {
 	outputLog.Println("Transform")
 }
 
+func (outputPage) GetTransform() matrix.Transform {
+	outputLog.Println("GetTransform")
+	return matrix.Identity()
+}
+
 func (outputPage) MoveTo(x fl, y fl) {
 	outputLog.Println("MoveTo")
 }

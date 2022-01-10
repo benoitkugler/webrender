@@ -139,6 +139,11 @@ func (outputPage) Paint(backend.PaintOp) {
 	outputLog.Println("Paint")
 }
 
+func (outputPage) GetTransform() matrix.Transform {
+	outputLog.Println("GetTransform")
+	return matrix.Identity()
+}
+
 func (outputPage) Transform(mt matrix.Transform) {
 	outputLog.Println("Transform")
 }

@@ -257,6 +257,9 @@ type Canvas interface {
 	// After this call, the current path will be cleared.
 	Paint(op PaintOp)
 
+	// GetTransform returns the current transformation matrix (CTM).
+	GetTransform() matrix.Transform
+
 	// Modifies the current transformation matrix (CTM)
 	// by applying `mt` as an additional transformation.
 	// The new transformation of user space takes place
