@@ -135,16 +135,8 @@ func (outputPage) SetDash(dashes []fl, offset fl) {
 	outputLog.Println("SetDash")
 }
 
-func (outputPage) Fill(evenOdd bool) {
-	outputLog.Println("Fill")
-}
-
-func (outputPage) FillWithImage(backend.Image, backend.BackgroundImageOptions) {
-	outputLog.Println("Fill")
-}
-
-func (outputPage) Stroke() {
-	outputLog.Println("Stroke")
+func (outputPage) Paint(backend.PaintOp) {
+	outputLog.Println("Paint")
 }
 
 func (outputPage) Transform(mt matrix.Transform) {
@@ -185,10 +177,19 @@ func (outputPage) AddOpacityGroup(x, y, width, height fl) backend.Canvas {
 	return outputPage{}
 }
 
-func (outputPage) DrawOpacityGroup(opacity fl, group backend.CanvasNoFill) {
+func (outputPage) DrawOpacityGroup(opacity fl, group backend.Canvas) {
 	outputLog.Println("DrawGroup")
 }
 
 func (outputPage) SetStrokeOptions(backend.StrokeOptions) {
 	outputLog.Println("SetStrokeOptions")
+}
+
+func (outputPage) AddPattern(_, _ fl) backend.Pattern {
+	outputLog.Println("AddPattern")
+	return outputPage{}
+}
+
+func (outputPage) SetColorPattern(backend.Pattern, fl, fl, matrix.Transform, bool) {
+	outputLog.Println("SetColorPattern")
 }

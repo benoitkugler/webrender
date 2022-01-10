@@ -87,14 +87,7 @@ type Image interface {
 	GetIntrinsicSize(imageResolution, fontSize properties.Float) (width, height, ratio properties.MaybeFloat)
 
 	// Draw shall write the image on the given `context`
-	Draw(context CanvasNoFill, concreteWidth, concreteHeight Fl, imageRendering string)
-}
-
-type BackgroundImageOptions struct {
-	Rendering                 string // CSS rendering property
-	ImageWidth, ImageHeight   Fl
-	RepeatWidth, RepeatHeight Fl
-	X, Y                      Fl // where to paint the image
+	Draw(context Canvas, concreteWidth, concreteHeight Fl, imageRendering string)
 }
 
 // StrokeJoinMode type to specify how segments join when stroking.
@@ -152,20 +145,25 @@ type StrokeOptions struct {
 	MiterLimit Fl
 }
 
-// Canvas represents a 2D surface which is the target of graphic operations.
-type Canvas interface {
-	CanvasNoFill
+// PaintOp specifies the graphic operation applied to the current path
+type PaintOp uint8
 
-	// FillWithImage fills the current path using the given image.
-	// Usually, the given image would be painted on an temporary Canvas,
-	// which would then be used as fill pattern.
-	FillWithImage(img Image, options BackgroundImageOptions)
+const (
+	// Clear does not show anything on the output, but reset the current path
+	Stroke PaintOp = 1 << iota
+	FillEvenOdd
+	FillNonZero // mutually exclusive with FillEvenOdd
+)
+
+// Pattern acts as a fill or stroke color, but permits complex textures.
+// It consists of a rectangle, fill with arbitrary content, which will be replicated
+// at fixed horizontal and vertical intervals to fill an area.
+type Pattern interface {
+	Canvas
 }
 
-// CanvasNoFill is the same as Canvas but without the `FillWithImage`,
-// to enforce that Image.Draw implementations do not use the FillWithImage
-// method.
-type CanvasNoFill interface {
+// Canvas represents a 2D surface which is the target of graphic operations.
+type Canvas interface {
 	// Returns the current canvas rectangle
 	GetRectangle() (left, top, right, bottom Fl)
 
@@ -179,7 +177,7 @@ type CanvasNoFill interface {
 	AddOpacityGroup(x, y, width, height Fl) Canvas
 
 	// DrawOpacityGroup draw the given target to the main target, applying the given opacity (in [0,1]).
-	DrawOpacityGroup(opacity Fl, group CanvasNoFill)
+	DrawOpacityGroup(opacity Fl, group Canvas)
 
 	// Establishes a new clip region
 	// by intersecting the current clip region
@@ -209,11 +207,18 @@ type CanvasNoFill interface {
 	// `stroke` controls whether stroking or filling operations are concerned.
 	SetAlpha(alpha Fl, stroke bool)
 
-	// Fill fills the current path  according to the given fill rule,
-	// and current fill color (or painter) in place.
-	// (each sub-path is implicitly closed before being filled).
-	// After `fill`, the current path will is cleared.
-	Fill(evenOdd bool)
+	// AddPattern creates a new pattern, whill should first be filled,
+	// then used as fill or stroke color.
+	// (cellWidth, cellHeight) define the size of a cell
+	// the grid used to when painting.
+	AddPattern(cellWidth, cellHeight Fl) Pattern
+
+	// SetColorPattern set the current paint color to the given pattern.
+	// (contentWidth, contentHeight) define the size of the pattern content.
+	// `mat` maps the pattern’s internal coordinate system to the one
+	// in which it will painted.
+	// `stroke` controls whether stroking or filling operations are concerned.
+	SetColorPattern(p Pattern, contentWidth, contentHeight Fl, mat matrix.Transform, stroke bool)
 
 	// Sets the current line width to be used by `Stroke`.
 	// The line width value specifies the diameter of a pen
@@ -245,11 +250,12 @@ type CanvasNoFill interface {
 	// (in addition to SetLineWidth and SetDash)
 	SetStrokeOptions(StrokeOptions)
 
-	// Stroke strokes the current path
-	// according to the current line width, line join, line cap,
-	// and dash settings.
-	// After `Stroke`, the current path will be cleared.
-	Stroke()
+	// Paint actually shows the current path on the target,
+	// either stroking, filling or doing both, according to `op`.
+	// The result of the operation depends on the current fill and
+	// stroke settings.
+	// After this call, the current path will be cleared.
+	Paint(op PaintOp)
 
 	// Modifies the current transformation matrix (CTM)
 	// by applying `mt` as an additional transformation.

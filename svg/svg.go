@@ -65,7 +65,7 @@ func (svg *SVGImage) ViewBox() *Rectangle { return svg.root.viewbox }
 
 // Draw draws the parsed SVG image into the given `dst` output,
 // with the given `width` and `height`.
-func (svg *SVGImage) Draw(dst backend.CanvasNoFill, width, height Fl) {
+func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
 	var dims drawingDims
 
 	dims.concreteWidth, dims.concreteHeight = width, height
@@ -85,7 +85,7 @@ func (svg *SVGImage) Draw(dst backend.CanvasNoFill, width, height Fl) {
 
 // if paint is false, only the path operations are executed, not the actual filling or drawing
 // moreover, no new graphic stack is created
-func (svg *SVGImage) drawNode(dst backend.CanvasNoFill, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDims, paint bool) {
 	dims.fontSize = node.attributes.fontSize.Resolve(dims.fontSize, dims.fontSize)
 
 	paintTask := func() {
@@ -96,7 +96,7 @@ func (svg *SVGImage) drawNode(dst backend.CanvasNoFill, node *svgNode, dims draw
 
 		// create sub group for opacity
 		opacity := node.attributes.opacity
-		var originalDst backend.CanvasNoFill
+		var originalDst backend.Canvas
 		if paint && 0 <= opacity && opacity < 1 {
 			originalDst = dst
 			var x, y, width, height Fl = 0, 0, dims.concreteWidth, dims.concreteHeight
@@ -160,7 +160,7 @@ func (svg *SVGImage) drawNode(dst backend.CanvasNoFill, node *svgNode, dims draw
 }
 
 // vertices are the resolved vertices computed when drawing the shape
-func (svg *SVGImage) drawMarkers(dst backend.CanvasNoFill, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
+func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *svgNode, dims drawingDims, paint bool) {
 	const (
 		start uint8 = iota
 		mid
@@ -337,7 +337,7 @@ func aggregateTransforms(transforms []transform, fontSize, diagonal Fl) matrix.T
 	return mat
 }
 
-func applyTransform(dst backend.CanvasNoFill, transforms []transform, dims drawingDims) {
+func applyTransform(dst backend.Canvas, transforms []transform, dims drawingDims) {
 	if len(transforms) == 0 { // do not apply a useless identity transform
 		return
 	}
@@ -349,7 +349,7 @@ func applyTransform(dst backend.CanvasNoFill, transforms []transform, dims drawi
 	}
 }
 
-func applyFilters(dst backend.CanvasNoFill, filters []filter, node *svgNode, dims drawingDims) {
+func applyFilters(dst backend.Canvas, filters []filter, node *svgNode, dims drawingDims) {
 	for _, filter := range filters {
 		switch filter := filter.(type) {
 		case filterOffset:
@@ -369,7 +369,7 @@ func applyFilters(dst backend.CanvasNoFill, filters []filter, node *svgNode, dim
 	}
 }
 
-func applyClipPath(dst backend.CanvasNoFill, clipPath clipPath, node *svgNode, dims drawingDims) {
+func applyClipPath(dst backend.Canvas, clipPath clipPath, node *svgNode, dims drawingDims) {
 	// old_ctm = self.stream.ctm
 	if clipPath.isUnitsBBox {
 		x, y := dims.point(node.attributes.x, node.attributes.y)
@@ -391,7 +391,7 @@ func applyClipPath(dst backend.CanvasNoFill, clipPath clipPath, node *svgNode, d
 	//     self.stream.transform(*(old_ctm @ new_ctm.invert).values)
 }
 
-func applyMask(dst backend.CanvasNoFill, mask mask, node *svgNode, dims drawingDims) {
+func applyMask(dst backend.Canvas, mask mask, node *svgNode, dims drawingDims) {
 	// mask._etree_node.tag = 'g'
 
 	widthRef, heightRef := dims.innerWidth, dims.innerHeight

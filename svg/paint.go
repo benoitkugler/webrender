@@ -81,7 +81,7 @@ func (dims drawingDims) resolveDashes(dashArray []Value, dashOffset Value) ([]Fl
 }
 
 // paint by filling and stroking the given node onto the graphic target
-func (svg *SVGImage) paintNode(dst backend.CanvasNoFill, node *svgNode, dims drawingDims) {
+func (svg *SVGImage) paintNode(dst backend.Canvas, node *svgNode, dims drawingDims) {
 	// TODO: handle text
 	// if node.tag in ('text', 'textPath', 'a') and not text:
 	// return
@@ -107,18 +107,24 @@ func (svg *SVGImage) paintNode(dst backend.CanvasNoFill, node *svgNode, dims dra
 		dst.SetStrokeOptions(node.strokeOptions)
 	}
 
+	var op backend.PaintOp
 	if doFill {
-		dst.Fill(node.isFillEvenOdd)
+		if node.isFillEvenOdd {
+			op |= backend.FillEvenOdd
+		} else {
+			op |= backend.FillNonZero
+		}
 	}
 	if doStroke {
-		dst.Stroke()
+		op |= backend.Stroke
 	}
+	dst.Paint(op)
 }
 
 // apply the given painter to the given node, outputing the
 // the result in `dst`
 // opacity is an additional opacity factor
-func (svg *SVGImage) applyPainter(dst backend.CanvasNoFill, node *svgNode, pt painter, opacity Fl, dims drawingDims, stroke bool) {
+func (svg *SVGImage) applyPainter(dst backend.Canvas, node *svgNode, pt painter, opacity Fl, dims drawingDims, stroke bool) {
 	if !pt.valid {
 		return
 	}
@@ -137,7 +143,7 @@ func (svg *SVGImage) applyPainter(dst backend.CanvasNoFill, node *svgNode, pt pa
 
 // gradient or pattern
 type paintServer interface { // TODO:
-	paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool
+	paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool
 }
 
 // either linear or radial
@@ -299,7 +305,7 @@ func newGradient(node *cascadedNode) (out gradient, err error) {
 	return out, nil
 }
 
-func (gr gradient) paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
+func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
 	if len(gr.colors) == 0 {
 		return false
 	}
@@ -433,7 +439,7 @@ func (gr gradient) paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, di
 	if laidOutGradient.Kind == "solid" {
 		dst.Rectangle(0, 0, width, height)
 		dst.SetColorRgba(laidOutGradient.Colors[0], false)
-		dst.Fill(false)
+		dst.Paint(backend.FillNonZero)
 		return true
 	}
 
@@ -467,7 +473,7 @@ func newPattern(node *cascadedNode) (out pattern, err error) {
 	return out, nil
 }
 
-func (pt pattern) paint(dst backend.CanvasNoFill, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
+func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
 	log.Println("painting with pattern is not implemented")
 	return false
 }

@@ -441,7 +441,7 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 				}
 				ctx.dst.Rectangle(ctx.dst.GetRectangle())
 				ctx.dst.SetColorRgba(bg.Color, false)
-				ctx.dst.Fill(false)
+				ctx.dst.Paint(backend.FillNonZero)
 			})
 		}
 
@@ -584,23 +584,23 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 		repeatHeight = 2 * h
 	}
 
-	options := backend.BackgroundImageOptions{
-		ImageWidth:   imageWidth,
-		ImageHeight:  imageHeight,
-		RepeatWidth:  repeatWidth,
-		RepeatHeight: repeatHeight,
-		X:            pr.Fl(positionX.V()) + positioningX,
-		Y:            pr.Fl(positionY.V()) + positioningY,
-		Rendering:    string(imageRendering),
-	}
+	X := pr.Fl(positionX.V()) + positioningX
+	Y := pr.Fl(positionY.V()) + positioningY
+
+	// draw the image on a pattern
+	pat := ctx.dst.AddPattern(repeatWidth, repeatHeight)
+	layer.Image.Draw(pat, imageWidth, imageHeight, string(imageRendering))
+
 	ctx.dst.OnNewStack(func() {
+		mat := matrix.New(1, 0, 0, 1, X, Y) // translate
+		ctx.dst.SetColorPattern(pat, imageWidth, imageHeight, mat, false)
 		if layer.Unbounded {
 			x1, y1, x2, y2 := ctx.dst.GetRectangle()
 			ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
 		} else {
 			ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
 		}
-		ctx.dst.FillWithImage(layer.Image, options)
+		ctx.dst.Paint(backend.FillNonZero)
 	})
 }
 
@@ -934,11 +934,11 @@ func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, col
 	if style == "ridge" || style == "groove" {
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
 		ctx.dst.SetColorRgba(colors[0], false)
-		ctx.dst.Fill(true)
+		ctx.dst.Paint(backend.FillEvenOdd)
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
 		roundedBoxPath(ctx.dst, box.RoundedBorderBox())
 		ctx.dst.SetColorRgba(colors[1], false)
-		ctx.dst.Fill(true)
+		ctx.dst.Paint(backend.FillEvenOdd)
 		return
 	}
 	if style == "double" {
@@ -947,7 +947,7 @@ func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, col
 	}
 	roundedBoxPath(ctx.dst, box.RoundedBorderBox())
 	ctx.dst.SetColorRgba(colors[0], false)
-	ctx.dst.Fill(true)
+	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
 func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String, color []Color) {
@@ -957,11 +957,11 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 	if style == "ridge" || style == "groove" {
 		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
 		ctx.dst.SetColorRgba(color[0], false)
-		ctx.dst.Fill(true)
+		ctx.dst.Paint(backend.FillEvenOdd)
 		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
 		ctx.dst.Rectangle(bbx+bl, bby+bt, bbw-bl-br, bbh-bt-bb)
 		ctx.dst.SetColorRgba(color[1], false)
-		ctx.dst.Fill(true)
+		ctx.dst.Paint(backend.FillEvenOdd)
 		return
 	}
 	if style == "double" {
@@ -970,7 +970,7 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 	}
 	ctx.dst.Rectangle(bbx+bl, bby+bt, bbw-bl-br, bbh-bt-bb)
 	ctx.dst.SetColorRgba(color[0], false)
-	ctx.dst.Fill(true)
+	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
 func (ctx drawContext) drawOutlines(box_ Box) {
@@ -1475,6 +1475,6 @@ func (ctx drawContext) drawTextDecoration(textbox *bo.TextBox, offsetX, offsetY,
 			ctx.dst.LineTo(posX+width, posY+offsetY+delta)
 		}
 
-		ctx.dst.Stroke()
+		ctx.dst.Paint(backend.Stroke)
 	})
 }

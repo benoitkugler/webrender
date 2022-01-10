@@ -45,7 +45,7 @@ const (
 	// quadratic curves
 )
 
-func (pi pathItem) draw(dst backend.CanvasNoFill) {
+func (pi pathItem) draw(dst backend.Canvas) {
 	switch pi.op {
 	case moveTo:
 		dst.MoveTo(pi.args[0].x, pi.args[0].y)

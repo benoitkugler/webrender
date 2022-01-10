@@ -143,14 +143,14 @@ func (g gradient) GetIntrinsicSize(_, _ pr.Float) (pr.MaybeFloat, pr.MaybeFloat,
 	return nil, nil, nil
 }
 
-func (g gradient) Draw(dst backend.CanvasNoFill, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (g gradient) Draw(dst backend.Canvas, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	layout := g.layouter.Layout(pr.Float(concreteWidth), pr.Float(concreteHeight))
 	layout.Reapeating = g.repeating
 
 	if layout.Kind == "solid" {
 		dst.Rectangle(0, 0, concreteWidth, concreteHeight)
 		dst.SetColorRgba(layout.Colors[0], false)
-		dst.Fill(false)
+		dst.Paint(backend.FillNonZero)
 		return
 	}
 
