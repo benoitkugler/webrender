@@ -184,14 +184,14 @@ func NewSVGImage(svgData io.Reader, baseURL string, urlFetcher utils.UrlFetcher)
 
 	var err error
 	// FIXME: imageLoader : for now, nested image are not supported
-	icon, err := svg.Parse(svgData, baseURL, nil)
+	icon, err := svg.Parse(svgData, baseURL, nil, urlFetcher)
 	if err != nil {
 		return SVGImage{}, imageLoadingError(err)
 	}
 	return SVGImage{icon: icon}, nil
 }
 
-func NewSVGImageFromNode(node *html.Node, baseURL string) (SVGImage, error) {
+func NewSVGImageFromNode(node *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (SVGImage, error) {
 	// don’t pass data URIs: they are useless for relative URIs anyway.
 	if strings.HasPrefix(strings.ToLower(baseURL), "data:") {
 		baseURL = ""
@@ -199,7 +199,7 @@ func NewSVGImageFromNode(node *html.Node, baseURL string) (SVGImage, error) {
 
 	var err error
 	// FIXME: imageLoader : for now, nested image are not supported
-	icon, err := svg.ParseNode(node, baseURL, nil)
+	icon, err := svg.ParseNode(node, baseURL, nil, urlFetcher)
 	if err != nil {
 		return SVGImage{}, imageLoadingError(err)
 	}

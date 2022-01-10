@@ -22,6 +22,7 @@ type svgContext struct {
 
 	baseURL     string
 	imageLoader ImageLoader
+	urlFetcher  utils.UrlFetcher
 
 	// cache
 	pathParser pathParser
@@ -176,7 +177,7 @@ func fetchStyleAndTextRefs(root *utils.HTMLNode) ([][]byte, map[string][]byte) {
 // The stylesheets are processed and applied, the values
 // of the CSS properties begin stored as attributes
 // Inheritable attributes are cascaded and 'inherit' special values are resolved.
-func buildSVGTree(root *html.Node, baseURL string) (*svgContext, error) {
+func buildSVGTree(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
 	// extract the root svg node, which is not
 	// always the first one
 	iter := utils.NewHtmlIterator(root, atom.Svg)
@@ -190,6 +191,8 @@ func buildSVGTree(root *html.Node, baseURL string) (*svgContext, error) {
 
 	// build the SVG tree and apply style attribute
 	var out svgContext
+	out.baseURL = baseURL
+	out.urlFetcher = urlFetcher
 
 	// may return nil to discard the node
 	var buildTree func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode
@@ -267,7 +270,6 @@ func buildSVGTree(root *html.Node, baseURL string) (*svgContext, error) {
 	}
 
 	out.root = buildTree((*html.Node)(svgRoot), nil)
-	out.baseURL = baseURL
 
 	return &out, nil
 }

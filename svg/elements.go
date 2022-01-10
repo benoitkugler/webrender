@@ -11,6 +11,10 @@ import (
 	"github.com/benoitkugler/webrender/utils"
 )
 
+func init() {
+	elementBuilders["use"] = newUse // to avoid cycles
+}
+
 var elementBuilders = map[string]elementBuilder{
 	// "a":        newText,
 	"circle": newEllipse, // handle circles
@@ -26,7 +30,6 @@ var elementBuilders = map[string]elementBuilder{
 	// "text":     newText,
 	// "textPath": newText,
 	// "tspan":    newText,
-	// "use":      newUse,
 }
 
 // function parsing a generic node to build a specialized element
@@ -347,6 +350,48 @@ func (img image) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex
 	return nil
 }
 
+type use struct{}
+
+func newUse(node *cascadedNode, context *svgContext) (drawable, error) {
+	href, err := parseURL(node.attrs["href"])
+	if err != nil {
+		return nil, err
+	}
+
+	if href.Path == "" && href.Fragment != "" {
+		// inner child
+	} else {
+		// remote child : fetch the url
+		url := href.String()
+		content, err := context.urlFetcher(url)
+		if err != nil {
+			logger.WarningLogger.Printf("SVG: fetching <use> content: %s", err)
+			return nil, nil
+		}
+
+		useTarget, err := Parse(content.Content, url, context.imageLoader, context.urlFetcher)
+		if err != nil {
+			logger.WarningLogger.Printf("SVG: parsing <use> content: %s", err)
+			return nil, nil
+		}
+
+		// TODO:
+		fmt.Println(useTarget)
+	}
+
+	return use{}, nil
+}
+
+func (u use) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
+	// TODO
+	logger.WarningLogger.Println("drawing <use> tags is not implemented")
+	return nil
+}
+
+func (u use) boundingBox(attrs *attributes, dims drawingDims) (Rectangle, bool) {
+	return Rectangle{}, false
+}
+
 // definitions
 
 type filter interface {
@@ -398,15 +443,17 @@ func newFilter(node *cascadedNode) (out []filter, err error) {
 // graphic nodes, which will use as clipping path,
 // that is drawn but not stroked nor filled.
 type clipPath struct {
-	children    []*svgNode
+	svgNode
 	isUnitsBBox bool
 }
 
-func newClipPath(node *cascadedNode, children []*svgNode) clipPath {
-	return clipPath{
-		children:    children,
+func newClipPath(node *cascadedNode, children []*svgNode) (*clipPath, error) {
+	out := clipPath{
+		svgNode:     svgNode{children: children},
 		isUnitsBBox: node.attrs["clipPathUnits"] == "objectBoundingBox",
 	}
+	err := node.attrs.parseCommonAttributes(&out.attributes)
+	return &out, err
 }
 
 // marker is a container for a marker to draw

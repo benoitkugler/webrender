@@ -22,7 +22,7 @@ import (
 // from other nodes
 type definitions struct {
 	filters      map[string][]filter
-	clipPaths    map[string]clipPath
+	clipPaths    map[string]*clipPath
 	masks        map[string]mask
 	paintServers map[string]paintServer
 	markers      map[string]*marker
@@ -32,7 +32,7 @@ type definitions struct {
 func newDefinitions() definitions {
 	return definitions{
 		filters:      make(map[string][]filter),
-		clipPaths:    make(map[string]clipPath),
+		clipPaths:    make(map[string]*clipPath),
 		masks:        make(map[string]mask),
 		paintServers: make(map[string]paintServer),
 		markers:      make(map[string]*marker),
@@ -110,7 +110,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// clip
 		if cp, has := svg.definitions.clipPaths[node.clipPathID]; has {
-			applyClipPath(dst, cp, node, dims)
+			svg.applyClipPath(dst, cp, node, dims)
 		}
 
 		// manage display and visibility
@@ -148,7 +148,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		// apply opacity group and restore original target
 		if paint && 0 <= opacity && opacity < 1 {
 			originalDst.DrawOpacityGroup(opacity, dst)
-			dst = originalDst
+			dst = originalDst // actually not used
 		}
 	}
 
@@ -369,26 +369,25 @@ func applyFilters(dst backend.Canvas, filters []filter, node *svgNode, dims draw
 	}
 }
 
-func applyClipPath(dst backend.Canvas, clipPath clipPath, node *svgNode, dims drawingDims) {
-	// old_ctm = self.stream.ctm
+func (svg *SVGImage) applyClipPath(dst backend.Canvas, clipPath *clipPath, node *svgNode, dims drawingDims) {
+	oldCtm := dst.GetTransform()
+
 	if clipPath.isUnitsBBox {
 		x, y := dims.point(node.attributes.x, node.attributes.y)
 		width, height := dims.point(node.attributes.width, node.attributes.height)
 		dst.Transform(matrix.New(width, 0, 0, height, x, y))
 	}
 
-	// FIXME:
-	logger.WarningLogger.Println("applying clip path is not supported")
-	// clip_path._etree_node.tag = 'g'
-	// self.draw_node(clip_path, font_size, fill_stroke=False)
+	svg.drawNode(dst, &clipPath.svgNode, dims, false)
 
 	// At least set the clipping area to an empty path, so that it’s
 	// totally clipped when the clipping path is empty.
 	dst.Rectangle(0, 0, 0, 0)
 	dst.Clip(false)
-	// new_ctm = self.stream.ctm
-	// if new_ctm.determinant:
-	//     self.stream.transform(*(old_ctm @ new_ctm.invert).values)
+	newCtm := dst.GetTransform()
+	if err := newCtm.Invert(); err == nil {
+		dst.Transform(matrix.Mul(oldCtm, newCtm))
+	}
 }
 
 func applyMask(dst backend.Canvas, mask mask, node *svgNode, dims drawingDims) {
@@ -444,20 +443,21 @@ type ImageLoader = func(url string) (backend.Image, error)
 // logged for unsupported elements.
 // An error is returned for invalid documents.
 // `baseURL` is used as base path for url resources.
+// `urlFetcher` is required to handle linked SVG documents like in <use> tags.
 // `imageLoader` is required to handle inner images.
-func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader) (*SVGImage, error) {
+func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
 	root, err := html.Parse(svg)
 	if err != nil {
 		return nil, err
 	}
 
-	return ParseNode(root, baseURL, imageLoader)
+	return ParseNode(root, baseURL, imageLoader, urlFetcher)
 }
 
 // ParseNode is the same as Parse but works with an already parsed
 // svg input.
-func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader) (*SVGImage, error) {
-	tree, err := buildSVGTree(root, baseURL)
+func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
+	tree, err := buildSVGTree(root, baseURL, urlFetcher)
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +580,11 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 		}
 		defs.filters[id] = filters
 	case "clipPath":
-		defs.clipPaths[id] = newClipPath(node, children)
+		cp, err := newClipPath(node, children)
+		if err != nil {
+			return nil, err
+		}
+		defs.clipPaths[id] = cp
 	case "mask":
 		ma, err := newMask(node, children)
 		if err != nil {
@@ -608,6 +612,8 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 	case "defs":
 		// children has been processed and registred,
 		// so we discard the node, which is not needed anymore
+	case "g":
+		logger.WarningLogger.Println("<g> element not supported yet")
 	default:
 		out, err := tree.processGraphicNode(node, children)
 		if err != nil {

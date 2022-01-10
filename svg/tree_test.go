@@ -16,7 +16,7 @@ func parseIcon(t *testing.T, iconPath string) {
 	}
 	defer f.Close()
 
-	img, err := Parse(f, "", nil)
+	img, err := Parse(f, "", nil, nil)
 	if err != nil {
 		t.Fatal(iconPath, err)
 	}
@@ -67,11 +67,11 @@ func TestPercentages(t *testing.T) {
 }
 
 func TestInvalidXML(t *testing.T) {
-	_, err := Parse(strings.NewReader("dummy"), "", nil)
+	_, err := Parse(strings.NewReader("dummy"), "", nil, nil)
 	if err == nil {
 		t.Fatal("expected error on invalid input")
 	}
-	_, err = Parse(strings.NewReader("<not-svg></not-svg>"), "", nil)
+	_, err = Parse(strings.NewReader("<not-svg></not-svg>"), "", nil, nil)
 	if err == nil {
 		t.Fatal("expected error on invalid input")
 	}
@@ -93,7 +93,7 @@ func TestBuildTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tree, err := buildSVGTree(root, "")
+	tree, err := buildSVGTree(root, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestParseDefs(t *testing.T) {
 	<use x="5" y="5" href="#myCircle" fill="url('#myGradient')" />
 	</svg>
 	`
-	img, err := Parse(strings.NewReader(input), "", nil)
+	img, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestTrefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	img, err := buildSVGTree(root, "")
+	img, err := buildSVGTree(root, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

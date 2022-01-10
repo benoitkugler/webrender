@@ -34,7 +34,7 @@ func TestSVGDisplayedSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	img, err := svg.Parse(f, "", nil)
+	img, err := svg.Parse(f, "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -37,7 +37,7 @@ func TestHandleText(t *testing.T) {
 				fill="none" stroke-width="2" />
 		</svg>
 		`
-	img, err := Parse(strings.NewReader(input), "", nil)
+	img, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestFilter(t *testing.T) {
 		<circle cx="170" cy="60" r="50" fill="green" filter="url(#blurMe)"/>
 	</svg>
 	`
-	out, err := Parse(strings.NewReader(input), "", nil)
+	out, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestClipPath(t *testing.T) {
 	<use clip-path="url(#myClip)" href="#heart" fill="red" />
 	</svg>
 	`
-	out, err := Parse(strings.NewReader(input), "", nil)
+	out, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestMask(t *testing.T) {
 	<circle cx="50" cy="50" r="50" mask="url(#myMask)" />
 	</svg>
 	`
-	out, err := Parse(strings.NewReader(input), "", nil)
+	out, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestMarker(t *testing.T) {
 		points="20,100 40,60 70,80 100,20" marker-start="url(#triangle)"/>
 	</svg>
 	`
-	out, err := Parse(strings.NewReader(input), "", nil)
+	out, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestGradient(t *testing.T) {
 
 	</svg>
 	`
-	out, err := Parse(strings.NewReader(input), "", nil)
+	out, err := Parse(strings.NewReader(input), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
