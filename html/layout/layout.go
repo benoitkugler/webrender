@@ -63,7 +63,7 @@ func Layout(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, f
 
 	logger.ProgressLogger.Println("Step 4 - Creating formatting structure")
 
-	rootBox := bo.BuildFormattingStructure(html.Root, context.styleFor, context.getImageFromUri,
+	rootBox := bo.BuildFormattingStructure(html.Root, context.styleFor, context.resolver,
 		html.BaseUrl, &context.TargetCollector, counterStyle, &context.footnotes)
 
 	return layoutDocument(html, rootBox, context, -1)
@@ -271,7 +271,7 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 			page.Children = append(page.Children, footnoteArea)
 		}
 		page.Children = append(page.Children, makeMarginBoxes(context, page, state)...)
-		layoutBackgrounds(page, context.getImageFromUri)
+		layoutBackgrounds(page, context.resolver.FetchImage)
 		out[i] = page
 	}
 	return out
@@ -294,7 +294,7 @@ type layoutContext struct {
 	strutLayouts    map[text.StrutLayoutKey][2]pr.Float
 	tables          map[*bo.TableBox]map[bool]tableContentWidths
 
-	getImageFromUri     bo.Gifu
+	resolver            bo.URLResolver
 	fontConfig          *text.FontConfiguration
 	TargetCollector     tree.TargetCollector
 	counterStyle        counters.CounterStyle
@@ -333,7 +333,7 @@ func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
 	}
 
 	self := layoutContext{}
-	self.getImageFromUri = getImageFromUri
+	self.resolver = bo.URLResolver{Fetch: html.UrlFetcher, FetchImage: getImageFromUri}
 	self.fontConfig = fontConfig
 	self.TargetCollector = tree.NewTargetCollector()
 	self.counterStyle = counterStyle

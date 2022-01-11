@@ -18,14 +18,10 @@ import (
 	"golang.org/x/net/html"
 )
 
-//    Turn an element tree with associated CSS style (computed values)
-//    into a "before layout" formatting structure / box tree.
-//
-//    This includes creating anonymous boxes and processing whitespace
-//    as necessary.
-//
-//    :copyright: Copyright 2011-2014 Simon Sapin and contributors, see AUTHORS.
-//    :license: BSD, see LICENSE for details.
+// Turn an element tree with associated CSS style (computed values)
+// into a "before layout" formatting structure / box tree.
+// This includes creating anonymous boxes and processing whitespace
+// as necessary.
 
 var (
 	TableFirstLetter = []*unicode.RangeTable{unicode.Ps, unicode.Pe, unicode.Pi, unicode.Pf, unicode.Po}
@@ -65,6 +61,11 @@ type Context interface {
 	GetRunningElementFor(page Box, name, keyword string) Box
 }
 
+type URLResolver struct {
+	Fetch      utils.UrlFetcher
+	FetchImage Gifu
+}
+
 type Gifu = func(url, forcedMimeType string) images.Image
 
 type styleForI interface {
@@ -98,17 +99,17 @@ func CreateAnonymousBox(box Box) Box {
 }
 
 // Build a formatting structure (box tree) from an element tree.
-func BuildFormattingStructure(elementTree *utils.HTMLNode, styleFor *tree.StyleFor, getImageFromUri Gifu,
+func BuildFormattingStructure(elementTree *utils.HTMLNode, styleFor *tree.StyleFor, resolver URLResolver,
 	baseUrl string, targetCollector *tree.TargetCollector, cs counters.CounterStyle, footnotes *[]Box) BlockLevelBoxITF {
 
-	boxList := elementToBox(elementTree, styleFor, getImageFromUri, baseUrl, targetCollector, cs, nil, footnotes)
+	boxList := elementToBox(elementTree, styleFor, resolver, baseUrl, targetCollector, cs, nil, footnotes)
 
 	var box Box
 	if len(boxList) > 0 {
 		box = boxList[0]
 	} else { //  No root element
 		rsf := rootStyleFor{elementTree: elementTree, StyleFor: *styleFor}
-		box = elementToBox(elementTree, rsf, getImageFromUri, baseUrl, targetCollector, cs, nil, footnotes)[0]
+		box = elementToBox(elementTree, rsf, resolver, baseUrl, targetCollector, cs, nil, footnotes)[0]
 	}
 
 	targetCollector.CheckPendingTargets()
@@ -200,7 +201,7 @@ func makeBox(style pr.ElementStyle, content []Box, element *utils.HTMLNode, pseu
 //    ``TextBox``es are anonymous inline boxes:
 //    See http://www.w3.org/TR/CSS21/visuren.html#anonymous
 func elementToBox(element *utils.HTMLNode, styleFor styleForI,
-	getImageFromUri Gifu, baseUrl string, targetCollector *tree.TargetCollector,
+	resolver URLResolver, baseUrl string, targetCollector *tree.TargetCollector,
 	cs counters.CounterStyle, state *tree.PageState, footnotes *[]Box) []Box {
 
 	if element.Type != html.TextNode && element.Type != html.ElementNode && element.Type != html.DocumentNode {
@@ -255,14 +256,14 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 
 	var children, markerBoxes []Box
 	if display.Has("list-item") {
-		mb := markerToBox(element, state, style, styleFor, getImageFromUri, targetCollector, cs)
+		mb := markerToBox(element, state, style, styleFor, resolver, targetCollector, cs)
 		if mb != nil {
 			markerBoxes = []Box{mb}
 		}
 		children = append(children, markerBoxes...)
 	}
 
-	vs := beforeAfterToBox(element, "before", state, styleFor, getImageFromUri, targetCollector, cs)
+	vs := beforeAfterToBox(element, "before", state, styleFor, resolver, targetCollector, cs)
 	children = append(children, vs...)
 
 	// collect anchor's counter_values, maybe it's a target.
@@ -292,7 +293,7 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 				children = append(children, textBox)
 			}
 		} else {
-			childBoxes := elementToBox(childElement, styleFor, getImageFromUri, baseUrl, targetCollector, cs, state, footnotes)
+			childBoxes := elementToBox(childElement, styleFor, resolver, baseUrl, targetCollector, cs, state, footnotes)
 			if len(childBoxes) != 0 && childBoxes[0].Box().Style.GetFloat() == "footnote" {
 				footnote := childBoxes[0]
 				footnote.Box().Style.SetFloat("none")
@@ -305,14 +306,14 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 				}
 				footnoteCall.Box().Children = ContentToBoxes(
 					callStyle, footnoteCall, state.QuoteDepth, state.CounterValues,
-					getImageFromUri, targetCollector, cs, nil, nil)
+					resolver, targetCollector, cs, nil, nil)
 				footnoteCall.Box().Footnote = footnote
 				childBoxes = []Box{footnoteCall}
 			}
 			children = append(children, childBoxes...)
 		}
 	}
-	children = append(children, beforeAfterToBox(element, "after", state, styleFor, getImageFromUri, targetCollector, cs)...)
+	children = append(children, beforeAfterToBox(element, "after", state, styleFor, resolver, targetCollector, cs)...)
 
 	// Scopes created by this element’s children stop here.
 	counterScope := state.CounterScopes[len(state.CounterScopes)-1]
@@ -355,17 +356,17 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 			return nil
 		}
 		marker.Box().Children = ContentToBoxes(
-			markerStyle, box, state.QuoteDepth, state.CounterValues, getImageFromUri,
+			markerStyle, box, state.QuoteDepth, state.CounterValues, resolver,
 			targetCollector, cs, nil, nil)
 		box.Box().Children = append([]Box{marker}, box.Box().Children...)
 	}
 	// Specific handling for the element. (eg. replaced element)
-	return handleElement(element, box, getImageFromUri, baseUrl)
+	return handleElement(element, box, resolver, baseUrl)
 }
 
 // Yield the box for ::before or ::after pseudo-element.
 func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.PageState, styleFor styleForI,
-	getImageFromUri Gifu, targetCollector *tree.TargetCollector, cs counters.CounterStyle) []Box {
+	resolver URLResolver, targetCollector *tree.TargetCollector, cs counters.CounterStyle) []Box {
 
 	style := styleFor.Get(element, pseudoType)
 	if pseudoType != "" && style == nil {
@@ -390,13 +391,13 @@ func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.Pa
 
 	var children []Box
 	if display.Has("list-item") {
-		mb := markerToBox(element, state, style, styleFor, getImageFromUri, targetCollector, cs)
+		mb := markerToBox(element, state, style, styleFor, resolver, targetCollector, cs)
 		if mb != nil {
 			children = append(children, mb)
 		}
 	}
 	children = append(children, ContentToBoxes(
-		style, box, state.QuoteDepth, state.CounterValues, getImageFromUri, targetCollector, cs, nil, nil)...)
+		style, box, state.QuoteDepth, state.CounterValues, resolver, targetCollector, cs, nil, nil)...)
 
 	box.Box().Children = children
 
@@ -409,7 +410,7 @@ func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.Pa
 // Yield the box for ::marker pseudo-element if there is one.
 // https://drafts.csswg.org/css-lists-3/#marker-pseudo
 func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.ElementStyle, styleFor styleForI,
-	getImageFromUri Gifu, targetCollector *tree.TargetCollector, cs counters.CounterStyle) Box {
+	resolver URLResolver, targetCollector *tree.TargetCollector, cs counters.CounterStyle) Box {
 	style := styleFor.Get(element, "marker")
 
 	box, err := makeBox(style, nil, element, "marker")
@@ -428,11 +429,11 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 
 	if content := style.GetContent().String; content != "normal" && content != "inhibit" {
 		*children = append(*children, ContentToBoxes(style, box, state.QuoteDepth, state.CounterValues,
-			getImageFromUri, targetCollector, cs, nil, nil)...)
+			resolver, targetCollector, cs, nil, nil)...)
 	} else {
 		if imageUrl, ok := image.(pr.UrlImage); ok {
 			// image may be None here too, in case the image is not available.
-			image_ := getImageFromUri(string(imageUrl), "")
+			image_ := resolver.FetchImage(string(imageUrl), "")
 			if image_ != nil {
 				markerBox := InlineReplacedBoxAnonymousFrom(box, image_)
 				*children = append(*children, markerBox)
@@ -514,7 +515,7 @@ func collectMissingTargetCounter(counterName string, lookupCounterValues tree.Co
 // required reparsing.
 func computeContentList(contentList pr.ContentProperties, parentBox Box, counterValues tree.CounterValues,
 	cssToken string, parseAgain tree.ParseFunc, targetCollector *tree.TargetCollector, cs counters.CounterStyle,
-	getImageFromUri Gifu, quoteDepth []int, quoteStyle pr.Quotes, context Context, page Box) []Box {
+	resolver URLResolver, quoteDepth []int, quoteStyle pr.Quotes, context Context, page Box) []Box {
 
 	contentBoxes := []Box{}
 
@@ -552,7 +553,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 		case "string":
 			addText(content.AsString())
 		case "url":
-			if getImageFromUri == nil {
+			if resolver.FetchImage == nil {
 				continue
 			}
 			value := content.Content.(pr.NamedString)
@@ -560,7 +561,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 				// Embedding internal references is impossible
 				continue
 			}
-			image := getImageFromUri(value.String, "")
+			image := resolver.FetchImage(value.String, "")
 			if image != nil {
 				contentBoxes = append(contentBoxes, InlineReplacedBoxAnonymousFrom(parentBox, image))
 			}
@@ -738,7 +739,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 				}
 				child.Box().Children = ContentToBoxes(
 					child.Box().Style, child, quoteDepth, counterValues,
-					getImageFromUri, targetCollector, cs, context, page)
+					resolver, targetCollector, cs, context, page)
 			}
 			contentBoxes = append(contentBoxes, newBox)
 		case "leader()":
@@ -763,7 +764,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 
 // Takes the value of a ``content`` property and yield boxes.
 func ContentToBoxes(style pr.ElementStyle, parentBox Box, quoteDepth []int, counterValues tree.CounterValues,
-	getImageFromUri Gifu, targetCollector *tree.TargetCollector, cs counters.CounterStyle, context Context, page Box) []Box {
+	resolver URLResolver, targetCollector *tree.TargetCollector, cs counters.CounterStyle, context Context, page Box) []Box {
 	origQuoteDepth := make([]int, len(quoteDepth))
 
 	// Closure to parse the ``parentBoxes`` children all again.
@@ -778,7 +779,7 @@ func ContentToBoxes(style pr.ElementStyle, parentBox Box, quoteDepth []int, coun
 		var localChildren []Box
 		localChildren = append(localChildren, ContentToBoxes(
 			style, parentBox, origQuoteDepth, localCounters,
-			getImageFromUri, targetCollector, cs, nil, nil)...)
+			resolver, targetCollector, cs, nil, nil)...)
 
 		parentChildren := parentBox.Box().Children
 		if len(parentChildren) == 1 && LineBoxT.IsInstance(parentChildren[0]) {
@@ -798,7 +799,7 @@ func ContentToBoxes(style pr.ElementStyle, parentBox Box, quoteDepth []int, coun
 	cssToken := "content"
 	boxList := computeContentList(
 		style.GetContent().Contents, parentBox, counterValues, cssToken, parseAgain,
-		targetCollector, cs, getImageFromUri, quoteDepth, style.GetQuotes(),
+		targetCollector, cs, resolver, quoteDepth, style.GetQuotes(),
 		context, page)
 	return boxList
 }
@@ -821,7 +822,7 @@ func computeStringSet(element *utils.HTMLNode, box Box, stringName string, conte
 
 	cssToken := "string-set::" + stringName
 	boxList := computeContentList(contentList, box, counterValues, cssToken, parseAgain,
-		targetCollector, cs, nil, nil, pr.Quotes{}, nil, nil)
+		targetCollector, cs, URLResolver{}, nil, pr.Quotes{}, nil, nil)
 	if boxList != nil {
 		var builder strings.Builder
 		for _, box1 := range boxList {
@@ -862,7 +863,7 @@ func computeBookmarkLabel(element *utils.HTMLNode, box Box, contentList pr.Conte
 
 	cssToken := "bookmark-label"
 	boxList := computeContentList(contentList, box, counterValues, cssToken, parseAgain, targetCollector, cs,
-		nil, nil, pr.Quotes{}, nil, nil)
+		URLResolver{}, nil, pr.Quotes{}, nil, nil)
 
 	var builder strings.Builder
 	for _, box := range boxList {

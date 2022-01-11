@@ -44,7 +44,7 @@ func fakeHTML(html *tree.HTML) *tree.HTML {
 }
 
 func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils.HTMLNode,
-	*tree.StyleFor, Gifu, string, *tree.TargetCollector, counters.CounterStyle, *[]Box) {
+	*tree.StyleFor, URLResolver, string, *tree.TargetCollector, counters.CounterStyle, *[]Box) {
 	t.Helper()
 
 	html, err := tree.NewHTML(content, baseUrl, utils.DefaultUrlFetcher, "")
@@ -58,7 +58,7 @@ func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils
 		return images.GetImageFromUri(images.NewCache(), document.UrlFetcher, false, url, forcedMimeType)
 	}
 	tr := tree.NewTargetCollector()
-	return document.Root, style, imgFetcher, html.BaseUrl, &tr, cs, new([]Box)
+	return document.Root, style, URLResolver{document.UrlFetcher, imgFetcher}, html.BaseUrl, &tr, cs, new([]Box)
 }
 
 func parse(t *testing.T, htmlContent string) BoxITF {

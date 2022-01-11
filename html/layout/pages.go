@@ -418,7 +418,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 			bo.UpdateCounters(&marginState, box.Style)
 			box.Children = bo.ContentToBoxes(
 				box.Style, box, marginState.QuoteDepth, marginState.CounterValues,
-				context.getImageFromUri, &context.TargetCollector, context.counterStyle, context,
+				context.resolver, &context.TargetCollector, context.counterStyle, context,
 				page)
 			bo.ProcessWhitespace(box, false)
 			bo.ProcessTextTransform(box)
