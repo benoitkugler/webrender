@@ -3,6 +3,7 @@ package svg
 import (
 	"bytes"
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 
@@ -24,6 +25,12 @@ type svgContext struct {
 	imageLoader ImageLoader
 	urlFetcher  utils.UrlFetcher
 
+	// to handle use tags
+	defs map[string]*cascadedNode
+	// ID of the current <use> target being resolved,
+	// to prevent infinite recursion
+	inUseIDs utils.Set
+
 	// cache
 	pathParser pathParser
 }
@@ -37,6 +44,17 @@ type cascadedNode struct {
 	text     []byte
 	attrs    nodeAttributes
 	children []*cascadedNode
+}
+
+// returns a copy
+// attrs id deepcopied, but the children and text are shallow copies
+func (c *cascadedNode) copy() cascadedNode {
+	out := *c
+	out.attrs = make(nodeAttributes, len(c.attrs))
+	for k, v := range c.attrs {
+		out.attrs[k] = v
+	}
+	return out
 }
 
 // raw attributes value of a node
@@ -177,6 +195,15 @@ func fetchStyleAndTextRefs(root *utils.HTMLNode) ([][]byte, map[string][]byte) {
 // The stylesheets are processed and applied, the values
 // of the CSS properties begin stored as attributes
 // Inheritable attributes are cascaded and 'inherit' special values are resolved.
+func buildSVGTreeReader(svg io.Reader, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
+	root, err := html.Parse(svg)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildSVGTree(root, baseURL, urlFetcher)
+}
+
 func buildSVGTree(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
 	// extract the root svg node, which is not
 	// always the first one
@@ -193,6 +220,8 @@ func buildSVGTree(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) 
 	var out svgContext
 	out.baseURL = baseURL
 	out.urlFetcher = urlFetcher
+	out.defs = make(map[string]*cascadedNode)
+	out.inUseIDs = make(utils.Set)
 
 	// may return nil to discard the node
 	var buildTree func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode
@@ -264,6 +293,10 @@ func buildSVGTree(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) 
 		// Fix text in text tags
 		if node.Data == "text" || node.Data == "textPath" || node.Data == "a" {
 			handleText(nodeSVG, true, true, trefs)
+		}
+
+		if ID := attrs["id"]; ID != "" {
+			out.defs[ID] = nodeSVG
 		}
 
 		return nodeSVG

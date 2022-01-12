@@ -16,12 +16,12 @@ func (node *svgNode) resolveBoundingBox(dims drawingDims, withStroke bool) (Rect
 		return Rectangle{}, false
 	}
 
-	if withStroke { // TODO: check the condition
+	if withStroke && node.attributes.stroke.valid {
 		strokeWidth := dims.length(node.attributes.strokeWidth)
 		bbox.X -= strokeWidth / 2
 		bbox.Y -= strokeWidth / 2
-		bbox.Width += strokeWidth / 2
-		bbox.Height += strokeWidth / 2
+		bbox.Width += strokeWidth
+		bbox.Height += strokeWidth
 	}
 
 	return bbox, true

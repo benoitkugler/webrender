@@ -11,10 +11,6 @@ import (
 	"github.com/benoitkugler/webrender/utils"
 )
 
-func init() {
-	elementBuilders["use"] = newUse // to avoid cycles
-}
-
 var elementBuilders = map[string]elementBuilder{
 	// "a":        newText,
 	"circle": newEllipse, // handle circles
@@ -350,16 +346,34 @@ func (img image) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex
 	return nil
 }
 
-type use struct{}
+// wraps a node
+// it is a special case of content, handled in drawNode
+type use struct {
+	target *svgNode
+}
 
-func newUse(node *cascadedNode, context *svgContext) (drawable, error) {
+// resolves and returns the <use> target content
+// wrapped in graphicContent field
+func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*svgNode, error) {
 	href, err := parseURL(node.attrs["href"])
 	if err != nil {
 		return nil, err
 	}
 
-	if href.Path == "" && href.Fragment != "" {
+	var useTarget cascadedNode
+	if ID := href.Fragment; href.Path == "" && ID != "" {
+		if context.inUseIDs.Has(ID) {
+			return nil, fmt.Errorf("invalid recursive <use>")
+		}
+		context.inUseIDs.Add(ID)
+
+		// update after resolving
+		defer func() {
+			delete(context.inUseIDs, ID)
+		}()
+
 		// inner child
+		useTarget = context.defs[ID].copy()
 	} else {
 		// remote child : fetch the url
 		url := href.String()
@@ -369,27 +383,66 @@ func newUse(node *cascadedNode, context *svgContext) (drawable, error) {
 			return nil, nil
 		}
 
-		useTarget, err := Parse(content.Content, url, context.imageLoader, context.urlFetcher)
+		parsedTarget, err := buildSVGTreeReader(content.Content, url, context.urlFetcher)
 		if err != nil {
 			logger.WarningLogger.Printf("SVG: parsing <use> content: %s", err)
 			return nil, nil
 		}
 
-		// TODO:
-		fmt.Println(useTarget)
+		useTarget = *parsedTarget.root
 	}
 
-	return use{}, nil
+	if useTarget.tag == "svg" || useTarget.tag == "symbol" {
+		// Explicitely specified
+		// http://www.w3.org/TR/SVG11/struct.html#UseElement
+		useTarget.tag = "svg"
+		width, hasWidth := node.attrs["width"]
+		height, hasHeight := node.attrs["height"]
+		if hasWidth && hasHeight {
+			useTarget.attrs["width"] = width
+			useTarget.attrs["height"] = height
+		}
+	}
+
+	// cascade
+	for key, value := range node.attrs {
+		if notInheritedAttributes.Has(key) {
+			continue
+		}
+		if _, specified := useTarget.attrs[key]; !specified {
+			useTarget.attrs[key] = value
+		}
+	}
+
+	target, err := context.processNode(&useTarget, defs)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &svgNode{
+		graphicContent: use{target: target},
+	}
+	err = node.attrs.parseCommonAttributes(&out.attributes)
+	return out, err
 }
 
-func (u use) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
-	// TODO
-	logger.WarningLogger.Println("drawing <use> tags is not implemented")
-	return nil
-}
+// stub implementation, see SVGImage.drawUse
+func (use) draw(dst backend.Canvas, attrs *attributes, dims drawingDims) []vertex { return nil }
 
-func (u use) boundingBox(attrs *attributes, dims drawingDims) (Rectangle, bool) {
+func (use) boundingBox(attrs *attributes, dims drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
+}
+
+func (svg *SVGImage) drawUse(dst backend.Canvas, u use, attrs *attributes, dims drawingDims) {
+	if u.target == nil {
+		return
+	}
+	x, y := dims.point(attrs.x, attrs.y)
+
+	dst.OnNewStack(func() {
+		dst.Transform(matrix.Translation(x, y))
+		svg.drawNode(dst, u.target, dims, true) // actually draw the target
+	})
 }
 
 // definitions

@@ -119,8 +119,13 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// draw the node itself.
 		var vertices []vertex
-		if visible && node.graphicContent != nil {
-			vertices = node.graphicContent.draw(dst, &node.attributes, dims)
+		if visible {
+			// special case for <use> tags, which require the context
+			if u, isUse := node.graphicContent.(use); isUse {
+				svg.drawUse(dst, u, &node.attributes, dims)
+			} else if node.graphicContent != nil {
+				vertices = node.graphicContent.draw(dst, &node.attributes, dims)
+			}
 		}
 
 		// then recurse
@@ -275,7 +280,7 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 }
 
 // compute scale and translation needed to preserve ratio
-// translate is optinional
+// translate is optional
 func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Rectangle, translate *point) (scaleX, scaleY, translateX, translateY Fl) {
 	if viewbox == nil {
 		return 1, 1, 0, 0
@@ -609,6 +614,12 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 			return nil, err
 		}
 		defs.paintServers[id] = pat
+	case "use": // special case
+		resolved, err := tree.resolveUse(node, defs)
+		if err != nil {
+			return nil, err
+		}
+		return resolved, nil
 	case "defs":
 		// children has been processed and registred,
 		// so we discard the node, which is not needed anymore

@@ -312,4 +312,57 @@ func TestInvalidAttributes(t *testing.T) {
 	}
 }
 
+func TestParseUse(t *testing.T) {
+	input := `
+	<svg width="10px" height="10px" xmlns="http://www.w3.org/2000/svg"
+		xlink="http://www.w3.org/1999/xlink">
+		<defs>
+			<rect id="rectangle" width="5" height="2" fill="red" />
+		</defs>
+		<use xlink:href="#rectangle" />
+		<use xlink:href="#rectangle" x="3" y="3" />
+		<use xlink:href="#rectangle" x="5" y="6" />
+	</svg>
+	`
+	out, err := Parse(strings.NewReader(input), "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(out.root.children) != 3 {
+		t.Fatalf("unexpected children length %v", out.root.children)
+	}
+
+	if _, has := out.definitions.nodes["rectangle"]; !has {
+		t.Fatal("missing defs")
+	}
+
+	u, ok := out.root.children[0].graphicContent.(use)
+	if !ok {
+		t.Fatalf("unexpected use %v", out.root.children[0].graphicContent)
+	}
+	if _, isRect := u.target.graphicContent.(rect); !isRect {
+		t.Fatalf("unexpected use target %v", u.target.graphicContent)
+	}
+}
+
+func TestParseUseMalicious(t *testing.T) {
+	input := `
+	<svg width="10px" height="10px" xmlns="http://www.w3.org/2000/svg"
+		xlink="http://www.w3.org/1999/xlink">
+		<defs>
+			<svg id="rectangle">
+				<rect width="5" height="2" fill="red" />
+				<use href="#rectangle"/>
+			</svg>
+		</defs>
+		<use xlink:href="#rectangle" />
+	</svg>
+	`
+	_, err := Parse(strings.NewReader(input), "", nil, nil)
+	if err == nil {
+		t.Fatal("expected error for malicious content")
+	}
+}
+
 // TODO: test pattern
