@@ -2,7 +2,6 @@ package svg
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
@@ -142,7 +141,8 @@ func (svg *SVGImage) applyPainter(dst backend.Canvas, node *svgNode, pt painter,
 }
 
 // gradient or pattern
-type paintServer interface { // TODO:
+type paintServer interface {
+	// setup the "color" for the given `node`
 	paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool
 }
 
@@ -450,24 +450,21 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 	return true
 }
 
-type pattern struct { // TODO:
-	transforms []transform
-
-	box
+// pattern is a container for shapes to be used as
+// fill or stroke color
+type pattern struct {
+	svgNode
 
 	isUnitsUserSpace   bool // patternUnits
 	isContentUnitsBBox bool // patternContentUnits
 }
 
-func newPattern(node *cascadedNode) (out pattern, err error) {
+func newPattern(node *cascadedNode, children []*svgNode) (out pattern, err error) {
+	out.children = children
 	out.isUnitsUserSpace = node.attrs["patternUnits"] == "userSpaceOnUse"
 	out.isContentUnitsBBox = node.attrs["patternContentUnits"] == "objectBoundingBox"
-	err = node.attrs.parseBox(&out.box)
-	if err != nil {
-		return out, fmt.Errorf("parsing pattern element: %s", err)
-	}
 
-	out.transforms, err = parseTransform(node.attrs["patternTransform"])
+	err = node.attrs.parseCommonAttributes(&out.attributes)
 	if err != nil {
 		return out, fmt.Errorf("parsing pattern element: %s", err)
 	}
@@ -476,6 +473,56 @@ func newPattern(node *cascadedNode) (out pattern, err error) {
 }
 
 func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
-	log.Println("painting with pattern is not implemented")
-	return false
+	bbox, ok := node.resolveBoundingBox(dims, stroke)
+	if !ok {
+		return false
+	}
+
+	mat := matrix.Translation(bbox.X, bbox.Y)
+
+	var patternWidth, patternHeight Fl
+	if pt.isUnitsUserSpace {
+		patternWidth = pt.width.Resolve(dims.fontSize, 1)
+		patternHeight = pt.height.Resolve(dims.fontSize, 1)
+	} else {
+		width, height := bbox.Width, bbox.Height
+
+		if pt.width.V == 0 {
+			pt.width = Value{U: Px, V: 1}
+		}
+		if pt.height.V == 0 {
+			pt.height = Value{U: Px, V: 1}
+		}
+		patternWidth = pt.width.Resolve(dims.fontSize, 1) * width
+		patternHeight = pt.height.Resolve(dims.fontSize, 1) * height
+
+		if pt.viewbox == nil {
+			pt.box.width = Value{U: Px, V: patternWidth}
+			pt.box.height = Value{U: Px, V: patternHeight}
+			if pt.isContentUnitsBBox {
+				pt.transforms = []transform{{kind: scale, args: [6]Value{
+					{U: Px, V: width}, {U: Px, V: height},
+				}}}
+			}
+		}
+	}
+
+	// Fail if pattern has an invalid size
+	if patternWidth == 0 || patternHeight == 0 {
+		return false
+	}
+
+	tr := aggregateTransforms(pt.transforms, dims.fontSize, dims.innerDiagonal)
+	mat.RightMultBy(tr)
+
+	// draw the pattern content on the temporary target
+	pat := dst.AddPattern(patternWidth, patternHeight)
+	pat.SetColorRgba(parser.RGBA{A: opacity}, false)
+	patSVG := SVGImage{root: &pt.svgNode}
+	patSVG.Draw(pat, patternWidth, patternHeight)
+
+	// apply the pattern
+	dst.SetColorPattern(pat, patternWidth, patternHeight, mat, stroke)
+
+	return true
 }

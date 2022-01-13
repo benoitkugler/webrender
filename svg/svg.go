@@ -609,7 +609,7 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 		}
 		defs.paintServers[id] = grad
 	case "pattern":
-		pat, err := newPattern(node)
+		pat, err := newPattern(node, children)
 		if err != nil {
 			return nil, err
 		}
