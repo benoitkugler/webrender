@@ -123,10 +123,6 @@ func (outputPage) SetColorRgba(color parser.RGBA, stroke bool) {
 	outputLog.Println("SetColorRgba")
 }
 
-func (outputPage) SetAlpha(alpha fl, stroke bool) {
-	outputLog.Println("SetAlpha")
-}
-
 func (outputPage) SetLineWidth(width fl) {
 	outputLog.Println("SetLineWidth")
 }
@@ -158,6 +154,10 @@ func (outputPage) LineTo(x fl, y fl) {
 
 func (outputPage) CubicTo(x1, y1, x2, y2, x3, y3 fl) {
 	outputLog.Println("CubicTo")
+}
+
+func (outputPage) ClosePath() {
+	outputLog.Println("ClosePath")
 }
 
 func (outputPage) DrawText(text backend.TextDrawing) {

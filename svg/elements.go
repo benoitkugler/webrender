@@ -289,14 +289,14 @@ func newPath(node *cascadedNode, context *svgContext) (drawable, error) {
 
 func (p path) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
 	var (
-		startPoint point
-		out        []vertex
+		segmentStart point
+		out          []vertex
 	)
 	for _, item := range p {
 		item.draw(dst)
-		angle := item.endAngle(startPoint)
-		startPoint = item.endPoint() // update the starting point
-		out = append(out, vertex{startPoint.x, startPoint.y, angle})
+		angle := item.endAngle(segmentStart)
+		segmentStart = item.endPoint() // update the starting point
+		out = append(out, vertex{segmentStart.x, segmentStart.y, angle})
 	}
 	return out
 }

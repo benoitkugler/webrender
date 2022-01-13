@@ -94,6 +94,15 @@ func (na nodeAttributes) strokeWidth() (Value, error) {
 	return parseValue(attrValue)
 }
 
+// default to black
+func (na nodeAttributes) fill() (painter, error) {
+	attrValue, has := na["fill"]
+	if !has {
+		attrValue = "black"
+	}
+	return newPainter(attrValue)
+}
+
 func (na nodeAttributes) lineCap() backend.StrokeCapMode {
 	switch na["stroke-linecap"] {
 	case "round":

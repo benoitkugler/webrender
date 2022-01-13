@@ -299,7 +299,7 @@ func (pi pathItem) boundingBox(currentPoint point) (Rectangle, point) {
 	case moveTo:
 		newPoint := pi.args[0]
 		return Rectangle{X: newPoint.x, Y: newPoint.y}, newPoint
-	case lineTo:
+	case lineTo, close:
 		newPoint := pi.args[0]
 		return computeBezierBoundingBox(lineBezier{currentPoint, newPoint}), newPoint
 	case cubicTo:

@@ -543,7 +543,7 @@ type attributes struct {
 
 	dashArray []Value
 
-	stroke, fill painter
+	fill, stroke painter // fill default to black, stroke to nothing
 
 	box
 
@@ -725,7 +725,7 @@ func (na nodeAttributes) parseCommonAttributes(out *attributes) error {
 	if err != nil {
 		return err
 	}
-	out.fill, err = newPainter(na["fill"])
+	out.fill, err = na.fill()
 	if err != nil {
 		return err
 	}

@@ -203,10 +203,6 @@ type Canvas interface {
 	// `stroke` controls whether stroking or filling operations are concerned.
 	SetColorRgba(color parser.RGBA, stroke bool)
 
-	// Set current alpha
-	// `stroke` controls whether stroking or filling operations are concerned.
-	SetAlpha(alpha Fl, stroke bool)
-
 	// AddPattern creates a new pattern, whill should first be filled,
 	// then used as fill or stroke color.
 	// (cellWidth, cellHeight) define the size of a cell
@@ -287,6 +283,12 @@ type Canvas interface {
 	// The curve shall extend to (x3, y3) using (x1, y1) and (x2,
 	// y2) as the Bézier control points.
 	CubicTo(x1, y1, x2, y2, x3, y3 Fl)
+
+	// ClosePath add a straight line to the beginning of
+	// the current sub-path (specified by MoveTo)
+	// It is somewhat equivalent to adding a LineTo instruction,
+	// but some backends may optimize the corner rendering, applying line join style.
+	ClosePath()
 
 	// AddFont register a new font to be used in the output and return
 	// an object used to store associated metadata.

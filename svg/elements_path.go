@@ -40,6 +40,8 @@ const (
 	lineTo
 	// cubicTo draws a cubic Bezier curve from the current point, and updates it.
 	cubicTo
+	// close the current path
+	close
 
 	// NOTE: to simplify the backend requirement, we do not use
 	// quadratic curves
@@ -53,13 +55,15 @@ func (pi pathItem) draw(dst backend.Canvas) {
 		dst.LineTo(pi.args[0].x, pi.args[0].y)
 	case cubicTo:
 		dst.CubicTo(pi.args[0].x, pi.args[0].y, pi.args[1].x, pi.args[1].y, pi.args[2].x, pi.args[2].y)
+	case close:
+		dst.ClosePath()
 	}
 }
 
 // returns the end of the segment
 func (pi pathItem) endPoint() point {
 	switch pi.op {
-	case moveTo, lineTo:
+	case moveTo, lineTo, close:
 		return pi.args[0]
 	case cubicTo:
 		return pi.args[2]
@@ -73,7 +77,7 @@ func (pi pathItem) endAngle(startPoint point) Fl {
 	switch pi.op {
 	case moveTo:
 		return 0
-	case lineTo:
+	case lineTo, close:
 		endPoint := pi.args[0]
 		return atan2(endPoint.x-startPoint.x, endPoint.y-startPoint.y)
 	case cubicTo:
@@ -89,8 +93,9 @@ func (pi pathItem) endAngle(startPoint point) Fl {
 // CP1 = QP0 + 2/3 *(QP1-QP0)
 // CP2 = QP2 + 2/3 *(QP1-QP2)
 func quadraticToCubic(x0, y0, x1, y1, x2, y2 Fl) [3]point {
-	cp1 := point{x0 + 2/3*(x1-x0), y0 + 2/3*(y1-y0)}
-	cp2 := point{x2 + 2/3*(x1-x2), y2 + 2/3*(y1-y2)}
+	const twoThird = 2. / 3
+	cp1 := point{x0 + twoThird*(x1-x0), y0 + twoThird*(y1-y0)}
+	cp2 := point{x2 + twoThird*(x1-x2), y2 + twoThird*(y1-y2)}
 	cp3 := point{x2, y2}
 	return [3]point{cp1, cp2, cp3}
 }
@@ -142,8 +147,9 @@ func (c *pathParser) parsePath(svgPath string) ([]pathItem, error) {
 	return append([]pathItem(nil), c.path...), nil
 }
 
+// add a line to the starting point
 func (c *pathParser) close() {
-	c.path = append(c.path, pathItem{op: lineTo, args: [3]point{{c.pathStartX, c.pathStartY}}})
+	c.path = append(c.path, pathItem{op: close, args: [3]point{{c.pathStartX, c.pathStartY}}})
 }
 
 func (c *pathParser) moveTo(x, y Fl) {
