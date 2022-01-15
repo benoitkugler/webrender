@@ -175,8 +175,8 @@ type BoxFields struct {
 	Top, Bottom, Left, Right                                pr.MaybeFloat
 	MarginTop, MarginBottom, MarginLeft, MarginRight        pr.MaybeFloat
 	PaddingTop, PaddingBottom, PaddingLeft, PaddingRight    pr.MaybeFloat
-	// TODO: use plain float
-	BorderTopWidth, BorderRightWidth, BorderBottomWidth, BorderLeftWidth pr.MaybeFloat
+
+	BorderTopWidth, BorderRightWidth, BorderBottomWidth, BorderLeftWidth pr.Float
 
 	// TODO: use plain float
 	BorderTopLeftRadius, BorderTopRightRadius, BorderBottomRightRadius, BorderBottomLeftRadius MaybePoint
