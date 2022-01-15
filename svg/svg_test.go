@@ -364,5 +364,3 @@ func TestParseUseMalicious(t *testing.T) {
 		t.Fatal("expected error for malicious content")
 	}
 }
-
-// TODO: test pattern
