@@ -11,23 +11,6 @@ import (
 	"github.com/benoitkugler/webrender/utils"
 )
 
-var elementBuilders = map[string]elementBuilder{
-	// "a":        newText,
-	"circle": newEllipse, // handle circles
-	// "clipPath": newClipPath,
-	"ellipse":  newEllipse,
-	"image":    newImage,
-	"line":     newLine,
-	"path":     newPath,
-	"polyline": newPolyline,
-	"polygon":  newPolygon,
-	"rect":     newRect,
-	"svg":      newSvg,
-	// "text":     newText,
-	// "textPath": newText,
-	// "tspan":    newText,
-}
-
 // function parsing a generic node to build a specialized element
 // context holds global data sometimes needed, as well as a cache to
 // reduce allocations
@@ -211,8 +194,9 @@ func (r polyline) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []verte
 		angle := atan2(point.x-oldPoint.x, point.y-oldPoint.y)
 		vertices = append(vertices, vertex{point.x, point.y, angle})
 	}
+
 	if r.close {
-		dst.LineTo(p1.x, p1.y)
+		dst.ClosePath()
 	}
 
 	return vertices

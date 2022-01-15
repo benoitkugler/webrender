@@ -258,7 +258,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		originalDst := ctx.dst
 		opacity := fl(box.Style.GetOpacity())
 		if opacity < 1 { // we draw all the following to a separate group
-			ctx.dst = ctx.dst.AddOpacityGroup(pr.Fl(box.BorderBoxX()), pr.Fl(box.BorderBoxY()),
+			ctx.dst = ctx.dst.NewGroup(pr.Fl(box.BorderBoxX()), pr.Fl(box.BorderBoxY()),
 				pr.Fl(box.BorderWidth()), pr.Fl(box.BorderHeight()))
 		}
 
@@ -344,7 +344,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			group := ctx.dst
 			ctx.dst = originalDst
 			ctx.dst.OnNewStack(func() {
-				ctx.dst.DrawOpacityGroup(opacity, group)
+				ctx.dst.DrawWithOpacity(opacity, group)
 			})
 		}
 	})
@@ -588,12 +588,12 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	Y := pr.Fl(positionY.V()) + positioningY
 
 	// draw the image on a pattern
-	pat := ctx.dst.AddPattern(repeatWidth, repeatHeight)
-	layer.Image.Draw(pat, imageWidth, imageHeight, string(imageRendering))
+	patttern := ctx.dst.NewGroup(0, 0, repeatWidth, repeatHeight)
+	layer.Image.Draw(patttern, imageWidth, imageHeight, string(imageRendering))
 
 	ctx.dst.OnNewStack(func() {
 		mat := matrix.New(1, 0, 0, 1, X, Y) // translate
-		ctx.dst.SetColorPattern(pat, imageWidth, imageHeight, mat, false)
+		ctx.dst.SetColorPattern(patttern, imageWidth, imageHeight, mat, false)
 		if layer.Unbounded {
 			x1, y1, x2, y2 := ctx.dst.GetRectangle()
 			ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)

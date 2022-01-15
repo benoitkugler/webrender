@@ -155,13 +155,6 @@ const (
 	FillNonZero // mutually exclusive with FillEvenOdd
 )
 
-// Pattern acts as a fill or stroke color, but permits complex textures.
-// It consists of a rectangle, fill with arbitrary content, which will be replicated
-// at fixed horizontal and vertical intervals to fill an area.
-type Pattern interface {
-	Canvas
-}
-
 // Canvas represents a 2D surface which is the target of graphic operations.
 type Canvas interface {
 	// Returns the current canvas rectangle
@@ -171,13 +164,17 @@ type Canvas interface {
 	// execute the given closure, and restore the stack.
 	OnNewStack(func())
 
-	// AddOpacityGroup creates a new drawing target with the given
-	// bounding box. The return `OutputGraphic` will be then
-	// passed to `DrawOpacityGroup`
-	AddOpacityGroup(x, y, width, height Fl) Canvas
+	// NewGroup creates a new drawing target with the given
+	// bounding box. It may be filled by graphic operations
+	// before beging passed to the `DrawWithOpacity`, `SetColorPattern`
+	// and `DrawMask` methods.
+	NewGroup(x, y, width, height Fl) Canvas
 
-	// DrawOpacityGroup draw the given target to the main target, applying the given opacity (in [0,1]).
-	DrawOpacityGroup(opacity Fl, group Canvas)
+	// DrawWithOpacity draw the given target to the main target, applying the given opacity (in [0,1]).
+	DrawWithOpacity(opacity Fl, group Canvas)
+
+	// DrawMask inteprets `mask` as an alpha mask
+	DrawMask(mask Canvas)
 
 	// Establishes a new clip region
 	// by intersecting the current clip region
@@ -203,18 +200,15 @@ type Canvas interface {
 	// `stroke` controls whether stroking or filling operations are concerned.
 	SetColorRgba(color parser.RGBA, stroke bool)
 
-	// AddPattern creates a new pattern, whill should first be filled,
-	// then used as fill or stroke color.
-	// (cellWidth, cellHeight) define the size of a cell
-	// the grid used to when painting.
-	AddPattern(cellWidth, cellHeight Fl) Pattern
-
 	// SetColorPattern set the current paint color to the given pattern.
+	// A pattern acts as a fill or stroke color, but permits complex textures.
+	// It consists of a rectangle, fill with arbitrary content, which will be replicated
+	// at fixed horizontal and vertical intervals to fill an area.
 	// (contentWidth, contentHeight) define the size of the pattern content.
 	// `mat` maps the pattern’s internal coordinate system to the one
 	// in which it will painted.
 	// `stroke` controls whether stroking or filling operations are concerned.
-	SetColorPattern(p Pattern, contentWidth, contentHeight Fl, mat matrix.Transform, stroke bool)
+	SetColorPattern(pattern Canvas, contentWidth, contentHeight Fl, mat matrix.Transform, stroke bool)
 
 	// Sets the current line width to be used by `Stroke`.
 	// The line width value specifies the diameter of a pen

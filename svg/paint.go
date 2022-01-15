@@ -444,7 +444,7 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 		return true
 	}
 
-	pattern := dst.AddPattern(width, height)
+	pattern := dst.NewGroup(0, 0, width, height)
 	pattern.DrawGradient(laidOutGradient, dims.concreteWidth, dims.concreteHeight)
 	dst.SetColorPattern(pattern, width, height, mt, stroke)
 	return true
@@ -516,7 +516,7 @@ func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims draw
 	mat.RightMultBy(tr)
 
 	// draw the pattern content on the temporary target
-	pat := dst.AddPattern(patternWidth, patternHeight)
+	pat := dst.NewGroup(0, 0, patternWidth, patternHeight)
 	pat.SetColorRgba(parser.RGBA{A: opacity}, false)
 	patSVG := SVGImage{root: &pt.svgNode}
 	patSVG.Draw(pat, patternWidth, patternHeight)

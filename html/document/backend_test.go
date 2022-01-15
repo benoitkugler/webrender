@@ -169,6 +169,11 @@ func (outputPage) AddFont(pango.Font, []byte) *backend.Font {
 	return &backend.Font{Cmap: make(map[fonts.GID][]rune), Extents: make(map[fonts.GID]backend.GlyphExtents)}
 }
 
+func (outputPage) NewGroup(x, y, width, height fl) backend.Canvas {
+	outputLog.Println("NewGroup")
+	return outputPage{}
+}
+
 func (outputPage) DrawRasterImage(img backend.RasterImage, width, height fl) {
 	outputLog.Println("DrawRasterImage")
 }
@@ -177,12 +182,7 @@ func (outputPage) DrawGradient(gradient backend.GradientLayout, width, height fl
 	outputLog.Println("DrawGradient")
 }
 
-func (outputPage) AddOpacityGroup(x, y, width, height fl) backend.Canvas {
-	outputLog.Println("AddGroup")
-	return outputPage{}
-}
-
-func (outputPage) DrawOpacityGroup(opacity fl, group backend.Canvas) {
+func (outputPage) DrawWithOpacity(opacity fl, group backend.Canvas) {
 	outputLog.Println("DrawGroup")
 }
 
@@ -190,11 +190,10 @@ func (outputPage) SetStrokeOptions(backend.StrokeOptions) {
 	outputLog.Println("SetStrokeOptions")
 }
 
-func (outputPage) AddPattern(_, _ fl) backend.Pattern {
-	outputLog.Println("AddPattern")
-	return outputPage{}
+func (outputPage) SetColorPattern(backend.Canvas, fl, fl, matrix.Transform, bool) {
+	outputLog.Println("SetColorPattern")
 }
 
-func (outputPage) SetColorPattern(backend.Pattern, fl, fl, matrix.Transform, bool) {
-	outputLog.Println("SetColorPattern")
+func (outputPage) DrawMask(mask backend.Canvas) {
+	outputLog.Println("DrawMask")
 }

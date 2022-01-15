@@ -103,7 +103,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			if box, ok := node.resolveBoundingBox(dims, true); ok {
 				x, y, width, height = box.X, box.Y, box.Width, box.Height
 			}
-			dst = dst.AddOpacityGroup(x, y, width, height)
+			dst = dst.NewGroup(x, y, width, height)
 		}
 
 		applyTransform(dst, node.attributes.transforms, dims)
@@ -137,7 +137,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// apply mask
 		if ma, has := svg.definitions.masks[node.maskID]; has {
-			applyMask(dst, ma, node, dims)
+			svg.applyMask(dst, ma, node, dims)
 		}
 
 		// do the actual painting
@@ -152,7 +152,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// apply opacity group and restore original target
 		if paint && 0 <= opacity && opacity < 1 {
-			originalDst.DrawOpacityGroup(opacity, dst)
+			originalDst.DrawWithOpacity(opacity, dst)
 			dst = originalDst // actually not used
 		}
 	}
@@ -395,9 +395,7 @@ func (svg *SVGImage) applyClipPath(dst backend.Canvas, clipPath *clipPath, node 
 	}
 }
 
-func applyMask(dst backend.Canvas, mask mask, node *svgNode, dims drawingDims) {
-	// mask._etree_node.tag = 'g'
-
+func (svg *SVGImage) applyMask(dst backend.Canvas, mask mask, node *svgNode, dims drawingDims) {
 	widthRef, heightRef := dims.innerWidth, dims.innerHeight
 	if mask.isUnitsBBox {
 		widthRef, heightRef = dims.point(node.width, node.height)
@@ -416,29 +414,12 @@ func applyMask(dst backend.Canvas, mask mask, node *svgNode, dims drawingDims) {
 	if mask.isUnitsBBox {
 		x, y, width, height = 0, 0, widthRef, heightRef
 	} else {
-		// TODO: update viewbox if needed
-		//     mask.attrib['viewBox'] = f'{x} {y} {width} {height}'
+		mask.viewbox = &Rectangle{X: x, Y: y, Width: width, Height: height}
 	}
 
-	// FIXME:
-	logger.WarningLogger.Println("mask not implemented")
-	// alpha_stream = svg.stream.add_group([x, y, width, height])
-	// state = pydyf.Dictionary({
-	//     'Type': '/ExtGState',
-	//     'SMask': pydyf.Dictionary({
-	//         'Type': '/Mask',
-	//         'S': '/Luminance',
-	//         'G': alpha_stream,
-	//     }),
-	//     'ca': 1,
-	//     'AIS': 'false',
-	// })
-	// svg.stream.set_state(state)
-
-	// svg_stream = svg.stream
-	// svg.stream = alpha_stream
-	// svg.draw_node(mask, font_size)
-	// svg.stream = svg_stream
+	alpha := dst.NewGroup(x, y, width, height)
+	svg.drawNode(alpha, &mask.svgNode, dims, true)
+	dst.DrawMask(alpha)
 }
 
 // ImageLoader is used to resolve and process image url found in SVG files.
@@ -623,8 +604,6 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 	case "defs":
 		// children has been processed and registred,
 		// so we discard the node, which is not needed anymore
-	case "g":
-		logger.WarningLogger.Println("<g> element not supported yet")
 	default:
 		out, err := tree.processGraphicNode(node, children)
 		if err != nil {
@@ -649,14 +628,27 @@ func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNo
 		return nil, err
 	}
 
-	builder := elementBuilders[node.tag]
-	if builder == nil {
-		// this node is not drawn, return an empty node
-		// with its children
-		return &out, nil
+	switch node.tag {
+	case "circle", "ellipse":
+		out.graphicContent, err = newEllipse(node, tree)
+	case "image":
+		out.graphicContent, err = newImage(node, tree)
+	case "line":
+		out.graphicContent, err = newLine(node, tree)
+	case "path":
+		out.graphicContent, err = newPath(node, tree)
+	case "polyline":
+		out.graphicContent, err = newPolyline(node, tree)
+	case "polygon":
+		out.graphicContent, err = newPolygon(node, tree)
+	case "rect":
+		out.graphicContent, err = newRect(node, tree)
+	case "svg":
+		out.graphicContent, err = newSvg(node, tree)
+		// case "a", "text", "textPath","tspan":
+		// out.graphicContent, err = newText(node, tree)
 	}
 
-	out.graphicContent, err = builder(node, tree)
 	if err != nil {
 		return nil, fmt.Errorf("invalid element %s: %s", node.tag, err)
 	}
