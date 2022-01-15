@@ -281,14 +281,13 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 
 // compute scale and translation needed to preserve ratio
 // translate is optional
+// for marker tags, translate should be the resolved refX and refY values
+// otherwise, it should be nil
 func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Rectangle, translate *point) (scaleX, scaleY, translateX, translateY Fl) {
 	if viewbox == nil {
 		return 1, 1, 0, 0
 	}
-	// }else if svg.tree == node{
-	//     viewboxWidth, viewboxHeight = svg.get_intrinsic_size(font_size)
-	//     if None in (viewboxWidth, viewboxHeight):
-	//         return 1, 1, 0, 0
+
 	viewboxWidth, viewboxHeight := viewbox.Width, viewbox.Height
 
 	scaleX, scaleY = 1, 1

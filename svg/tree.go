@@ -94,6 +94,14 @@ func (na nodeAttributes) strokeWidth() (Value, error) {
 	return parseValue(attrValue)
 }
 
+func (na nodeAttributes) aspectRatio() preserveAspectRatio {
+	preserveAspectRatio := "xMidYMid"
+	if s, has := na["preserveAspectRatio"]; has {
+		preserveAspectRatio = s
+	}
+	return parsePreserveAspectRatio(preserveAspectRatio)
+}
+
 // default to black
 func (na nodeAttributes) fill() (painter, error) {
 	attrValue, has := na["fill"]

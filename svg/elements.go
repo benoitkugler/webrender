@@ -285,6 +285,37 @@ func (p path) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
 	return out
 }
 
+// <svg> tag
+type svg struct {
+	preserveRatio preserveAspectRatio
+	isRoot        bool
+}
+
+func newSvg(node *cascadedNode, tree *svgContext) (drawable, error) {
+	var out svg
+	out.preserveRatio = node.attrs.aspectRatio()
+	out.isRoot = node == tree.root
+	return out, nil
+}
+
+func (s svg) draw(dst backend.Canvas, attrs *attributes, dims drawingDims) []vertex {
+	x, y := dims.point(attrs.x, attrs.y)
+	dst.Transform(matrix.Translation(x, y))
+	width, height := dims.concreteWidth, dims.concreteHeight
+	if !s.isRoot {
+		width, height = dims.point(attrs.width, attrs.height)
+	}
+
+	sx, sy, tx, ty := s.preserveRatio.resolveTransforms(width, height, attrs.viewbox, nil)
+	if !s.isRoot {
+		dst.Rectangle(0, 0, width, height)
+		dst.Clip(false)
+	}
+
+	dst.Transform(matrix.New(sx, 0, 0, sy, tx, ty))
+	return nil
+}
+
 // <image> tag
 type image struct {
 	// width, height are common attributes
@@ -528,11 +559,7 @@ func newMarker(node *cascadedNode, children []*svgNode) (out *marker, err error)
 		return nil, err
 	}
 
-	preserveAspectRatio := "xMidYMid"
-	if s, has := node.attrs["preserveAspectRatio"]; has {
-		preserveAspectRatio = s
-	}
-	out.preserveAspectRatio = parsePreserveAspectRatio(preserveAspectRatio)
+	out.preserveAspectRatio = node.attrs.aspectRatio()
 
 	out.overflow = "hidden"
 	if s, has := node.attrs["overflow"]; has {
@@ -651,8 +678,4 @@ func (tr transform) applyTo(mat *matrix.Transform, fontSize, diagonal Fl) {
 			tr.args[5].Resolve(fontSize, diagonal),
 		))
 	}
-}
-
-func newSvg(_ *cascadedNode, _ *svgContext) (drawable, error) {
-	return nil, nil
 }

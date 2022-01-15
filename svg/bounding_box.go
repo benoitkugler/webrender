@@ -109,7 +109,11 @@ func (p path) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
 	return boundingBox, true
 }
 
-func (img image) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
+func (image) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
+	return Rectangle{}, false
+}
+
+func (svg) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
 }
 
