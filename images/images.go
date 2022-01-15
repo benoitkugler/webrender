@@ -11,6 +11,7 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/svg"
 	"github.com/benoitkugler/webrender/utils"
@@ -160,7 +161,7 @@ func (r rasterImage) GetIntrinsicSize(imageResolution, _ pr.Float) (width, heigh
 	return r.intrinsicWidth / imageResolution, r.intrinsicHeight / imageResolution, r.intrinsicRatio
 }
 
-func (r rasterImage) Draw(context backend.Canvas, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (r rasterImage) Draw(context backend.Canvas, _ text.TextLayoutContext, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	hasSize := concreteWidth > 0 && concreteHeight > 0 && r.intrinsicWidth > 0 && r.intrinsicHeight > 0
 	if !hasSize {
 		return
@@ -234,6 +235,6 @@ func (s SVGImage) GetIntrinsicSize(_, fontSize pr.Float) (pr.MaybeFloat, pr.Mayb
 	return intrinsicWidth, intrinsicHeight, ratio
 }
 
-func (img SVGImage) Draw(dst backend.Canvas, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
-	img.icon.Draw(dst, concreteWidth, concreteHeight)
+func (img SVGImage) Draw(dst backend.Canvas, textContext text.TextLayoutContext, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+	img.icon.Draw(dst, concreteWidth, concreteHeight, textContext)
 }

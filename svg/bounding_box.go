@@ -117,6 +117,10 @@ func (svg) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
 }
 
+func (span) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
+	return Rectangle{}, false
+}
+
 // bounding box for bezier curves
 
 type lineBezier [2]point

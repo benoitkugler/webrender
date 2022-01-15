@@ -8,6 +8,7 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/svg"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -143,7 +144,7 @@ func (g gradient) GetIntrinsicSize(_, _ pr.Float) (pr.MaybeFloat, pr.MaybeFloat,
 	return nil, nil, nil
 }
 
-func (g gradient) Draw(dst backend.Canvas, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (g gradient) Draw(dst backend.Canvas, _ text.TextLayoutContext, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
 	layout := g.layouter.Layout(pr.Float(concreteWidth), pr.Float(concreteHeight))
 	layout.Reapeating = g.repeating
 

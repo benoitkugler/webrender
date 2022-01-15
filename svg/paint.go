@@ -6,6 +6,7 @@ import (
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
+	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -130,7 +131,7 @@ func (svg *SVGImage) applyPainter(dst backend.Canvas, node *svgNode, pt painter,
 
 	// check for a paintServer
 	if ps := svg.definitions.paintServers[pt.refID]; ps != nil {
-		wasPainted := ps.paint(dst, node, opacity, dims, stroke)
+		wasPainted := ps.paint(dst, node, opacity, dims, svg.textContext, stroke)
 		if wasPainted {
 			return
 		} // else default to a plain color
@@ -143,7 +144,7 @@ func (svg *SVGImage) applyPainter(dst backend.Canvas, node *svgNode, pt painter,
 // gradient or pattern
 type paintServer interface {
 	// setup the "color" for the given `node`
-	paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool
+	paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, textContext text.TextLayoutContext, stroke bool) bool
 }
 
 // either linear or radial
@@ -305,7 +306,7 @@ func newGradient(node *cascadedNode) (out gradient, err error) {
 	return out, nil
 }
 
-func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
+func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, textContext text.TextLayoutContext, stroke bool) bool {
 	if len(gr.colors) == 0 {
 		return false
 	}
@@ -472,7 +473,7 @@ func newPattern(node *cascadedNode, children []*svgNode) (out pattern, err error
 	return out, nil
 }
 
-func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, stroke bool) bool {
+func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims drawingDims, textContext text.TextLayoutContext, stroke bool) bool {
 	bbox, ok := node.resolveBoundingBox(dims, stroke)
 	if !ok {
 		return false
@@ -519,7 +520,7 @@ func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims draw
 	pat := dst.NewGroup(0, 0, patternWidth, patternHeight)
 	pat.SetColorRgba(parser.RGBA{A: opacity}, false)
 	patSVG := SVGImage{root: &pt.svgNode}
-	patSVG.Draw(pat, patternWidth, patternHeight)
+	patSVG.Draw(pat, patternWidth, patternHeight, textContext)
 
 	// apply the pattern
 	dst.SetColorPattern(pat, patternWidth, patternHeight, mat, stroke)

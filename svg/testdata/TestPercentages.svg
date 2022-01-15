@@ -11,7 +11,7 @@
   <g fill="blue" stroke="red" font-family="Verdana" font-size="150">
     <!-- Absolute unit specifiers -->
     <g transform="translate(400,0)">
-      <text x="-50" y="300" fill="black" stroke="none">Abs. units:</text>
+      <!-- <text x="-50" y="300" fill="black" stroke="none">Abs. units:</text> -->
       <rect x="0" y="400" width="4in" height="2in" stroke-width=".4in"/>
       <rect x="0" y="750" width="384" height="192" stroke-width="38.4"/>
       <g transform="scale(2)">
@@ -31,7 +31,7 @@
 
     <!-- Percentages -->
     <g transform="translate(2800,0)">
-      <text x="-50" y="300" fill="black" stroke="none">Percentages:</text>
+      <!-- <text x="-50" y="300" fill="black" stroke="none">Percentages:</text> -->
       <rect x="0" y="400" width="10%" height="10%" stroke-width="1%"/>
       <rect x="0" y="750" width="400" height="200" stroke-width="31.62"/>
       <g transform="scale(2)">

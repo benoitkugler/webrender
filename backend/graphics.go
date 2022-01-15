@@ -15,6 +15,7 @@ import (
 	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -87,7 +88,7 @@ type Image interface {
 	GetIntrinsicSize(imageResolution, fontSize properties.Float) (width, height, ratio properties.MaybeFloat)
 
 	// Draw shall write the image on the given `canvas`
-	Draw(canvas Canvas, concreteWidth, concreteHeight Fl, imageRendering string)
+	Draw(canvas Canvas, textContext text.TextLayoutContext, concreteWidth, concreteHeight Fl, imageRendering string)
 }
 
 // StrokeJoinMode type to specify how segments join when stroking.

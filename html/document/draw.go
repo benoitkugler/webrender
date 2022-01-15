@@ -12,6 +12,7 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/html/layout/text"
+	"github.com/benoitkugler/webrender/html/layout/text/hyphen"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
@@ -172,9 +173,25 @@ func lighten(color Color) Color {
 	return Color{R: r, G: g, B: b, A: color.A}
 }
 
+// text layout is needed by SVG images
+var _ text.TextLayoutContext = drawContext{}
+
 type drawContext struct {
 	dst   backend.Canvas
 	fonts *text.FontConfiguration
+
+	hyphenCache       map[text.HyphenDictKey]hyphen.Hyphener
+	strutLayoutsCache map[text.StrutLayoutKey][2]pr.Float
+}
+
+func (ctx drawContext) Fontmap() pango.FontMap { return ctx.fonts.Fontmap }
+
+func (ctx drawContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
+	return ctx.hyphenCache
+}
+
+func (ctx drawContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float {
+	return ctx.strutLayoutsCache
 }
 
 // Draw the given PageBox.
@@ -589,7 +606,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 
 	// draw the image on a pattern
 	patttern := ctx.dst.NewGroup(0, 0, repeatWidth, repeatHeight)
-	layer.Image.Draw(patttern, imageWidth, imageHeight, string(imageRendering))
+	layer.Image.Draw(patttern, ctx, imageWidth, imageHeight, string(imageRendering))
 
 	ctx.dst.OnNewStack(func() {
 		mat := matrix.New(1, 0, 0, 1, X, Y) // translate
@@ -1203,7 +1220,7 @@ func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 		ctx.dst.Clip(false)
 		ctx.dst.Transform(matrix.New(1, 0, 0, 1, pr.Fl(drawX), pr.Fl(drawY)))
 		ctx.dst.OnNewStack(func() {
-			box.Replacement.Draw(ctx.dst, pr.Fl(drawWidth), pr.Fl(drawHeight), string(box.Style.GetImageRendering()))
+			box.Replacement.Draw(ctx.dst, ctx, pr.Fl(drawWidth), pr.Fl(drawHeight), string(box.Style.GetImageRendering()))
 		})
 	})
 }

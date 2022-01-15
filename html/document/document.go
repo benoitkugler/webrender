@@ -9,6 +9,7 @@ import (
 	"path"
 
 	"github.com/benoitkugler/webrender/html/layout/text"
+	"github.com/benoitkugler/webrender/html/layout/text/hyphen"
 	"github.com/benoitkugler/webrender/logger"
 	mt "github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/version"
@@ -246,7 +247,12 @@ func (d Page) Paint(dst backend.Page, fc *text.FontConfiguration, leftX, topY, s
 			dst.Rectangle(0, 0, width, height)
 			dst.Clip(false)
 		}
-		ctx := drawContext{dst: dst, fonts: fc}
+		ctx := drawContext{
+			dst:               dst,
+			fonts:             fc,
+			hyphenCache:       make(map[text.HyphenDictKey]hyphen.Hyphener),
+			strutLayoutsCache: make(map[text.StrutLayoutKey][2]pr.Float),
+		}
 		ctx.drawPage(d.pageBox)
 	})
 }

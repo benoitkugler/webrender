@@ -21,7 +21,7 @@ func parseIcon(t *testing.T, iconPath string) {
 		t.Fatal(iconPath, err)
 	}
 
-	img.Draw(outputPage{}, 100, 100) // just check for crashes
+	img.Draw(outputPage{}, 100, 100, nil) // just check for crashes
 }
 
 func corpusFiles() (out []string) {

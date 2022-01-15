@@ -20,7 +20,7 @@ type drawable interface {
 	// Draws the node onto `dst` with the given dimensions.
 	// It should return the vertices of the path for path, line, polyline and polygon elements
 	// or nil
-	draw(dst backend.Canvas, attrs *attributes, dims drawingDims) []vertex
+	draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims drawingDims) []vertex
 
 	// computes the bounding box of the node, or returns false
 	// if the node has no valid bounding box, like empty paths.
@@ -59,7 +59,7 @@ func newLine(node *cascadedNode, _ *svgContext) (drawable, error) {
 
 func atan2(x, y Fl) Fl { return Fl(math.Atan2(float64(x), float64(y))) }
 
-func (l line) draw(dst backend.Canvas, _ *attributes, dims drawingDims) []vertex {
+func (l line) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, dims drawingDims) []vertex {
 	x1, y1 := dims.point(l.x1, l.y1)
 	x2, y2 := dims.point(l.x2, l.y2)
 	dst.MoveTo(x1, y1)
@@ -103,7 +103,7 @@ func newRect(node *cascadedNode, _ *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (r rect) draw(dst backend.Canvas, attrs *attributes, dims drawingDims) []vertex {
+func (r rect) draw(dst backend.Canvas, attrs *attributes, _ *SVGImage, dims drawingDims) []vertex {
 	width, height := dims.point(attrs.width, attrs.height)
 	if width <= 0 || height <= 0 { // nothing to draw
 		return nil
@@ -178,7 +178,7 @@ func parsePoly(node *cascadedNode) (polyline, error) {
 	return out, nil
 }
 
-func (r polyline) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
+func (r polyline) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, _ drawingDims) []vertex {
 	if len(r.points) == 0 {
 		return nil
 	}
@@ -240,7 +240,7 @@ func newEllipse(node *cascadedNode, _ *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (e ellipse) draw(dst backend.Canvas, _ *attributes, dims drawingDims) []vertex {
+func (e ellipse) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, dims drawingDims) []vertex {
 	rx, ry := dims.point(e.rx, e.ry)
 	if rx == 0 || ry == 0 {
 		return nil
@@ -271,7 +271,7 @@ func newPath(node *cascadedNode, context *svgContext) (drawable, error) {
 	return path(out), err
 }
 
-func (p path) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
+func (p path) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, _ drawingDims) []vertex {
 	var (
 		segmentStart point
 		out          []vertex
@@ -298,7 +298,7 @@ func newSvg(node *cascadedNode, tree *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (s svg) draw(dst backend.Canvas, attrs *attributes, dims drawingDims) []vertex {
+func (s svg) draw(dst backend.Canvas, attrs *attributes, _ *SVGImage, dims drawingDims) []vertex {
 	x, y := dims.point(attrs.x, attrs.y)
 	dst.Transform(matrix.Translation(x, y))
 	width, height := dims.concreteWidth, dims.concreteHeight
@@ -355,7 +355,7 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (img image) draw(dst backend.Canvas, _ *attributes, _ drawingDims) []vertex {
+func (img image) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, _ drawingDims) []vertex {
 	// TODO: support nested images
 	logger.WarningLogger.Println("nested image are not supported")
 	return nil
@@ -441,16 +441,13 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 	return out, err
 }
 
-// stub implementation, see SVGImage.drawUse
-func (use) draw(dst backend.Canvas, attrs *attributes, dims drawingDims) []vertex { return nil }
-
 func (use) boundingBox(attrs *attributes, dims drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
 }
 
-func (svg *SVGImage) drawUse(dst backend.Canvas, u use, attrs *attributes, dims drawingDims) {
+func (u use) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
 	if u.target == nil {
-		return
+		return nil
 	}
 	x, y := dims.point(attrs.x, attrs.y)
 
@@ -458,6 +455,7 @@ func (svg *SVGImage) drawUse(dst backend.Canvas, u use, attrs *attributes, dims 
 		dst.Transform(matrix.Translation(x, y))
 		svg.drawNode(dst, u.target, dims, true) // actually draw the target
 	})
+	return nil
 }
 
 // definitions

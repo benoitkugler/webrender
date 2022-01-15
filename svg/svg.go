@@ -10,6 +10,7 @@ import (
 	"math"
 
 	"github.com/benoitkugler/webrender/backend"
+	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
@@ -43,7 +44,13 @@ func newDefinitions() definitions {
 type SVGImage struct {
 	root *svgNode
 
+	// setup when calling Draw
+	textContext text.TextLayoutContext
+
 	definitions definitions
+
+	// needed to draw text
+	cursorPosition point
 }
 
 // DisplayedSize returns the value of the "width" and "height" attributes
@@ -65,7 +72,9 @@ func (svg *SVGImage) ViewBox() *Rectangle { return svg.root.viewbox }
 
 // Draw draws the parsed SVG image into the given `dst` output,
 // with the given `width` and `height`.
-func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
+// `textContext` is required to properly layout <text> tags. It may be ommited
+// for svg content not displaying text.
+func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl, textContext text.TextLayoutContext) {
 	var dims drawingDims
 
 	dims.concreteWidth, dims.concreteHeight = width, height
@@ -80,6 +89,7 @@ func (svg *SVGImage) Draw(dst backend.Canvas, width, height Fl) {
 
 	dims.setupDiagonal()
 
+	svg.textContext = textContext
 	svg.drawNode(dst, svg.root, dims, true)
 }
 
@@ -119,13 +129,8 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// draw the node itself.
 		var vertices []vertex
-		if visible {
-			// special case for <use> tags, which require the context
-			if u, isUse := node.graphicContent.(use); isUse {
-				svg.drawUse(dst, u, &node.attributes, dims)
-			} else if node.graphicContent != nil {
-				vertices = node.graphicContent.draw(dst, &node.attributes, dims)
-			}
+		if visible && node.graphicContent != nil {
+			vertices = node.graphicContent.draw(dst, &node.attributes, svg, dims)
 		}
 
 		// then recurse
@@ -644,8 +649,8 @@ func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNo
 		out.graphicContent, err = newRect(node, tree)
 	case "svg":
 		out.graphicContent, err = newSvg(node, tree)
-		// case "a", "text", "textPath","tspan":
-		// out.graphicContent, err = newText(node, tree)
+	case "a", "text", "textPath", "tspan":
+		out.graphicContent, err = newText(node, tree)
 	}
 
 	if err != nil {

@@ -354,3 +354,69 @@ func parseOrientation(attr string) (Value, error) {
 		return Value{V: Fl(f)}, err
 	}
 }
+
+// default to 400 if invalid
+func parseFontWeight(s string) int {
+	switch s {
+	case "normal":
+		return 400
+	case "bold":
+		return 700
+	default:
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return 400
+		}
+		return v
+	}
+}
+
+type anchor uint8
+
+const (
+	start anchor = iota + 1
+	middle
+	end
+	top
+	bottom
+)
+
+// default to 0 when invalid
+func parseAnchor(s string) anchor {
+	switch s {
+	case "start":
+		return start
+	case "middle":
+		return middle
+	case "end":
+		return end
+	case "top":
+		return top
+	case "bottom":
+		return bottom
+	default:
+		return 0
+	}
+}
+
+type baseline uint8
+
+const (
+	central baseline = iota + 1
+	ascent
+	descent
+)
+
+// default to 0 when invalid
+func parseBaseline(s string) baseline {
+	switch s {
+	case "central", "middle":
+		return central
+	case "text-before-edge", "before_edge", "top", "hanging", "text-top":
+		return ascent
+	case "text-after-edge", "after_edge", "bottom", "text-bottom":
+		return descent
+	default:
+		return 0
+	}
+}
