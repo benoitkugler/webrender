@@ -3,6 +3,7 @@ package document
 import (
 	"io"
 	"io/ioutil"
+	"os"
 	"testing"
 	"text/template"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/benoitkugler/textlayout/pango/fcfonts"
 	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/html/tree"
+	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -108,9 +110,20 @@ func TestRealPage(t *testing.T) {
 }
 
 func BenchmarkRender(b *testing.B) {
-	outputLog.SetOutput(io.Discard)
+	logger.ProgressLogger.SetOutput(io.Discard)
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer func() {
+		logger.WarningLogger.SetOutput(os.Stdout)
+		logger.ProgressLogger.SetOutput(os.Stdout)
+	}()
+
+	doc, err := tree.NewHTML(utils.InputFilename("../../resources_test/acid2-test.html"), "", nil, "")
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		renderUrl(b, "https://golang.org/doc/go1.17")
+		Render(doc, nil, true, fc)
 	}
 }
