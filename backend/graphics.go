@@ -86,8 +86,8 @@ type RasterImage struct {
 type Image interface {
 	GetIntrinsicSize(imageResolution, fontSize properties.Float) (width, height, ratio properties.MaybeFloat)
 
-	// Draw shall write the image on the given `context`
-	Draw(context Canvas, concreteWidth, concreteHeight Fl, imageRendering string)
+	// Draw shall write the image on the given `canvas`
+	Draw(canvas Canvas, concreteWidth, concreteHeight Fl, imageRendering string)
 }
 
 // StrokeJoinMode type to specify how segments join when stroking.
@@ -156,6 +156,8 @@ const (
 )
 
 // Canvas represents a 2D surface which is the target of graphic operations.
+// It may be used as the final output (like a PDF page or the screen),
+// or as intermediate container (see for instance DrawWithOpacity or DrawAsMask)
 type Canvas interface {
 	// Returns the current canvas rectangle
 	GetRectangle() (left, top, right, bottom Fl)
@@ -166,15 +168,15 @@ type Canvas interface {
 
 	// NewGroup creates a new drawing target with the given
 	// bounding box. It may be filled by graphic operations
-	// before beging passed to the `DrawWithOpacity`, `SetColorPattern`
-	// and `DrawMask` methods.
+	// before being passed to the `DrawWithOpacity`, `SetColorPattern`
+	// and `DrawAsMask` methods.
 	NewGroup(x, y, width, height Fl) Canvas
 
 	// DrawWithOpacity draw the given target to the main target, applying the given opacity (in [0,1]).
 	DrawWithOpacity(opacity Fl, group Canvas)
 
-	// DrawMask inteprets `mask` as an alpha mask
-	DrawMask(mask Canvas)
+	// DrawAsMask inteprets `mask` as an alpha mask
+	DrawAsMask(mask Canvas)
 
 	// Establishes a new clip region
 	// by intersecting the current clip region

@@ -96,8 +96,8 @@ func (outputPage) DrawRasterImage(img backend.RasterImage, width, height fl) {
 	outputLog.Println("DrawRasterImage")
 }
 
-func (outputPage) DrawMask(mask backend.Canvas) {
-	outputLog.Println("DrawMask")
+func (outputPage) DrawAsMask(mask backend.Canvas) {
+	outputLog.Println("DrawAsMask")
 }
 
 func (outputPage) DrawGradient(gradient backend.GradientLayout, width, height fl) {

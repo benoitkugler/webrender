@@ -419,7 +419,7 @@ func (svg *SVGImage) applyMask(dst backend.Canvas, mask mask, node *svgNode, dim
 
 	alpha := dst.NewGroup(x, y, width, height)
 	svg.drawNode(alpha, &mask.svgNode, dims, true)
-	dst.DrawMask(alpha)
+	dst.DrawAsMask(alpha)
 }
 
 // ImageLoader is used to resolve and process image url found in SVG files.
