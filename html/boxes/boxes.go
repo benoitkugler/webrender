@@ -82,7 +82,7 @@ type Point [2]pr.Float
 type MaybePoint [2]pr.MaybeFloat
 
 func (mp MaybePoint) V() Point {
-	return Point{mp[0].V(), mp[1].V()}
+	return Point{pr.MaybeFloatToFloat(mp[0]), pr.MaybeFloatToFloat(mp[1])}
 }
 
 type BoxITF = Box
@@ -178,8 +178,7 @@ type BoxFields struct {
 
 	BorderTopWidth, BorderRightWidth, BorderBottomWidth, BorderLeftWidth pr.Float
 
-	// TODO: use plain float
-	BorderTopLeftRadius, BorderTopRightRadius, BorderBottomRightRadius, BorderBottomLeftRadius MaybePoint
+	BorderTopLeftRadius, BorderTopRightRadius, BorderBottomRightRadius, BorderBottomLeftRadius Point
 
 	ViewportOverflow string
 
@@ -193,13 +192,14 @@ type BoxFields struct {
 
 	IsHeader, IsFooter bool
 
-	Baseline                      pr.MaybeFloat
-	ComputedHeight, ContentHeight pr.MaybeFloat
-	VerticalAlign                 string
-	Empty                         bool
-	span                          int
-	Colspan                       int
-	Rowspan                       int
+	Baseline       pr.MaybeFloat
+	ComputedHeight pr.MaybeFloat
+	ContentHeight  pr.Float
+	VerticalAlign  string
+	Empty          bool
+	span           int
+	Colspan        int
+	Rowspan        int
 
 	GridX int
 	Index int
@@ -404,10 +404,10 @@ type RoundedBox struct {
 // bt, br, bb, and bl are distances from the outer border box,
 // defining a rectangle to be rounded.
 func (b *BoxFields) roundedBox(bt, br, bb, bl pr.Float) RoundedBox {
-	tlr := b.BorderTopLeftRadius.V()
-	trr := b.BorderTopRightRadius.V()
-	brr := b.BorderBottomRightRadius.V()
-	blr := b.BorderBottomLeftRadius.V()
+	tlr := b.BorderTopLeftRadius
+	trr := b.BorderTopRightRadius
+	brr := b.BorderBottomRightRadius
+	blr := b.BorderBottomLeftRadius
 
 	tlrx := pr.Max(0, tlr[0]-bl)
 	tlry := pr.Max(0, tlr[1]-bt)

@@ -44,6 +44,15 @@ func Is(m MaybeFloat) bool {
 	return false
 }
 
+// MaybeFloatToFloat is the same as MaybeFloat.V(),
+// but handles nil values
+func MaybeFloatToFloat(mf MaybeFloat) Float {
+	if mf == nil {
+		return 0
+	}
+	return mf.V()
+}
+
 func MaybeFloatToValue(mf MaybeFloat) Value {
 	if mf == nil {
 		return Value{}

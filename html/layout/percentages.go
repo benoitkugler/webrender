@@ -150,8 +150,8 @@ func resoudRadius(box *bo.BoxFields, v pr.Point, side1, side2 bo.Side) bo.MaybeP
 }
 
 func resolveRadiiPercentages(box *bo.BoxFields) {
-	box.BorderTopLeftRadius = resoudRadius(box, box.Style.GetBorderTopLeftRadius(), bo.STop, bo.SLeft)
-	box.BorderTopRightRadius = resoudRadius(box, box.Style.GetBorderTopRightRadius(), bo.STop, bo.SRight)
-	box.BorderBottomRightRadius = resoudRadius(box, box.Style.GetBorderBottomRightRadius(), bo.SBottom, bo.SRight)
-	box.BorderBottomLeftRadius = resoudRadius(box, box.Style.GetBorderBottomLeftRadius(), bo.SBottom, bo.SLeft)
+	box.BorderTopLeftRadius = resoudRadius(box, box.Style.GetBorderTopLeftRadius(), bo.STop, bo.SLeft).V()
+	box.BorderTopRightRadius = resoudRadius(box, box.Style.GetBorderTopRightRadius(), bo.STop, bo.SRight).V()
+	box.BorderBottomRightRadius = resoudRadius(box, box.Style.GetBorderBottomRightRadius(), bo.SBottom, bo.SRight).V()
+	box.BorderBottomLeftRadius = resoudRadius(box, box.Style.GetBorderBottomLeftRadius(), bo.SBottom, bo.SLeft).V()
 }

@@ -213,7 +213,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 				cell.Empty = !any
 
-				cell.ContentHeight = cell.Height
+				cell.ContentHeight = cell.Height.V()
 				if cell.ComputedHeight != pr.Auto {
 					cell.Height = pr.Max(cell.Height.V(), cell.ComputedHeight.V())
 				}
