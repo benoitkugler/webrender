@@ -9,7 +9,7 @@ import (
 	"github.com/benoitkugler/textlayout/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
-	"github.com/benoitkugler/webrender/html/layout/text/hyphen"
+	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
@@ -190,7 +190,7 @@ func TestHeightAndBaseline(t *testing.T) {
 func newContextWithWeasyFont(t *testing.T) textContext {
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 	fc := NewFontConfiguration(fontmap)
-	url, err := utils.PathToURL("../../../resources_test/weasyprint.otf")
+	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,9 +11,9 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/svg"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	"golang.org/x/net/html"
 

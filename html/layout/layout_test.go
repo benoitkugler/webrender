@@ -8,16 +8,16 @@ import (
 	fc "github.com/benoitkugler/textlayout/fontconfig"
 	"github.com/benoitkugler/textlayout/pango/fcfonts"
 	bo "github.com/benoitkugler/webrender/html/boxes"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
 
-const fontmapCache = "text/test/cache.fc"
+const fontmapCache = "../../text/test/cache.fc"
 
 var fontconfig *text.FontConfiguration
 

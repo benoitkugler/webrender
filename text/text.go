@@ -7,7 +7,7 @@ import (
 	"github.com/benoitkugler/textlayout/language"
 	"github.com/benoitkugler/textlayout/pango"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/html/layout/text/hyphen"
+	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 )
 

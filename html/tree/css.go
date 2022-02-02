@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/benoitkugler/webrender/css/counters"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/text"
 
 	"github.com/benoitkugler/webrender/css/parser"
 

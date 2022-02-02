@@ -6,8 +6,8 @@ import (
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/matrix"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 )
 

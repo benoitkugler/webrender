@@ -8,10 +8,10 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/benoitkugler/webrender/html/layout/text"
-	"github.com/benoitkugler/webrender/html/layout/text/hyphen"
 	"github.com/benoitkugler/webrender/logger"
 	mt "github.com/benoitkugler/webrender/matrix"
+	"github.com/benoitkugler/webrender/text"
+	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/version"
 
 	"github.com/benoitkugler/webrender/backend"

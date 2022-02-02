@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/images"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	"golang.org/x/net/html"
 )

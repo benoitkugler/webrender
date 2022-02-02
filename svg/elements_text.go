@@ -6,7 +6,7 @@ import (
 
 	"github.com/benoitkugler/webrender/backend"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/html/layout/text"
+	"github.com/benoitkugler/webrender/text"
 )
 
 // text tags

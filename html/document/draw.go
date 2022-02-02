@@ -11,11 +11,11 @@ import (
 	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
-	"github.com/benoitkugler/webrender/html/layout/text"
-	"github.com/benoitkugler/webrender/html/layout/text/hyphen"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
+	"github.com/benoitkugler/webrender/text"
+	"github.com/benoitkugler/webrender/text/hyphen"
 
 	"github.com/benoitkugler/webrender/html/layout"
 

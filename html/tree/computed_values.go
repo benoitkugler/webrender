@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/webrender/css/validation"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/text"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"

@@ -9,13 +9,13 @@ import (
 
 	"github.com/benoitkugler/textlayout/fontconfig"
 	"github.com/benoitkugler/textlayout/pango/fcfonts"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 )
 
-const fontmapCache = "../layout/text/test/cache.fc"
+const fontmapCache = "../../text/test/cache.fc"
 
 var fc *text.FontConfiguration
 

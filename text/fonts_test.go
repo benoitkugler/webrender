@@ -58,7 +58,7 @@ func TestAddConfig(t *testing.T) {
 
 func TestAddFace(t *testing.T) {
 	fc := NewFontConfiguration(fontmap)
-	url, err := utils.PathToURL("../../../resources_test/weasyprint.otf")
+	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestAddFace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected, err := ioutil.ReadFile("../../../resources_test/weasyprint.otf")
+	expected, err := ioutil.ReadFile("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
 	}

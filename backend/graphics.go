@@ -15,8 +15,8 @@ import (
 	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/html/layout/text"
 	"github.com/benoitkugler/webrender/matrix"
+	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 )
 
