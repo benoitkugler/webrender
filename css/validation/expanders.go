@@ -48,8 +48,8 @@ var expandBorderSide = genericExpander("-width", "-color", "-style")(_expandBord
 // Expanders
 
 type NamedTokens struct {
-	name   string
-	tokens []parser.Token
+	Name   string
+	Tokens []parser.Token
 }
 
 type beforeGeneric = func(baseUrl, name string, tokens []parser.Token) ([]NamedTokens, error)
@@ -94,7 +94,7 @@ func genericExpander(expandedNames ...string) func(beforeGeneric) expander {
 				}
 
 				for _, nameToken := range result {
-					newName, newToken := nameToken.name, nameToken.tokens
+					newName, newToken := nameToken.Name, nameToken.Tokens
 					if !_expandedNames.Has(newName) {
 						return nil, fmt.Errorf("unknown expanded property %s", newName)
 					}
@@ -260,16 +260,16 @@ func _expandListStyle(baseUrl, _ string, tokens []parser.Token) (out []NamedToke
 		} else {
 			return nil, InvalidValue
 		}
-		out = append(out, NamedTokens{name: suffix, tokens: []parser.Token{token}})
+		out = append(out, NamedTokens{Name: suffix, Tokens: []parser.Token{token}})
 	}
 
 	if !typeSpecified && noneCount > 0 {
-		out = append(out, NamedTokens{name: "-type", tokens: []parser.Token{noneToken}})
+		out = append(out, NamedTokens{Name: "-type", Tokens: []parser.Token{noneToken}})
 		noneCount -= 1
 	}
 
 	if !imageSpecified && noneCount > 0 {
-		out = append(out, NamedTokens{name: "-image", tokens: []parser.Token{noneToken}})
+		out = append(out, NamedTokens{Name: "-image", Tokens: []parser.Token{noneToken}})
 		noneCount -= 1
 	}
 
@@ -318,7 +318,7 @@ func _expandBorderSide(_, _ string, tokens []parser.Token) ([]NamedTokens, error
 		} else {
 			return nil, InvalidValue
 		}
-		out[index] = NamedTokens{name: suffix, tokens: []parser.Token{token}}
+		out[index] = NamedTokens{Name: suffix, Tokens: []parser.Token{token}}
 	}
 	return out, nil
 }
@@ -698,7 +698,7 @@ func _expandColumns(_, name string, tokens []parser.Token) (out []NamedTokens, e
 		} else {
 			return nil, InvalidValue
 		}
-		out = append(out, NamedTokens{name: name, tokens: l})
+		out = append(out, NamedTokens{Name: name, Tokens: l})
 	}
 	return out, nil
 }
@@ -726,13 +726,13 @@ func expandFontVariant(tokens []parser.Token) (out []NamedTokens, err error) {
 			"-alternates", "-caps", "-east-asian", "-numeric",
 			"-position",
 		} {
-			out[index] = NamedTokens{name: suffix, tokens: []parser.Token{normalFakeToken}}
+			out[index] = NamedTokens{Name: suffix, Tokens: []parser.Token{normalFakeToken}}
 		}
 		token := noneFakeToken
 		if keyword == "normal" {
 			token = normalFakeToken
 		}
-		out[5] = NamedTokens{name: "-ligatures", tokens: []parser.Token{token}}
+		out[5] = NamedTokens{Name: "-ligatures", Tokens: []parser.Token{token}}
 	} else {
 		features := map[string][]parser.Token{}
 		featuresKeys := [6]string{"alternates", "caps", "east-asian", "ligatures", "numeric", "position"}
@@ -756,7 +756,7 @@ func expandFontVariant(tokens []parser.Token) (out []NamedTokens, err error) {
 		}
 		for feature, tokens := range features {
 			if len(tokens) > 0 {
-				out = append(out, NamedTokens{name: fmt.Sprintf("-%s", feature), tokens: tokens})
+				out = append(out, NamedTokens{Name: fmt.Sprintf("-%s", feature), Tokens: tokens})
 			}
 		}
 	}
@@ -772,6 +772,21 @@ var fontVariantMapper = map[string]func(tokens []parser.Token, _ string) pr.CssP
 	"position":   fontVariantPosition,
 }
 
+// ExpandFont expands the 'font' property.
+func ExpandFont(tokens []parser.Token) ([]NamedTokens, error) {
+	l, err := _expandFont("", "", tokens)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, v := range l {
+		if strings.HasPrefix(v.Name, "-") { // newName is a suffix
+			l[i].Name = "font" + v.Name
+		}
+	}
+	return l, nil
+}
+
 //@expander("font")
 //@genericExpander("-style", "-variant-caps", "-weight", "-stretch", "-size",
 //   "line-height", "-family")  // line-height is not a suffix
@@ -783,7 +798,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	if expandFontKeyword == "caption" || expandFontKeyword == "icon" || expandFontKeyword == "menu" || expandFontKeyword == "message-box" || expandFontKeyword ==
 		"small-caption" || expandFontKeyword == "status-bar" {
 
-		return nil, errors.New("System fonts are not supported")
+		return nil, errors.New("system fonts are not supported")
 	}
 	var (
 		out   []NamedTokens
@@ -818,7 +833,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 			hasBroken = true
 			break
 		}
-		out = append(out, NamedTokens{name: suffix, tokens: []parser.Token{token}})
+		out = append(out, NamedTokens{Name: suffix, Tokens: []parser.Token{token}})
 
 		if len(tokens) == 0 {
 			return nil, InvalidValue
@@ -837,7 +852,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	if fs == nil {
 		return nil, errors.New("invalid : font-size is mandatory for short font attribute !")
 	}
-	out = append(out, NamedTokens{name: "-size", tokens: []parser.Token{token}})
+	out = append(out, NamedTokens{Name: "-size", Tokens: []parser.Token{token}})
 
 	// Then line-height is optional, but font-family is not so the list
 	// must not be empty yet
@@ -853,7 +868,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 		if lineHeight([]parser.Token{token}, "") == nil {
 			return nil, InvalidValue
 		}
-		out = append(out, NamedTokens{name: "line-height", tokens: []parser.Token{token}})
+		out = append(out, NamedTokens{Name: "line-height", Tokens: []parser.Token{token}})
 	} else {
 		// We pop()ed a font-family, add it back
 		tokens = append(tokens, token)
@@ -863,7 +878,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	if fontFamily(tokens, "") == nil {
 		return nil, InvalidValue
 	}
-	out = append(out, NamedTokens{name: "-family", tokens: tokens})
+	out = append(out, NamedTokens{Name: "-family", Tokens: tokens})
 	return out, nil
 }
 

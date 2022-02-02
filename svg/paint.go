@@ -80,15 +80,10 @@ func (dims drawingDims) resolveDashes(dashArray []Value, dashOffset Value) ([]Fl
 	return dashes, offset
 }
 
-// paint by filling and stroking the given node onto the graphic target
-func (svg *SVGImage) paintNode(dst backend.Canvas, node *svgNode, dims drawingDims) {
-	// TODO: handle text
-	// if node.tag in ('text', 'textPath', 'a') and not text:
-	// return
-
+func (svg *SVGImage) setupPaint(dst backend.Canvas, node *svgNode, dims drawingDims) (doFill, doStroke bool) {
 	strokeWidth := dims.length(node.strokeWidth)
-	doFill := node.fill.valid
-	doStroke := node.stroke.valid && strokeWidth > 0
+	doFill = node.fill.valid
+	doStroke = node.stroke.valid && strokeWidth > 0
 
 	// fill
 	if doFill {
@@ -107,18 +102,32 @@ func (svg *SVGImage) paintNode(dst backend.Canvas, node *svgNode, dims drawingDi
 		dst.SetStrokeOptions(node.strokeOptions)
 	}
 
+	return
+}
+
+func newPaintOp(fill, stroke, evenOdd bool) backend.PaintOp {
 	var op backend.PaintOp
-	if doFill {
-		if node.isFillEvenOdd {
+	if fill {
+		if evenOdd {
 			op |= backend.FillEvenOdd
 		} else {
 			op |= backend.FillNonZero
 		}
 	}
-	if doStroke {
+	if stroke {
 		op |= backend.Stroke
 	}
-	dst.Paint(op)
+	return op
+}
+
+// paint by filling and stroking the given node onto the graphic target
+func (svg *SVGImage) paintNode(dst backend.Canvas, node *svgNode, dims drawingDims) {
+	if _, isText := node.graphicContent.(span); isText {
+		return
+	}
+
+	doFill, doStroke := svg.setupPaint(dst, node, dims)
+	dst.Paint(newPaintOp(doFill, doStroke, node.isFillEvenOdd))
 }
 
 // apply the given painter to the given node, outputing the

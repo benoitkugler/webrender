@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
-	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/utils"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -261,20 +260,7 @@ func buildSVGTree(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) 
 		}
 
 		// Apply style
-		var normalAttr, importantAttr []declaration
-		if styleAttr := attrs["style"]; styleAttr != "" {
-			normalAttr, importantAttr = parseDeclarations(parser.Tokenize([]byte(styleAttr), false))
-		}
-		delete(attrs, "style") // not useful anymore
-
-		var allProps []declaration
-		allProps = append(allProps, normalMatcher.match((*html.Node)(node))...)
-		allProps = append(allProps, normalAttr...)
-		allProps = append(allProps, importantMatcher.match((*html.Node)(node))...)
-		allProps = append(allProps, importantAttr...)
-		for _, d := range allProps {
-			attrs[d.property] = strings.TrimSpace(d.value)
-		}
+		attrs.applyStyle(baseURL, (*html.Node)(node), normalMatcher, importantMatcher)
 
 		// Replace 'currentColor' value
 		for key := range colorAttributes {

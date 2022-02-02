@@ -160,6 +160,10 @@ func (outputPage) ClosePath() {
 	outputLog.Println("ClosePath")
 }
 
+func (outputPage) SetTextPaint(backend.PaintOp) {
+	outputLog.Println("SetTextPaint")
+}
+
 func (outputPage) DrawText(text backend.TextDrawing) {
 	outputLog.Println("DrawText", text)
 }

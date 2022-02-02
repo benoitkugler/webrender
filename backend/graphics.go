@@ -293,9 +293,13 @@ type Canvas interface {
 	// so caching is advised.
 	AddFont(font pango.Font, content []byte) *Font
 
+	// SetTextPaint adjusts how text shapes are rendered.
+	SetTextPaint(op PaintOp)
+
 	// DrawText draws the given text using the current fill color.
+	// The rendering may be altered by a preivous `SetTextPaint` call.
 	// The fonts of the runs have been registred with `AddFont`.
-	DrawText(TextDrawing)
+	DrawText(text TextDrawing)
 
 	// DrawRasterImage draws the given image at the current point, with the given dimensions.
 	// Typical format for image.Content are PNG, JPEG, GIF.

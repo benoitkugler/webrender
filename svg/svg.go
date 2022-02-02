@@ -627,11 +627,10 @@ func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgN
 func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNode) (*svgNode, error) {
 	out := svgNode{children: children}
 
-	err := node.attrs.parseCommonAttributes(&out.attributes)
-	if err != nil {
-		return nil, err
-	}
-
+	var (
+		err    error
+		isText bool
+	)
 	switch node.tag {
 	case "circle", "ellipse":
 		out.graphicContent, err = newEllipse(node, tree)
@@ -651,10 +650,21 @@ func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNo
 		out.graphicContent, err = newSvg(node, tree)
 	case "a", "text", "textPath", "tspan":
 		out.graphicContent, err = newText(node, tree)
+		isText = true
 	}
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid element %s: %s", node.tag, err)
+	}
+
+	if isText {
+		err = node.attrs.parseCommonAttributesForText(&out.attributes)
+	} else {
+		err = node.attrs.parseCommonAttributes(&out.attributes)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return &out, nil
@@ -686,10 +696,12 @@ func (na nodeAttributes) parseCommonAttributes(out *attributes) error {
 	if err != nil {
 		return err
 	}
-	out.viewbox, err = na.viewBox()
-	if err != nil {
-		return err
-	}
+	err = na.parseSharedAttributes(out)
+	return err
+}
+
+func (na nodeAttributes) parseSharedAttributes(out *attributes) error {
+	var err error
 	out.fontSize, err = na.fontSize()
 	if err != nil {
 		return err
@@ -755,4 +767,20 @@ func (na nodeAttributes) parseCommonAttributes(out *attributes) error {
 	out.display = na.display()
 	out.visible = na.visible()
 	return nil
+}
+
+// does not parse "x" and "y" fields
+func (na nodeAttributes) parseCommonAttributesForText(out *attributes) error {
+	var err error
+	out.width, err = parseValue(na["width"])
+	if err != nil {
+		return err
+	}
+	out.height, err = parseValue(na["height"])
+	if err != nil {
+		return err
+	}
+
+	err = na.parseSharedAttributes(out)
+	return err
 }

@@ -17,7 +17,7 @@ type span struct {
 	text   string
 	rotate []Fl // angles in degrees
 
-	dx, dy Value
+	x, y, dx, dy []Value
 
 	letterSpacing Value
 
@@ -48,11 +48,20 @@ func newText(node *cascadedNode, tree *svgContext) (drawable, error) {
 
 	// get rotations and translations
 	var err error
-	out.dx, err = parseValue(node.attrs["dx"])
+	out.x, err = parseValues(node.attrs["x"])
 	if err != nil {
 		return nil, err
 	}
-	out.dy, err = parseValue(node.attrs["dy"])
+	out.y, err = parseValues(node.attrs["y"])
+	if err != nil {
+		return nil, err
+	}
+
+	out.dx, err = parseValues(node.attrs["dx"])
+	if err != nil {
+		return nil, err
+	}
+	out.dy, err = parseValues(node.attrs["dy"])
 	if err != nil {
 		return nil, err
 	}
@@ -83,19 +92,40 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 	t.style.SetFontSize(pr.FToV(dims.fontSize))
 
 	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, 0, false)
-	x, y := dims.point(attrs.x, attrs.y)
-	dx, dy := dims.point(t.dx, t.dy)
+
+	var x, y, dx, dy []Fl
+	for _, v := range t.x {
+		x = append(x, v.Resolve(dims.fontSize, dims.innerWidth))
+	}
+	for _, v := range t.y {
+		y = append(y, v.Resolve(dims.fontSize, dims.innerHeight))
+	}
+	for _, v := range t.dx {
+		dx = append(dx, v.Resolve(dims.fontSize, dims.innerWidth))
+	}
+	for _, v := range t.dy {
+		dy = append(dy, v.Resolve(dims.fontSize, dims.innerHeight))
+	}
 
 	// return early when there’s no text,
 	// update the cursor position though
 	if t.text == "" {
-		if attrs.x.U == 0 { // no x specified
-			x = svg.cursorPosition.x
+		x0 := svg.cursorPosition.x
+		if len(x) != 0 {
+			x0 = x[0]
 		}
-		if attrs.y.U == 0 { // no y specified
-			y = svg.cursorPosition.y
+		y0 := svg.cursorPosition.y
+		if len(y) != 0 {
+			y0 = y[0]
 		}
-		svg.cursorPosition = point{x + dx, y + dy}
+		var dx0, dy0 Fl
+		if len(dx) != 0 {
+			dx0 = dx[0]
+		}
+		if len(dy) != 0 {
+			dy0 = dy[0]
+		}
+		svg.cursorPosition = point{x0 + dx0, y0 + dy0}
 		return nil
 	}
 
@@ -138,6 +168,8 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 	chars := []rune(t.text)
 	var bbox Rectangle
 	for i, r := range chars {
+		hasX, hasY := i < len(x), i < len(y)
+
 		var rot Fl // en radians
 		if i < len(t.rotate) {
 			rot = t.rotate[i] * math.Pi / 180
@@ -145,25 +177,29 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 			rot = t.rotate[L-1] * math.Pi / 180
 		}
 
-		if attrs.x.U != 0 { // x specified
+		if hasX && x[i] != 0 { // x specified
 			svg.cursorDPosition.x = 0
 		}
-		if attrs.y.U != 0 { // y specified
+		if hasY && y[i] != 0 { // y specified
 			svg.cursorDPosition.y = 0
 		}
-		svg.cursorDPosition.x += dx
-		svg.cursorDPosition.y += dy
+		if i < len(dx) {
+			svg.cursorDPosition.x += dx[i]
+		}
+		if i < len(dy) {
+			svg.cursorDPosition.y += dy[i]
+		}
 
 		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, 0, false)
 		layout := splitted.Layout
 		width, height = Fl(splitted.Width), Fl(splitted.Height)
 
 		letterX, letterY := svg.cursorPosition.x, svg.cursorPosition.y
-		if i != 0 && attrs.x.U != 0 {
-			letterX = x
+		if hasX {
+			letterX = x[i]
 		}
-		if i != 0 && attrs.y.U != 0 {
-			letterY = y
+		if hasY {
+			letterY = y[i]
 		}
 
 		if i != 0 {
@@ -198,7 +234,8 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 				dst.Transform(matrix.Translation(-xPosition, -yPosition))
 			}
 
-			// svg.paintNode(dst, node, dims) // TODO: check whether it is needed
+			doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
+			dst.SetTextPaint(newPaintOp(doFill, doStroke, false))
 			textContext := drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
 			textContext.DrawFirstLine(layout, t.style, "none", pr.NamedString{Name: "none"}, xPosition, yPosition)
 		})

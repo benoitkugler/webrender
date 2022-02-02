@@ -365,7 +365,7 @@ func TestParseUseMalicious(t *testing.T) {
 	}
 }
 
-func TestParseText(t *testing.T) {
+func TestParseText1(t *testing.T) {
 	input := `
 	<svg viewBox="0 0 240 80" xmlns="http://www.w3.org/2000/svg">
 	<style>
@@ -399,5 +399,48 @@ func TestParseText(t *testing.T) {
 
 	if te.text != "My" {
 		t.Fatalf("unexpected text %s", te.text)
+	}
+
+	if te.style.GetFontStyle() != "italic" {
+		t.Fatalf("unexpected text style : %v", te.style)
+	}
+}
+
+func TestParseText2(t *testing.T) {
+	input := `
+	<svg width="20px" height="2px" xmlns="http://www.w3.org/2000/svg">
+		<text x="0 4 7" y="1.5" dx="2pt 1px" rotate="1 2 3" font-family="weasyprint" font-size="2" fill="blue">
+		ABCD
+		</text>
+	</svg>
+	`
+	img, err := Parse(strings.NewReader(input), "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(img.root.children) != 1 {
+		t.Fatal("unexpected children")
+	}
+
+	te, ok := img.root.children[0].graphicContent.(span)
+	if !ok {
+		t.Fatalf("unexpected content %T", img.root.children[0].graphicContent)
+	}
+
+	if te.text != "ABCD" {
+		t.Fatalf("unexpected text %s", te.text)
+	}
+
+	if !reflect.DeepEqual(te.x, []Value{{U: Px, V: 0}, {U: Px, V: 4}, {U: Px, V: 7}}) {
+		t.Fatalf("unexpected x list: %v", te.x)
+	}
+
+	if !reflect.DeepEqual(te.dx, []Value{{U: Pt, V: 2}, {U: Px, V: 1}}) {
+		t.Fatalf("unexpected dx list: %v", te.x)
+	}
+
+	if !reflect.DeepEqual(te.rotate, []Fl{1, 2, 3}) {
+		t.Fatalf("unexpected dx list: %v", te.x)
 	}
 }

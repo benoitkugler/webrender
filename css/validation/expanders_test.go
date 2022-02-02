@@ -160,6 +160,11 @@ func TestFont(t *testing.T) {
 		"font_size":         pr.SToV("large"),
 		"font_family":       pr.Strings{"serif"},
 	}))
+	assertValidDict(t, "font: italic 13px sans-serif", toValidated(pr.Properties{
+		"font_style":  pr.String("italic"),
+		"font_size":   pr.FToPx(13),
+		"font_family": pr.Strings{"sans-serif"},
+	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, `font-family: "My" Font, serif`, "invalid")
 	assertInvalid(t, `font-family: "My" "Font", serif`, "invalid")

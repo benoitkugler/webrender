@@ -5,6 +5,7 @@ import (
 
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/selector"
+	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 	"golang.org/x/net/html"
@@ -144,4 +145,47 @@ func (m matcher) match(element *html.Node) (out []declaration) {
 		}
 	}
 	return
+}
+
+// replace `d` with the (potential) expanded properties
+func expandProperty(d declaration) []declaration {
+	if d.property != "font" {
+		return []declaration{d}
+	}
+
+	tokens := validation.RemoveWhitespace(parser.Tokenize([]byte(d.value), true))
+	expanded, err := validation.ExpandFont(tokens)
+	if err != nil {
+		logger.WarningLogger.Printf("ignoring %s property: %s", d.property, err)
+		return nil
+	}
+
+	out := make([]declaration, len(expanded))
+	for i, p := range expanded {
+		out[i] = declaration{
+			property: p.Name,
+			value:    parser.Serialize(p.Tokens),
+		}
+	}
+	return out
+}
+
+func (attrs nodeAttributes) applyStyle(baseURL string, node *html.Node, normal, important matcher) {
+	var normalAttr, importantAttr []declaration
+	if styleAttr := attrs["style"]; styleAttr != "" {
+		normalAttr, importantAttr = parseDeclarations(parser.Tokenize([]byte(styleAttr), false))
+	}
+	delete(attrs, "style") // not useful anymore
+
+	var allProps []declaration
+	allProps = append(allProps, normal.match(node)...)
+	allProps = append(allProps, normalAttr...)
+	allProps = append(allProps, important.match(node)...)
+	allProps = append(allProps, importantAttr...)
+	for _, d := range allProps {
+		expanded := expandProperty(d)
+		for _, exp := range expanded {
+			attrs[exp.property] = strings.TrimSpace(exp.value)
+		}
+	}
 }
