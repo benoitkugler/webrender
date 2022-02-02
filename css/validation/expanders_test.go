@@ -169,7 +169,7 @@ func TestFont(t *testing.T) {
 	assertInvalid(t, `font-family: "My" Font, serif`, "invalid")
 	assertInvalid(t, `font-family: "My" "Font", serif`, "invalid")
 	assertInvalid(t, `font-family: "My", 12pt, serif`, "invalid")
-	assertInvalid(t, `font: menu`, "System fonts are not supported")
+	assertInvalid(t, `font: menu`, "system fonts are not supported")
 	assertInvalid(t, `font: 12deg My Fancy Font, serif`, "invalid")
 	assertInvalid(t, `font: 12px`, "invalid")
 	assertInvalid(t, `font: 12px/foo serif`, "invalid")

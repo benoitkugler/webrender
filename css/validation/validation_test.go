@@ -23,6 +23,8 @@ func toValidated(d pr.Properties) map[string]pr.ValidatedProperty {
 
 // Helper to test shorthand properties expander functions.
 func expandToDict(t *testing.T, css string, expectedError string) map[string]pr.ValidatedProperty {
+	t.Helper()
+
 	declarations := parser.ParseDeclarationListString(css, false, false)
 
 	capt := testutils.CaptureLogs()
@@ -33,6 +35,7 @@ func expandToDict(t *testing.T, css string, expectedError string) map[string]pr.
 	if expectedError != "" {
 		if len(logs) != 1 || !strings.Contains(logs[0], expectedError) {
 			t.Log(validated)
+
 			t.Fatalf("for %s expected error \n%s\n got\n%v (len : %d)", css, expectedError, logs, len(logs))
 		}
 	} else {
@@ -49,6 +52,8 @@ func expandToDict(t *testing.T, css string, expectedError string) map[string]pr.
 
 // message="invalid"
 func assertInvalid(t *testing.T, css, message string) {
+	t.Helper()
+
 	d := expandToDict(t, css, message)
 	if len(d) != 0 {
 		t.Fatalf("expected no properties, got %v", d)
