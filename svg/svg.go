@@ -50,7 +50,7 @@ type SVGImage struct {
 	definitions definitions
 
 	// needed to draw text
-	cursorPosition point
+	cursorPosition, cursorDPosition point
 }
 
 // DisplayedSize returns the value of the "width" and "height" attributes

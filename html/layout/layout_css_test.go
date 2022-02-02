@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/css/properties"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/html/tree"
@@ -29,16 +28,15 @@ func TestErrorRecovery(t *testing.T) {
 }
 
 type textContext struct {
-	fontmap pango.FontMap
-	struts  map[text.StrutLayoutKey][2]pr.Float
+	struts map[text.StrutLayoutKey][2]pr.Float
 }
 
-func (tc textContext) Fontmap() pango.FontMap                                 { return tc.fontmap }
+func (tc textContext) Fonts() *text.FontConfiguration                         { return fontconfig }
 func (tc textContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener    { return nil }
 func (tc textContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float { return tc.struts }
 
 func newTextContext() textContext {
-	return textContext{fontmap: fontconfig.Fontmap, struts: make(map[text.StrutLayoutKey][2]pr.Float)}
+	return textContext{struts: make(map[text.StrutLayoutKey][2]pr.Float)}
 }
 
 func TestLineHeightInheritance(t *testing.T) {

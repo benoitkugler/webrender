@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/benoitkugler/textlayout/fontconfig"
-	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/textlayout/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
@@ -45,11 +44,11 @@ func assert(t *testing.T, b bool, msg string) {
 }
 
 type textContext struct {
-	fontmap pango.FontMap
+	fontmap *fcfonts.FontMap
 	dict    map[HyphenDictKey]hyphen.Hyphener
 }
 
-func (tc textContext) Fontmap() pango.FontMap                         { return tc.fontmap }
+func (tc textContext) Fonts() *FontConfiguration                      { return &FontConfiguration{Fontmap: tc.fontmap} }
 func (tc textContext) HyphenCache() map[HyphenDictKey]hyphen.Hyphener { return tc.dict }
 func (tc textContext) StrutLayoutsCache() map[StrutLayoutKey][2]pr.Float {
 	return make(map[StrutLayoutKey][2]pr.Float)

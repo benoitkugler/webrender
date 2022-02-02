@@ -7,14 +7,13 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/benoitkugler/textlayout/fonts"
-	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
+	drawText "github.com/benoitkugler/webrender/text/draw"
 	"github.com/benoitkugler/webrender/text/hyphen"
 
 	"github.com/benoitkugler/webrender/html/layout"
@@ -184,7 +183,7 @@ type drawContext struct {
 	strutLayoutsCache map[text.StrutLayoutKey][2]pr.Float
 }
 
-func (ctx drawContext) Fontmap() pango.FontMap { return ctx.fonts.Fontmap }
+func (ctx drawContext) Fonts() *text.FontConfiguration { return ctx.fonts }
 
 func (ctx drawContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
 	return ctx.hyphenCache
@@ -1310,136 +1309,8 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 }
 
 func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.NamedString, x, y pr.Fl) {
-	layout := &textbox.PangoLayout.Layout
-	layout.SetSingleParagraphMode(true)
-
-	var ellipsis string
-	if textOverflow == "ellipsis" || blockEllipsis.Name != "none" {
-		// assert textbox.PangoLayout.maxWidth is not nil
-		maxWidth := textbox.PangoLayout.MaxWidth.V()
-		layout.SetWidth(pango.Unit(text.PangoUnitsFromFloat(pr.Fl(maxWidth))))
-		if textOverflow == "ellipsis" {
-			layout.SetEllipsize(pango.ELLIPSIZE_END)
-		} else {
-			ellipsis = blockEllipsis.String
-			if blockEllipsis.Name == "auto" {
-				ellipsis = "…"
-			}
-			// Remove last word if hyphenated
-			newText := layout.Text
-			if hyph := string(textbox.Style.GetHyphenateCharacter()); strings.HasSuffix(string(newText), hyph) {
-				lastWordEnd := text.GetLastWordEnd(newText[:len(newText)-len([]rune(hyph))])
-				if lastWordEnd != -1 && lastWordEnd != 0 {
-					newText = newText[:lastWordEnd]
-				}
-			}
-			textbox.PangoLayout.SetText(string(newText) + ellipsis)
-		}
-	}
-
-	firstLine, secondLine := textbox.PangoLayout.GetFirstLine()
-	if blockEllipsis.Name != "none" {
-		for secondLine != 0 && secondLine != -1 {
-			lastWordEnd := text.GetLastWordEnd(layout.Text[:len(layout.Text)-len([]rune(ellipsis))])
-			if lastWordEnd == -1 {
-				break
-			}
-			newText := layout.Text[:lastWordEnd]
-			textbox.PangoLayout.SetText(string(newText) + ellipsis)
-			firstLine, secondLine = textbox.PangoLayout.GetFirstLine()
-		}
-	}
-
-	var (
-		output               backend.TextDrawing
-		inkRect, logicalRect pango.Rectangle
-		lastFont             *backend.Font
-		xAdvance             pr.Fl
-	)
-	fontSize := pr.Fl(textbox.Style.GetFontSize().Value)
-	output.FontSize = fontSize
-	output.X, output.Y = x, y
-
-	textRunes := layout.Text
-	for run := firstLine.Runs; run != nil; run = run.Next {
-
-		// Pango objects
-		glyphItem := run.Data
-		glyphString := glyphItem.Glyphs
-		runStart := glyphItem.Item.Offset
-
-		// Font content
-		pangoFont := glyphItem.Item.Analysis.Font
-		content := ctx.fonts.FontContent(pangoFont.FaceID())
-		outFont := ctx.dst.AddFont(pangoFont, content)
-
-		if outFont != lastFont { // add a new "run"
-			var outRun backend.TextRun
-			outRun.Font = pangoFont
-			output.Runs = append(output.Runs, outRun)
-		} else { // use the last one
-		}
-		runDst := &output.Runs[len(output.Runs)-1]
-
-		runDst.Glyphs = make([]backend.TextGlyph, len(glyphString.Glyphs))
-		for i, glyphInfo := range glyphString.Glyphs {
-			outGlyph := &runDst.Glyphs[i]
-			width := glyphInfo.Geometry.Width
-			glyph := glyphInfo.Glyph
-
-			if glyph == pango.GLYPH_EMPTY {
-				outGlyph.Offset = pr.Fl(width) / fontSize
-				outGlyph.Glyph = fonts.EmptyGlyph
-				continue
-			}
-
-			outGlyph.Offset = pr.Fl(glyphInfo.Geometry.XOffset) / fontSize
-			outGlyph.Glyph = glyph.GID()
-
-			// Ink bounding box and logical widths in font
-			if _, in := outFont.Extents[outGlyph.Glyph]; !in {
-				pangoFont.GlyphExtents(glyph, &inkRect, &logicalRect)
-				x1, y1, x2, y2 := inkRect.X, -inkRect.Y-inkRect.Height,
-					inkRect.X+inkRect.Width, -inkRect.Y
-				if int(x1) < outFont.Bbox[0] {
-					outFont.Bbox[0] = int(text.PangoUnitsToFloat(x1*1000) / fontSize)
-				}
-				if int(y1) < outFont.Bbox[1] {
-					outFont.Bbox[1] = int(text.PangoUnitsToFloat(y1*1000) / fontSize)
-				}
-				if int(x2) > outFont.Bbox[2] {
-					outFont.Bbox[2] = int(text.PangoUnitsToFloat(x2*1000) / fontSize)
-				}
-				if int(y2) > outFont.Bbox[3] {
-					outFont.Bbox[3] = int(text.PangoUnitsToFloat(y2*1000) / fontSize)
-				}
-				outFont.Extents[outGlyph.Glyph] = backend.GlyphExtents{
-					Width:  int(text.PangoUnitsToFloat(logicalRect.Width*1000) / fontSize),
-					Y:      int(text.PangoUnitsToFloat(logicalRect.Y*1000) / fontSize),
-					Height: int(text.PangoUnitsToFloat(logicalRect.Height*1000) / fontSize),
-				}
-			}
-
-			// Kerning, word spacing, letter spacing
-			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - text.PangoUnitsToFloat(width*1000)/fontSize + outGlyph.Offset)
-
-			// Mapping between glyphs and characters
-			startPos := runStart + glyphString.LogClusters[i] // Positions of the glyphs in the UTF-8 string
-			endPos := runStart + glyphItem.Item.Length
-			if i < len(glyphString.Glyphs)-1 {
-				endPos = runStart + glyphString.LogClusters[i+1]
-			}
-			if _, in := outFont.Cmap[outGlyph.Glyph]; !in {
-				outFont.Cmap[outGlyph.Glyph] = textRunes[startPos:endPos]
-			}
-
-			// advance
-			outGlyph.XAdvance = xAdvance
-			xAdvance += pr.Fl(outFont.Extents[outGlyph.Glyph].Width) + outGlyph.Offset
-		}
-	}
-
-	ctx.dst.DrawText(output)
+	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
+	textContext.DrawFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y)
 }
 
 func (ctx drawContext) drawWave(x, y, width, offsetX, radius pr.Fl) {

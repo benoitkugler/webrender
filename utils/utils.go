@@ -1,5 +1,7 @@
 package utils
 
+import "hash/fnv"
+
 var Has = struct{}{}
 
 type Set map[string]struct{}
@@ -48,4 +50,11 @@ func NewSet(values ...string) Set {
 		s.Add(v)
 	}
 	return s
+}
+
+// Hash creates an ID from a string.
+func Hash(s string) int {
+	h := fnv.New32()
+	h.Write([]byte(s))
+	return int(h.Sum32())
 }

@@ -1,12 +1,14 @@
 package svg
 
 import (
-	"fmt"
+	"math"
 	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
+	drawText "github.com/benoitkugler/webrender/text/draw"
 )
 
 // text tags
@@ -133,6 +135,75 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 		yAlign = -descentL
 	}
 
-	fmt.Println(yAlign) // TODO:
+	chars := []rune(t.text)
+	var bbox Rectangle
+	for i, r := range chars {
+		var rot Fl // en radians
+		if i < len(t.rotate) {
+			rot = t.rotate[i] * math.Pi / 180
+		} else if L := len(t.rotate); L != 0 {
+			rot = t.rotate[L-1] * math.Pi / 180
+		}
+
+		if attrs.x.U != 0 { // x specified
+			svg.cursorDPosition.x = 0
+		}
+		if attrs.y.U != 0 { // y specified
+			svg.cursorDPosition.y = 0
+		}
+		svg.cursorDPosition.x += dx
+		svg.cursorDPosition.y += dy
+
+		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, 0, false)
+		layout := splitted.Layout
+		width, height = Fl(splitted.Width), Fl(splitted.Height)
+
+		letterX, letterY := svg.cursorPosition.x, svg.cursorPosition.y
+		if i != 0 && attrs.x.U != 0 {
+			letterX = x
+		}
+		if i != 0 && attrs.y.U != 0 {
+			letterY = y
+		}
+
+		if i != 0 {
+			letterX += letterSpacing
+		}
+
+		xPosition := letterX + svg.cursorDPosition.x + xAlign
+		yPosition := letterY + svg.cursorDPosition.y + yAlign
+
+		cursorPosition := point{letterX + width, letterY}
+
+		bb := Rectangle{
+			cursorPosition.x + xAlign + svg.cursorDPosition.x,
+			cursorPosition.y + yAlign + svg.cursorDPosition.y,
+			width,
+			height,
+		}
+		if i == 0 {
+			bbox = bb
+		} else {
+			bbox.union(bb)
+		}
+
+		layout.ApplyJustification()
+
+		dst.OnNewStack(func() {
+			dst.MoveTo(xPosition, yPosition)
+
+			if rot != 0 {
+				dst.Transform(matrix.Translation(xPosition, yPosition))
+				dst.Transform(matrix.Rotation(rot))
+				dst.Transform(matrix.Translation(-xPosition, -yPosition))
+			}
+
+			// svg.paintNode(dst, node, dims) // TODO: check whether it is needed
+			textContext := drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
+			textContext.DrawFirstLine(layout, t.style, "none", pr.NamedString{Name: "none"}, xPosition, yPosition)
+		})
+
+		svg.cursorPosition = cursorPosition
+	}
 	return nil
 }

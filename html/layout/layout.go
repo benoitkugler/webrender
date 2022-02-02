@@ -13,7 +13,6 @@ package layout
 import (
 	"fmt"
 
-	"github.com/benoitkugler/textlayout/pango"
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
@@ -352,7 +351,7 @@ func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
 
 func (l *layoutContext) CurrentPage() int { return l.currentPage }
 
-func (l *layoutContext) Fontmap() pango.FontMap { return l.fontConfig.Fontmap }
+func (l *layoutContext) Fonts() *text.FontConfiguration { return l.fontConfig }
 
 func (l *layoutContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
 	return l.dictionaries
