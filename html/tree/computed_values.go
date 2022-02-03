@@ -64,7 +64,7 @@ var (
 	tmp = map[string]computerFunc{
 		"background_image":    backgroundImage,
 		"background_position": backgroundPosition,
-		"object_position":     backgroundPosition,
+		"object_position":     objectPosition,
 		"transform_origin":    transformOrigin,
 
 		"border_spacing":             borderSpacing,
@@ -247,7 +247,7 @@ func backgroundImage(computer *ComputedStyle, name string, _value pr.CssProperty
 					gradient.ColorStops[j] = cl
 				}
 			}
-			gradient.Center = _backgroundPosition(computer, name, []pr.Center{gradient.Center})[0]
+			gradient.Center = centers(computer, name, []pr.Center{gradient.Center})[0]
 			if gradient.Size.IsExplicit() {
 				l := _lengthOrPercentageTuple2(computer, name, gradient.Size.Explicit.ToSlice())
 				gradient.Size.Explicit = pr.Point{l[0], l[1]}
@@ -259,7 +259,7 @@ func backgroundImage(computer *ComputedStyle, name string, _value pr.CssProperty
 	return value
 }
 
-func _backgroundPosition(computer *ComputedStyle, name string, value pr.Centers) pr.Centers {
+func centers(computer *ComputedStyle, name string, value pr.Centers) pr.Centers {
 	out := make(pr.Centers, len(value))
 	for index, v := range value {
 		out[index] = pr.Center{
@@ -277,7 +277,12 @@ func _backgroundPosition(computer *ComputedStyle, name string, value pr.Centers)
 // backgroundPosition compute lengths in background-position.
 func backgroundPosition(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Centers)
-	return _backgroundPosition(computer, name, value)
+	return centers(computer, name, value)
+}
+
+func objectPosition(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
+	value := _value.(pr.Center)
+	return centers(computer, name, pr.Centers{value})[0]
 }
 
 func transformOrigin(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {

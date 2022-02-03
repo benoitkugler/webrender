@@ -253,7 +253,6 @@ func TestColumnsFixedHeight(t *testing.T) {
 	defer capt.AssertNoLogs(t)
 
 	for _, prop := range []string{"height", "min-height"} {
-		// TODO: we should test when the height is too small
 		page := renderOnePage(t, fmt.Sprintf(`
       <style>
         @font-face { src: url(weasyprint.otf); font-family: weasyprint }

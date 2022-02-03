@@ -1084,7 +1084,6 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 	footerRowsOffset := originalGridHeight - gridHeight
 
 	rowNumber := func(y int, horizontal bool) int {
-		// fmt.Println(headerRows, footerRows, y, horizontal)
 		// Examples in comments for 2 headers rows, 5 body rows, 3 footer rows
 		if headerRows != 0 && y < (headerRows+boolToInt(horizontal)) {
 			// Row in header: y < 2 for vertical, y < 3 for horizontal
@@ -1202,7 +1201,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 	}
 }
 
-// Draw the given :class:`boxes.ReplacedBox`
+// Draw the given `bo.ReplacedBox`
 func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 	box := box_.Replaced()
 	if box.Style.GetVisibility() != "visible" || !pr.Is(box.Width) || !pr.Is(box.Height) {

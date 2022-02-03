@@ -12,6 +12,8 @@ package layout
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -34,13 +36,13 @@ const (
 )
 
 var (
-	debugLogger testutils.IndentLogger
-	traceLogger tracer.Tracer
+	debugLogger testutils.IndentLogger // used only when debugMode is true
+	traceLogger tracer.Tracer          // used only when traceMode is true
 )
 
 func init() {
 	if traceMode {
-		traceLogger = tracer.NewTracer("/tmp/trace_go.txt")
+		traceLogger = tracer.NewTracer(filepath.Join(os.TempDir(), "trace_go.txt"))
 	}
 }
 

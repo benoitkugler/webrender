@@ -80,7 +80,7 @@ func LayoutReplacedBox(box_ bo.ReplacedBoxITF) (drawWidth, drawHeight, positionX
 	box := box_.Replaced()
 	// TODO: respect box-sizing ?
 	objectFit := box.Style.GetObjectFit()
-	position := box.Style.GetObjectPosition()
+	position := box.Style.GetObjectPosition() // see validation
 
 	image := box.Replacement
 	intrinsicWidth, intrinsicHeight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
@@ -315,5 +315,10 @@ func blockReplacedBoxLayout(context *layoutContext, box_ bo.ReplacedBoxITF, cont
 	// http://www.w3.org/TR/CSS21/visuren.html#floats
 	box.PositionX, box.PositionY, _ = avoidCollisions(context, box_, containingBlock, false)
 	nextPage := tree.PageBreak{Break: "any"}
+
+	if traceMode {
+		traceLogger.DumpTree(box_, "blockReplacedBoxLayout-end")
+	}
+
 	return box_, blockLayout{resumeAt: nil, nextPage: nextPage, adjoiningMargins: nil, collapsingThrough: false}
 }

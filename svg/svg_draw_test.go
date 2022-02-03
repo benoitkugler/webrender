@@ -82,6 +82,10 @@ func (outputPage) SetTextPaint(backend.PaintOp) {
 	outputLog.Println("SetTextPaint")
 }
 
+func (outputPage) SetBlendingMode(mode string) {
+	outputLog.Println("SetTextPaint")
+}
+
 func (outputPage) DrawText(text backend.TextDrawing) {
 	outputLog.Println("DrawText", text)
 }

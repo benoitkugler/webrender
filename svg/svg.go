@@ -10,7 +10,6 @@ import (
 	"math"
 
 	"github.com/benoitkugler/webrender/backend"
-	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
@@ -372,8 +371,7 @@ func applyFilters(dst backend.Canvas, filters []filter, node *svgNode, dims draw
 			}
 			dst.Transform(matrix.New(1, 0, 0, 1, dx, dy))
 		case filterBlend:
-			// TODO:
-			logger.WarningLogger.Println("blend filter is not yet implemented")
+			dst.SetBlendingMode(string(filter))
 		}
 	}
 }
@@ -702,6 +700,11 @@ func (na nodeAttributes) parseCommonAttributes(out *attributes) error {
 
 func (na nodeAttributes) parseSharedAttributes(out *attributes) error {
 	var err error
+	out.viewbox, err = na.viewBox()
+	if err != nil {
+		return err
+	}
+
 	out.fontSize, err = na.fontSize()
 	if err != nil {
 		return err

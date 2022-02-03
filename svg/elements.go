@@ -298,7 +298,7 @@ func newSvg(node *cascadedNode, tree *svgContext) (drawable, error) {
 	return out, nil
 }
 
-func (s svg) draw(dst backend.Canvas, attrs *attributes, _ *SVGImage, dims drawingDims) []vertex {
+func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims drawingDims) []vertex {
 	x, y := dims.point(attrs.x, attrs.y)
 	dst.Transform(matrix.Translation(x, y))
 	width, height := dims.concreteWidth, dims.concreteHeight
@@ -306,7 +306,17 @@ func (s svg) draw(dst backend.Canvas, attrs *attributes, _ *SVGImage, dims drawi
 		width, height = dims.point(attrs.width, attrs.height)
 	}
 
-	sx, sy, tx, ty := s.preserveRatio.resolveTransforms(width, height, attrs.viewbox, nil)
+	viewbox := attrs.viewbox
+	if viewbox == nil && s.isRoot {
+		width, height := img.DisplayedSize()
+		if width.U != Perc && height.U != Perc {
+			w := width.Resolve(dims.fontSize, 0)
+			h := height.Resolve(dims.fontSize, 0)
+			viewbox = &Rectangle{Width: w, Height: h}
+		}
+	}
+
+	sx, sy, tx, ty := s.preserveRatio.resolveTransforms(width, height, viewbox, nil)
 	if !s.isRoot {
 		dst.Rectangle(0, 0, width, height)
 		dst.Clip(false)

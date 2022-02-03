@@ -105,7 +105,7 @@ var (
 		"border-collapse":            borderCollapse,
 		"empty-cells":                emptyCells,
 		"transform-origin":           transformOrigin,
-		"object-position":            backgroundPosition,
+		"object-position":            objectPosition,
 		"background-position":        backgroundPosition,
 		"background-repeat":          backgroundRepeat,
 		"background-size":            backgroundSize,
@@ -716,6 +716,16 @@ func transformOrigin(tokens []Token, _ string) pr.CssProperty {
 // ``background-position`` and ``object-position`` property validation.
 // See http://dev.w3.org/csswg/css3-background/#the-background-position
 func backgroundPosition(tokens []Token, _ string) pr.CssProperty {
+	out := centers(tokens)
+
+	if len(out) == 0 {
+		return nil
+	}
+
+	return out
+}
+
+func centers(tokens []Token) pr.Centers {
 	var out pr.Centers
 	for _, part := range SplitOnComma(tokens) {
 		result := parsePosition(RemoveWhitespace(part))
@@ -725,6 +735,16 @@ func backgroundPosition(tokens []Token, _ string) pr.CssProperty {
 		out = append(out, result)
 	}
 	return out
+}
+
+// object-position property validation
+func objectPosition(tokens []Token, _ string) pr.CssProperty {
+	out := centers(tokens)
+
+	if len(out) == 0 {
+		return nil
+	}
+	return out[0]
 }
 
 // Common syntax of background-position and transform-origin.

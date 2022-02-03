@@ -327,8 +327,8 @@ func TestImages16(t *testing.T) {
 }
 
 func TestImages17(t *testing.T) {
-	// capt := tu.CaptureLogs()
-	// defer capt.AssertNoLogs(t)
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <div style="width: 300px; height: 300px">
@@ -564,5 +564,25 @@ func TestImageMinMaxWidth(t *testing.T) {
 		line := body.Box().Children[0]
 		div := line.Box().Children[0]
 		tu.AssertEqual(t, div.Box().Width, data.divWidth, fmt.Sprintf("div width for %v", data.props))
+	}
+}
+
+func TestSVGResizing(t *testing.T) {
+	input := `
+	<style>
+		@page { size: 12px }
+		body { margin: 2px 0 0 2px; background: #fff; font-size: 0 }
+		svg { display: block; width: 8px }
+	</style>
+	<svg viewbox="0 0 4 4">
+		<rect width="4" height="4" fill="#00f" />
+		<rect width="1" height="1" fill="#f00" />
+	</svg>`
+	page := renderOnePage(t, input)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	img := body.Box().Children[0]
+	if h := img.Box().Height; h != pr.Float(8) {
+		t.Fatalf("invalid SVG height: %v", h)
 	}
 }

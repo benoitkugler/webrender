@@ -213,6 +213,9 @@ type Canvas interface {
 	// `stroke` controls whether stroking or filling operations are concerned.
 	SetColorPattern(pattern Canvas, contentWidth, contentHeight Fl, mat matrix.Transform, stroke bool)
 
+	// SetBlendingMode sets the blending mode, which is a CSS blend mode keyword.
+	SetBlendingMode(mode string)
+
 	// Sets the current line width to be used by `Stroke`.
 	// The line width value specifies the diameter of a pen
 	// that is circular in user space,

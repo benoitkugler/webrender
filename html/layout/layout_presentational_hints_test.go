@@ -182,7 +182,6 @@ func TestPhListsTypes(t *testing.T) {
 	tu.AssertEqual(t, ul3.Box().Style.GetListStyleType(), pr.CounterStyleID{Name: "square"}, "ul3")
 }
 
-// FIXME:
 func TestPhTables(t *testing.T) {
 	cp := tu.CaptureLogs()
 	defer cp.AssertNoLogs(t)
