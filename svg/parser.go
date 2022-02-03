@@ -44,6 +44,13 @@ const (
 
 var units = [...]string{Px: "px", Cm: "cm", Mm: "mm", Pt: "pt", In: "in", Q: "Q", Pc: "pc", Perc: "%", Em: "em", Ex: "ex"}
 
+func (u Unit) String() string {
+	if int(u) < len(units) {
+		return units[u]
+	}
+	return fmt.Sprintf("<unit %d>", u)
+}
+
 var toPx = [...]Fl{
 	Px: 1, Cm: 96. / 2.54, Mm: 9.6 / 2.54, Pt: 96. / 72., In: 96., Q: 96. / 40. / 2.54, Pc: 96. / 6.,
 	// other units depend on context
