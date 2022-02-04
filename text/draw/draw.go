@@ -24,7 +24,7 @@ type Context struct {
 
 // DrawFirstLine draws the first line of `layout` starting at position `(x,y)`.
 func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor,
-	textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
+	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl) {
 	pl := &layout.Layout
 	pl.SetSingleParagraphMode(true)
 
@@ -74,6 +74,7 @@ func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor
 	fontSize := pr.Fl(style.GetFontSize().Value)
 	output.FontSize = fontSize
 	output.X, output.Y = x, y
+	output.Angle = angle
 
 	textRunes := pl.Text
 	for run := firstLine.Runs; run != nil; run = run.Next {

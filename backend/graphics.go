@@ -29,6 +29,7 @@ type TextDrawing struct {
 
 	FontSize Fl
 	X, Y     Fl // origin of the text
+	Angle    Fl // optional rotation angle for the text, in radians
 }
 
 // TextRun is a serie of glyphs with constant font.

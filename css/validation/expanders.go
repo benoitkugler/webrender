@@ -347,10 +347,8 @@ func reverseLayers(a [][]parser.Token) {
 	}
 }
 
-//@expander("background")
 // Expand the ``background`` shorthand property.
-//     See http://dev.w3.org/csswg/css3-background/#the-background
-//
+// See http://dev.w3.org/csswg/css3-background/#the-background
 func expandBackground(baseUrl, _ string, tokens []parser.Token) (out pr.NamedProperties, err error) {
 	properties := [8]string{
 		"background_color", "background_image", "background_repeat",
@@ -708,12 +706,8 @@ var (
 	normalFakeToken = parser.IdentToken{Value: "normal"}
 )
 
-//@expander("font-variant")
-//@genericExpander("-alternates", "-caps", "-east-asian", "-ligatures",
-//   "-numeric", "-position")
 // Expand the ``font-variant`` shorthand property.
-//     https://www.w3.org/TR/css-fonts-3/#font-variant-prop
-//
+// https://www.w3.org/TR/css-fonts-3/#font-variant-prop
 func _fontVariant(_, name string, tokens []parser.Token) (out []NamedTokens, err error) {
 	return expandFontVariant(tokens)
 }
@@ -787,12 +781,8 @@ func ExpandFont(tokens []parser.Token) ([]NamedTokens, error) {
 	return l, nil
 }
 
-//@expander("font")
-//@genericExpander("-style", "-variant-caps", "-weight", "-stretch", "-size",
-//   "line-height", "-family")  // line-height is not a suffix
 // Expand the ``font`` shorthand property.
-//     https://www.w3.org/TR/css-fonts-3/#font-prop
-//
+// https://www.w3.org/TR/css-fonts-3/#font-prop
 func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	expandFontKeyword := getSingleKeyword(tokens)
 	if expandFontKeyword == "caption" || expandFontKeyword == "icon" || expandFontKeyword == "menu" || expandFontKeyword == "message-box" || expandFontKeyword ==

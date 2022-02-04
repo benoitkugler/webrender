@@ -13,6 +13,8 @@ import (
 	"github.com/benoitkugler/webrender/utils/testutils"
 )
 
+// TODO: cover all properties
+
 func toValidated(d pr.Properties) map[string]pr.ValidatedProperty {
 	out := make(map[string]pr.ValidatedProperty)
 	for k, v := range d {
@@ -389,6 +391,56 @@ func TestLineHeight(t *testing.T) {
 	assertInvalid(t, "line-height: -1", "invalid")
 	assertInvalid(t, "line-height: -0.5%", "invalid")
 	assertInvalid(t, "line-height: 1px 1px", "invalid")
+}
+
+func TestImageResolution(t *testing.T) {
+	capt := testutils.CaptureLogs()
+	assertValidDict(t, "image-resolution: .5dppx", toValidated(pr.Properties{
+		"image_resolution": pr.FToV(.5),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "image-resolution: 1deg", "invalid")
+	assertInvalid(t, "image-resolution: -0.5%", "invalid")
+	assertInvalid(t, "image-resolution: 1px 1px", "invalid")
+}
+
+func TestObjectFit(t *testing.T) {
+	capt := testutils.CaptureLogs()
+	assertValidDict(t, "object-fit: cover", toValidated(pr.Properties{
+		"object_fit": pr.String("cover"),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "object-fit: 1deg", "invalid")
+	assertInvalid(t, "object-fit: -0.5%", "invalid")
+	assertInvalid(t, "object-fit: 1px 1px", "invalid")
+}
+
+func TestMinMaxWidthHeight(t *testing.T) {
+	capt := testutils.CaptureLogs()
+	assertValidDict(t, "min-width: 30px", toValidated(pr.Properties{
+		"min_width": pr.FToPx(30),
+	}))
+	assertValidDict(t, "min-height: 20px", toValidated(pr.Properties{
+		"min_height": pr.FToPx(20),
+	}))
+	assertValidDict(t, "max-width: 30px", toValidated(pr.Properties{
+		"max_width": pr.FToPx(30),
+	}))
+	assertValidDict(t, "max-height: 20px", toValidated(pr.Properties{
+		"max_height": pr.FToPx(20),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "min-width: red", "invalid")
+	assertInvalid(t, "min-width: 1px 1px", "invalid")
+	assertInvalid(t, "min-height: red", "invalid")
+	assertInvalid(t, "min-height: 1px 1px", "invalid")
+	assertInvalid(t, "max-width: red", "invalid")
+	assertInvalid(t, "max-width: 1px 1px", "invalid")
+	assertInvalid(t, "max-height: red", "invalid")
+	assertInvalid(t, "max-height: 1px 1px", "invalid")
 }
 
 // Test the ``string-set`` property.

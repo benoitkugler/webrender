@@ -344,7 +344,8 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 				textRunes := []rune(childText)
 				for newResumeAt != -1 {
 					resumeAt += newResumeAt
-					tmp := text.SplitFirstLine(string(textRunes[resumeAt:]), textBox.Style, context, maxWidth, textBox.JustificationSpacing, true)
+					tmp := text.SplitFirstLine(string(textRunes[resumeAt:]), textBox.Style,
+						context, maxWidth, textBox.JustificationSpacing, true, isLineStart)
 					newResumeAt = tmp.ResumeAt
 					lines = append(lines, tmp.Width)
 					if firstLine {
@@ -882,19 +883,19 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 		var oldBox *bo.TextBox
 		for resume != -1 {
 			oldResume = resume
-			oldBox, resume, _ = splitTextBox(context, textBox, nil, resume)
+			oldBox, resume, _ = splitTextBox(context, textBox, nil, resume, true)
 		}
 		if oldBox == nil {
 			panic("oldBox can't be nil")
 		}
 		strippedBox := textBox.CopyWithText(strippedText)
-		strippedBox, resume, _ = splitTextBox(context, strippedBox, nil, oldResume)
+		strippedBox, resume, _ = splitTextBox(context, strippedBox, nil, oldResume, true)
 		if strippedBox == nil || resume != -1 {
 			panic("invalid strippedBox or resume")
 		}
 		return oldBox.Box().Width.V() - strippedBox.Box().Width.V()
 	} else {
-		spli := text.SplitFirstLine(textBox.Text, textBox.Style, context, nil, textBox.JustificationSpacing, false)
+		spli := text.SplitFirstLine(textBox.Text, textBox.Style, context, nil, textBox.JustificationSpacing, false, true)
 		return spli.Width
 	}
 }

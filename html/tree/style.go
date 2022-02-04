@@ -1314,14 +1314,14 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 
 				ignoreImports = true
 				content := parser.ParseDeclarationList(*rule.Content, false, false)
-				desc := validation.PreprocessCounterStyleDescriptors(baseUrl, content)
+				ruleDescriptors := validation.PreprocessCounterStyleDescriptors(baseUrl, content)
 
-				if err := desc.Validate(); err != nil {
+				if err := ruleDescriptors.Validate(); err != nil {
 					logger.WarningLogger.Printf("In counter style %s at %d:%d, %s", name, rule.Line, rule.Column, err)
 					continue
 				}
 
-				counterStyle[name] = desc
+				counterStyle[name] = ruleDescriptors
 			}
 		}
 	}

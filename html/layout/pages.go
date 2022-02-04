@@ -530,12 +530,18 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 
 // Layout a margin box’s content once the box has dimensions.
 func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
+	var positionedBoxes []*AbsolutePlaceholder
 	newBox_, tmp := blockContainerLayout(context, mBox, -pr.Inf, nil, true,
-		new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
+		&positionedBoxes, &positionedBoxes, new([]pr.Float), false)
 
 	if tmp.resumeAt != nil {
 		panic(fmt.Sprintf("resumeAt should be nil, got %v", tmp.resumeAt))
 	}
+
+	for _, absBox := range positionedBoxes {
+		absoluteLayout(context, absBox, mBox, &positionedBoxes, 0, nil)
+	}
+
 	box := newBox_.Box()
 	verticalAlign := box.Style.GetVerticalAlign()
 	// Every other value is read as "top", ie. no change.
@@ -776,7 +782,6 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		// string-set and bookmark-labels don't create boxes, only `content`
 		// requires another call to makePage. There is maximum one "content"
 		// item per box.
-		// TODO: remove attribute or set a default value in Box class
 		var counterLookup *tree.CounterLookupItem
 		if missingLink := child.MissingLink(); missingLink != nil {
 			// A CounterLookupItem exists for the css-token "content"

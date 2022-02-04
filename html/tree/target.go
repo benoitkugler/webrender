@@ -332,7 +332,6 @@ func (tc *TargetCollector) StoreTarget(anchorName string, targetCounterValues Co
 		item.TargetBox = targetBox
 		// Store the counterValues in the TargetBox like
 		// computeContentList does.
-		// TODO: remove attribute or set a default value in  Box type
 		if targetBox.CachedCounterValues() == nil {
 			targetBox.SetCachedCounterValues(targetCounterValues.Copy())
 		}
@@ -355,7 +354,6 @@ func (tc *TargetCollector) CollectMissingCounters(parentBox Box, cssToken string
 
 	// No need to add empty miss-lists
 	if len(missingCounters) > 0 || len(missingTargetCounters) > 0 {
-		// TODO: remove attribute or set a default value in Box type
 		if parentBox.MissingLink() == nil {
 			parentBox.SetMissingLink(parentBox)
 		}

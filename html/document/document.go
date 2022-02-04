@@ -242,9 +242,7 @@ func (d Page) Paint(dst backend.Page, fc *text.FontConfiguration, leftX, topY, s
 		// Make (0, 0) the top-left corner and make user units CSS pixels
 		dst.Transform(mt.New(scale, 0, 0, scale, leftX, topY))
 		if clip {
-			width := d.Width
-			height := d.Height
-			dst.Rectangle(0, 0, width, height)
+			dst.Rectangle(0, 0, d.Width, d.Height)
 			dst.Clip(false)
 		}
 		ctx := drawContext{

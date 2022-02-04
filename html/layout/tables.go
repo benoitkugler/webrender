@@ -186,7 +186,13 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					}
 				}
 
-				newCell, tmp := blockContainerLayout(context, cell_, bottomSpace, cellSkipStack, false, absoluteBoxes, fixedBoxes, new([]pr.Float), false)
+				// First try to render content as if there was already something
+				// on the page to avoid hitting block_level_layout’s TODO. Then
+				// force to render something if the page is actually empty, or
+				// just draw an empty cell otherwise. See
+				// test_table_break_children_margin.
+				newCell, tmp := blockContainerLayout(context, cell_, bottomSpace, cellSkipStack, pageIsEmpty,
+					absoluteBoxes, fixedBoxes, new([]pr.Float), false)
 				cellResumeAt := tmp.resumeAt
 				if newCell == nil {
 					cell_ = bo.CopyWithChildren(cell_, nil)
@@ -220,8 +226,16 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				newRowChildren = append(newRowChildren, cell_)
 			}
 
+			if resumeAt != nil && !pageIsEmpty {
+				if bi := row.Style.GetBreakInside(); bi == "avoid" || bi == "avoid-page" {
+					resumeAt = tree.ResumeStack{indexRow: {}}
+					break
+				}
+			}
+
 			row_ = bo.CopyWithChildren(row_, newRowChildren)
 			row = row_.Box()
+
 			// Table height algorithm
 			// http://www.w3.org/TR/CSS21/tables.html#height-layout
 

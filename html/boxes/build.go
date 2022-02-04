@@ -733,13 +733,16 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 			newBox = Deepcopy(newBox)
 
 			newBox.Box().Style.SetPosition(pr.BoolString{String: "static"})
-			for _, child := range Descendants(newBox) {
-				if content := child.Box().Style.GetContent(); content.String == "normal" || content.String == "none" {
-					continue
+
+			if ParentBoxT.IsInstance(newBox) {
+				for _, child := range Descendants(newBox) {
+					if content := child.Box().Style.GetContent(); content.String == "normal" || content.String == "none" {
+						continue
+					}
+					child.Box().Children = ContentToBoxes(
+						child.Box().Style, child, quoteDepth, counterValues,
+						resolver, targetCollector, cs, context, page)
 				}
-				child.Box().Children = ContentToBoxes(
-					child.Box().Style, child, quoteDepth, counterValues,
-					resolver, targetCollector, cs, context, page)
 			}
 			contentBoxes = append(contentBoxes, newBox)
 		case "leader()":

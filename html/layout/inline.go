@@ -328,7 +328,7 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 			return
 		}
 		textBox.Text = newText
-		newBox, resume, _ := splitTextBox(context, textBox, nil, 0)
+		newBox, resume, _ := splitTextBox(context, textBox, nil, 0, true)
 		if newBox == nil || resume != -1 {
 			panic(fmt.Sprintf("expected newBox and no resume, got %v, %v", newBox, resume))
 		}
@@ -623,7 +623,8 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 			}
 		}
 		var newTextBox *bo.TextBox
-		newTextBox, skip, preservedLineBreak = splitTextBox(context, textBox, maxX-positionX, skip)
+		isLineStart := len(lineChildren) == 0
+		newTextBox, skip, preservedLineBreak = splitTextBox(context, textBox, maxX-positionX, skip, isLineStart)
 		if skip != -1 {
 			resumeAt = tree.ResumeStack{skip: nil}
 		}
@@ -1192,13 +1193,14 @@ var lineBreaks = utils.NewSet("\n", "\t", "\f", "\u0085", "\u2028", "\u2029")
 // -1 if all of the text fits.
 //
 // Also break on preserved line breaks.
-func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.MaybeFloat, skip int) (*bo.TextBox, int, bool) {
+func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.MaybeFloat,
+	skip int, isLineStart bool) (*bo.TextBox, int, bool) {
 	fontSize := box.Style.GetFontSize()
 	text_ := []rune(box.Text)[skip:]
 	if fontSize == pr.FToV(0) || len(text_) == 0 {
 		return nil, -1, false
 	}
-	v := text.SplitFirstLine(string(text_), box.Style, context, availableWidth, box.JustificationSpacing, false)
+	v := text.SplitFirstLine(string(text_), box.Style, context, availableWidth, box.JustificationSpacing, false, isLineStart)
 	layout, length, resumeIndex, width, height, baseline := v.Layout, v.Length, v.ResumeAt, v.Width, v.Height, v.Baseline
 	if resumeIndex == 0 {
 		panic("resumeAt should not be 0 here")

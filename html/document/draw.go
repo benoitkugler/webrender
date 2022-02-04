@@ -552,9 +552,11 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	var repeatWidth, repeatHeight pr.Fl
 	switch repeatX {
 	case "no-repeat":
-		// We want at least the whole imageWidth drawn on subSurface, but we
-		// want to be sure it will not be repeated on the paintingWidth.
-		repeatWidth = utils.Maxs(imageWidth, paintingWidth)
+		// We want at least the whole image_width drawn on sub_surface, but we
+		// want to be sure it will not be repeated on the painting_width. We
+		// double the painting width to ensure viewers don't incorrectly bleed
+		// the edge of the pattern into the painting area. (See #1539.)
+		repeatWidth = utils.Maxs(imageWidth, 2*paintingWidth)
 	case "repeat", "round":
 		// We repeat the image each imageWidth.
 		repeatWidth = imageWidth
@@ -578,7 +580,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	// Comments above apply here too.
 	switch repeatY {
 	case "no-repeat":
-		repeatHeight = utils.Maxs(imageHeight, paintingHeight)
+		repeatHeight = utils.Maxs(imageHeight, 2*paintingHeight)
 	case "repeat", "round":
 		repeatHeight = imageHeight
 	case "space":
@@ -591,13 +593,6 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 		}
 	default:
 		panic(fmt.Sprintf("unexpected repeatY %s", repeatY))
-	}
-
-	if repeatX == "no-repeat" && repeatY == "no-repeat" {
-		// PDF patterns always repeat, use a big number to hide repetition
-		_, _, w, h := ctx.dst.GetRectangle()
-		repeatWidth = 2 * w
-		repeatHeight = 2 * h
 	}
 
 	X := pr.Fl(positionX.V()) + positioningX
@@ -1309,7 +1304,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 
 func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
-	textContext.DrawFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y)
+	textContext.DrawFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
 }
 
 func (ctx drawContext) drawWave(x, y, width, offsetX, radius pr.Fl) {

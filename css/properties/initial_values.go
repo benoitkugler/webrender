@@ -159,6 +159,7 @@ var InitialValues = Properties{
 	"text_indent":           zeroPixelsValue,
 	"text_transform":        String("none"),
 	"white_space":           String("normal"),
+	"word_break":            String("normal"),
 	"word_spacing":          Value{}, // computed value for "normal"
 
 	// Transforms 1 (CR): https://www.w3.org/TR/css-transforms-1/

@@ -172,6 +172,7 @@ var (
 		"white_space",
 		"widows",
 		"word_spacing",
+		"word_break",
 	)
 
 	// Not applicable to the print media

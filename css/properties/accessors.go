@@ -1073,6 +1073,13 @@ func (s Properties) SetWidth(v Value) {
 	s["width"] = v
 }
 
+func (s Properties) GetWordBreak() String {
+	return s["word_break"].(String)
+}
+func (s Properties) SetWordBreak(v String) {
+	s["word_break"] = v
+}
+
 func (s Properties) GetWordSpacing() Value {
 	return s["word_spacing"].(Value)
 }
@@ -1546,6 +1553,9 @@ type StyleAccessor interface {
 
 	GetWidth() Value
 	SetWidth(v Value)
+
+	GetWordBreak() String
+	SetWordBreak(v String)
 
 	GetWordSpacing() Value
 	SetWordSpacing(v Value)

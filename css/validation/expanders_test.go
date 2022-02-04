@@ -9,6 +9,8 @@ import (
 	"github.com/benoitkugler/webrender/utils/testutils"
 )
 
+var inherit = pr.CascadedProperty{Default: pr.Inherit}.AsValidated()
+
 // Test the 4-value pr.
 func TestExpandFourSides(t *testing.T) {
 	capt := testutils.CaptureLogs()
@@ -137,10 +139,10 @@ func TestExpandBorderRadius(t *testing.T) {
 		"border_bottom_left_radius":  pr.Point{{Value: 4, Unit: pr.Rem}, {Value: 4, Unit: pr.Rem}},
 	}))
 	assertValidDict(t, "border-radius: inherit", map[string]pr.ValidatedProperty{
-		"border_top_left_radius":     pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"border_top_right_radius":    pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"border_bottom_right_radius": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"border_bottom_left_radius":  pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"border_top_left_radius":     inherit,
+		"border_top_right_radius":    inherit,
+		"border_bottom_right_radius": inherit,
+		"border_bottom_left_radius":  inherit,
 	})
 	capt.AssertNoLogs(t)
 
@@ -293,7 +295,7 @@ func TestExpandOverflowWrap(t *testing.T) {
 		"overflow_wrap": pr.String("break-word"),
 	}))
 	assertValidDict(t, "overflow-wrap: inherit", map[string]pr.ValidatedProperty{
-		"overflow_wrap": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"overflow_wrap": inherit,
 	})
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "overflow-wrap: none", "invalid")
@@ -309,7 +311,7 @@ func TestExpandWordWrap(t *testing.T) {
 		"overflow_wrap": pr.String("break-word"),
 	}))
 	assertValidDict(t, "word-wrap: inherit", map[string]pr.ValidatedProperty{
-		"overflow_wrap": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"overflow_wrap": inherit,
 	})
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "word-wrap: none", "invalid")
@@ -325,6 +327,10 @@ func TestExpandTextDecoration(t *testing.T) {
 	assertValidDict(t, "text-decoration: overline", toValidated(pr.Properties{
 		"text_decoration_line": pr.Decorations(utils.NewSet("overline")),
 	}))
+	assertValidDict(t, "text-decoration: overline solid", toValidated(pr.Properties{
+		"text_decoration_line":  pr.Decorations(utils.NewSet("overline")),
+		"text_decoration_style": pr.String("solid"),
+	}))
 	assertValidDict(t, "text-decoration: overline blink line-through", toValidated(pr.Properties{
 		"text_decoration_line": pr.Decorations(utils.NewSet("blink", "line-through", "overline")),
 	}))
@@ -332,9 +338,9 @@ func TestExpandTextDecoration(t *testing.T) {
 		"text_decoration_color": pr.NewColor(1, 0, 0, 1),
 	}))
 	assertValidDict(t, "text-decoration: inherit", map[string]pr.ValidatedProperty{
-		"text_decoration_color": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"text_decoration_line":  pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"text_decoration_style": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"text_decoration_color": inherit,
+		"text_decoration_line":  inherit,
+		"text_decoration_style": inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -379,9 +385,9 @@ func TestExpandFlex(t *testing.T) {
 		"flex_basis":  pr.SToV("auto"),
 	}))
 	assertValidDict(t, "flex: inherit", map[string]pr.ValidatedProperty{
-		"flex_grow":   pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"flex_shrink": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"flex_basis":  pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"flex_grow":   inherit,
+		"flex_shrink": inherit,
+		"flex_basis":  inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -410,8 +416,8 @@ func TestExpandFlexFlow(t *testing.T) {
 		"flex_wrap":      pr.String("wrap"),
 	}))
 	assertValidDict(t, "flex-flow: inherit", map[string]pr.ValidatedProperty{
-		"flex_direction": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"flex_wrap":      pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"flex_direction": inherit,
+		"flex_wrap":      inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -433,10 +439,10 @@ func TestExpandPageBreak(t *testing.T) {
 		"break_before": pr.String("page"),
 	}))
 	assertValidDict(t, "page-break-after: inherit", map[string]pr.ValidatedProperty{
-		"break_after": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"break_after": inherit,
 	})
 	assertValidDict(t, "page-break-before: inherit", map[string]pr.ValidatedProperty{
-		"break_before": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"break_before": inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -452,7 +458,7 @@ func TestExpandPageBreakInside(t *testing.T) {
 		"break_inside": pr.String("avoid"),
 	}))
 	assertValidDict(t, "page-break-inside: inherit", map[string]pr.ValidatedProperty{
-		"break_inside": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"break_inside": inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -500,9 +506,9 @@ func TestLineClamp(t *testing.T) {
 		"block_ellipsis": pr.TaggedString{S: "…"},
 	}))
 	assertValidDict(t, "line-clamp: inherit", map[string]pr.ValidatedProperty{
-		"max_lines":      pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"continue":       pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"block_ellipsis": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"max_lines":      inherit,
+		"continue":       inherit,
+		"block_ellipsis": inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -533,8 +539,8 @@ func TestExpandTextAlign(t *testing.T) {
 		"text_align_last": pr.String("justify"),
 	}))
 	assertValidDict(t, "text-align: inherit", map[string]pr.ValidatedProperty{
-		"text_align_all":  pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
-		"text_align_last": pr.CascadedProperty{Default: pr.Inherit}.AsValidated(),
+		"text_align_all":  inherit,
+		"text_align_last": inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -556,7 +562,8 @@ func assertBackground(t *testing.T, css string, expected map[string]pr.Validated
 	}
 	delete(expanded, "background_color")
 	delete(expected, "background_color")
-	nbLayers := len(expanded["background_image"].ToCascaded().ToCSS().(pr.Images))
+
+	bi := expanded["background_image"]
 	for name, value := range expected {
 		if !reflect.DeepEqual(expanded[name], value) {
 			t.Fatalf("for %s expected %v got %v", name, value, expanded[name])
@@ -564,6 +571,12 @@ func assertBackground(t *testing.T, css string, expected map[string]pr.Validated
 		delete(expanded, name)
 		delete(expected, name)
 	}
+
+	if len(expanded) == 0 {
+		return
+	}
+
+	nbLayers := len(bi.ToCascaded().ToCSS().(pr.Images))
 	for name, value := range expanded {
 		initv := pr.InitialValues[name].(repeatable)
 		ref := pr.AsCascaded(initv.Repeat(nbLayers)).AsValidated()
@@ -593,6 +606,16 @@ func TestExpandBackground(t *testing.T) {
 		"background_repeat":     pr.Repeats{{"repeat", "no-repeat"}},
 		"background_attachment": pr.Strings{"fixed"},
 	}))
+	assertBackground(t, "inherit", map[string]pr.ValidatedProperty{
+		"background_repeat":     inherit,
+		"background_attachment": inherit,
+		"background_image":      inherit,
+		"background_position":   inherit,
+		"background_size":       inherit,
+		"background_clip":       inherit,
+		"background_origin":     inherit,
+		"background_color":      inherit,
+	})
 	assertBackground(t, "top", toValidated(pr.Properties{
 		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))

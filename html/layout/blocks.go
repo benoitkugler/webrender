@@ -39,11 +39,13 @@ func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSp
 		}
 
 		if context.currentPage > 1 && pageIsEmpty {
-			if box.Style.GetMarginBreak() == "discard" {
-				box.MarginTop = pr.Float(0)
-			} else if box.Style.GetMarginBreak() == "auto" {
-				if !context.forcedBreak {
+			if collapseWithPage := containingBlock.IsForRootElement || len(*adjoiningMargins) != 0; collapseWithPage {
+				if box.Style.GetMarginBreak() == "discard" {
 					box.MarginTop = pr.Float(0)
+				} else if box.Style.GetMarginBreak() == "auto" {
+					if !context.forcedBreak {
+						box.MarginTop = pr.Float(0)
+					}
 				}
 			}
 		}

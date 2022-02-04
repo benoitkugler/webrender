@@ -73,7 +73,7 @@ type HyphenDictKey struct {
 // Fit as much as possible in the available width for one line of text.
 // minimum=False
 func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutContext,
-	maxWidth pr.MaybeFloat, justificationSpacing pr.Float, minimum bool) Splitted {
+	maxWidth pr.MaybeFloat, justificationSpacing pr.Float, minimum, isLineStart bool) Splitted {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
 		ws               = style.GetWhiteSpace()
@@ -145,8 +145,6 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	if index != -1 && index <= len(text) {
 		firstLineText = string(text[:index])
 	}
-	// We can’t rely on firstLineWidth, see
-	// https://github.com/Kozea/WeasyPrint/issues/1051
 	firstLineFits := (firstLineWidth <= maxWidthV ||
 		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
 		CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
@@ -329,11 +327,13 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	}
 
 	// Step 5: Try to break word if it's too long for the line
-	overflowWrap := style.GetOverflowWrap()
+	overflowWrap, wordBreak := style.GetOverflowWrap(), style.GetWordBreak()
 	firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
 	space := maxWidthV - firstLineWidth
 	// If we can break words and the first line is too long
-	if space < 0 && (overflowWrap == "anywhere" || (overflowWrap == "break-word" && !minimum)) {
+	canBreak := wordBreak == "break-all" ||
+		(isLineStart && (overflowWrap == "anywhere" || (overflowWrap == "break-word" && !minimum)))
+	if space < 0 && canBreak {
 		// Is it really OK to remove hyphenation for word-break ?
 		hyphenated = false
 		layout.SetText(string(text))

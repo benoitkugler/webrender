@@ -60,7 +60,7 @@ func makeText(text string, width pr.MaybeFloat, style pr.Properties) Splitted {
 	newStyle.SetFontFamily(monoFonts)
 	newStyle.UpdateWith(style)
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
-	return SplitFirstLine(text, newStyle, ct, width, 0, false)
+	return SplitFirstLine(text, newStyle, ct, width, 0, false, true)
 }
 
 func TestLineContent(t *testing.T) {
@@ -138,7 +138,7 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 
 	text := "This is a text for test. This is a test for text.py"
 	for i := 0; i < b.N; i++ {
-		SplitFirstLine(text, newStyle, ct, pr.Float(200), 0, false)
+		SplitFirstLine(text, newStyle, ct, pr.Float(200), 0, false, true)
 	}
 }
 
@@ -175,7 +175,7 @@ func TestHeightAndBaseline(t *testing.T) {
 		fc.AddFontFace(desc, utils.DefaultUrlFetcher)
 	}
 
-	spi := SplitFirstLine("Go 1.17 Release Notes", newStyle, ct, pr.Float(595), 0, false)
+	spi := SplitFirstLine("Go 1.17 Release Notes", newStyle, ct, pr.Float(595), 0, false, true)
 	height, baseline := spi.Height, spi.Baseline
 
 	if int((height-43)/10) != 0 {
@@ -233,7 +233,7 @@ func TestSplitFirstLine(t *testing.T) {
 
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
-	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), 0, false)
+	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), 0, false, true)
 
 	if out.ResumeAt != -1 {
 		t.Fatalf("unexpected resume index %d", out.ResumeAt)

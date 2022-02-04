@@ -2146,6 +2146,20 @@ func (s *AnonymousStyle) SetWidth(v pr.Value) {
 	s.dict["width"] = v
 }
 
+func (s *ComputedStyle) GetWordBreak() pr.String {
+	return s.Get("word_break").(pr.String)
+}
+func (s *ComputedStyle) SetWordBreak(v pr.String) {
+	s.dict["word_break"] = v
+}
+
+func (s *AnonymousStyle) GetWordBreak() pr.String {
+	return s.Get("word_break").(pr.String)
+}
+func (s *AnonymousStyle) SetWordBreak(v pr.String) {
+	s.dict["word_break"] = v
+}
+
 func (s *ComputedStyle) GetWordSpacing() pr.Value {
 	return s.Get("word_spacing").(pr.Value)
 }
