@@ -91,7 +91,7 @@ func newText(node *cascadedNode, tree *svgContext) (drawable, error) {
 func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
 	t.style.SetFontSize(pr.FToV(dims.fontSize))
 
-	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, 0, false)
+	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, 0, false, true)
 
 	var x, y, dx, dy []Fl
 	for _, v := range t.x {
@@ -190,7 +190,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 			svg.cursorDPosition.y += dy[i]
 		}
 
-		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, 0, false)
+		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, 0, false, true)
 		layout := splitted.Layout
 		width, height = Fl(splitted.Width), Fl(splitted.Height)
 
@@ -237,7 +237,8 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 			doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
 			dst.SetTextPaint(newPaintOp(doFill, doStroke, false))
 			textContext := drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
-			textContext.DrawFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition)
+			// TODO: angle
+			textContext.DrawFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, 0)
 		})
 
 		svg.cursorPosition = cursorPosition
