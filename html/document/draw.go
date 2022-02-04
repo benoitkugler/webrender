@@ -324,7 +324,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 			// Point 6
 			if bo.InlineBoxT.IsInstance(box_) {
-				ctx.drawInlineLevel(stackingContext.page, box_, 0, "clip", pr.NamedString{Name: "none"})
+				ctx.drawInlineLevel(stackingContext.page, box_, 0, "clip", pr.TaggedString{Tag: pr.None})
 			}
 
 			// Point 7
@@ -334,7 +334,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 				} else {
 					for _, child := range block.Box().Children {
 						if bo.LineBoxT.IsInstance(child) {
-							ctx.drawInlineLevel(stackingContext.page, child, 0, "clip", pr.NamedString{Name: "none"})
+							ctx.drawInlineLevel(stackingContext.page, child, 0, "clip", pr.TaggedString{Tag: pr.None})
 						}
 					}
 				}
@@ -1224,7 +1224,7 @@ func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 }
 
 // offsetX=0, textOverflow="clip"
-func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, textOverflow string, blockEllipsis pr.NamedString) {
+func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, textOverflow string, blockEllipsis pr.TaggedString) {
 	if stackingContext, ok := box_.(StackingContext); ok {
 		if !(bo.InlineBlockBoxT.IsInstance(stackingContext.box) || bo.InlineFlexBoxT.IsInstance(stackingContext.box)) {
 			panic(fmt.Sprintf("expected InlineBlock or InlineFlex, got %v", stackingContext.box))
@@ -1265,7 +1265,7 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 
 // Draw ``textbox`` to a ``cairo.Context`` from ``PangoCairo.Context``
 // 	(offsetX=0,textOverflow="clip")
-func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow string, blockEllipsis pr.NamedString) {
+func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow string, blockEllipsis pr.TaggedString) {
 	if textbox.Style.GetVisibility() != "visible" {
 		return
 	}
@@ -1307,7 +1307,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	}
 }
 
-func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.NamedString, x, y pr.Fl) {
+func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
 	textContext.DrawFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y)
 }

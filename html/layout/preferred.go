@@ -85,7 +85,7 @@ type fnBlock = func(*layoutContext, Box, bool) pr.Float
 func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var widthValue pr.Float
-	if width.String == "auto" || width.Unit == pr.Percentage {
+	if width.String == "auto" || width.Unit == pr.Perc {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// http://dbaron.org/css/intrinsic/#outer-intrinsic
@@ -114,12 +114,12 @@ func minMax(box Box, width pr.Float) pr.Float {
 	minWidth := box.Box().Style.GetMinWidth()
 	maxWidth := box.Box().Style.GetMaxWidth()
 	var resMin, resMax pr.Float
-	if minWidth.String == "auto" || minWidth.Unit == pr.Percentage {
+	if minWidth.String == "auto" || minWidth.Unit == pr.Perc {
 		resMin = 0
 	} else {
 		resMin = minWidth.Value
 	}
-	if maxWidth.String == "auto" || maxWidth.Unit == pr.Percentage {
+	if maxWidth.String == "auto" || maxWidth.Unit == pr.Perc {
 		resMax = pr.Inf
 	} else {
 		resMax = maxWidth.Value
@@ -129,11 +129,11 @@ func minMax(box Box, width pr.Float) pr.Float {
 		_, _, ratio := replaced.Replaced().Replacement.GetIntrinsicSize(1, box.Box().Style.GetFontSize().Value)
 		if ratio != nil {
 			minHeight := box.Box().Style.GetMinHeight()
-			if minHeight.String != "auto" && minHeight.Unit != pr.Percentage {
+			if minHeight.String != "auto" && minHeight.Unit != pr.Perc {
 				resMin = pr.Max(resMin, minHeight.Value*ratio.V())
 			}
 			maxHeight := box.Box().Style.GetMaxHeight()
-			if maxHeight.String != "auto" && maxHeight.Unit != pr.Percentage {
+			if maxHeight.String != "auto" && maxHeight.Unit != pr.Perc {
 				resMax = pr.Min(resMax, maxHeight.Value*ratio.V())
 			}
 		}
@@ -159,7 +159,7 @@ func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
 			switch styleValue.Unit {
 			case pr.Px:
 				width += styleValue.Value
-			case pr.Percentage:
+			case pr.Perc:
 				percentages += styleValue.Value
 			default:
 				panic(fmt.Sprintf("expected Px or Percentage, got %d", styleValue.Unit))
@@ -238,7 +238,7 @@ func inlineMaxContentWidth(context *layoutContext, box_ Box, outer, isLineStart 
 func columnGroupContentWidth(box Box) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var width_ pr.Float
-	if width.String == "auto" || width.Unit == pr.Percentage {
+	if width.String == "auto" || width.Unit == pr.Perc {
 		width_ = 0
 	} else if width.Unit == pr.Px {
 		width_ = width.Value
@@ -287,7 +287,7 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 		box                     = box_.Box()
 	)
 	if bo.LineBoxT.IsInstance(box_) {
-		if box.Style.GetTextIndent().Unit == pr.Percentage {
+		if box.Style.GetTextIndent().Unit == pr.Perc {
 			// TODO: this is wrong, text-indent percentages should be resolved
 			// before calling this function.
 			textIndent = 0
@@ -394,13 +394,13 @@ func percentageContribution(box bo.BoxFields) pr.Float {
 	var minWidth, width pr.Float
 	maxWidth := pr.Inf
 	miw, maw, w := box.Style.GetMinWidth(), box.Style.GetMaxWidth(), box.Style.GetWidth()
-	if miw.String != "auto" && miw.Unit == pr.Percentage {
+	if miw.String != "auto" && miw.Unit == pr.Perc {
 		minWidth = miw.Value
 	}
-	if maw.String != "auto" && maw.Unit == pr.Percentage {
+	if maw.String != "auto" && maw.Unit == pr.Perc {
 		maxWidth = maw.Value
 	}
-	if w.String != "auto" && w.Unit == pr.Percentage {
+	if w.String != "auto" && w.Unit == pr.Perc {
 		width = w.Value
 	}
 	return pr.Max(minWidth, pr.Min(width, maxWidth))
@@ -611,20 +611,20 @@ outerLoop:
 	constrainedness := make([]bool, gridWidth)
 	for i := range constrainedness {
 		if columnGroups[i] != nil {
-			if wid := columnGroups[i].Box().Style.GetWidth(); wid.String != "auto" && wid.Unit != pr.Percentage {
+			if wid := columnGroups[i].Box().Style.GetWidth(); wid.String != "auto" && wid.Unit != pr.Perc {
 				constrainedness[i] = true
 				continue
 			}
 		}
 		if columns[i] != nil {
-			if wid := columns[i].Box().Style.GetWidth(); wid.String != "auto" && wid.Unit != pr.Percentage {
+			if wid := columns[i].Box().Style.GetWidth(); wid.String != "auto" && wid.Unit != pr.Perc {
 				constrainedness[i] = true
 				continue
 			}
 		}
 		for _, cell := range zippedGrid[i] {
 			if cell != nil {
-				if wid := cell.Box().Style.GetWidth(); cell.Box().Colspan == 1 && wid.String != "auto" && wid.Unit != pr.Percentage {
+				if wid := cell.Box().Style.GetWidth(); cell.Box().Colspan == 1 && wid.String != "auto" && wid.Unit != pr.Perc {
 					constrainedness[i] = true
 					break
 				}
@@ -758,22 +758,22 @@ func replacedMinContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 	)
 	if width.String == "auto" {
 		height := box.Style.GetHeight()
-		if height.String == "auto" || height.Unit == pr.Percentage {
-			h = pr.Auto
+		if height.String == "auto" || height.Unit == pr.Perc {
+			h = pr.AutoF
 		} else if height.Unit == pr.Px {
 			h = height.Value
 		} else {
 			panic(fmt.Sprintf("expected Px got %d", height.Unit))
 		}
-		if mw := box.Style.GetMaxWidth(); mw.String != "auto" && mw.Unit == pr.Percentage {
+		if mw := box.Style.GetMaxWidth(); mw.String != "auto" && mw.Unit == pr.Perc {
 			// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
 			w = pr.Float(0)
 		} else {
 			image := box.Replacement
 			iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-			w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.Auto, h, 300, 150)
+			w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
 		}
-	} else if width.Unit == pr.Percentage {
+	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
 		w = 0
 	} else if width.Unit == pr.Px {
@@ -793,8 +793,8 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 	)
 	if width.String == "auto" {
 		height := box.Style.GetHeight()
-		if height.String == "auto" || height.Unit == pr.Percentage {
-			h = pr.Auto
+		if height.String == "auto" || height.Unit == pr.Perc {
+			h = pr.AutoF
 		} else if height.Unit == pr.Px {
 			h = height.Value
 		} else {
@@ -803,9 +803,9 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 
 		image := box.Replacement
 		iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-		w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.Auto, h, 300, 150)
+		w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
 
-	} else if width.Unit == pr.Percentage {
+	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
 		w = 0
 	} else if width.Unit == pr.Px {

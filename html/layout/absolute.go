@@ -94,18 +94,18 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 	var translateX pr.Float = 0
 	translateBoxWidth := false
 	defaultTranslateX := cbX - box.PositionX
-	if left == pr.Auto && right == pr.Auto && width == pr.Auto {
-		if marginL == pr.Auto {
+	if left == pr.AutoF && right == pr.AutoF && width == pr.AutoF {
+		if marginL == pr.AutoF {
 			box.MarginLeft = pr.Float(0)
 		}
-		if marginR == pr.Auto {
+		if marginR == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
 		availableWidth := cbWidth - (paddingPlusBordersX + box.MarginLeft.V() + box.MarginRight.V())
 		box.Width = shrinkToFit(context, box_, availableWidth)
-	} else if left != pr.Auto && right != pr.Auto && width != pr.Auto {
+	} else if left != pr.AutoF && right != pr.AutoF && width != pr.AutoF {
 		widthForMargins := cbWidth - (right.V() + left.V() + width.V() + paddingPlusBordersX)
-		if marginL == pr.Auto && marginR == pr.Auto {
+		if marginL == pr.AutoF && marginR == pr.AutoF {
 			if width.V()+paddingPlusBordersX+right.V()+left.V() <= cbWidth {
 				box.MarginLeft = widthForMargins / 2
 				box.MarginRight = box.MarginLeft
@@ -113,37 +113,37 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 				box.MarginLeft = pr.Float(0)
 				box.MarginRight = widthForMargins
 			}
-		} else if marginL == pr.Auto {
+		} else if marginL == pr.AutoF {
 			box.MarginLeft = widthForMargins
-		} else if marginR == pr.Auto {
+		} else if marginR == pr.AutoF {
 			box.MarginRight = widthForMargins
 		} else {
 			box.MarginRight = widthForMargins
 		}
 		translateX = left.V() + defaultTranslateX
 	} else {
-		if marginL == pr.Auto {
+		if marginL == pr.AutoF {
 			box.MarginLeft = pr.Float(0)
 		}
-		if marginR == pr.Auto {
+		if marginR == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
 		spacing := paddingPlusBordersX + box.MarginLeft.V() + box.MarginRight.V()
-		if left == pr.Auto && width == pr.Auto {
+		if left == pr.AutoF && width == pr.AutoF {
 			box.Width = shrinkToFit(context, box_, cbWidth-spacing-right.V())
 			translateX = cbWidth - right.V() - spacing + defaultTranslateX
 			translateBoxWidth = true
-		} else if left == pr.Auto && right == pr.Auto {
+		} else if left == pr.AutoF && right == pr.AutoF {
 			// Keep the static position
-		} else if width == pr.Auto && right == pr.Auto {
+		} else if width == pr.AutoF && right == pr.AutoF {
 			box.Width = shrinkToFit(context, box_, cbWidth-spacing-left.V())
 			translateX = left.V() + defaultTranslateX
-		} else if left == pr.Auto {
+		} else if left == pr.AutoF {
 			translateX = cbWidth + defaultTranslateX - right.V() - spacing - width.V()
-		} else if width == pr.Auto {
+		} else if width == pr.AutoF {
 			box.Width = cbWidth.V() - right.V() - left.V() - spacing
 			translateX = left.V() + defaultTranslateX
-		} else if right == pr.Auto {
+		} else if right == pr.AutoF {
 			translateX = left.V() + defaultTranslateX
 		}
 	}
@@ -171,48 +171,48 @@ func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 	var translateY pr.Float = 0
 	translateBoxHeight := false
 	defaultTranslateY := cbY - box.PositionY
-	if top == pr.Auto && bottom == pr.Auto && height == pr.Auto {
+	if top == pr.AutoF && bottom == pr.AutoF && height == pr.AutoF {
 		// Keep the static position
-		if marginT == pr.Auto {
+		if marginT == pr.AutoF {
 			box.MarginTop = pr.Float(0)
 		}
-		if marginB == pr.Auto {
+		if marginB == pr.AutoF {
 			box.MarginBottom = pr.Float(0)
 		}
-	} else if top != pr.Auto && bottom != pr.Auto && height != pr.Auto {
+	} else if top != pr.AutoF && bottom != pr.AutoF && height != pr.AutoF {
 		heightForMargins := cbHeight - (top.V() + bottom.V() + height.V() + paddingsPlusBordersY)
-		if marginT == pr.Auto && marginB == pr.Auto {
+		if marginT == pr.AutoF && marginB == pr.AutoF {
 			box.MarginTop = heightForMargins / 2
 			box.MarginBottom = box.MarginTop
-		} else if marginT == pr.Auto {
+		} else if marginT == pr.AutoF {
 			box.MarginTop = heightForMargins
-		} else if marginB == pr.Auto {
+		} else if marginB == pr.AutoF {
 			box.MarginBottom = heightForMargins
 		} else {
 			box.MarginBottom = heightForMargins
 		}
 		translateY = top.V() + defaultTranslateY
 	} else {
-		if marginT == pr.Auto {
+		if marginT == pr.AutoF {
 			box.MarginTop = pr.Float(0)
 		}
-		if marginB == pr.Auto {
+		if marginB == pr.AutoF {
 			box.MarginBottom = pr.Float(0)
 		}
 		spacing := paddingsPlusBordersY + box.MarginTop.V() + box.MarginBottom.V()
-		if top == pr.Auto && height == pr.Auto {
+		if top == pr.AutoF && height == pr.AutoF {
 			translateY = cbHeight.V() - bottom.V() - spacing + defaultTranslateY
 			translateBoxHeight = true
-		} else if top == pr.Auto && bottom == pr.Auto {
+		} else if top == pr.AutoF && bottom == pr.AutoF {
 			// Keep the static position
-		} else if height == pr.Auto && bottom == pr.Auto {
+		} else if height == pr.AutoF && bottom == pr.AutoF {
 			translateY = top.V() + defaultTranslateY
-		} else if top == pr.Auto {
+		} else if top == pr.AutoF {
 			translateY = cbHeight.V() + defaultTranslateY - bottom.V() - spacing - height.V()
-		} else if height == pr.Auto {
+		} else if height == pr.AutoF {
 			box.Height = cbHeight.V() - bottom.V() - top.V() - spacing
 			translateY = top.V() + defaultTranslateY
-		} else if bottom == pr.Auto {
+		} else if bottom == pr.AutoF {
 			translateY = top.V() + defaultTranslateY
 		}
 	}
@@ -342,7 +342,7 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 	ltr := box.Style.GetDirection() == "ltr"
 
 	// http://www.w3.org/TR/CSS21/visudet.html#abs-replaced-width
-	if box.Left == pr.Auto && box.Right == pr.Auto {
+	if box.Left == pr.AutoF && box.Right == pr.AutoF {
 		// static position:
 		if ltr {
 			box.Left = box.PositionX - cbX
@@ -350,23 +350,23 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 			box.Right = cbX + cbWidth - box.PositionX
 		}
 	}
-	if box.Left == pr.Auto || box.Right == pr.Auto {
-		if box.MarginLeft == pr.Auto {
+	if box.Left == pr.AutoF || box.Right == pr.AutoF {
+		if box.MarginLeft == pr.AutoF {
 			box.MarginLeft = pr.Float(0)
 		}
-		if box.MarginRight == pr.Auto {
+		if box.MarginRight == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
 		remaining := cbWidth - box.MarginWidth()
-		if box.Left == pr.Auto {
+		if box.Left == pr.AutoF {
 			box.Left = remaining - box.Right.V()
 		}
-		if box.Right == pr.Auto {
+		if box.Right == pr.AutoF {
 			box.Right = remaining - box.Left.V()
 		}
-	} else if pr.Auto == box.MarginLeft || pr.Auto == box.MarginRight {
+	} else if pr.AutoF == box.MarginLeft || pr.AutoF == box.MarginRight {
 		remaining := cbWidth - (box.BorderWidth() + box.Left.V() + box.Right.V())
-		if box.MarginLeft == pr.Auto && box.MarginRight == pr.Auto {
+		if box.MarginLeft == pr.AutoF && box.MarginRight == pr.AutoF {
 			if remaining >= 0 {
 				box.MarginLeft = intDiv(remaining, 2)
 				box.MarginRight = box.MarginLeft
@@ -377,7 +377,7 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 				box.MarginLeft = remaining
 				box.MarginRight = pr.Float(0)
 			}
-		} else if box.MarginLeft == pr.Auto {
+		} else if box.MarginLeft == pr.AutoF {
 			box.MarginLeft = remaining
 		} else {
 			box.MarginRight = remaining
@@ -392,29 +392,29 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 	}
 
 	// http://www.w3.org/TR/CSS21/visudet.html#abs-replaced-height
-	if box.Top == pr.Auto && box.Bottom == pr.Auto {
+	if box.Top == pr.AutoF && box.Bottom == pr.AutoF {
 		box.Top = box.PositionY - cbY
 	}
-	if box.Top == pr.Auto || box.Bottom == pr.Auto {
-		if box.MarginTop == pr.Auto {
+	if box.Top == pr.AutoF || box.Bottom == pr.AutoF {
+		if box.MarginTop == pr.AutoF {
 			box.MarginTop = pr.Float(0)
 		}
-		if box.MarginBottom == pr.Auto {
+		if box.MarginBottom == pr.AutoF {
 			box.MarginBottom = pr.Float(0)
 		}
 		remaining := cbHeight - box.MarginHeight()
-		if box.Top == pr.Auto {
+		if box.Top == pr.AutoF {
 			box.Top = remaining
 		}
-		if box.Bottom == pr.Auto {
+		if box.Bottom == pr.AutoF {
 			box.Bottom = remaining
 		}
-	} else if box.MarginTop == pr.Auto || box.MarginBottom == pr.Auto {
+	} else if box.MarginTop == pr.AutoF || box.MarginBottom == pr.AutoF {
 		remaining := cbHeight - (box.BorderHeight() + box.Top.V() + box.Bottom.V())
-		if box.MarginTop == pr.Auto && box.MarginBottom == pr.Auto {
+		if box.MarginTop == pr.AutoF && box.MarginBottom == pr.AutoF {
 			box.MarginTop = intDiv(remaining, 2)
 			box.MarginBottom = box.MarginTop
-		} else if box.MarginTop == pr.Auto {
+		} else if box.MarginTop == pr.AutoF {
 			box.MarginTop = remaining
 		} else {
 			box.MarginBottom = remaining

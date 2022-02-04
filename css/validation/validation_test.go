@@ -61,6 +61,8 @@ func assertInvalid(t *testing.T, css, message string) {
 }
 
 func assertValidDict(t *testing.T, css string, ref map[string]pr.ValidatedProperty) {
+	t.Helper()
+
 	got := expandToDict(t, css, "")
 	if !reflect.DeepEqual(ref, got) {
 		t.Fatalf("expected %v got %v", ref, got)
@@ -262,10 +264,10 @@ func TestTransforms(t *testing.T) {
 		"transform": pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: -4, Unit: pr.Px}, {Value: 0, Unit: pr.Scalar}}}},
 	}))
 	assertValidDict(t, "transform: translate(6px, 20%)", toValidated(pr.Properties{
-		"transform": pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Percentage}}}},
+		"transform": pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Perc}}}},
 	}))
 	assertValidDict(t, "transform: translate(6px 20%)", toValidated(pr.Properties{
-		"transform": pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Percentage}}}},
+		"transform": pr.Transforms{{String: "translate", Dimensions: []pr.Dimension{{Value: 6, Unit: pr.Px}, {Value: 20, Unit: pr.Perc}}}},
 	}))
 	assertValidDict(t, "transform: scale(2)", toValidated(pr.Properties{
 		"transform": pr.Transforms{{String: "scale", Dimensions: []pr.Dimension{pr.FToD(2), pr.FToD(2)}}},
@@ -305,9 +307,9 @@ func TestExpandBackgroundPosition(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	css_xs := [5]string{"left", "center", "right", "4.5%", "12px"}
-	val_xs := [5]pr.Dimension{{Value: 0, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}, {Value: 100, Unit: pr.Percentage}, {Value: 4.5, Unit: pr.Percentage}, {Value: 12, Unit: pr.Px}}
+	val_xs := [5]pr.Dimension{{Value: 0, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}, {Value: 4.5, Unit: pr.Perc}, {Value: 12, Unit: pr.Px}}
 	css_ys := [5]string{"top", "center", "bottom", "7%", "1.5px"}
-	val_ys := [5]pr.Dimension{{Value: 0, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}, {Value: 100, Unit: pr.Percentage}, {Value: 7, Unit: pr.Percentage}, {Value: 1.5, Unit: pr.Px}}
+	val_ys := [5]pr.Dimension{{Value: 0, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}, {Value: 7, Unit: pr.Perc}, {Value: 1.5, Unit: pr.Px}}
 	for i, css_x := range css_xs {
 		val_x := val_xs[i]
 		for j, css_y := range css_ys {
@@ -316,38 +318,38 @@ func TestExpandBackgroundPosition(t *testing.T) {
 			checkPosition(t, fmt.Sprintf("%s %s", css_x, css_y), pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, val_y}})
 		}
 		// One token:
-		checkPosition(t, css_x, pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, {Value: 50, Unit: pr.Percentage}}})
+		checkPosition(t, css_x, pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{val_x, {Value: 50, Unit: pr.Perc}}})
 	}
 	// One token, vertical
-	checkPosition(t, "top", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 0, Unit: pr.Percentage}}})
-	checkPosition(t, "bottom", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 100, Unit: pr.Percentage}}})
+	checkPosition(t, "top", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "bottom", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}}})
 
 	// Three tokens:
-	checkPosition(t, "center top 10%", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
-	checkPosition(t, "top 10% center", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
-	checkPosition(t, "center bottom 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
-	checkPosition(t, "bottom 10% center", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
+	checkPosition(t, "center top 10%", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "top 10% center", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "center bottom 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "bottom 10% center", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
 
-	checkPosition(t, "right top 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
-	checkPosition(t, "top 10% right", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
-	checkPosition(t, "right bottom 10%", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
-	checkPosition(t, "bottom 10% right", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}})
+	checkPosition(t, "right top 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "top 10% right", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "right bottom 10%", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
+	checkPosition(t, "bottom 10% right", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}})
 
-	checkPosition(t, "center left 10%", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}}})
-	checkPosition(t, "left 10% center", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}}})
-	checkPosition(t, "center right 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}}})
-	checkPosition(t, "right 10% center", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}}})
+	checkPosition(t, "center left 10%", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "left 10% center", pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "center right 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
+	checkPosition(t, "right 10% center", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}})
 
-	checkPosition(t, "bottom left 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 0, Unit: pr.Percentage}}})
-	checkPosition(t, "left 10% bottom", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 0, Unit: pr.Percentage}}})
-	checkPosition(t, "bottom right 10%", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 0, Unit: pr.Percentage}}})
-	checkPosition(t, "right 10% bottom", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 0, Unit: pr.Percentage}}})
+	checkPosition(t, "bottom left 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "left 10% bottom", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "bottom right 10%", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
+	checkPosition(t, "right 10% bottom", pr.Center{OriginX: "right", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 0, Unit: pr.Perc}}})
 
 	// Four tokens :
-	checkPosition(t, "left 10% bottom 3px", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 3, Unit: pr.Px}}})
-	checkPosition(t, "bottom 3px left 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 3, Unit: pr.Px}}})
-	checkPosition(t, "right 10% top 3px", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 3, Unit: pr.Px}}})
-	checkPosition(t, "top 3px right 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Percentage}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "left 10% bottom 3px", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "bottom 3px left 10%", pr.Center{OriginX: "left", OriginY: "bottom", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "right 10% top 3px", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
+	checkPosition(t, "top 3px right 10%", pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Perc}, {Value: 3, Unit: pr.Px}}})
 
 	capt.AssertNoLogs(t)
 
@@ -364,7 +366,7 @@ func TestLineHeight(t *testing.T) {
 		"line_height": pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
 	}))
 	assertValidDict(t, "line-height: 1.1%", toValidated(pr.Properties{
-		"line_height": pr.Dimension{Value: 1.1, Unit: pr.Percentage}.ToValue(),
+		"line_height": pr.Dimension{Value: 1.1, Unit: pr.Perc}.ToValue(),
 	}))
 	assertValidDict(t, "line-height: 1em", toValidated(pr.Properties{
 		"line_height": pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
@@ -543,21 +545,21 @@ func TestLinearGradient(t *testing.T) {
 	gradient(t, "blue", pr.DirectionType{Angle: pi}, nil, nil)
 	gradient(t, "red", pr.DirectionType{Angle: pi}, []pr.Color{red}, []pr.Dimension{{}})
 	gradient(t, "blue 1%, lime,red 2em ", pr.DirectionType{Angle: pi},
-		[]pr.Color{blue, lime, red}, []pr.Dimension{{Value: 1, Unit: pr.Percentage}, {}, {Value: 2, Unit: pr.Em}})
+		[]pr.Color{blue, lime, red}, []pr.Dimension{{Value: 1, Unit: pr.Perc}, {}, {Value: 2, Unit: pr.Em}})
 
 	gradient(t, "18deg, blue", pr.DirectionType{Angle: pi / 10}, nil, nil)
 	gradient(t, "4rad, blue", pr.DirectionType{Angle: 4}, nil, nil)
 	gradient(t, ".25turn, blue", pr.DirectionType{Angle: pi / 2}, nil, nil)
 	gradient(t, "100grad, blue", pr.DirectionType{Angle: (pi / 200) * 100}, nil, nil) // rounding error
 	gradient(t, "12rad, blue 1%, lime,red 2em ", pr.DirectionType{Angle: 12},
-		[]pr.Color{blue, lime, red}, []pr.Dimension{{Value: 1, Unit: pr.Percentage}, {}, {Value: 2, Unit: pr.Em}})
+		[]pr.Color{blue, lime, red}, []pr.Dimension{{Value: 1, Unit: pr.Perc}, {}, {Value: 2, Unit: pr.Em}})
 
 	gradient(t, "to top, blue", pr.DirectionType{Angle: 0}, nil, nil)
 	gradient(t, "to right, blue", pr.DirectionType{Angle: pi / 2}, nil, nil)
 	gradient(t, "to bottom, blue", pr.DirectionType{Angle: pi}, nil, nil)
 	gradient(t, "to left, blue", pr.DirectionType{Angle: pi * 3 / 2}, nil, nil)
 	gradient(t, "to right, blue 1%, lime,red 2em ", pr.DirectionType{Angle: pi / 2},
-		[]pr.Color{blue, lime, red}, []pr.Dimension{{Value: 1, Unit: pr.Percentage}, {}, {Value: 2, Unit: pr.Em}})
+		[]pr.Color{blue, lime, red}, []pr.Dimension{{Value: 1, Unit: pr.Perc}, {}, {Value: 2, Unit: pr.Em}})
 
 	gradient(t, "to top left, blue", pr.DirectionType{Corner: "top_left"}, nil, nil)
 	gradient(t, "to left top, blue", pr.DirectionType{Corner: "top_left"}, nil, nil)
@@ -604,7 +606,7 @@ func TestRadialGradient(t *testing.T) {
 			size = pr.GradientSize{Keyword: "farthest-corner"}
 		}
 		if center.IsNone() {
-			center = pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 50, Unit: pr.Percentage}}}
+			center = pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}}}
 		}
 		checkGradientGeneric(t, css, pr.RadialGradient{ColorStops: colorStops, Shape: shape, Size: size, Center: center})
 	}
@@ -641,7 +643,7 @@ func TestRadialGradient(t *testing.T) {
 	gradient(t, "red", "", pr.GradientSize{}, pr.Center{}, []pr.Color{red}, nil)
 	gradient(t, "blue 1%, lime,red 2em ", "", pr.GradientSize{}, pr.Center{},
 		[]pr.Color{blue, lime, red},
-		[]pr.Dimension{{Value: 1, Unit: pr.Percentage}, {}, {Value: 2, Unit: pr.Em}})
+		[]pr.Dimension{{Value: 1, Unit: pr.Perc}, {}, {Value: 2, Unit: pr.Em}})
 	gradient(t, "circle, blue", "circle", pr.GradientSize{}, pr.Center{}, nil, nil)
 	gradient(t, "ellipse, blue", "ellipse", pr.GradientSize{}, pr.Center{}, nil, nil)
 
@@ -670,12 +672,12 @@ func TestRadialGradient(t *testing.T) {
 	gradient(t, "10px 50px, blue",
 		"ellipse", pr.GradientSize{Explicit: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Px}}}, pr.Center{}, nil, nil)
 	gradient(t, "at top 10% right, blue", "", pr.GradientSize{},
-		pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Percentage}, {Value: 10, Unit: pr.Percentage}}}, nil, nil)
+		pr.Center{OriginX: "right", OriginY: "top", Pos: pr.Point{{Value: 0, Unit: pr.Perc}, {Value: 10, Unit: pr.Perc}}}, nil, nil)
 	gradient(t, "circle at bottom, blue", "circle", pr.GradientSize{},
-		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Percentage}, {Value: 100, Unit: pr.Percentage}}}, nil, nil)
+		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}}}, nil, nil)
 	gradient(t, "circle at 10px, blue", "circle", pr.GradientSize{},
-		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Percentage}}}, nil, nil)
+		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 10, Unit: pr.Px}, {Value: 50, Unit: pr.Perc}}}, nil, nil)
 	gradient(t, "closest-side circle at right 5em, blue",
 		"circle", pr.GradientSize{Keyword: "closest-side"},
-		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 100, Unit: pr.Percentage}, {Value: 5, Unit: pr.Em}}}, nil, nil)
+		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 100, Unit: pr.Perc}, {Value: 5, Unit: pr.Em}}}, nil, nil)
 }

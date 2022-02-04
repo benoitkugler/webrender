@@ -461,9 +461,9 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 		// We can safely edit everything that can't be changed by user style
 		// See https://drafts.csswg.org/css-pseudo-4/#marker-pseudo
 		markerBox.Box().Style.SetPosition(pr.BoolString{String: "absolute"})
-		translateX := pr.Dimension{Value: 100, Unit: pr.Percentage}
+		translateX := pr.Dimension{Value: 100, Unit: pr.Perc}
 		if parentStyle.GetDirection() == "ltr" {
-			translateX = pr.Dimension{Value: -100, Unit: pr.Percentage}
+			translateX = pr.Dimension{Value: -100, Unit: pr.Perc}
 		}
 		translateY := pr.ZeroPixels
 		markerBox.Box().Style.SetTransform(pr.Transforms{{String: "translate", Dimensions: pr.Dimensions{translateX, translateY}}})

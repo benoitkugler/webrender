@@ -36,7 +36,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 
 	height_ := box.Style.GetHeight()
 	knownHeight := false
-	if height_.String != "auto" && height_.Unit != pr.Percentage {
+	if height_.String != "auto" && height_.Unit != pr.Perc {
 		if height_.Unit != pr.Px {
 			panic(fmt.Sprintf("expected Px got %v", height_))
 		}
@@ -299,13 +299,13 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 	currentPositionY += collapseMargin(adjoiningMargins)
 	height := currentPositionY - box.ContentBoxY()
 	var heightDifference pr.Float
-	if box.Height == pr.Auto {
+	if box.Height == pr.AutoF {
 		box.Height = height
 		heightDifference = 0
 	} else {
 		heightDifference = box.Height.V() - height
 	}
-	if box.MinHeight != pr.Auto && box.MinHeight.V() > box.Height.V() {
+	if box.MinHeight != pr.AutoF && box.MinHeight.V() > box.Height.V() {
 		heightDifference += box.MinHeight.V() - box.Height.V()
 		box.Height = box.MinHeight
 	}

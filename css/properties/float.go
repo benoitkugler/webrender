@@ -9,7 +9,9 @@ import (
 // This file define a float64-like type handling these cases.
 
 const (
-	Auto special = true
+	// AutoF indicates a value specified as "auto", which will
+	// be resolved during layout.
+	AutoF special = true
 )
 
 type MaybeFloat interface {
@@ -57,7 +59,7 @@ func MaybeFloatToValue(mf MaybeFloat) Value {
 	if mf == nil {
 		return Value{}
 	}
-	if mf == Auto {
+	if mf == AutoF {
 		return SToV("auto")
 	}
 	return mf.V().ToValue()
@@ -119,11 +121,11 @@ func ResoudPercentage(value Value, referTo Float) MaybeFloat {
 	if value.IsNone() {
 		return nil
 	} else if value.String == "auto" {
-		return Auto
+		return AutoF
 	} else if value.Unit == Px {
 		return value.Value
 	} else {
-		if value.Unit != Percentage {
+		if value.Unit != Perc {
 			panic(fmt.Sprintf("expected percentage, got %d", value.Unit))
 		}
 		return referTo * value.Value / 100.

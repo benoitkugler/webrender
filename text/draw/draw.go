@@ -24,20 +24,20 @@ type Context struct {
 
 // DrawFirstLine draws the first line of `layout` starting at position `(x,y)`.
 func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor,
-	textOverflow string, blockEllipsis pr.NamedString, x, y pr.Fl) {
+	textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
 	pl := &layout.Layout
 	pl.SetSingleParagraphMode(true)
 
 	var ellipsis string
-	if textOverflow == "ellipsis" || blockEllipsis.Name != "none" {
+	if textOverflow == "ellipsis" || blockEllipsis.Tag != pr.None {
 		// assert layout.maxWidth is not nil
 		maxWidth := layout.MaxWidth.V()
 		pl.SetWidth(pango.Unit(text.PangoUnitsFromFloat(pr.Fl(maxWidth))))
 		if textOverflow == "ellipsis" {
 			pl.SetEllipsize(pango.ELLIPSIZE_END)
 		} else {
-			ellipsis = blockEllipsis.String
-			if blockEllipsis.Name == "auto" {
+			ellipsis = blockEllipsis.S
+			if blockEllipsis.Tag == pr.Auto {
 				ellipsis = "…"
 			}
 			// Remove last word if hyphenated
@@ -53,7 +53,7 @@ func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor
 	}
 
 	firstLine, secondLine := layout.GetFirstLine()
-	if blockEllipsis.Name != "none" {
+	if blockEllipsis.Tag != pr.None {
 		for secondLine != 0 && secondLine != -1 {
 			lastWordEnd := text.GetLastWordEnd(pl.Text[:len(pl.Text)-len([]rune(ellipsis))])
 			if lastWordEnd == -1 {

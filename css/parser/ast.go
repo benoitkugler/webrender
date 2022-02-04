@@ -2,7 +2,9 @@ package parser
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"math"
 
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -34,7 +36,7 @@ type TokenType string
 
 type Token interface {
 	jsonisable
-	Position() position
+	Position() Pos
 	Type() TokenType
 	serializeTo(io.StringWriter)
 }
@@ -51,37 +53,37 @@ func (s LowerableString) Lower() string {
 	return utils.AsciiLower(string(s))
 }
 
-type position struct {
+type Pos struct {
 	Line, Column int
 }
 
-func newPosition(line, column int) position {
-	return position{Line: line, Column: column}
+func newPosition(line, column int) Pos {
+	return Pos{Line: line, Column: column}
 }
 
-func (n position) Position() position { return n }
+func (n Pos) Position() Pos { return n }
 
 // shared tokens
 type stringToken struct {
 	Value string
-	position
+	Pos
 }
 
 type bracketsBlock struct {
 	Content *[]Token
-	position
+	Pos
 }
 
-type numericToken struct {
+type NumericToken struct {
 	Representation string
-	position
+	Pos
 	Value     utils.Fl
 	IsInteger bool
 }
 
 type QualifiedRule struct {
 	Prelude, Content *[]Token
-	position
+	Pos
 }
 
 type AtRule struct {
@@ -92,14 +94,14 @@ type AtRule struct {
 type Declaration struct {
 	Name  LowerableString
 	Value []Token
-	position
+	Pos
 	Important bool
 }
 
 type ParseError struct {
 	Kind    string
 	Message string
-	position
+	Pos
 }
 
 type (
@@ -108,24 +110,24 @@ type (
 	LiteralToken    stringToken
 	IdentToken      struct {
 		Value LowerableString
-		position
+		Pos
 	}
 )
 
 type AtKeywordToken struct {
 	Value LowerableString
-	position
+	Pos
 }
 
 type HashToken struct {
 	Value string
-	position
+	Pos
 	IsIdentifier bool
 }
 
 type StringToken struct {
 	Value string
-	position
+	Pos
 	isError bool
 }
 
@@ -136,25 +138,30 @@ const (
 
 type URLToken struct {
 	Value string
-	position
+	Pos
 	isError uint8
 }
 
 type (
 	UnicodeRangeToken struct {
-		position
+		Pos
 		Start, End uint32
 	}
 )
 
 type (
-	NumberToken     numericToken
-	PercentageToken numericToken
+	NumberToken     NumericToken
+	PercentageToken NumericToken
 	DimensionToken  struct {
 		Unit LowerableString
-		numericToken
+		NumericToken
 	}
 )
+
+func NewNumberToken(v utils.Fl, pos Pos) NumberToken {
+	isInt := v == utils.Fl(math.Trunc((float64(v))))
+	return NumberToken{Pos: pos, Value: v, IsInteger: isInt, Representation: fmt.Sprintf("%v", v)}
+}
 
 type (
 	ParenthesesBlock    bracketsBlock
@@ -163,7 +170,7 @@ type (
 	FunctionBlock       struct {
 		Arguments *[]Token
 		Name      LowerableString
-		position
+		Pos
 	}
 )
 
@@ -194,16 +201,16 @@ func (t FunctionBlock) Type() TokenType       { return FunctionBlockT }
 
 // IntValue returns the rounded value
 // Should be used only if  `IsInteger` is true
-func (t numericToken) IntValue() int {
+func (t NumericToken) IntValue() int {
 	return int(t.Value)
 }
 
 func (t NumberToken) IntValue() int {
-	return numericToken(t).IntValue()
+	return NumericToken(t).IntValue()
 }
 
 func (t PercentageToken) IntValue() int {
-	return numericToken(t).IntValue()
+	return NumericToken(t).IntValue()
 }
 
 // ---------------- JSON -------------------------------------------
@@ -228,7 +235,7 @@ func (s jsonList) toJson() jsonisable {
 	return s
 }
 
-func (n numericToken) toJson() jsonList {
+func (n NumericToken) toJson() jsonList {
 	l := jsonList{myString(n.Representation), myFloat(n.Value)}
 	if n.IsInteger {
 		l = append(l, myString("integer"))
@@ -322,15 +329,15 @@ func (t UnicodeRangeToken) toJson() jsonisable {
 }
 
 func (t NumberToken) toJson() jsonisable {
-	return append(jsonList{myString("number")}, numericToken(t).toJson()...)
+	return append(jsonList{myString("number")}, NumericToken(t).toJson()...)
 }
 
 func (t PercentageToken) toJson() jsonisable {
-	return append(jsonList{myString("percentage")}, numericToken(t).toJson()...)
+	return append(jsonList{myString("percentage")}, NumericToken(t).toJson()...)
 }
 
 func (t DimensionToken) toJson() jsonisable {
-	return append(append(jsonList{myString("dimension")}, t.numericToken.toJson()...), myString(t.Unit))
+	return append(append(jsonList{myString("dimension")}, t.NumericToken.toJson()...), myString(t.Unit))
 }
 
 func (t ParenthesesBlock) toJson() jsonisable {

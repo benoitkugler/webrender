@@ -31,10 +31,10 @@ func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSp
 	if !bo.TableBoxT.IsInstance(box_) {
 		resolvePercentagesBox(box_, containingBlock, "")
 
-		if box.MarginTop == pr.Auto {
+		if box.MarginTop == pr.AutoF {
 			box.MarginTop = pr.Float(0)
 		}
-		if box.MarginBottom == pr.Auto {
+		if box.MarginBottom == pr.AutoF {
 			box.MarginBottom = pr.Float(0)
 		}
 
@@ -177,37 +177,37 @@ func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlo
 	//               + padding-right + border-right-width + margin-right
 
 	paddingsPlusBorders := paddingL + paddingR + borderL + borderR
-	if width != pr.Auto {
+	if width != pr.AutoF {
 		total := paddingsPlusBorders + width.V()
-		if marginL != pr.Auto {
+		if marginL != pr.AutoF {
 			total += marginL.V()
 		}
-		if marginR != pr.Auto {
+		if marginR != pr.AutoF {
 			total += marginR.V()
 		}
 		if total > cbWidth {
-			if marginL == pr.Auto {
+			if marginL == pr.AutoF {
 				marginL = pr.Float(0)
 				box.MarginLeft = pr.Float(0)
 			}
-			if marginR == pr.Auto {
+			if marginR == pr.AutoF {
 				marginR = pr.Float(0)
 				box.MarginRight = pr.Float(0)
 			}
 		}
 	}
-	if width != pr.Auto && marginL != pr.Auto && marginR != pr.Auto {
+	if width != pr.AutoF && marginL != pr.AutoF && marginR != pr.AutoF {
 		// The equation is over-constrained.
 		if direction == "rtl" && !box.IsColumn {
 			box.PositionX += cbWidth - paddingsPlusBorders - width.V() - marginR.V() - marginL.V()
 		} // Do nothing in ltr.
 	}
-	if width == pr.Auto {
-		if marginL == pr.Auto {
+	if width == pr.AutoF {
+		if marginL == pr.AutoF {
 			marginL = pr.Float(0)
 			box.MarginLeft = pr.Float(0)
 		}
-		if marginR == pr.Auto {
+		if marginR == pr.AutoF {
 			marginR = pr.Float(0)
 			box.MarginRight = pr.Float(0)
 		}
@@ -215,12 +215,12 @@ func blockLevelWidth_(box_ Box, _ *layoutContext, containingBlock_ containingBlo
 		box.Width = width
 	}
 	marginSum := cbWidth - paddingsPlusBorders - width.V()
-	if marginL == pr.Auto && marginR == pr.Auto {
+	if marginL == pr.AutoF && marginR == pr.AutoF {
 		box.MarginLeft = marginSum / 2.
 		box.MarginRight = marginSum / 2.
-	} else if marginL == pr.Auto && marginR != pr.Auto {
+	} else if marginL == pr.AutoF && marginR != pr.AutoF {
 		box.MarginLeft = marginSum - marginR.V()
-	} else if marginL != pr.Auto && marginR == pr.Auto {
+	} else if marginL != pr.AutoF && marginR == pr.AutoF {
 		box.MarginRight = marginSum - marginL.V()
 	}
 	return false, 0
@@ -232,21 +232,21 @@ func relativePositioning(box_ Box, containingBlock bo.Point) {
 	if box.Style.GetPosition().String == "relative" {
 		resolvePositionPercentages(box, containingBlock)
 		var translateX, translateY pr.Float
-		if box.Left != pr.Auto && box.Right != pr.Auto {
+		if box.Left != pr.AutoF && box.Right != pr.AutoF {
 			if box.Style.GetDirection() == "ltr" {
 				translateX = box.Left.V()
 			} else {
 				translateX = -box.Right.V()
 			}
-		} else if box.Left != pr.Auto {
+		} else if box.Left != pr.AutoF {
 			translateX = box.Left.V()
-		} else if box.Right != pr.Auto {
+		} else if box.Right != pr.AutoF {
 			translateX = -box.Right.V()
 		} else {
 			translateX = 0
 		}
 
-		if box.Top != pr.Auto {
+		if box.Top != pr.AutoF {
 			translateY = box.Top.V()
 		} else if box.Style.GetBottom().String != "auto" {
 			translateY = -box.Bottom.V()
@@ -419,7 +419,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	if lastInFlowChild == nil {
 		collapsedMargin := collapseMargin(*adjoiningMargins)
 		// top && bottom margin of this box
-		if (box.Height == pr.Auto || box.Height == pr.Float(0)) &&
+		if (box.Height == pr.AutoF || box.Height == pr.Float(0)) &&
 			getClearance(context, box, collapsedMargin) == nil &&
 			box.MinHeight == pr.Float(0) && box.BorderTopWidth == pr.Float(0) && box.PaddingTop == pr.Float(0) &&
 			box.BorderBottomWidth == pr.Float(0) && box.PaddingBottom == pr.Float(0) {
@@ -430,7 +430,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		}
 	} else {
 		// bottom margin of the last child && bottom margin of this box ...
-		if box.Height != pr.Auto {
+		if box.Height != pr.AutoF {
 			// not adjoining. (positionY is not used afterwards.)
 			adjoiningMargins = new([]pr.Float)
 		}
@@ -446,7 +446,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	newBox := newBox_.Box()
 	newBox_.RemoveDecoration(newBox, !isStart, boxIsFragmented && !discard)
 
-	if newBox.Height == pr.Auto {
+	if newBox.Height == pr.AutoF {
 		if len(*context.excludedShapes) != 0 && newBox.Style.GetOverflow() != "visible" {
 			maxFloatPositionY := -pr.Inf
 			for _, floatBox := range *context.excludedShapes {
@@ -657,8 +657,8 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 		positionY = newPositionY
 		skipStack = resumeAt
 
-		if ml := box.Style.GetMaxLines(); ml != (pr.IntString{String: "none"}) {
-			if i >= ml.Int-1 {
+		if ml := box.Style.GetMaxLines(); ml.Tag != pr.None {
+			if i >= ml.I-1 {
 				line_.BlockEllipsis = box.Style.GetBlockEllipsis()
 				break
 			}
@@ -702,7 +702,7 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 		if child.IsInNormalFlow() && lastInFlowChild == nil && collapsingWithChildren {
 			oldCollapsedMargin := collapseMargin(*adjoiningMargins)
 			var childMarginTop pr.Float
-			if child.MarginTop != pr.Auto {
+			if child.MarginTop != pr.AutoF {
 				childMarginTop = child.MarginTop.V()
 			}
 			newCollapsedMargin := collapseMargin(append(*adjoiningMargins, childMarginTop))

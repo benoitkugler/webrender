@@ -237,7 +237,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 			doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
 			dst.SetTextPaint(newPaintOp(doFill, doStroke, false))
 			textContext := drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
-			textContext.DrawFirstLine(layout, t.style, "none", pr.NamedString{Name: "none"}, xPosition, yPosition)
+			textContext.DrawFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition)
 		})
 
 		svg.cursorPosition = cursorPosition

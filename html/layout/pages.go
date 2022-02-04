@@ -46,14 +46,14 @@ func (o orientedBox) outer() pr.Float {
 }
 
 func (o orientedBox) outerMinContentSize() pr.Float {
-	if o.inner == pr.Auto {
+	if o.inner == pr.AutoF {
 		return o.sugar() + o.minContentSize()
 	}
 	return o.sugar() + o.inner.V()
 }
 
 func (o orientedBox) outerMaxContentSize() pr.Float {
-	if o.inner == pr.Auto {
+	if o.inner == pr.AutoF {
 		return o.sugar() + o.maxContentSize()
 	}
 	return o.sugar() + o.inner.V()
@@ -141,13 +141,13 @@ func (self *horizontalBox) maxContentSize() pr.Float {
 
 func countAuto(v1, v2, v3 pr.MaybeFloat) int {
 	out := 0
-	if v1 == pr.Auto {
+	if v1 == pr.AutoF {
 		out++
 	}
-	if v2 == pr.Auto {
+	if v2 == pr.AutoF {
 		out++
 	}
-	if v3 == pr.Auto {
+	if v3 == pr.AutoF {
 		out++
 	}
 	return out
@@ -179,18 +179,18 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 	// Rule 2
 	total := box.paddingPlusBorder
 	for _, value := range [3]pr.MaybeFloat{box.marginA, box.marginB, box.inner} {
-		if value != pr.Auto {
+		if value != pr.AutoF {
 			total += value.V()
 		}
 	}
 	if total > outer {
-		if box.marginA == pr.Auto {
+		if box.marginA == pr.AutoF {
 			box.marginA = pr.Float(0)
 		}
-		if box.marginB == pr.Auto {
+		if box.marginB == pr.AutoF {
 			box.marginB = pr.Float(0)
 		}
-		if box.inner == pr.Auto {
+		if box.inner == pr.AutoF {
 			// XXX this is not in the spec, but without it box.inner
 			// would end up with a negative value.
 			// Instead, this will trigger rule 3 below.
@@ -202,33 +202,33 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 	if countAuto(box.marginA, box.marginB, box.inner) == 0 {
 		// Over-constrained
 		if topOrLeft {
-			box.marginA = pr.Auto
+			box.marginA = pr.AutoF
 		} else {
-			box.marginB = pr.Auto
+			box.marginB = pr.AutoF
 		}
 	}
 	// Rule 4
 	if countAuto(box.marginA, box.marginB, box.inner) == 1 {
-		if box.inner == pr.Auto {
+		if box.inner == pr.AutoF {
 			box.inner = outer - box.paddingPlusBorder - box.marginA.V() - box.marginB.V()
-		} else if box.marginA == pr.Auto {
+		} else if box.marginA == pr.AutoF {
 			box.marginA = outer - box.paddingPlusBorder - box.marginB.V() - box.inner.V()
-		} else if box.marginB == pr.Auto {
+		} else if box.marginB == pr.AutoF {
 			box.marginB = outer - box.paddingPlusBorder - box.marginA.V() - box.inner.V()
 		}
 	}
 	// Rule 5
-	if box.inner == pr.Auto {
-		if box.marginA == pr.Auto {
+	if box.inner == pr.AutoF {
+		if box.marginA == pr.AutoF {
 			box.marginA = pr.Float(0)
 		}
-		if box.marginB == pr.Auto {
+		if box.marginB == pr.AutoF {
 			box.marginB = pr.Float(0)
 		}
 		box.inner = outer - box.paddingPlusBorder - box.marginA.V() - box.marginB.V()
 	}
 	// Rule 6
-	if box.marginA == pr.Auto && box.marginB == pr.Auto {
+	if box.marginA == pr.AutoF && box.marginB == pr.AutoF {
 		v := (outer - box.paddingPlusBorder - box.inner.V()) / 2
 		box.marginA = v
 		box.marginB = v
@@ -266,16 +266,16 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 
 	for _, box_ := range sideBoxes {
 		box := box_.baseBox()
-		if box.marginA == pr.Auto {
+		if box.marginA == pr.AutoF {
 			box.marginA = pr.Float(0)
 		}
-		if box.marginB == pr.Auto {
+		if box.marginB == pr.AutoF {
 			box.marginB = pr.Float(0)
 		}
 	}
 
 	if boxB.box.(*bo.MarginBox).IsGenerated {
-		if boxB.inner == pr.Auto {
+		if boxB.inner == pr.AutoF {
 			acMaxContentSize := 2 * pr.Max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
 			if outerSum >= (boxB.outerMaxContentSize() + acMaxContentSize) {
 				boxB.inner = boxB.maxContentSize()
@@ -300,10 +300,10 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 				}
 			}
 		}
-		if boxA.inner == pr.Auto {
+		if boxA.inner == pr.AutoF {
 			boxA.shrinkToFit((outerSum-boxB.outer())/2 - boxA.sugar())
 		}
-		if boxC.inner == pr.Auto {
+		if boxC.inner == pr.AutoF {
 			boxC.shrinkToFit((outerSum-boxB.outer())/2 - boxC.sugar())
 		}
 	} else {
@@ -311,7 +311,7 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 		if boxB.inner.V() != 0 {
 			panic(fmt.Sprintf("expected boxB.inner == 0, got %v", boxB.inner))
 		}
-		if boxA.inner == pr.Auto && boxC.inner == pr.Auto {
+		if boxA.inner == pr.AutoF && boxC.inner == pr.AutoF {
 			if outerSum >= (boxA.outerMaxContentSize() + boxC.outerMaxContentSize()) {
 				boxA.inner = boxA.maxContentSize()
 				boxC.inner = boxC.maxContentSize()
@@ -336,9 +336,9 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 					boxC.inner = boxC.inner.V() + available*weightC/weightSum
 				}
 			}
-		} else if boxA.inner == pr.Auto {
+		} else if boxA.inner == pr.AutoF {
 			boxA.shrinkToFit(outerSum - boxC.outer() - boxA.sugar())
-		} else if boxC.inner == pr.Auto {
+		} else if boxC.inner == pr.AutoF {
 			boxC.shrinkToFit(outerSum - boxA.outer() - boxC.sugar())
 		}
 	}
@@ -571,20 +571,20 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 func pageWidthOrHeight(box_ orientedBoxITF, containingBlockSize pr.Float) {
 	box := box_.baseBox()
 	remaining := containingBlockSize - box.paddingPlusBorder
-	if box.inner == pr.Auto {
-		if box.marginA == pr.Auto {
+	if box.inner == pr.AutoF {
+		if box.marginA == pr.AutoF {
 			box.marginA = pr.Float(0)
 		}
-		if box.marginB == pr.Auto {
+		if box.marginB == pr.AutoF {
 			box.marginB = pr.Float(0)
 		}
 		box.inner = remaining - box.marginA.V() - box.marginB.V()
-	} else if box.marginA == pr.Auto && box.marginB == pr.Auto {
+	} else if box.marginA == pr.AutoF && box.marginB == pr.AutoF {
 		box.marginA = (remaining - box.inner.V()) / 2
 		box.marginB = box.marginA
-	} else if box.marginA == pr.Auto {
+	} else if box.marginA == pr.AutoF {
 		box.marginA = remaining - box.inner.V() - box.marginB.V()
-	} else if box.marginB == pr.Auto {
+	} else if box.marginB == pr.AutoF {
 		box.marginB = remaining - box.inner.V() - box.marginA.V()
 	}
 	box_.restoreBoxAttributes()

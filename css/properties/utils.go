@@ -9,6 +9,16 @@ import (
 
 var Inf = Float(math.Inf(+1))
 
+// Tag is a flag indicating special values,
+// such as "none" or "auto".
+type Tag uint8
+
+const (
+	_    Tag = iota
+	Auto     // "auto"
+	None     // "none"
+)
+
 // --------------- Values  -----------------------------------------------
 
 func (d Dimension) ToPixels() Dimension {
@@ -34,7 +44,7 @@ func (f Float) ToValue() Value { return FToV(Fl(f)) }
 
 func (v Value) ToMaybeFloat() MaybeFloat {
 	if v.String == "auto" {
-		return Auto
+		return AutoF
 	}
 	return v.Value
 }

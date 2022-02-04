@@ -8,8 +8,8 @@ import style_accessor
 sys.path.append("macros")
 
 
-SOURCE = "style/properties/types.go"
-OUT = "style/properties/generated.go"
+SOURCE = "css/properties/types.go"
+OUT = "css/properties/generated.go"
 
 RE_TYPEDEF = re.compile(r"^type (\S+) ((struct {)|\[\d?\](\S+)|[\w.]+)")
 

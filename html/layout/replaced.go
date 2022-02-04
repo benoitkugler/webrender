@@ -16,10 +16,10 @@ import (
 func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 	specifiedWidth, specifiedHeight pr.MaybeFloat, defaultWidth, defaultHeight pr.Float) (concreteWidth, concreteHeight pr.Float) {
 
-	if specifiedWidth == pr.Auto {
+	if specifiedWidth == pr.AutoF {
 		specifiedWidth = nil
 	}
-	if specifiedHeight == pr.Auto {
+	if specifiedHeight == pr.AutoF {
 		specifiedHeight = nil
 	}
 
@@ -141,7 +141,7 @@ func replacedBoxWidth_(box_ Box, _ *layoutContext, containingBlock containingBlo
 
 	// This algorithm simply follows the different points of the specification
 	// http://www.w3.org/TR/CSS21/visudet.html#inline-replaced-width
-	if box.Height == pr.Auto && box.Width == pr.Auto {
+	if box.Height == pr.AutoF && box.Width == pr.AutoF {
 		if intrinsicWidth != nil {
 			// Point #1
 			box.Width = intrinsicWidth
@@ -155,7 +155,7 @@ func replacedBoxWidth_(box_ Box, _ *layoutContext, containingBlock containingBlo
 			}
 		}
 	}
-	if box.Width == pr.Auto {
+	if box.Width == pr.AutoF {
 		if ratio != nil {
 			// Point #2 second part
 			box.Width = box.Height.V() * ratio.V()
@@ -187,19 +187,19 @@ func replacedBoxHeight_(box_ Box, _ *layoutContext, _ containingBlock) (bool, pr
 		box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
 
 	// Test pr.Auto on the computed width, not the used width
-	if box.Height == pr.Auto && box.Width == pr.Auto {
+	if box.Height == pr.AutoF && box.Width == pr.AutoF {
 		box.Height = intrinsicHeight
-	} else if box.Height == pr.Auto && pr.Is(ratio) {
+	} else if box.Height == pr.AutoF && pr.Is(ratio) {
 		box.Height = box.Width.V() / ratio.V()
 	}
 
-	if box.Height == pr.Auto && box.Width == pr.Auto && intrinsicHeight != nil {
+	if box.Height == pr.AutoF && box.Width == pr.AutoF && intrinsicHeight != nil {
 		box.Height = intrinsicHeight
-	} else if ratio != nil && box.Height == pr.Auto {
+	} else if ratio != nil && box.Height == pr.AutoF {
 		box.Height = box.Width.V() / ratio.V()
-	} else if box.Height == pr.Auto && intrinsicHeight != nil {
+	} else if box.Height == pr.AutoF && intrinsicHeight != nil {
 		box.Height = intrinsicHeight
-	} else if box.Height == pr.Auto {
+	} else if box.Height == pr.AutoF {
 		// It"s pretty useless to rely on device size to set width.
 		box.Height = pr.Float(150)
 	}

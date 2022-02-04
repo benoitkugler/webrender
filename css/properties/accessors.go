@@ -114,10 +114,10 @@ func (s Properties) SetBleedTop(v Value) {
 	s["bleed_top"] = v
 }
 
-func (s Properties) GetBlockEllipsis() NamedString {
-	return s["block_ellipsis"].(NamedString)
+func (s Properties) GetBlockEllipsis() TaggedString {
+	return s["block_ellipsis"].(TaggedString)
 }
-func (s Properties) SetBlockEllipsis(v NamedString) {
+func (s Properties) SetBlockEllipsis(v TaggedString) {
 	s["block_ellipsis"] = v
 }
 
@@ -772,10 +772,10 @@ func (s Properties) SetMaxHeight(v Value) {
 	s["max_height"] = v
 }
 
-func (s Properties) GetMaxLines() IntString {
-	return s["max_lines"].(IntString)
+func (s Properties) GetMaxLines() TaggedInt {
+	return s["max_lines"].(TaggedInt)
 }
-func (s Properties) SetMaxLines(v IntString) {
+func (s Properties) SetMaxLines(v TaggedInt) {
 	s["max_lines"] = v
 }
 
@@ -1136,8 +1136,8 @@ type StyleAccessor interface {
 	GetBleedTop() Value
 	SetBleedTop(v Value)
 
-	GetBlockEllipsis() NamedString
-	SetBlockEllipsis(v NamedString)
+	GetBlockEllipsis() TaggedString
+	SetBlockEllipsis(v TaggedString)
 
 	GetBookmarkLabel() ContentProperties
 	SetBookmarkLabel(v ContentProperties)
@@ -1418,8 +1418,8 @@ type StyleAccessor interface {
 	GetMaxHeight() Value
 	SetMaxHeight(v Value)
 
-	GetMaxLines() IntString
-	SetMaxLines(v IntString)
+	GetMaxLines() TaggedInt
+	SetMaxLines(v TaggedInt)
 
 	GetMaxWidth() Value
 	SetMaxWidth(v Value)

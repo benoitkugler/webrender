@@ -56,7 +56,7 @@ var InitialValues = Properties{
 	"background_image":      Images{NoneImage{}},
 	"background_origin":     Strings{"padding-box"},
 	"background_position": Centers{
-		Center{OriginX: "left", OriginY: "top", Pos: Point{Dimension{Unit: Percentage}, Dimension{Unit: Percentage}}},
+		Center{OriginX: "left", OriginY: "top", Pos: Point{Dimension{Unit: Perc}, Dimension{Unit: Perc}}},
 	},
 	"background_repeat":   Repeats{{"repeat", "repeat"}},
 	"background_size":     Sizes{Size{Width: SToV("auto"), Height: SToV("auto")}},
@@ -135,7 +135,7 @@ var InitialValues = Properties{
 	// https://drafts.csswg.org/css-images-3/
 	"object_fit": String("fill"),
 	"object_position": Center{OriginX: "left", OriginY: "top", Pos: Point{
-		Dimension{Value: 50, Unit: Percentage}, Dimension{Value: 50, Unit: Percentage},
+		Dimension{Value: 50, Unit: Perc}, Dimension{Value: 50, Unit: Perc},
 	}},
 
 	// Paged Media 3 (WD): https://www.w3.org/TR/css-page-3/
@@ -162,7 +162,7 @@ var InitialValues = Properties{
 	"word_spacing":          Value{}, // computed value for "normal"
 
 	// Transforms 1 (CR): https://www.w3.org/TR/css-transforms-1/
-	"transform_origin": Point{{Value: 50, Unit: Percentage}, {Value: 50, Unit: Percentage}},
+	"transform_origin": Point{{Value: 50, Unit: Perc}, {Value: 50, Unit: Perc}},
 	"transform":        Transforms{}, // computed value for "none"
 
 	// User Interface 3 (REC): https://www.w3.org/TR/css-ui-3/
@@ -192,9 +192,9 @@ var InitialValues = Properties{
 	"text_decoration_style": String("solid"),
 
 	// Overflow Module 3 (WD): https://www.w3.org/TR/css-overflow-3/
-	"block_ellipsis": NamedString{Name: "none"},
+	"block_ellipsis": TaggedString{Tag: None},
 	"continue":       String("auto"),
-	"max_lines":      IntString{String: "none"},
+	"max_lines":      TaggedInt{Tag: None},
 	"overflow":       String("visible"),
 	"text_overflow":  String("clip"),
 

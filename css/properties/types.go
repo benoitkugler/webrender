@@ -113,6 +113,11 @@ type NamedString struct {
 	String string
 }
 
+type TaggedString struct {
+	S   string
+	Tag Tag
+}
+
 type Point [2]Dimension
 
 type Marks struct {
@@ -123,6 +128,11 @@ type Marks struct {
 type IntString struct {
 	String string
 	Int    int
+}
+
+type TaggedInt struct {
+	I   int
+	Tag Tag
 }
 
 type IntNamedString struct {
@@ -231,6 +241,9 @@ type RadialGradient struct {
 	Center     Center
 	Repeating  bool
 }
+
+func (TaggedString) isCssProperty() {}
+func (TaggedInt) isCssProperty()    {}
 
 func (Display) isCssProperty() {}
 

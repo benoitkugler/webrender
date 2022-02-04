@@ -479,7 +479,7 @@ func (self *layoutContext) GetRunningElementFor(page Box, name, keyword string) 
 func (l *layoutContext) layoutFootnote(footnote Box) {
 	removeFromBoxes(&l.footnotes, footnote)
 	l.currentPageFootnotes = append(l.currentPageFootnotes, footnote)
-	if l.currentFootnoteArea.Height != pr.Auto {
+	if l.currentFootnoteArea.Height != pr.AutoF {
 		l.pageBottom += l.currentFootnoteArea.MarginHeight()
 	}
 	l.currentFootnoteArea.Children = l.currentPageFootnotes

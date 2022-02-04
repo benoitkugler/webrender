@@ -524,7 +524,7 @@ func computeAttrFunction(computer *ComputedStyle, values pr.AttrData) (out pr.Co
 			if err != nil {
 				return out, err
 			}
-			prop = pr.Dimension{Value: pr.Float(f), Unit: pr.Percentage}.ToValue()
+			prop = pr.Dimension{Value: pr.Float(f), Unit: pr.Perc}.ToValue()
 			typeOrUnit = "length"
 		default:
 			unit, isUnit := validation.LENGTHUNITS[typeOrUnit]
@@ -710,7 +710,7 @@ func fontSize(computer *ComputedStyle, name string, _value pr.CssProperty) pr.Cs
 			}
 		}
 		return (parentFontSize * 0.8).ToValue()
-	} else if value.Unit == pr.Percentage {
+	} else if value.Unit == pr.Perc {
 		return (value.Value * parentFontSize / 100.).ToValue()
 	} else {
 		return length2(computer, name, value, parentFontSize, true)
@@ -747,7 +747,7 @@ func lineHeight(computer *ComputedStyle, name string, _value pr.CssProperty) pr.
 		return value
 	case value.Unit == pr.Scalar:
 		return value
-	case value.Unit == pr.Percentage:
+	case value.Unit == pr.Perc:
 		factor := value.Value / 100.
 		fontSizeValue := computer.GetFontSize().Value
 		pixels = factor * fontSizeValue
@@ -853,7 +853,7 @@ func verticalAlign(computer *ComputedStyle, name string, _value pr.CssProperty) 
 		out.Unit = pr.Scalar
 	default:
 		out.Unit = pr.Scalar
-		if value.Unit == pr.Percentage {
+		if value.Unit == pr.Perc {
 			height := text.StrutLayout(computer, computer.textContext)[0]
 			out.Value = height * value.Value / 100
 		} else {

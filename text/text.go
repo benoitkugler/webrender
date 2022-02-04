@@ -221,7 +221,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 				space := maxWidthV - firstLineWidth
 				zone := style.GetHyphenateLimitZone()
 				limitZone := pr.Fl(zone.Value)
-				if zone.Unit == pr.Percentage {
+				if zone.Unit == pr.Perc {
 					limitZone = (maxWidthV * pr.Fl(zone.Value) / 100.)
 				}
 				if space > limitZone || space < 0 {

@@ -17,7 +17,7 @@ var floatWidth = handleMinMaxWidth(floatWidth_)
 func floatWidth_(box Box, context *layoutContext, containingBlock containingBlock) (bool, pr.Float) {
 	// Check that box.width is auto even if the caller does it too, because
 	// the handleMinMaxWidth decorator can change the value
-	if w := box.Box().Width; w == pr.Auto {
+	if w := box.Box().Width; w == pr.AutoF {
 		box.Box().Width = shrinkToFit(context, box, containingBlock.(block).Width)
 	}
 	return false, 0
@@ -34,23 +34,23 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 	}
 	// TODO: This is only handled later in blocks.blockContainerLayout
 	// http://www.w3.org/TR/CSS21/visudet.html#normal-block
-	if cbHeight == pr.Auto {
+	if cbHeight == pr.AutoF {
 		cbHeight = containingBlock.PositionY - containingBlock.ContentBoxY()
 	}
 
 	box := box_.Box()
 	resolvePositionPercentages(box, bo.Point{cbWidth.V(), cbHeight.V()})
 
-	if box.MarginLeft == pr.Auto {
+	if box.MarginLeft == pr.AutoF {
 		box.MarginLeft = pr.Float(0)
 	}
-	if box.MarginRight == pr.Auto {
+	if box.MarginRight == pr.AutoF {
 		box.MarginRight = pr.Float(0)
 	}
-	if box.MarginTop == pr.Auto {
+	if box.MarginTop == pr.AutoF {
 		box.MarginTop = pr.Float(0)
 	}
-	if box.MarginBottom == pr.Auto {
+	if box.MarginBottom == pr.AutoF {
 		box.MarginBottom = pr.Float(0)
 	}
 
@@ -61,7 +61,7 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 
 	if bo.BlockReplacedBoxT.IsInstance(box_) {
 		inlineReplacedBoxWidthHeight(box_, containingBlock)
-	} else if box.Width == pr.Auto {
+	} else if box.Width == pr.AutoF {
 		floatWidth(box_, context, block{Width: containingBlock.Width.V()})
 	}
 

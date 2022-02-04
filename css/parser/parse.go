@@ -56,10 +56,10 @@ func ParseOneComponentValue(input []Token) Token {
 	first := nextSignificant(tokens)
 	second := nextSignificant(tokens)
 	if first == nil {
-		return ParseError{position: newPosition(1, 1), Kind: "empty", Message: "Input is empty"}
+		return ParseError{Pos: newPosition(1, 1), Kind: "empty", Message: "Input is empty"}
 	}
 	if second != nil {
-		return ParseError{position: second.Position(), Kind: "extra-input", Message: "Got more than one token"}
+		return ParseError{Pos: second.Position(), Kind: "extra-input", Message: "Got more than one token"}
 	}
 	return first
 }
@@ -79,7 +79,7 @@ func ParseOneDeclaration(input []Token) Token {
 	tokens := NewTokenIterator(input)
 	firstToken := nextSignificant(tokens)
 	if firstToken == nil {
-		return ParseError{position: newPosition(1, 1), Kind: "empty", Message: "Input is empty"}
+		return ParseError{Pos: newPosition(1, 1), Kind: "empty", Message: "Input is empty"}
 	}
 	return parseDeclaration(firstToken, tokens)
 }
@@ -99,25 +99,25 @@ func parseDeclaration(firstToken Token, tokens *TokenIterator) Token {
 	name, ok := firstToken.(IdentToken)
 	if !ok {
 		return ParseError{
-			position: name.position,
-			Kind:     "invalid",
-			Message:  fmt.Sprintf("Expected <ident> for declaration name, got %s.", firstToken.Type()),
+			Pos:     name.Pos,
+			Kind:    "invalid",
+			Message: fmt.Sprintf("Expected <ident> for declaration name, got %s.", firstToken.Type()),
 		}
 	}
 	colon := nextSignificant(tokens)
 	if colon == nil {
 		return ParseError{
-			position: name.position,
-			Kind:     "invalid",
-			Message:  "Expected ':' after declaration name, got EOF",
+			Pos:     name.Pos,
+			Kind:    "invalid",
+			Message: "Expected ':' after declaration name, got EOF",
 		}
 	}
 
 	if lit, ok := colon.(LiteralToken); !ok || lit.Value != ":" {
 		return ParseError{
-			position: colon.Position(),
-			Kind:     "invalid",
-			Message:  fmt.Sprintf("Expected ':' after declaration name, got %s.", colon.Type()),
+			Pos:     colon.Position(),
+			Kind:    "invalid",
+			Message: fmt.Sprintf("Expected ':' after declaration name, got %s.", colon.Type()),
 		}
 	}
 
@@ -152,7 +152,7 @@ func parseDeclaration(firstToken Token, tokens *TokenIterator) Token {
 	}
 
 	return Declaration{
-		position:  name.position,
+		Pos:       name.Pos,
 		Name:      name.Value,
 		Value:     value,
 		Important: state == "important",
@@ -222,14 +222,14 @@ func parseOneRule(input []Token) Token {
 	tokens := NewTokenIterator(input)
 	first := nextSignificant(tokens)
 	if first == nil {
-		return ParseError{position: newPosition(1, 1), Kind: "empty", Message: "Input is empty"}
+		return ParseError{Pos: newPosition(1, 1), Kind: "empty", Message: "Input is empty"}
 	}
 
 	rule := consumeRule(first, tokens)
 	next := nextSignificant(tokens)
 	if next != nil {
 		return ParseError{
-			position: next.Position(), Kind: "extra-input",
+			Pos: next.Position(), Kind: "extra-input",
 			Message: fmt.Sprintf("Expected a single rule, got %s after the first rule.", next.Type()),
 		}
 	}
@@ -346,16 +346,16 @@ func consumeRule(_firstToken Token, tokens *TokenIterator) Token {
 		}
 		if !hasBroken {
 			return ParseError{
-				position: prelude[len(prelude)-1].Position(),
-				Kind:     "invalid",
-				Message:  "EOF reached before {} block for a qualified rule.",
+				Pos:     prelude[len(prelude)-1].Position(),
+				Kind:    "invalid",
+				Message: "EOF reached before {} block for a qualified rule.",
 			}
 		}
 	}
 	return QualifiedRule{
-		position: _firstToken.Position(),
-		Content:  block.Content,
-		Prelude:  &prelude,
+		Pos:     _firstToken.Position(),
+		Content: block.Content,
+		Prelude: &prelude,
 	}
 }
 
@@ -383,9 +383,9 @@ func consumeAtRule(atKeyword AtKeywordToken, tokens *TokenIterator) AtRule {
 	return AtRule{
 		AtKeyword: atKeyword.Value,
 		QualifiedRule: QualifiedRule{
-			position: atKeyword.position,
-			Prelude:  &prelude,
-			Content:  content,
+			Pos:     atKeyword.Pos,
+			Prelude: &prelude,
+			Content: content,
 		},
 	}
 }

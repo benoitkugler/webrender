@@ -34,9 +34,9 @@ var (
 		"no-close-quote": {Open: false, Insert: false},
 	}
 
-	ZEROPERCENT    = pr.Dimension{Value: 0, Unit: pr.Percentage}
-	fiftyPercent   = pr.Dimension{Value: 50, Unit: pr.Percentage}
-	HUNDREDPERCENT = pr.Dimension{Value: 100, Unit: pr.Percentage}
+	ZEROPERCENT    = pr.Dimension{Value: 0, Unit: pr.Perc}
+	fiftyPercent   = pr.Dimension{Value: 50, Unit: pr.Perc}
+	HUNDREDPERCENT = pr.Dimension{Value: 100, Unit: pr.Perc}
 
 	backgroundPositionsPercentages = map[string]pr.Dimension{
 		"top":    ZEROPERCENT,
@@ -234,6 +234,7 @@ var (
 		"block-ellipsis":             blockEllipsis,
 		"continue":                   continue_,
 		"max-lines":                  maxLines,
+		"word-break":                 wordBreak,
 	}
 	validatorsError = map[string]validatorError{
 		"background-image":  backgroundImage,
@@ -485,11 +486,11 @@ func getSingleKeyword(tokens []Token) string {
 }
 
 // negative  = true, percentage = false
-func getLength(_token Token, negative, percentage bool) pr.Dimension {
-	switch token := _token.(type) {
+func getLength(token Token, negative, percentage bool) pr.Dimension {
+	switch token := token.(type) {
 	case parser.PercentageToken:
 		if percentage && (negative || token.Value >= 0) {
-			return pr.Dimension{Value: pr.Float(token.Value), Unit: pr.Percentage}
+			return pr.Dimension{Value: pr.Float(token.Value), Unit: pr.Perc}
 		}
 	case parser.DimensionToken:
 		unit, isKnown := LENGTHUNITS[string(token.Unit)]
@@ -901,11 +902,11 @@ func box(tokens []Token, _ string) pr.CssProperty {
 	return out
 }
 
-func borderDims(tokens []Token, negative bool) pr.CssProperty {
+func borderDims(tokens []Token, negative, percentage bool) pr.CssProperty {
 	lengths := make([]pr.Dimension, len(tokens))
 	allLengths := true
 	for index, token := range tokens {
-		lengths[index] = getLength(token, negative, false)
+		lengths[index] = getLength(token, negative, percentage)
 		allLengths = allLengths && !lengths[index].IsNone()
 	}
 	if allLengths {
@@ -921,7 +922,7 @@ func borderDims(tokens []Token, negative bool) pr.CssProperty {
 //@validator()
 // Validator for the `border-spacing` property.
 func borderSpacing(tokens []Token, _ string) pr.CssProperty {
-	return borderDims(tokens, true)
+	return borderDims(tokens, true, false)
 }
 
 //@validator("border-top-right-radius")
@@ -930,7 +931,7 @@ func borderSpacing(tokens []Token, _ string) pr.CssProperty {
 //@validator("border-top-left-radius")
 // Validator for the `border-*-radius` pr.
 func borderCornerRadius(tokens []Token, _ string) pr.CssProperty {
-	return borderDims(tokens, false)
+	return borderDims(tokens, false, true)
 }
 
 //@validator("border-top-style")
@@ -1411,7 +1412,7 @@ func display(tokens []Token, _ string) pr.CssProperty {
 		"table-header-group", "table-footer-group", "table-row",
 		"table-column-group", "table-column":
 		return pr.Display{keyword}
-	case "inline-table", "inline-flex", "inline-grid":
+	case "inline-table", "inline-flex":
 		return pr.Display{"inline", keyword[7:]}
 	case "inline-block":
 		return pr.Display{"inline", "flow-root"}
@@ -1430,7 +1431,7 @@ func display(tokens []Token, _ string) pr.CssProperty {
 				return nil
 			}
 			outside = value
-		case "flow", "flow-root", "table", "flex", "grid":
+		case "flow", "flow-root", "table", "flex":
 			if inside != "" {
 				return nil
 			}
@@ -1869,7 +1870,7 @@ func lineHeight(tokens []Token, _ string) pr.CssProperty {
 		}
 	case parser.PercentageToken:
 		if tt.Value >= 0 {
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.Value), Unit: pr.Percentage}}
+			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.Value), Unit: pr.Perc}}
 		}
 	case parser.DimensionToken:
 		if tt.Value >= 0 {
@@ -2091,6 +2092,17 @@ func overflow(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
 	case "auto", "visible", "hidden", "scroll":
+		return pr.String(keyword)
+	default:
+		return nil
+	}
+}
+
+// Validation for the ``word-break`` property.
+func wordBreak(tokens []Token, _ string) pr.CssProperty {
+	keyword := getSingleKeyword(tokens)
+	switch keyword {
+	case "normal", "break-all":
 		return pr.String(keyword)
 	default:
 		return nil
@@ -2370,14 +2382,21 @@ func flexDirection(tokens []Token, _ string) pr.CssProperty {
 // @validator("flex-shrink")
 // @singleToken
 func flexGrowShrink(tokens []Token, _ string) pr.CssProperty {
+	if f, ok := _flexGrowShrink(tokens); ok {
+		return pr.Float(f)
+	}
+	return nil
+}
+
+func _flexGrowShrink(tokens []Token) (pr.Fl, bool) {
 	if len(tokens) != 1 {
-		return nil
+		return 0, false
 	}
 	token := tokens[0]
 	if number, ok := token.(parser.NumberToken); ok {
-		return pr.Float(number.Value)
+		return number.Value, true
 	}
-	return nil
+	return 0, false
 }
 
 // @validator()
@@ -2838,17 +2857,19 @@ func blockEllipsis(tokens []Token, _ string) pr.CssProperty {
 	return nil
 }
 
-func blockEllipsis_(tokens []Token) (out pr.NamedString, ok bool) {
+func blockEllipsis_(tokens []Token) (out pr.TaggedString, ok bool) {
 	if len(tokens) != 1 {
 		return
 	}
 	token := tokens[0]
 	if str, ok := token.(parser.StringToken); ok {
-		return pr.NamedString{Name: "string", String: str.Value}, true
+		return pr.TaggedString{S: str.Value}, true
 	}
-	keyword := getKeyword(token)
-	if keyword == "none" || keyword == "auto" {
-		return pr.NamedString{Name: keyword}, true
+	switch keyword := getKeyword(token); keyword {
+	case "none":
+		return pr.TaggedString{Tag: pr.None}, true
+	case "auto":
+		return pr.TaggedString{Tag: pr.Auto}, true
 	}
 	return
 }
@@ -2930,11 +2951,11 @@ func maxLines(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	if token, ok := token.(parser.NumberToken); ok {
 		if token.IsInteger {
-			return pr.IntString{Int: token.IntValue()}
+			return pr.TaggedInt{I: token.IntValue()}
 		}
 	}
 	if keyword := getKeyword(token); keyword == "none" {
-		return pr.IntString{String: "none"}
+		return pr.TaggedInt{Tag: pr.None}
 	}
 	return nil
 }

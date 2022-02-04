@@ -456,16 +456,16 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 }
 
 func resolveMarginAuto(box *bo.BoxFields) {
-	if box.MarginTop == pr.Auto {
+	if box.MarginTop == pr.AutoF {
 		box.MarginTop = pr.Float(0)
 	}
-	if box.MarginRight == pr.Auto {
+	if box.MarginRight == pr.AutoF {
 		box.MarginRight = pr.Float(0)
 	}
-	if box.MarginBottom == pr.Auto {
+	if box.MarginBottom == pr.AutoF {
 		box.MarginBottom = pr.Float(0)
 	}
-	if box.MarginLeft == pr.Auto {
+	if box.MarginLeft == pr.AutoF {
 		box.MarginLeft = pr.Float(0)
 	}
 }
@@ -496,17 +496,17 @@ func inlineBlockBoxLayout(context *layoutContext, box_ Box, positionX pr.Float, 
 	resolvePercentagesBox(box_, containingBlock, "")
 	box := box_.Box()
 	// http://www.w3.org/TR/CSS21/visudet.html#inlineblock-width
-	if box.MarginLeft == pr.Auto {
+	if box.MarginLeft == pr.AutoF {
 		box.MarginLeft = pr.Float(0)
 	}
-	if box.MarginRight == pr.Auto {
+	if box.MarginRight == pr.AutoF {
 		box.MarginRight = pr.Float(0)
 	}
 	// http://www.w3.org/TR/CSS21/visudet.html#block-root-margin
-	if box.MarginTop == pr.Auto {
+	if box.MarginTop == pr.AutoF {
 		box.MarginTop = pr.Float(0)
 	}
-	if box.MarginBottom == pr.Auto {
+	if box.MarginBottom == pr.AutoF {
 		box.MarginBottom = pr.Float(0)
 	}
 
@@ -548,7 +548,7 @@ var inlineBlockWidth = handleMinMaxWidth(inlineBlockWidth_)
 
 // @handleMinMaxWidth
 func inlineBlockWidth_(box_ Box, context *layoutContext, containingBlock containingBlock) (bool, pr.Float) {
-	if box := box_.Box(); box.Width == pr.Auto {
+	if box := box_.Box(); box.Width == pr.AutoF {
 		cbWidth, _ := containingBlock.ContainingBlock()
 		availableContentWidth := cbWidth.V() - (box.MarginLeft.V() + box.MarginRight.V() +
 			box.BorderLeftWidth.V() + box.BorderRightWidth.V() +
@@ -639,10 +639,10 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 			}
 		}
 	} else if bo.InlineBoxT.IsInstance(box_) {
-		if box.MarginLeft == pr.Auto {
+		if box.MarginLeft == pr.AutoF {
 			box.MarginLeft = pr.Float(0)
 		}
-		if box.MarginRight == pr.Auto {
+		if box.MarginRight == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
 		tmp := splitInlineBox(context, box_, positionX, maxX, bottomSpace, skipStack, containingBlock,

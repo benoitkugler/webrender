@@ -72,29 +72,29 @@ mainLoop:
 				}
 			}
 			value := css[tokenStartPos:pos]
-			*ts = append(*ts, WhitespaceToken{position: tokenPos, Value: string(value)})
+			*ts = append(*ts, WhitespaceToken{Pos: tokenPos, Value: string(value)})
 			continue
 		case 'U', 'u':
 			if pos+2 < length && css[pos+1] == '+' && strings.ContainsRune("0123456789abcdefABCDEF?", rune(css[pos+2])) {
 				var start, end int64
 				start, end, pos, err = consumeUnicodeRange(css, pos+2)
 				if err != nil {
-					*ts = append(*ts, ParseError{position: tokenPos, Kind: "invalid number", Message: err.Error()})
+					*ts = append(*ts, ParseError{Pos: tokenPos, Kind: "invalid number", Message: err.Error()})
 				} else {
-					*ts = append(*ts, UnicodeRangeToken{position: tokenPos, Start: uint32(start), End: uint32(end)})
+					*ts = append(*ts, UnicodeRangeToken{Pos: tokenPos, Start: uint32(start), End: uint32(end)})
 				}
 				continue
 			}
 		}
 		if bytes.HasPrefix(css[pos:], []byte("-->")) { // Check before identifiers
-			*ts = append(*ts, LiteralToken{position: tokenPos, Value: "-->"})
+			*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: "-->"})
 			pos += 3
 			continue
 		} else if isIdentStart(css, pos) {
 			var value string
 			value, pos = consumeIdent(css, pos)
 			if !(pos < length && css[pos] == '(') { // Not a function
-				*ts = append(*ts, IdentToken{position: tokenPos, Value: LowerableString(value)})
+				*ts = append(*ts, IdentToken{Pos: tokenPos, Value: LowerableString(value)})
 				continue
 			}
 			pos += 1 // Skip the "("
@@ -116,16 +116,16 @@ mainLoop:
 								isError = errorInURL
 							}
 						}
-						*ts = append(*ts, URLToken{position: tokenPos, Value: value, isError: isError})
+						*ts = append(*ts, URLToken{Pos: tokenPos, Value: value, isError: isError})
 					}
 					if err != nil {
-						*ts = append(*ts, ParseError{position: tokenPos, Kind: err.Error(), Message: err.Error()})
+						*ts = append(*ts, ParseError{Pos: tokenPos, Kind: err.Error(), Message: err.Error()})
 					}
 					continue
 				}
 			}
 			funcBlock := FunctionBlock{
-				position:  tokenPos,
+				Pos:       tokenPos,
 				Name:      LowerableString(value),
 				Arguments: new([]Token),
 			}
@@ -147,8 +147,8 @@ mainLoop:
 			}
 			_, err = strconv.ParseInt(repr, 10, 0)
 			isInt := err == nil
-			n := numericToken{
-				position:       tokenPos,
+			n := NumericToken{
+				Pos:            tokenPos,
 				Representation: repr,
 				IsInteger:      isInt,
 				Value:          utils.Fl(value),
@@ -156,7 +156,7 @@ mainLoop:
 			if pos < length && isIdentStart(css, pos) {
 				var unit string
 				unit, pos = consumeIdent(css, pos)
-				*ts = append(*ts, DimensionToken{numericToken: n, Unit: LowerableString(unit)})
+				*ts = append(*ts, DimensionToken{NumericToken: n, Unit: LowerableString(unit)})
 			} else if pos < length && css[pos] == '%' {
 				pos += 1
 				*ts = append(*ts, PercentageToken(n))
@@ -171,9 +171,9 @@ mainLoop:
 			if pos < length && isIdentStart(css, pos) {
 				var ident string
 				ident, pos = consumeIdent(css, pos)
-				*ts = append(*ts, AtKeywordToken{position: tokenPos, Value: LowerableString(ident)})
+				*ts = append(*ts, AtKeywordToken{Pos: tokenPos, Value: LowerableString(ident)})
 			} else {
-				*ts = append(*ts, LiteralToken{position: tokenPos, Value: "@"})
+				*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: "@"})
 			}
 		case '#':
 			pos += 1
@@ -185,27 +185,27 @@ mainLoop:
 					isIdentifier := isIdentStart(css, pos)
 					var ident string
 					ident, pos = consumeIdent(css, pos)
-					*ts = append(*ts, HashToken{position: tokenPos, Value: ident, IsIdentifier: isIdentifier})
+					*ts = append(*ts, HashToken{Pos: tokenPos, Value: ident, IsIdentifier: isIdentifier})
 					continue
 				}
 			}
-			*ts = append(*ts, LiteralToken{position: tokenPos, Value: "#"})
+			*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: "#"})
 		case '{':
-			brack := CurlyBracketsBlock{position: tokenPos, Content: new([]Token)}
+			brack := CurlyBracketsBlock{Pos: tokenPos, Content: new([]Token)}
 			*ts = append(*ts, brack)
 			stack = append(stack, nestedBlock{tokens: ts, endChar: endChar})
 			endChar = '}'
 			ts = brack.Content
 			pos += 1
 		case '[':
-			brack := SquareBracketsBlock{position: tokenPos, Content: new([]Token)}
+			brack := SquareBracketsBlock{Pos: tokenPos, Content: new([]Token)}
 			*ts = append(*ts, brack)
 			stack = append(stack, nestedBlock{tokens: ts, endChar: endChar})
 			endChar = ']'
 			ts = brack.Content
 			pos += 1
 		case '(':
-			brack := ParenthesesBlock{position: tokenPos, Content: new([]Token)}
+			brack := ParenthesesBlock{Pos: tokenPos, Content: new([]Token)}
 			*ts = append(*ts, brack)
 			stack = append(stack, nestedBlock{tokens: ts, endChar: endChar})
 			endChar = ')'
@@ -219,7 +219,7 @@ mainLoop:
 			ts, endChar = block.tokens, block.endChar
 			pos += 1
 		case '}', ']', ')':
-			*ts = append(*ts, ParseError{position: tokenPos, Kind: string(rune(c)), Message: "Unmatched " + string(rune(c))})
+			*ts = append(*ts, ParseError{Pos: tokenPos, Kind: string(rune(c)), Message: "Unmatched " + string(rune(c))})
 			pos += 1
 		case '\'', '"':
 			var (
@@ -228,10 +228,10 @@ mainLoop:
 			)
 			quotedString, pos, addValue, err = consumeQuotedString(css, pos)
 			if addValue {
-				*ts = append(*ts, StringToken{position: tokenPos, Value: quotedString, isError: err != nil})
+				*ts = append(*ts, StringToken{Pos: tokenPos, Value: quotedString, isError: err != nil})
 			}
 			if err != nil {
-				*ts = append(*ts, ParseError{position: tokenPos, Kind: err.Error(), Message: "bad string token"})
+				*ts = append(*ts, ParseError{Pos: tokenPos, Kind: err.Error(), Message: "bad string token"})
 			}
 		default:
 			switch {
@@ -240,32 +240,32 @@ mainLoop:
 				pos += 2 + index
 				if index == -1 {
 					if !skipComments {
-						*ts = append(*ts, Comment{position: tokenPos, Value: string(css[tokenStartPos+2:])})
+						*ts = append(*ts, Comment{Pos: tokenPos, Value: string(css[tokenStartPos+2:])})
 					}
 					break mainLoop
 				}
 				if !skipComments {
-					*ts = append(*ts, Comment{position: tokenPos, Value: string(css[tokenStartPos+2 : pos])})
+					*ts = append(*ts, Comment{Pos: tokenPos, Value: string(css[tokenStartPos+2 : pos])})
 				}
 				pos += 2
 			case bytes.HasPrefix(css[pos:], []byte("<!--")):
-				*ts = append(*ts, LiteralToken{position: tokenPos, Value: "<!--"})
+				*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: "<!--"})
 				pos += 4
 			case bytes.HasPrefix(css[pos:], []byte("||")):
-				*ts = append(*ts, LiteralToken{position: tokenPos, Value: "||"})
+				*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: "||"})
 				pos += 2
 			case c == '~' || c == '|' || c == '^' || c == '$' || c == '*':
 				pos += 1
 				if bytes.HasPrefix(css[pos:], []byte{'='}) {
 					pos += 1
-					*ts = append(*ts, LiteralToken{position: tokenPos, Value: string(rune(c)) + "="})
+					*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: string(rune(c)) + "="})
 				} else {
-					*ts = append(*ts, LiteralToken{position: tokenPos, Value: string(rune(c))})
+					*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: string(rune(c))})
 				}
 			default:
 				r, w := utf8.DecodeRune(css[pos:])
 				pos += w
-				*ts = append(*ts, LiteralToken{position: tokenPos, Value: string(r)})
+				*ts = append(*ts, LiteralToken{Pos: tokenPos, Value: string(r)})
 			}
 		}
 	}

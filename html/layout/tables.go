@@ -168,7 +168,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				cell.Width = width
 				// The computed height is a minimum
 				cell.ComputedHeight = cell.Height
-				cell.Height = pr.Auto
+				cell.Height = pr.AutoF
 
 				var cellSkipStack tree.ResumeStack
 				if skipStack != nil {
@@ -214,7 +214,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				cell.Empty = !any
 
 				cell.ContentHeight = cell.Height.V()
-				if cell.ComputedHeight != pr.Auto {
+				if cell.ComputedHeight != pr.AutoF {
 					cell.Height = pr.Max(cell.Height.V(), cell.ComputedHeight.V())
 				}
 				newRowChildren = append(newRowChildren, cell_)
@@ -263,7 +263,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			endingCellsByRow = endingCellsByRow[1:]
 			var rowBottomY pr.Float
 			if len(endingCells) != 0 { // in this row
-				if row.Height == pr.Auto {
+				if row.Height == pr.AutoF {
 					for _, cell := range endingCells {
 						if v := cell.Box().PositionY + cell.Box().BorderHeight(); v > rowBottomY {
 							rowBottomY = v
@@ -306,7 +306,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 						cell.PaddingBottom = cell.PaddingBottom.V() + extra
 					}
 				}
-				if cell.ComputedHeight != pr.Auto {
+				if cell.ComputedHeight != pr.AutoF {
 					var verticalAlignShift pr.Float
 					if cell.VerticalAlign == "middle" {
 						verticalAlignShift = (cell.ComputedHeight.V() - cell.ContentHeight.V()) / 2
@@ -646,7 +646,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	// If the height property has a bigger value, just add blank space
 	// below the last row group.
 	var th pr.Float
-	if table.Height != pr.Auto {
+	if table.Height != pr.AutoF {
 		th = table.Height.V()
 	}
 	table.Height = pr.Max(th, positionY-table.ContentBoxY())
@@ -709,7 +709,7 @@ func addTopPadding(box *bo.BoxFields, extraPadding pr.Float) {
 // http://www.w3.org/TR/CSS21/tables.html#fixed-table-layout
 func fixedTableLayout(box *bo.BoxFields) {
 	table := box.GetWrappedTable().Table()
-	if table.Width == pr.Auto {
+	if table.Width == pr.AutoF {
 		panic("table width can't be auto here")
 	}
 	var allColumns []Box
@@ -736,7 +736,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	for i, column_ := range allColumns {
 		column := column_.Box()
 		column.Width = resolveOnePercentage(column.Style.GetWidth(), "width", table.Width.V(), "")
-		if column.Width != pr.Auto {
+		if column.Width != pr.AutoF {
 			columnWidths[i] = column.Width
 		}
 	}
@@ -751,7 +751,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	for _, cell_ := range firstRowCells {
 		cell := cell_.Box()
 		resolvePercentagesBox(cell_, &table.BoxFields, "")
-		if cell.Width != pr.Auto {
+		if cell.Width != pr.AutoF {
 			width := cell.BorderWidth()
 			width -= borderSpacingX * pr.Float(cell.Colspan-1)
 			// In the general case, this width affects several columns (through
@@ -840,10 +840,10 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 	table := table_.Table()
 	tmp := tableAndColumnsPreferredWidths(context, box_, false)
 	var margins pr.Float
-	if box.MarginLeft != pr.Auto {
+	if box.MarginLeft != pr.AutoF {
 		margins += box.MarginLeft.V()
 	}
-	if box.MarginRight != pr.Auto {
+	if box.MarginRight != pr.AutoF {
 		margins += box.MarginRight.V()
 	}
 	paddings := table.PaddingLeft.V() + table.PaddingRight.V()
@@ -852,7 +852,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 	cbWidth := containingBlock[0]
 	availableWidth := cbWidth - margins - paddings - borders
 
-	if table.Width == pr.Auto {
+	if table.Width == pr.AutoF {
 		if availableWidth <= tmp.tableMinContentWidth {
 			table.Width = tmp.tableMinContentWidth
 		} else if availableWidth < tmp.tableMaxContentWidth {
@@ -977,7 +977,7 @@ func tableWrapperWidth(context *layoutContext, wrapper_ Box, containingBlock bo.
 	table := wrapper.GetWrappedTable()
 	resolvePercentages(table, containingBlock, "")
 
-	if table.Box().Style.GetTableLayout() == "fixed" && table.Box().Width != pr.Auto {
+	if table.Box().Style.GetTableLayout() == "fixed" && table.Box().Width != pr.AutoF {
 		fixedTableLayout(wrapper)
 	} else {
 		autoTableLayout(context, wrapper_, containingBlock.V())

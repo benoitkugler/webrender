@@ -228,17 +228,17 @@ func (s *AnonymousStyle) SetBleedTop(v pr.Value) {
 	s.dict["bleed_top"] = v
 }
 
-func (s *ComputedStyle) GetBlockEllipsis() pr.NamedString {
-	return s.Get("block_ellipsis").(pr.NamedString)
+func (s *ComputedStyle) GetBlockEllipsis() pr.TaggedString {
+	return s.Get("block_ellipsis").(pr.TaggedString)
 }
-func (s *ComputedStyle) SetBlockEllipsis(v pr.NamedString) {
+func (s *ComputedStyle) SetBlockEllipsis(v pr.TaggedString) {
 	s.dict["block_ellipsis"] = v
 }
 
-func (s *AnonymousStyle) GetBlockEllipsis() pr.NamedString {
-	return s.Get("block_ellipsis").(pr.NamedString)
+func (s *AnonymousStyle) GetBlockEllipsis() pr.TaggedString {
+	return s.Get("block_ellipsis").(pr.TaggedString)
 }
-func (s *AnonymousStyle) SetBlockEllipsis(v pr.NamedString) {
+func (s *AnonymousStyle) SetBlockEllipsis(v pr.TaggedString) {
 	s.dict["block_ellipsis"] = v
 }
 
@@ -1544,17 +1544,17 @@ func (s *AnonymousStyle) SetMaxHeight(v pr.Value) {
 	s.dict["max_height"] = v
 }
 
-func (s *ComputedStyle) GetMaxLines() pr.IntString {
-	return s.Get("max_lines").(pr.IntString)
+func (s *ComputedStyle) GetMaxLines() pr.TaggedInt {
+	return s.Get("max_lines").(pr.TaggedInt)
 }
-func (s *ComputedStyle) SetMaxLines(v pr.IntString) {
+func (s *ComputedStyle) SetMaxLines(v pr.TaggedInt) {
 	s.dict["max_lines"] = v
 }
 
-func (s *AnonymousStyle) GetMaxLines() pr.IntString {
-	return s.Get("max_lines").(pr.IntString)
+func (s *AnonymousStyle) GetMaxLines() pr.TaggedInt {
+	return s.Get("max_lines").(pr.TaggedInt)
 }
-func (s *AnonymousStyle) SetMaxLines(v pr.IntString) {
+func (s *AnonymousStyle) SetMaxLines(v pr.TaggedInt) {
 	s.dict["max_lines"] = v
 }
 

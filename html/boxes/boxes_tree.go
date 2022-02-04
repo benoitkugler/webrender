@@ -24,7 +24,7 @@ type LineBox struct {
 	BoxFields
 	TextIndent    pr.MaybeFloat
 	TextOverflow  string
-	BlockEllipsis pr.NamedString
+	BlockEllipsis pr.TaggedString
 }
 
 type InlineLevelBox struct{}
@@ -167,7 +167,7 @@ func LineBoxAnonymousFrom(parent Box, children []Box) Box {
 func NewLineBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) LineBox {
 	out := LineBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
 	out.TextOverflow = "clip"
-	out.BlockEllipsis = pr.NamedString{Name: "none"}
+	out.BlockEllipsis = pr.TaggedString{Tag: pr.None}
 	return out
 }
 

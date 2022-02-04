@@ -10,7 +10,7 @@ import (
 
 const ( // zero field corresponds to null content
 	Scalar Unit = iota + 1 // means no unit, but a valid value
-	Percentage
+	Perc                   // percentage (%)
 	Ex
 	Em
 	Ch

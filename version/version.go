@@ -11,4 +11,5 @@ const (
 // Used for "User-Agent" in HTTP
 var VersionString = fmt.Sprintf("Go-WebRender %s", Version)
 
-// reference commit 5ce71e48fe2deb745bb919876bcced91740316ba
+// TODO: update to last version
+// commit of the Python reference implementation 117bbae615bc6b01c93cbab937c387e06dd1ae4e
