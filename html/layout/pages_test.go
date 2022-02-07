@@ -1560,3 +1560,46 @@ func TestNoNewPage(t *testing.T) {
 		t.Fatalf("expected one page, got %d", len(pages))
 	}
 }
+
+func TestRunningImg(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Test regression
+	_ = renderPages(t, `
+      <style>
+        img {
+          position: running(img);
+        }
+        @page {
+          @bottom-center {
+            content: element(img);
+          }
+        }
+      </style>
+      <img src="pattern.png" />
+    `)
+}
+
+func TestRunningAbsolute(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1540
+	_ = renderPages(t, `
+      <style>
+        footer {
+          position: running(footer);
+        }
+        p {
+          position: absolute;
+        }
+        @page {
+          @bottom-center {
+            content: element(footer);
+          }
+        }
+      </style>
+      <footer>Hello!<p>Bonjour!</p></footer>
+    `)
+}

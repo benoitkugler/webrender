@@ -6,7 +6,6 @@ import (
 
 	"github.com/benoitkugler/webrender/backend"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
 	drawText "github.com/benoitkugler/webrender/text/draw"
 )
@@ -166,15 +165,19 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 	}
 
 	chars := []rune(t.text)
-	var bbox Rectangle
+	var (
+		bbox        Rectangle
+		texts       []backend.TextDrawing
+		textContext = drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
+	)
 	for i, r := range chars {
 		hasX, hasY := i < len(x), i < len(y)
 
-		var rot Fl // en radians
+		var angle Fl // en radians
 		if i < len(t.rotate) {
-			rot = t.rotate[i] * math.Pi / 180
+			angle = t.rotate[i] * math.Pi / 180
 		} else if L := len(t.rotate); L != 0 {
-			rot = t.rotate[L-1] * math.Pi / 180
+			angle = t.rotate[L-1] * math.Pi / 180
 		}
 
 		if hasX && x[i] != 0 { // x specified
@@ -225,23 +228,17 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 
 		layout.ApplyJustification()
 
-		dst.OnNewStack(func() {
-			dst.MoveTo(xPosition, yPosition)
-
-			if rot != 0 {
-				dst.Transform(matrix.Translation(xPosition, yPosition))
-				dst.Transform(matrix.Rotation(rot))
-				dst.Transform(matrix.Translation(-xPosition, -yPosition))
-			}
-
-			doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
-			dst.SetTextPaint(newPaintOp(doFill, doStroke, false))
-			textContext := drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
-			// TODO: angle
-			textContext.DrawFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, 0)
-		})
+		doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
+		dst.SetTextPaint(newPaintOp(doFill, doStroke, false))
+		texts = append(texts,
+			textContext.CreateFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, angle))
 
 		svg.cursorPosition = cursorPosition
 	}
+
+	dst.OnNewStack(func() {
+		dst.DrawText(texts)
+	})
+
 	return nil
 }

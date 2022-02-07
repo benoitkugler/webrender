@@ -7,6 +7,7 @@ import (
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
+	"github.com/benoitkugler/webrender/utils/testutils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -935,6 +936,48 @@ func TestOverflowWrap_2(t *testing.T) {
 		tr := rowGroup.Box().Children[0]
 		td := tr.Box().Children[0]
 		tu.AssertEqual(t, td.Box().Width, v.expectedWidth, fmt.Sprintf("input %s %s", v.wrap, v.text))
+	}
+}
+
+func TestWrapOverflowWordBreak(t *testing.T) {
+	capt := testutils.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	for _, data := range []struct {
+		spanCSS       string
+		expectedLines []string
+	}{
+		// overflow-wrap: anywhere and break-word are only allowed to break a word
+		// "if there are no otherwise-acceptable break points in the line", which
+		// means they should not split a word if it fits cleanly into the next line.
+		// This can be done accidentally if it is in its own inline element.
+		{"overflow-wrap: anywhere", []string{"aaa", "bbb"}},
+		{"overflow-wrap: break-word", []string{"aaa", "bbb"}},
+
+		// On the other hand, word-break: break-all mandates a break anywhere at the
+		// end of a line, even if the word could fit cleanly onto the next line.
+		{"word-break: break-all", []string{"aaa b", "bb"}},
+	} {
+		page := renderOnePage(t, fmt.Sprintf(`
+		<style>
+			@font-face {src: url(weasyprint.otf); font-family: weasyprint}
+			body {width: 80px; overflow: hidden; font-family: weasyprint}
+			span {%s}
+		</style>
+		<body>
+		<span>aaa </span><span>bbb
+	`, data.spanCSS))
+		html := page.Box().Children[0]
+		body := html.Box().Children[0]
+		var lines []string
+		for _, line := range body.Box().Children {
+			lineText := ""
+			for _, span_box := range line.Box().Children {
+				lineText += span_box.Box().Children[0].(*bo.TextBox).Text
+			}
+			lines = append(lines, lineText)
+		}
+		tu.AssertEqual(t, lines, data.expectedLines, "")
 	}
 }
 

@@ -22,9 +22,10 @@ type Context struct {
 	Fonts  *text.FontConfiguration // used to find fonts
 }
 
-// DrawFirstLine draws the first line of `layout` starting at position `(x,y)`.
-func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor,
-	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl) {
+// CreateFirstLine create the text for the first line of `layout` starting at position `(x,y)`.
+// It also register the font used.
+func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccessor,
+	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl) backend.TextDrawing {
 	pl := &layout.Layout
 	pl.SetSingleParagraphMode(true)
 
@@ -71,7 +72,9 @@ func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor
 		lastFont             *backend.Font
 		xAdvance             pr.Fl
 	)
+
 	fontSize := pr.Fl(style.GetFontSize().Value)
+
 	output.FontSize = fontSize
 	output.X, output.Y = x, y
 	output.Angle = angle
@@ -155,7 +158,7 @@ func (ctx Context) DrawFirstLine(layout *text.TextLayout, style pr.StyleAccessor
 		}
 	}
 
-	ctx.Output.DrawText(output)
+	return output
 }
 
 // DrawEmoji loads and draws `glyph` onto `dst`.

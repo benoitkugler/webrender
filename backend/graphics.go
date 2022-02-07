@@ -303,7 +303,7 @@ type Canvas interface {
 	// DrawText draws the given text using the current fill color.
 	// The rendering may be altered by a preivous `SetTextPaint` call.
 	// The fonts of the runs have been registred with `AddFont`.
-	DrawText(text TextDrawing)
+	DrawText(texts []TextDrawing)
 
 	// DrawRasterImage draws the given image at the current point, with the given dimensions.
 	// Typical format for image.Content are PNG, JPEG, GIF.

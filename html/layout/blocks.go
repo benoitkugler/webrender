@@ -74,6 +74,7 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 	}
 
 	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("skipStack %s", skipStack))
 		traceLogger.DumpTree(box_, "blockLevelLayoutSwitch")
 	}
 
@@ -383,6 +384,10 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 
 		if debugMode {
 			debugLogger.LineWithDedent("--> block child done (resume at: %s, positionY: %g)", resumeAt, positionY)
+		}
+
+		if traceMode {
+			traceLogger.Dump(fmt.Sprintf("resumeAt %s", resumeAt))
 		}
 
 		if abort {

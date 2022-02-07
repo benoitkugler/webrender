@@ -402,6 +402,10 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 	} else {
 		// remote child : fetch the url
 		url := href.String()
+		url, err = utils.SafeUrljoin(context.baseURL, url, false)
+		if err != nil {
+			return nil, err
+		}
 		content, err := context.urlFetcher(url)
 		if err != nil {
 			logger.WarningLogger.Printf("SVG: fetching <use> content: %s", err)

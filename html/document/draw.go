@@ -1304,7 +1304,8 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 
 func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
-	textContext.DrawFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
+	text := textContext.CreateFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
+	ctx.dst.DrawText([]backend.TextDrawing{text})
 }
 
 func (ctx drawContext) drawWave(x, y, width, offsetX, radius pr.Fl) {

@@ -2082,93 +2082,131 @@ func TestTablePageBreaks(t *testing.T) {
 	}{
 		{
 			`
-		<style>
-		  @page { size: 120px }
-		  table { table-layout: fixed; width: 100% }
-		  h1 { height: 30px }
-		  td { height: 40px }
-		</style>
-		<h1>Dummy title</h1>
-		<table>
-		  <tr><td>row 1</td></tr>
-		  <tr><td>row 2</td></tr>
-  
-		  <tr><td>row 3</td></tr>
-		  <tr><td>row 4</td></tr>
-		  <tr><td>row 5</td></tr>
-  
-		  <tr><td style="height: 300px"> <!-- overflow the page -->
-			row 6</td></tr>
-		  <tr><td>row 7</td></tr>
-		  <tr><td>row 8</td></tr>
-		</table>
-	   `,
+			<style>
+			  @page { size: 120px }
+			  table { table-layout: fixed; width: 100% }
+			  h1 { height: 30px }
+			  td { height: 40px }
+			</style>
+			<h1>Dummy title</h1>
+			<table>
+			  <tr><td>row 1</td></tr>
+			  <tr><td>row 2</td></tr>
+
+			  <tr><td>row 3</td></tr>
+			  <tr><td>row 4</td></tr>
+			  <tr><td>row 5</td></tr>
+
+			  <tr><td style="height: 300px"> <!-- overflow the page -->
+				row 6</td></tr>
+			  <tr><td>row 7</td></tr>
+			  <tr><td>row 8</td></tr>
+			</table>
+		   `,
 			[]int{2, 3, 1, 2},
 			[]pr.Float{30, 70, 0, 40, 80, 0, 0, 40},
 		},
 		{
 			`
-		<style>
-		  @page { size: 120px }
-		  h1 { height: 30px}
-		  td { height: 40px }
-		  table { table-layout: fixed; width: 100%;
-				  page-break-inside: avoid }
-		</style>
-		<h1>Dummy title</h1>
-		<table>
-		  <tr><td>row 1</td></tr>
-		  <tr><td>row 2</td></tr>
-		  <tr><td>row 3</td></tr>
-		  <tr><td>row 4</td></tr>
-	   </table>
-	   `,
+			<style>
+			  @page { size: 120px }
+			  h1 { height: 30px}
+			  td { height: 40px }
+			  table { table-layout: fixed; width: 100%;
+					  page-break-inside: avoid }
+			</style>
+			<h1>Dummy title</h1>
+			<table>
+			  <tr><td>row 1</td></tr>
+			  <tr><td>row 2</td></tr>
+			  <tr><td>row 3</td></tr>
+			  <tr><td>row 4</td></tr>
+		   </table>
+		   `,
 			[]int{0, 3, 1},
 			[]pr.Float{0, 40, 80, 0},
+		},
+		{
+			`
+			<style>
+			  @page { size: 120px }
+			  h1 { height: 30px}
+			  td { height: 40px }
+			  table { table-layout: fixed; width: 100%;
+					  page-break-inside: avoid }
+			</style>
+			<h1>Dummy title</h1>
+			<table>
+			  <tbody>
+				<tr><td>row 1</td></tr>
+				<tr><td>row 2</td></tr>
+				<tr><td>row 3</td></tr>
+			  </tbody>
+
+			  <tr><td>row 4</td></tr>
+			</table>
+		   `,
+			[]int{0, 3, 1},
+			[]pr.Float{0, 40, 80, 0},
+		},
+		{
+			`
+			<style>
+			  @page { size: 120px }
+			  h1 { height: 30px}
+			  td { height: 40px }
+			  table { table-layout: fixed; width: 100% }
+			</style>
+			<h1>Dummy title</h1>
+			<table>
+			  <tr><td>row 1</td></tr>
+
+			  <tbody style="page-break-inside: avoid">
+				<tr><td>row 2</td></tr>
+				<tr><td>row 3</td></tr>
+			  </tbody>
+			</table>
+		   `,
+			[]int{1, 2},
+			[]pr.Float{30, 0, 40},
 		},
 		{
 			`
 		<style>
 		  @page { size: 120px }
 		  h1 { height: 30px}
-		  td { height: 40px }
-		  table { table-layout: fixed; width: 100%;
-				  page-break-inside: avoid }
+		  td { line-height: 40px }
+		  table { table-layout: fixed; width: 100%; orphans: 1; widows: 1 }
 		</style>
 		<h1>Dummy title</h1>
 		<table>
-		  <tbody>
-			<tr><td>row 1</td></tr>
-			<tr><td>row 2</td></tr>
-			<tr><td>row 3</td></tr>
-		  </tbody>
-  
-		  <tr><td>row 4</td></tr>
-		</table>
-	   `,
-			[]int{0, 3, 1},
-			[]pr.Float{0, 40, 80, 0},
-		},
-		{
-			`
-		<style>
-		  @page { size: 120px }
-		  h1 { height: 30px}
-		  td { height: 40px }
-		  table { table-layout: fixed; width: 100% }
-		</style>
-		<h1>Dummy title</h1>
-		<table>
-		  <tr><td>row 1</td></tr>
-  
-		  <tbody style="page-break-inside: avoid">
-			<tr><td>row 2</td></tr>
-			<tr><td>row 3</td></tr>
-		  </tbody>
+		  <tr><td>r1l1</td></tr>
+		  <tr style="break-inside: avoid"><td>r2l1<br>r2l2</td></tr>
+		  <tr><td>r3l1</td></tr>
 		</table>
 	   `,
 			[]int{1, 2},
-			[]pr.Float{30, 0, 40},
+			[]pr.Float{30, 0, 80},
+		},
+		{
+			`
+			<style>
+			  @page { size: 120px }
+			  h1 { height: 30px}
+			  td { line-height: 40px }
+			  table { table-layout: fixed; width: 100%; orphans: 1; widows: 1 }
+			</style>
+			<h1>Dummy title</h1>
+			<table>
+			  <tbody>
+				<tr><td>r1l1</td></tr>
+				<tr style="break-inside: avoid"><td>r2l1<br>r2l2</td></tr>
+			  </tbody>
+			  <tr><td>r3l1</td></tr>
+			</table>
+		   `,
+			[]int{1, 2},
+			[]pr.Float{30, 0, 80},
 		},
 	} {
 		pages := renderPages(t, data.html)
@@ -2947,4 +2985,22 @@ func TestTableBreakChildrenMargin(t *testing.T) {
       </table>
     `
 	tu.AssertEqual(t, len(renderPages(t, html)), 3, "")
+}
+
+func TestTableTdBreakInsideAvoid(t *testing.T) {
+	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1547
+	html := `
+	<style>
+	@page { size: 4cm }
+	td { break-inside: avoid; line-height: 3cm }
+  </style>
+  <table>
+	<tr>
+	  <td>
+		a<br>a
+	  </td>
+	</tr>
+  </table>
+    `
+	tu.AssertEqual(t, len(renderPages(t, html)), 2, "")
 }

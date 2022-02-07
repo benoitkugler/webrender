@@ -562,3 +562,14 @@ func TestFlexUndefinedPercentageHeightMultipleLines(t *testing.T) {
         <div style="width: 100%">b</div>
       </div>`)
 }
+
+func TestFlexAbsolute(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1536
+	_ = renderOnePage(t, `
+      <div style="display: flex; position: absolute">
+        <div>a</div>
+      </div>`)
+}

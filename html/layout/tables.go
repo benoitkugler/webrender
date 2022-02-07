@@ -15,6 +15,7 @@ import (
 // Layout for a table box.
 func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
 	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder) (bo.BlockLevelBoxITF, blockLayout) {
+
 	table := table_.Table()
 
 	table_.RemoveDecoration(&table.BoxFields, skipStack != nil, false)
@@ -171,7 +172,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				cell.Height = pr.AutoF
 
 				var cellSkipStack tree.ResumeStack
-				if skipStack != nil {
+				if len(skipStack) != 0 {
 					if rs, has := skipStack[indexCell]; has {
 						cellSkipStack = rs
 					} else {
