@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"regexp"
 	"strconv"
@@ -232,6 +233,8 @@ func clamp(v utils.Fl) utils.Fl {
 	}
 	return v
 }
+
+var _ color.Color = RGBA{}
 
 // RGBA returns the alpha-premultiplied red, green, blue and alpha values
 // for the color. Each value ranges within [0, 0xffff], but is represented

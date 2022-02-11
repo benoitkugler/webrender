@@ -390,6 +390,10 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 		if context.inUseIDs.Has(ID) {
 			return nil, fmt.Errorf("invalid recursive <use>")
 		}
+		if context.defs[ID] == nil {
+			logger.WarningLogger.Printf("SVG: <use> content not defined")
+			return nil, nil
+		}
 		context.inUseIDs.Add(ID)
 
 		// update after resolving

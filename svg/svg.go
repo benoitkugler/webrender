@@ -126,17 +126,16 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		display := node.attributes.display
 		visible := node.attributes.visible
 
-		// draw the node itself.
+		// draw the node itself : it is done in three steps
+		// 	1) resolve paint options and apply it
+		// 	2) apply the path operation
+		// 	3) conclude by calling Paint
+
+		doFill, doStroke := svg.setupPaint(dst, node, dims)
+
 		var vertices []vertex
 		if visible && node.graphicContent != nil {
 			vertices = node.graphicContent.draw(dst, &node.attributes, svg, dims)
-		}
-
-		// then recurse
-		if display {
-			for _, child := range node.children {
-				svg.drawNode(dst, child, dims, paint)
-			}
 		}
 
 		// apply mask
@@ -144,14 +143,22 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			svg.applyMask(dst, ma, node, dims)
 		}
 
-		// do the actual painting
-		if paint {
-			svg.paintNode(dst, node, dims)
-		}
-
 		// draw markers
 		if len(vertices) != 0 {
 			svg.drawMarkers(dst, vertices, node, dims, paint)
+		}
+
+		// do the actual painting :
+		// paint by filling and stroking the given node onto the graphic target
+		if _, isText := node.graphicContent.(span); paint && !isText {
+			dst.Paint(newPaintOp(doFill, doStroke, node.isFillEvenOdd))
+		}
+
+		// then recurse
+		if display {
+			for _, child := range node.children {
+				svg.drawNode(dst, child, dims, paint)
+			}
 		}
 
 		// apply opacity group and restore original target

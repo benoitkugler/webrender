@@ -120,16 +120,6 @@ func newPaintOp(fill, stroke, evenOdd bool) backend.PaintOp {
 	return op
 }
 
-// paint by filling and stroking the given node onto the graphic target
-func (svg *SVGImage) paintNode(dst backend.Canvas, node *svgNode, dims drawingDims) {
-	if _, isText := node.graphicContent.(span); isText {
-		return
-	}
-
-	doFill, doStroke := svg.setupPaint(dst, node, dims)
-	dst.Paint(newPaintOp(doFill, doStroke, node.isFillEvenOdd))
-}
-
 // apply the given painter to the given node, outputing the
 // the result in `dst`
 // opacity is an additional opacity factor
