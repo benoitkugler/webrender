@@ -185,6 +185,8 @@ func newGradientLinear(node *cascadedNode) (out gradientLinear, err error) {
 }
 
 type gradientRadial struct {
+	// if fx or fy are empty, they should default to
+	// the resolved values of cx and cy
 	cx, cy, r, fx, fy, fr Value
 }
 
@@ -200,12 +202,6 @@ func newGradientRadial(node *cascadedNode) (out gradientRadial, err error) {
 		r = "50%"
 	}
 	fx, fy, fr := node.attrs["fx"], node.attrs["fy"], node.attrs["fr"]
-	if fx == "" {
-		fx = cx
-	}
-	if fy == "" {
-		fy = cy
-	}
 
 	out.cx, err = parseValue(cx)
 	if err != nil {
@@ -400,8 +396,14 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 		cx := kind.cx.Resolve(dims.fontSize, 1)
 		cy := kind.cy.Resolve(dims.fontSize, 1)
 		r := kind.r.Resolve(dims.fontSize, 1)
-		fx := kind.fx.Resolve(dims.fontSize, width)
-		fy := kind.fy.Resolve(dims.fontSize, height)
+
+		fx, fy := cx, cy
+		if kind.fx.U != 0 {
+			fx = kind.fx.Resolve(dims.fontSize, width)
+		}
+		if kind.fy.U != 0 {
+			fy = kind.fy.Resolve(dims.fontSize, height)
+		}
 		fr := kind.fr.Resolve(dims.fontSize, 1)
 		if gr.isUnitsUserSpace {
 			cx -= x
@@ -424,7 +426,7 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 			} else {
 				d = height / width
 			}
-			mt.LeftMultBy(matrix.Scaling(a, d))
+			mt.RightMultBy(matrix.Scaling(a, d))
 		}
 
 		laidOutGradient = gr.spreadMethod.RadialGradient(positions, colors, fx, fy, fr, cx, cy, r, width, height)
