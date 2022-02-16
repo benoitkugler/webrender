@@ -138,14 +138,14 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			vertices = node.graphicContent.draw(dst, &node.attributes, svg, dims)
 		}
 
-		// apply mask
-		if ma, has := svg.definitions.masks[node.maskID]; has {
-			svg.applyMask(dst, ma, node, dims)
-		}
-
 		// draw markers
 		if len(vertices) != 0 {
 			svg.drawMarkers(dst, vertices, node, dims, paint)
+		}
+
+		// apply mask
+		if ma, has := svg.definitions.masks[node.maskID]; has {
+			svg.applyMask(dst, ma, node, dims)
 		}
 
 		// do the actual painting :
@@ -273,14 +273,14 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 				mat.LeftMultBy(matrix.Scaling(scaleX, scaleY))
 				mat.LeftMultBy(matrix.Translation(vertex.x, vertex.y))
 				mat.LeftMultBy(matrix.Translation(translateX, translateY))
-				dst.Transform(mat)
+				dst.State().Transform(mat)
 
 				overflow := marker.overflow
 				if clipBox != nil && (overflow == "hidden" || overflow == "scroll") {
 					dst.OnNewStack(func() {
 						dst.Rectangle(clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height)
 					})
-					dst.Clip(false)
+					dst.State().Clip(false)
 				}
 
 				svg.drawNode(dst, child, dims, paint)
@@ -360,7 +360,7 @@ func applyTransform(dst backend.Canvas, transforms []transform, dims drawingDims
 	// aggregate the transformations
 	mat := aggregateTransforms(transforms, dims.fontSize, dims.innerDiagonal)
 	if mat.Determinant() != 0 {
-		dst.Transform(mat)
+		dst.State().Transform(mat)
 	}
 }
 
@@ -376,20 +376,20 @@ func applyFilters(dst backend.Canvas, filters []filter, node *svgNode, dims draw
 			} else {
 				dx, dy = dims.point(filter.dx, filter.dy)
 			}
-			dst.Transform(matrix.New(1, 0, 0, 1, dx, dy))
+			dst.State().Transform(matrix.New(1, 0, 0, 1, dx, dy))
 		case filterBlend:
-			dst.SetBlendingMode(string(filter))
+			dst.State().SetBlendingMode(string(filter))
 		}
 	}
 }
 
 func (svg *SVGImage) applyClipPath(dst backend.Canvas, clipPath *clipPath, node *svgNode, dims drawingDims) {
-	oldCtm := dst.GetTransform()
+	oldCtm := dst.State().GetTransform()
 
 	if clipPath.isUnitsBBox {
 		x, y := dims.point(node.attributes.x, node.attributes.y)
 		width, height := dims.point(node.attributes.width, node.attributes.height)
-		dst.Transform(matrix.New(width, 0, 0, height, x, y))
+		dst.State().Transform(matrix.New(width, 0, 0, height, x, y))
 	}
 
 	svg.drawNode(dst, &clipPath.svgNode, dims, false)
@@ -397,10 +397,10 @@ func (svg *SVGImage) applyClipPath(dst backend.Canvas, clipPath *clipPath, node 
 	// At least set the clipping area to an empty path, so that it’s
 	// totally clipped when the clipping path is empty.
 	dst.Rectangle(0, 0, 0, 0)
-	dst.Clip(false)
-	newCtm := dst.GetTransform()
+	dst.State().Clip(false)
+	newCtm := dst.State().GetTransform()
 	if err := newCtm.Invert(); err == nil {
-		dst.Transform(matrix.Mul(oldCtm, newCtm))
+		dst.State().Transform(matrix.Mul(oldCtm, newCtm))
 	}
 }
 
@@ -428,7 +428,7 @@ func (svg *SVGImage) applyMask(dst backend.Canvas, mask mask, node *svgNode, dim
 
 	alpha := dst.NewGroup(x, y, width, height)
 	svg.drawNode(alpha, &mask.svgNode, dims, true)
-	dst.DrawAsMask(alpha)
+	dst.State().SetAlphaMask(alpha)
 }
 
 // ImageLoader is used to resolve and process image url found in SVG files.

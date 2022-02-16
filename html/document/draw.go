@@ -245,7 +245,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		if box.IsForRootElement && (stackingContext.page.Style.GetOverflow() != "visible") {
 			roundedBoxPath(
 				ctx.dst, stackingContext.page.RoundedPaddingBox())
-			ctx.dst.Clip(false)
+			ctx.dst.State().Clip(false)
 		}
 
 		if clips := box.Style.GetClip(); box.IsAbsolutelyPositioned() && len(clips) != 0 {
@@ -268,7 +268,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 				fl(left.Value-right.Value),
 				fl(bottom.Value-top.Value),
 			)
-			ctx.dst.Clip(false)
+			ctx.dst.State().Clip(false)
 		}
 
 		originalDst := ctx.dst
@@ -280,7 +280,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 		if mat, ok := getMatrix(box_); ok {
 			if mat.Determinant() != 0 {
-				ctx.dst.Transform(mat)
+				ctx.dst.State().Transform(mat)
 			} else {
 				logger.WarningLogger.Printf("non invertible transformation matrix %v\n", mat)
 				return
@@ -304,7 +304,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 				// - the background is already clipped
 				// - the border must *not* be clipped
 				roundedBoxPath(ctx.dst, box.RoundedPaddingBox())
-				ctx.dst.Clip(false)
+				ctx.dst.State().Clip(false)
 			}
 
 			// Point 3
@@ -436,7 +436,7 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 			for _, box := range bg.Layers[len(bg.Layers)-1].ClippedBoxes {
 				roundedBoxPath(ctx.dst, box)
 			}
-			ctx.dst.Clip(false)
+			ctx.dst.State().Clip(false)
 		}
 
 		// Background color
@@ -453,10 +453,10 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 						pth += bleed.Top + bleed.Bottom
 					}
 					ctx.dst.Rectangle(ptx, pty, ptw, pth)
-					ctx.dst.Clip(false)
+					ctx.dst.State().Clip(false)
 				}
 				ctx.dst.Rectangle(ctx.dst.GetRectangle())
-				ctx.dst.SetColorRgba(bg.Color, false)
+				ctx.dst.State().SetColorRgba(bg.Color, false)
 				ctx.dst.Paint(backend.FillNonZero)
 			})
 		}
@@ -604,7 +604,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 
 	ctx.dst.OnNewStack(func() {
 		mat := matrix.New(1, 0, 0, 1, X, Y) // translate
-		ctx.dst.SetColorPattern(patttern, imageWidth, imageHeight, mat, false)
+		ctx.dst.State().SetColorPattern(patttern, imageWidth, imageHeight, mat, false)
 		if layer.Unbounded {
 			x1, y1, x2, y2 := ctx.dst.GetRectangle()
 			ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
@@ -914,7 +914,7 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 			}
 		} else {
 			// 2x + 1 dashes
-			context.Clip(true)
+			context.State().Clip(true)
 			ld := fl(math.Round(float64(length / dash)))
 			denom := ld - utils.FloatModulo(ld+1, 2)
 			dash = length
@@ -937,18 +937,18 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 			}
 		}
 	}
-	context.Clip(true)
+	context.State().Clip(true)
 }
 
 func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, colors []Color) {
 	roundedBoxPath(ctx.dst, box.RoundedPaddingBox())
 	if style == "ridge" || style == "groove" {
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
-		ctx.dst.SetColorRgba(colors[0], false)
+		ctx.dst.State().SetColorRgba(colors[0], false)
 		ctx.dst.Paint(backend.FillEvenOdd)
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
 		roundedBoxPath(ctx.dst, box.RoundedBorderBox())
-		ctx.dst.SetColorRgba(colors[1], false)
+		ctx.dst.State().SetColorRgba(colors[1], false)
 		ctx.dst.Paint(backend.FillEvenOdd)
 		return
 	}
@@ -957,7 +957,7 @@ func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, col
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(2./3))
 	}
 	roundedBoxPath(ctx.dst, box.RoundedBorderBox())
-	ctx.dst.SetColorRgba(colors[0], false)
+	ctx.dst.State().SetColorRgba(colors[0], false)
 	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
@@ -967,11 +967,11 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 	ctx.dst.Rectangle(box.Unpack())
 	if style == "ridge" || style == "groove" {
 		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
-		ctx.dst.SetColorRgba(color[0], false)
+		ctx.dst.State().SetColorRgba(color[0], false)
 		ctx.dst.Paint(backend.FillEvenOdd)
 		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
 		ctx.dst.Rectangle(bbx+bl, bby+bt, bbw-bl-br, bbh-bt-bb)
-		ctx.dst.SetColorRgba(color[1], false)
+		ctx.dst.State().SetColorRgba(color[1], false)
 		ctx.dst.Paint(backend.FillEvenOdd)
 		return
 	}
@@ -980,7 +980,7 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 		ctx.dst.Rectangle(bbx+bl*2/3, bby+bt*2/3, bbw-(bl+br)*2/3, bbh-(bt+bb)*2/3)
 	}
 	ctx.dst.Rectangle(bbx+bl, bby+bt, bbw-bl-br, bbh-bt-bb)
-	ctx.dst.SetColorRgba(color[0], false)
+	ctx.dst.State().SetColorRgba(color[0], false)
 	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
@@ -1210,8 +1210,8 @@ func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 
 	ctx.dst.OnNewStack(func() {
 		roundedBoxPath(ctx.dst, box.RoundedContentBox())
-		ctx.dst.Clip(false)
-		ctx.dst.Transform(matrix.New(1, 0, 0, 1, pr.Fl(drawX), pr.Fl(drawY)))
+		ctx.dst.State().Clip(false)
+		ctx.dst.State().Transform(matrix.New(1, 0, 0, 1, pr.Fl(drawX), pr.Fl(drawY)))
 		ctx.dst.OnNewStack(func() {
 			box.Replacement.Draw(ctx.dst, ctx, pr.Fl(drawWidth), pr.Fl(drawHeight), string(box.Style.GetImageRendering()))
 		})
@@ -1266,7 +1266,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	}
 
 	x, y := pr.Fl(textbox.PositionX), pr.Fl(textbox.PositionY+textbox.Baseline.V())
-	ctx.dst.SetColorRgba(textbox.Style.GetColor().RGBA, false)
+	ctx.dst.State().SetColorRgba(textbox.Style.GetColor().RGBA, false)
 
 	textbox.PangoLayout.ApplyJustification()
 	ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, x, y)
@@ -1312,7 +1312,7 @@ func (ctx drawContext) drawWave(x, y, width, offsetX, radius pr.Fl) {
 	var up pr.Fl = 1
 	maxX := x + width
 	ctx.dst.Rectangle(x, y-2*radius, width, 4*radius)
-	ctx.dst.Clip(false)
+	ctx.dst.State().Clip(false)
 
 	x -= offsetX
 	ctx.dst.MoveTo(x, y)
@@ -1331,13 +1331,13 @@ func (ctx drawContext) drawTextDecoration(textbox *bo.TextBox, offsetX, offsetY,
 	style := textbox.Style.GetTextDecorationStyle()
 
 	ctx.dst.OnNewStack(func() {
-		ctx.dst.SetColorRgba(color, true)
-		ctx.dst.SetLineWidth(thickness)
+		ctx.dst.State().SetColorRgba(color, true)
+		ctx.dst.State().SetLineWidth(thickness)
 
 		if style == "dashed" {
-			ctx.dst.SetDash([]fl{5 * thickness}, offsetX)
+			ctx.dst.State().SetDash([]fl{5 * thickness}, offsetX)
 		} else if style == "dotted" {
-			ctx.dst.SetDash([]fl{thickness}, offsetX)
+			ctx.dst.State().SetDash([]fl{thickness}, offsetX)
 		}
 
 		posX, posY, width := fl(textbox.PositionX), fl(textbox.PositionY), fl(textbox.Width.V())
@@ -1350,7 +1350,7 @@ func (ctx drawContext) drawTextDecoration(textbox *bo.TextBox, offsetX, offsetY,
 			ctx.dst.LineTo(posX+width, posY+offsetY)
 		}
 
-		ctx.dst.SetLineWidth(thickness)
+		ctx.dst.State().SetLineWidth(thickness)
 
 		if style == "double" {
 			delta := 2 * thickness

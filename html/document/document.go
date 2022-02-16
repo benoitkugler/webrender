@@ -240,10 +240,10 @@ func newPage(pageBox *bo.PageBox) Page {
 func (d Page) Paint(dst backend.Page, fc *text.FontConfiguration, leftX, topY, scale fl, clip bool) {
 	dst.OnNewStack(func() {
 		// Make (0, 0) the top-left corner and make user units CSS pixels
-		dst.Transform(mt.New(scale, 0, 0, scale, leftX, topY))
+		dst.State().Transform(mt.New(scale, 0, 0, scale, leftX, topY))
 		if clip {
 			dst.Rectangle(0, 0, d.Width, d.Height)
-			dst.Clip(false)
+			dst.State().Clip(false)
 		}
 		ctx := drawContext{
 			dst:               dst,
@@ -498,7 +498,7 @@ func (d *Document) Write(target backend.Document, zoom pr.Fl, attachments []back
 		bottom := top + pageHeight
 
 		outputPage := target.AddPage(left/scale, top/scale, (right-left)/scale, (bottom-top)/scale)
-		outputPage.Transform(mt.New(1, 0, 0, -1, 0, page.Height*scale))
+		outputPage.State().Transform(mt.New(1, 0, 0, -1, 0, page.Height*scale))
 		page.Paint(outputPage, d.fontconfig, 0, 0, scale, false)
 
 		// Draw from the top-left corner

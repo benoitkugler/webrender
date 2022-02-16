@@ -186,7 +186,7 @@ func DrawEmoji(font *harfbuzz.Font, glyph fonts.GID, extents backend.GlyphExtent
 			e = x + e*fontSize
 
 			dst.OnNewStack(func() {
-				dst.Transform(matrix.New(a, 0, 0, d, e, f))
+				dst.State().Transform(matrix.New(a, 0, 0, d, e, f))
 				dst.DrawRasterImage(img, fontSize, fontSize)
 			})
 		}

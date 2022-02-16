@@ -300,7 +300,7 @@ func newSvg(node *cascadedNode, tree *svgContext) (drawable, error) {
 
 func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims drawingDims) []vertex {
 	x, y := dims.point(attrs.x, attrs.y)
-	dst.Transform(matrix.Translation(x, y))
+	dst.State().Transform(matrix.Translation(x, y))
 	width, height := dims.concreteWidth, dims.concreteHeight
 	if !s.isRoot {
 		width, height = dims.point(attrs.width, attrs.height)
@@ -319,10 +319,10 @@ func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims dra
 	sx, sy, tx, ty := s.preserveRatio.resolveTransforms(width, height, viewbox, nil)
 	if !s.isRoot {
 		dst.Rectangle(0, 0, width, height)
-		dst.Clip(false)
+		dst.State().Clip(false)
 	}
 
-	dst.Transform(matrix.New(sx, 0, 0, sy, tx, ty))
+	dst.State().Transform(matrix.New(sx, 0, 0, sy, tx, ty))
 	return nil
 }
 
@@ -470,7 +470,7 @@ func (u use) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dra
 	x, y := dims.point(attrs.x, attrs.y)
 
 	dst.OnNewStack(func() {
-		dst.Transform(matrix.Translation(x, y))
+		dst.State().Transform(matrix.Translation(x, y))
 		svg.drawNode(dst, u.target, dims, true) // actually draw the target
 	})
 	return nil

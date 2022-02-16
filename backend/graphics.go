@@ -157,28 +157,12 @@ const (
 	FillNonZero // mutually exclusive with FillEvenOdd
 )
 
-// Canvas represents a 2D surface which is the target of graphic operations.
-// It may be used as the final output (like a PDF page or the screen),
-// or as intermediate container (see for instance DrawWithOpacity or DrawAsMask)
-type Canvas interface {
-	// Returns the current canvas rectangle
-	GetRectangle() (left, top, right, bottom Fl)
-
-	// OnNewStack save the current graphic stack,
-	// execute the given closure, and restore the stack.
-	OnNewStack(func())
-
-	// NewGroup creates a new drawing target with the given
-	// bounding box. It may be filled by graphic operations
-	// before being passed to the `DrawWithOpacity`, `SetColorPattern`
-	// and `DrawAsMask` methods.
-	NewGroup(x, y, width, height Fl) Canvas
-
-	// DrawWithOpacity draw the given target to the main target, applying the given opacity (in [0,1]).
-	DrawWithOpacity(opacity Fl, group Canvas)
-
-	// DrawAsMask inteprets `mask` as an alpha mask
-	DrawAsMask(mask Canvas)
+// GraphicState exposes the settings for a group of graphic
+// operations.
+type GraphicState interface {
+	// SetAlphaMask inteprets `mask` as an alpha mask which should be applied
+	// to the painting done in the current graphic stack.
+	SetAlphaMask(mask Canvas)
 
 	// Establishes a new clip region
 	// by intersecting the current clip region
@@ -247,13 +231,6 @@ type Canvas interface {
 	// (in addition to SetLineWidth and SetDash)
 	SetStrokeOptions(StrokeOptions)
 
-	// Paint actually shows the current path on the target,
-	// either stroking, filling or doing both, according to `op`.
-	// The result of the operation depends on the current fill and
-	// stroke settings.
-	// After this call, the current path will be cleared.
-	Paint(op PaintOp)
-
 	// GetTransform returns the current transformation matrix (CTM).
 	GetTransform() matrix.Transform
 
@@ -262,6 +239,40 @@ type Canvas interface {
 	// The new transformation of user space takes place
 	// after any existing transformation.
 	Transform(mt matrix.Transform)
+
+	// SetTextPaint adjusts how text shapes are rendered.
+	SetTextPaint(op PaintOp)
+}
+
+// Canvas represents a 2D surface which is the target of graphic operations.
+// It may be used as the final output (like a PDF page or the screen),
+// or as intermediate container (see for instance DrawWithOpacity or SetAlphaMask)
+type Canvas interface {
+	// Returns the current canvas rectangle
+	GetRectangle() (left, top, right, bottom Fl)
+
+	// OnNewStack save the current graphic state,
+	// execute the given closure, and restore the state.
+	OnNewStack(func())
+
+	// State returns the current graphic state.
+	State() GraphicState
+
+	// NewGroup creates a new drawing target with the given
+	// bounding box. It may be filled by graphic operations
+	// before being passed to the `DrawWithOpacity`, `SetColorPattern`
+	// and `SetAlphaMask` methods.
+	NewGroup(x, y, width, height Fl) Canvas
+
+	// DrawWithOpacity draw the given target to the main target, applying the given opacity (in [0,1]).
+	DrawWithOpacity(opacity Fl, group Canvas)
+
+	// Paint actually shows the current path on the target,
+	// either stroking, filling or doing both, according to `op`.
+	// The result of the operation depends on the current fill and
+	// stroke settings.
+	// After this call, the current path will be cleared.
+	Paint(op PaintOp)
 
 	// Adds a rectangle of the given size to the current path,
 	// at position ``(x, y)`` in user-space coordinates.
@@ -296,9 +307,6 @@ type Canvas interface {
 	// This method will be called several times with the same `font` argument,
 	// so caching is advised.
 	AddFont(font pango.Font, content []byte) *Font
-
-	// SetTextPaint adjusts how text shapes are rendered.
-	SetTextPaint(op PaintOp)
 
 	// DrawText draws the given text using the current fill color.
 	// The rendering may be altered by a preivous `SetTextPaint` call.

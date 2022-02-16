@@ -229,7 +229,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 		layout.ApplyJustification()
 
 		doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
-		dst.SetTextPaint(newPaintOp(doFill, doStroke, false))
+		dst.State().SetTextPaint(newPaintOp(doFill, doStroke, false))
 		texts = append(texts,
 			textContext.CreateFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, angle))
 

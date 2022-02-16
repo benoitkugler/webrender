@@ -150,7 +150,7 @@ func (g gradient) Draw(dst backend.Canvas, _ text.TextLayoutContext, concreteWid
 
 	if layout.Kind == "solid" {
 		dst.Rectangle(0, 0, concreteWidth, concreteHeight)
-		dst.SetColorRgba(layout.Colors[0], false)
+		dst.State().SetColorRgba(layout.Colors[0], false)
 		dst.Paint(backend.FillNonZero)
 		return
 	}

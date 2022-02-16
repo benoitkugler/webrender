@@ -202,6 +202,10 @@ func (outputPage) SetColorPattern(backend.Canvas, fl, fl, matrix.Transform, bool
 	outputLog.Println("SetColorPattern")
 }
 
-func (outputPage) DrawAsMask(mask backend.Canvas) {
-	outputLog.Println("DrawAsMask")
+func (outputPage) SetAlphaMask(mask backend.Canvas) {
+	outputLog.Println("SetAlphaMask")
+}
+
+func (outputPage) State() backend.GraphicState {
+	return outputPage{}
 }

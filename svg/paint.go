@@ -96,10 +96,10 @@ func (svg *SVGImage) setupPaint(dst backend.Canvas, node *svgNode, dims drawingD
 
 		// stroke options
 		dashes, offset := dims.resolveDashes(node.dashArray, node.dashOffset)
-		dst.SetDash(dashes, offset)
+		dst.State().SetDash(dashes, offset)
 
-		dst.SetLineWidth(strokeWidth)
-		dst.SetStrokeOptions(node.strokeOptions)
+		dst.State().SetLineWidth(strokeWidth)
+		dst.State().SetStrokeOptions(node.strokeOptions)
 	}
 
 	return
@@ -137,7 +137,7 @@ func (svg *SVGImage) applyPainter(dst backend.Canvas, node *svgNode, pt painter,
 	}
 
 	pt.color.A *= opacity // apply the opacity factor
-	dst.SetColorRgba(pt.color, stroke)
+	dst.State().SetColorRgba(pt.color, stroke)
 }
 
 // gradient or pattern
@@ -311,7 +311,7 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 	}
 
 	if len(gr.colors) == 1 { // actually solid
-		dst.SetColorRgba(gr.colors[0], stroke)
+		dst.State().SetColorRgba(gr.colors[0], stroke)
 		return true
 	}
 
@@ -439,14 +439,14 @@ func (gr gradient) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims dra
 
 	if laidOutGradient.Kind == "solid" {
 		dst.Rectangle(0, 0, width, height)
-		dst.SetColorRgba(laidOutGradient.Colors[0], false)
+		dst.State().SetColorRgba(laidOutGradient.Colors[0], false)
 		dst.Paint(backend.FillNonZero)
 		return true
 	}
 
 	pattern := dst.NewGroup(0, 0, width, height)
 	pattern.DrawGradient(laidOutGradient, dims.concreteWidth, dims.concreteHeight)
-	dst.SetColorPattern(pattern, width, height, mt, stroke)
+	dst.State().SetColorPattern(pattern, width, height, mt, stroke)
 	return true
 }
 
@@ -517,12 +517,12 @@ func (pt pattern) paint(dst backend.Canvas, node *svgNode, opacity Fl, dims draw
 
 	// draw the pattern content on the temporary target
 	pat := dst.NewGroup(0, 0, patternWidth, patternHeight)
-	pat.SetColorRgba(parser.RGBA{A: opacity}, false)
+	pat.State().SetColorRgba(parser.RGBA{A: opacity}, false)
 	patSVG := SVGImage{root: &pt.svgNode}
 	patSVG.Draw(pat, patternWidth, patternHeight, textContext)
 
 	// apply the pattern
-	dst.SetColorPattern(pat, patternWidth, patternHeight, mat, stroke)
+	dst.State().SetColorPattern(pat, patternWidth, patternHeight, mat, stroke)
 
 	return true
 }

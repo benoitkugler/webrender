@@ -104,8 +104,8 @@ func (outputPage) DrawRasterImage(img backend.RasterImage, width, height fl) {
 	outputLog.Println("DrawRasterImage")
 }
 
-func (outputPage) DrawAsMask(mask backend.Canvas) {
-	outputLog.Println("DrawAsMask")
+func (outputPage) SetAlphaMask(mask backend.Canvas) {
+	outputLog.Println("SetAlphaMask")
 }
 
 func (outputPage) DrawGradient(gradient backend.GradientLayout, width, height fl) {
@@ -122,4 +122,8 @@ func (outputPage) SetStrokeOptions(backend.StrokeOptions) {
 
 func (outputPage) SetColorPattern(backend.Canvas, fl, fl, matrix.Transform, bool) {
 	outputLog.Println("SetColorPattern")
+}
+
+func (outputPage) State() backend.GraphicState {
+	return outputPage{}
 }
