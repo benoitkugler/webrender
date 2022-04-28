@@ -94,6 +94,15 @@ func Mul(T, U Transform) Transform {
 	return out
 }
 
+// Mul3 returns the transform R * S * T,
+// which applies T, then S, then R.
+func Mul3(R, S, T Transform) Transform {
+	out := Transform{}
+	mult(S, T, &out)
+	mult(R, out, &out)
+	return out
+}
+
 // LeftMultBy update T in place with the result of U * T
 // The resulting transformation apply T first, then U.
 func (T *Transform) LeftMultBy(U Transform) { mult(U, *T, T) }

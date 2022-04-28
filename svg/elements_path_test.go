@@ -1,6 +1,7 @@
 package svg
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -87,6 +88,43 @@ func TestParsePathCrash(t *testing.T) {
 		_, err := c.parsePath(path)
 		if err != nil {
 			t.Fatalf("path %s: %s", path, err)
+		}
+	}
+}
+
+func TestPathToOp(t *testing.T) {
+	path := `M4500 12794 c-357 -33 -696 -154 -995 -352 -384 -256 -595 -558 -686
+-982 -20 -90 -23 -136 -23 -325 -1 -234 7 -303 60 -509 49 -192 167 -471 288
+-683 l35 -61 -87 -37 c-477 -205 -864 -510 -1094 -865 -144 -222 -239 -471
+-290 -768 -20 -111 -23 -163 -22 -402 0 -239 3 -292 22 -405 88 -509 312 -946
+629 -1227 134 -119 361 -251 521 -302 28 -10 52 -19 52 -21 0 -2 -87 -48 -192
+-102 -823 -423 -1477 -975 -1895 -1598 -401 -598 -657 -1322 -763 -2155 -49
+-390 -54 -503 -54 -1150 -1 -338 3 -668 8 -733 l8 -117 4648 0 4648 0 8 118
+c14 196 11 1295 -4 1492 -50 677 -166 1264 -334 1690 -212 537 -514 988 -962
+1436 -398 398 -850 726 -1418 1031 -123 67 -156 89 -142 94 207 78 277 120
+473 283 150 124 223 199 326 337 175 234 287 495 349 809 65 330 59 761 -14
+1040 -72 277 -219 601 -354 781 -224 298 -565 548 -998 734 l-87 37 30 52
+c234 399 352 838 336 1246 -13 310 -91 552 -264 815 -182 276 -398 472 -668
+605 -273 135 -505 188 -855 194 -107 2 -215 2 -240 0z`
+	var c pathParser
+	out, err := c.parsePath(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range out {
+		switch item.op {
+		case moveTo:
+			fmt.Printf("..moveTo(%g, %g)\n", item.args[0].x/10, item.args[0].y/10)
+		case lineTo:
+			fmt.Printf("..lineTo(%g, %g)\n", item.args[0].x/10, item.args[0].y/10)
+		case cubicTo:
+			fmt.Printf("..cubicTo(%g, %g, %g, %g, %g, %g)\n",
+				item.args[0].x/10, item.args[0].y/10,
+				item.args[1].x/10, item.args[1].y/10,
+				item.args[2].x/10, item.args[2].y/10,
+			)
+		case close:
+			fmt.Println("..close()")
 		}
 	}
 }

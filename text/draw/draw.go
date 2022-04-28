@@ -9,7 +9,7 @@ import (
 
 	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textlayout/harfbuzz"
-	"github.com/benoitkugler/textlayout/pango"
+	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/backend"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/matrix"
@@ -25,7 +25,8 @@ type Context struct {
 // CreateFirstLine create the text for the first line of `layout` starting at position `(x,y)`.
 // It also register the font used.
 func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccessor,
-	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl) backend.TextDrawing {
+	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
+) backend.TextDrawing {
 	pl := &layout.Layout
 	pl.SetSingleParagraphMode(true)
 
@@ -164,7 +165,8 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 // DrawEmoji loads and draws `glyph` onto `dst`.
 // It may be used by backend implementations to render emojis.
 func DrawEmoji(font *harfbuzz.Font, glyph fonts.GID, extents backend.GlyphExtents,
-	fontSize, x, y, xAdvance utils.Fl, dst backend.Canvas) {
+	fontSize, x, y, xAdvance utils.Fl, dst backend.Canvas,
+) {
 	face := font.Face()
 	data := face.GlyphData(glyph, font.XPpem, font.YPpem)
 

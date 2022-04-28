@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/benoitkugler/textlayout/fontconfig"
-	"github.com/benoitkugler/textlayout/pango/fcfonts"
+	"github.com/benoitkugler/textprocessing/fontconfig"
+	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/text/hyphen"

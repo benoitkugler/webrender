@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/benoitkugler/textlayout/fonts"
-	"github.com/benoitkugler/textlayout/pango"
+	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/matrix"

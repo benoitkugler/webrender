@@ -144,7 +144,7 @@ func (g gradient) GetIntrinsicSize(_, _ pr.Float) (pr.MaybeFloat, pr.MaybeFloat,
 	return nil, nil, nil
 }
 
-func (g gradient) Draw(dst backend.Canvas, _ text.TextLayoutContext, concreteWidth, concreteHeight pr.Fl, imageRendering string) {
+func (g gradient) Draw(dst backend.Canvas, _ text.TextLayoutContext, concreteWidth, concreteHeight pr.Fl, _ string) {
 	layout := g.layouter.Layout(pr.Float(concreteWidth), pr.Float(concreteHeight))
 	layout.Reapeating = g.repeating
 

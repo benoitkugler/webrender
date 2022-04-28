@@ -12,7 +12,7 @@ import (
 	"io"
 
 	"github.com/benoitkugler/textlayout/fonts"
-	"github.com/benoitkugler/textlayout/pango"
+	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/matrix"

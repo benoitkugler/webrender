@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/benoitkugler/textlayout/fontconfig"
 	"github.com/benoitkugler/textlayout/fonts"
+	"github.com/benoitkugler/textprocessing/fontconfig"
 	"github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"

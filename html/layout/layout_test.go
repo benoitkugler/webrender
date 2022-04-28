@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	fc "github.com/benoitkugler/textlayout/fontconfig"
-	"github.com/benoitkugler/textlayout/pango/fcfonts"
+	fc "github.com/benoitkugler/textprocessing/fontconfig"
+	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"

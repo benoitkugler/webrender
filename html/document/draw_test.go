@@ -7,8 +7,8 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/benoitkugler/textlayout/fontconfig"
-	"github.com/benoitkugler/textlayout/pango/fcfonts"
+	"github.com/benoitkugler/textprocessing/fontconfig"
+	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"

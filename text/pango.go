@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/textlayout/language"
-	"github.com/benoitkugler/textlayout/pango"
+	"github.com/benoitkugler/textprocessing/pango"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/text/hyphen"
 )

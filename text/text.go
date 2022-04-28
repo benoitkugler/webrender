@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/textlayout/language"
-	"github.com/benoitkugler/textlayout/pango"
+	"github.com/benoitkugler/textprocessing/pango"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
@@ -73,7 +73,8 @@ type HyphenDictKey struct {
 // Fit as much as possible in the available width for one line of text.
 // minimum=False
 func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutContext,
-	maxWidth pr.MaybeFloat, justificationSpacing pr.Float, minimum, isLineStart bool) Splitted {
+	maxWidth pr.MaybeFloat, justificationSpacing pr.Float, minimum, isLineStart bool,
+) Splitted {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
 		ws               = style.GetWhiteSpace()
@@ -353,7 +354,8 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 }
 
 func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayout, resumeAt int, spaceCollapse bool,
-	style pr.StyleAccessor, hyphenated bool, hyphenationCharacter string) Splitted {
+	style pr.StyleAccessor, hyphenated bool, hyphenationCharacter string,
+) Splitted {
 	length := firstLine.Length
 	if hyphenated {
 		length -= len([]rune(hyphenationCharacter))

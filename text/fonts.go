@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	fc "github.com/benoitkugler/textlayout/fontconfig"
 	"github.com/benoitkugler/textlayout/fonts"
-	"github.com/benoitkugler/textlayout/pango/fcfonts"
+	fc "github.com/benoitkugler/textprocessing/fontconfig"
+	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
