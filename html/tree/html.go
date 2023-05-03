@@ -23,14 +23,13 @@ type HTML struct {
 }
 
 // `baseUrl` is the base used to resolve relative URLs
-// (e.g. in “<img src="../foo.png">“). If not provided, try to use
-// the input filename, URL, or “name“ attribute of :term:`file objects
+// (e.g. in “<img src="../foo.png">“). If not provided, is is infered from
+// the input filename or the URL
 //
-//	<file object>`.
+// `urlFetcher` is a function called to fetch external resources such as stylesheets and images.
+// and defaults to utils.DefaultUrlFetcher
 //
-// `urlFetcher` is a function called to
-// fetch external resources such as stylesheets and images, UTF-8 encoded
-// `mediaType` is the media type to use for “@media“, and defaults to “'print'“.
+// `mediaType` is the media type to use for “@media“, and defaults to "print".
 func NewHTML(htmlContent utils.ContentInput, baseUrl string, urlFetcher utils.UrlFetcher, mediaType string) (*HTML, error) {
 	logger.ProgressLogger.Println("Step 1 - Fetching and parsing HTML")
 	if urlFetcher == nil {
@@ -43,11 +42,12 @@ func NewHTML(htmlContent utils.ContentInput, baseUrl string, urlFetcher utils.Ur
 	if err != nil {
 		return nil, fmt.Errorf("can't fetch html input : %s", err)
 	}
+
 	root, err := html.ParseWithOptions(bytes.NewReader(result.Content), html.ParseOptionEnableScripting(false))
-	// root, err := html.Parse(bytes.NewReader(result.Content))
 	if err != nil || root.FirstChild == nil {
 		return nil, fmt.Errorf("invalid html input : %s", err)
 	}
+
 	var out HTML
 	// html.Parse wraps the <html> tag
 	out.Root = (*utils.HTMLNode)(root.FirstChild)

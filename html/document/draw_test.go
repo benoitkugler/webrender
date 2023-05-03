@@ -100,6 +100,8 @@ func renderUrl(t testing.TB, url string) {
 }
 
 func TestRealPage(t *testing.T) {
+	// t.Skip()
+
 	// Simply test for crashes
 	outputLog.SetOutput(io.Discard)
 
@@ -111,7 +113,7 @@ func TestRealPage(t *testing.T) {
 	renderUrl(t, "https://en.wikipedia.org/wiki/Go_(programming_language)") // rather big document
 	renderUrl(t, "https://golang.org/doc/go1.17")                           // slow because of text layout
 	renderUrl(t, "https://github.com/Kozea/WeasyPrint")
-	renderUrl(t, "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio")
+	// renderUrl(t, "https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/preserveAspectRatio") // large page, very slow !
 }
 
 func BenchmarkRender(b *testing.B) {
@@ -123,6 +125,25 @@ func BenchmarkRender(b *testing.B) {
 	}()
 
 	doc, err := tree.NewHTML(utils.InputFilename("../../resources_test/acid2-test.html"), "", nil, "")
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		Render(doc, nil, true, fc)
+	}
+}
+
+func BenchmarkRenderText(b *testing.B) {
+	logger.ProgressLogger.SetOutput(io.Discard)
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer func() {
+		logger.WarningLogger.SetOutput(os.Stdout)
+		logger.ProgressLogger.SetOutput(os.Stdout)
+	}()
+
+	doc, err := tree.NewHTML(utils.InputUrl("https://golang.org/doc/go1.17"), "", nil, "")
 	if err != nil {
 		b.Fatal(err)
 	}
