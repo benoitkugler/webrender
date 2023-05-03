@@ -71,6 +71,9 @@ type specialProperty interface {
 	isSpecialProperty()
 }
 
+func (v VarData) isSpecialProperty()   {}
+func (v RawTokens) isSpecialProperty() {}
+
 type DefaultKind uint8
 
 const (
@@ -89,10 +92,6 @@ type VarData struct {
 func (v VarData) IsNone() bool {
 	return v.Name == "" && v.Default == nil
 }
-
-func (v VarData) isSpecialProperty() {}
-
-func (v RawTokens) isSpecialProperty() {}
 
 // ---------- Convenience constructor -------------------------------
 

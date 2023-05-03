@@ -112,7 +112,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 				}
 			}
 		}
-		out.SetComputedStyles(element, (*utils.HTMLNode)(element.Parent), html.Root, "", html.BaseUrl,
+		out.setComputedStyles(element, (*utils.HTMLNode)(element.Parent), html.Root, "", html.BaseUrl,
 			targetColllector)
 	}
 
@@ -127,7 +127,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 	for key := range out.cascadedStyles {
 		// Element, pseudoType
 		if key.PseudoType != "" && !key.IsPageType() {
-			out.SetComputedStyles(key.Element, key.Element, html.Root,
+			out.setComputedStyles(key.Element, key.Element, html.Root,
 				key.PseudoType, html.BaseUrl, targetColllector)
 			// The pseudo-Element inherits from the Element.
 		}
@@ -147,7 +147,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 // Take the properties left by “applyStyleRule“ on an Element or
 // pseudo-Element and assign computed values with respect to the cascade,
 // declaration priority (ie. “!important“) and selector specificity.
-func (sf *StyleFor) SetComputedStyles(element, parent Element,
+func (sf *StyleFor) setComputedStyles(element, parent Element,
 	root *utils.HTMLNode, pseudoType, baseUrl string,
 	targetCollector *TargetCollector,
 ) {
@@ -1435,14 +1435,14 @@ func (styleFor StyleFor) SetPageComputedStylesT(pageType utils.PageElement, html
 	// Apply style for page
 	// @page inherits from the Root Element :
 	// http://lists.w3.org/Archives/Public/www-style/2012Jan/1164.html
-	styleFor.SetComputedStyles(pageType, html.Root, html.Root, "", html.BaseUrl, nil)
+	styleFor.setComputedStyles(pageType, html.Root, html.Root, "", html.BaseUrl, nil)
 
 	// Apply style for page pseudo-elements (margin boxes)
 	for key := range styleFor.cascadedStyles {
 		// Element, pseudoType = key
 		if key.PseudoType != "" && key.PageType == pageType {
 			// The pseudo-Element inherits from the Element.
-			styleFor.SetComputedStyles(key.PageType, key.PageType, html.Root, key.PseudoType, html.BaseUrl, nil)
+			styleFor.setComputedStyles(key.PageType, key.PageType, html.Root, key.PseudoType, html.BaseUrl, nil)
 		}
 	}
 }
