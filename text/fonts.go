@@ -409,7 +409,7 @@ func getFontDescription(style pr.StyleAccessor) pango.FontDescription {
 	if vs := style.GetFontVariationSettings(); vs.String != "normal" {
 		chunks := make([]string, len(vs.Values))
 		for i, v := range vs.Values {
-			chunks[i] = fmt.Sprintf("%s=%s", v.String, v.Float)
+			chunks[i] = fmt.Sprintf("%s=%f", v.String, v.Float)
 		}
 		variations := strings.Join(chunks, ",")
 		fontDesc.SetVariations(variations)

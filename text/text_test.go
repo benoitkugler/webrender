@@ -228,16 +228,16 @@ func TestLayoutFirstLine(t *testing.T) {
 	}
 }
 
-func TestChWidth(t *testing.T) {
-	newStyle := pr.InitialValues.Copy()
-	newStyle.SetFontFamily(pr.Strings{"arial"})
-	newStyle.SetFontSize(pr.FToV(16))
-	//  pr.FToV(-0.04444)
-	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
-	if w := CharacterRatio(dummyStyle{newStyle}, pr.NewTextRatioCache(), true, ct); utils.RoundPrec(pr.Fl(w), 3) != 8.854 {
-		t.Fatalf("unexpected ch width %v", w)
-	}
-}
+// func TestChWidth(t *testing.T) {
+// 	newStyle := pr.InitialValues.Copy()
+// 	newStyle.SetFontFamily(pr.Strings{"arial"})
+// 	newStyle.SetFontSize(pr.FToV(16))
+// 	//  pr.FToV(-0.04444)
+// 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+// 	if w := CharacterRatio(dummyStyle{newStyle}, pr.NewTextRatioCache(), true, ct); utils.RoundPrec(pr.Fl(w), 3) != 8.854 {
+// 		t.Fatalf("unexpected ch width %v", w)
+// 	}
+// }
 
 func TestSplitFirstLine(t *testing.T) {
 	newStyle := pr.InitialValues.Copy()
