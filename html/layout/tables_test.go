@@ -1536,7 +1536,7 @@ func TestLayoutTableAuto46(t *testing.T) {
 	defer capt.AssertNoLogs(t)
 
 	// Test regression:
-	// http://test.weasyprint.org/suite-css21/chapter8/section2/test56/
+	// https://test.weasyprint.org/suite-css21/chapter8/section2/test56/
 	page := renderOnePage(t, `
       <div style="position: absolute">
         <table style="margin: 50px; border: 20px solid black">
@@ -2011,7 +2011,7 @@ func TestTableRowHeight3(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/
+	// Test regression: https://github.com/Kozea/WeasyPrint/issues/937
 	page := renderOnePage(t, `
       <style>
         @font-face { src: url(weasyprint.otf); font-family: weasyprint }
@@ -2176,7 +2176,7 @@ func TestTablePageBreaks(t *testing.T) {
 		  @page { size: 120px }
 		  h1 { height: 30px}
 		  td { line-height: 40px }
-		  table { table-layout: fixed; width: 100%; orphans: 1; widows: 1 }
+		  table { table-layout: fixed; width: 100%; }
 		</style>
 		<h1>Dummy title</h1>
 		<table>
@@ -2194,7 +2194,7 @@ func TestTablePageBreaks(t *testing.T) {
 			  @page { size: 120px }
 			  h1 { height: 30px}
 			  td { line-height: 40px }
-			  table { table-layout: fixed; width: 100%; orphans: 1; widows: 1 }
+			  table { table-layout: fixed; width: 100%; }
 			</style>
 			<h1>Dummy title</h1>
 			<table>
@@ -2991,16 +2991,138 @@ func TestTableTdBreakInsideAvoid(t *testing.T) {
 	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1547
 	html := `
 	<style>
-	@page { size: 4cm }
-	td { break-inside: avoid; line-height: 3cm }
-  </style>
-  <table>
-	<tr>
-	  <td>
-		a<br>a
-	  </td>
-	</tr>
-  </table>
+		@page { size: 4cm }
+		td { break-inside: avoid; line-height: 3cm }
+	</style>
+	<table>
+		<tr>
+		<td>
+			a<br>a
+		</td>
+		</tr>
+	</table>
     `
 	tu.AssertEqual(t, len(renderPages(t, html)), 2, "")
+}
+
+func TestTableBadIntTdThSpan(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <table>
+        <tr>
+          <td colspan="bad"></td>
+          <td rowspan="23.4"></td>
+        </tr>
+        <tr>
+          <th colspan="x" rowspan="-2"></th>
+          <th></th>
+        </tr>
+      </table>
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	tableWrapper := body.Box().Children[0]
+	table := tableWrapper.Box().Children[0]
+	rowGroup := table.Box().Children[0]
+	row_1, row_2 := unpack2(rowGroup)
+	td_1, td_2 := unpack2(row_1)
+	tu.AssertEqual(t, td_1.Box().Width, td_2.Box().Width, "")
+	th_1, th_2 := unpack2(row_2)
+	tu.AssertEqual(t, th_1.Box().Width, th_2.Box().Width, "")
+}
+
+func TestTableBadIntColSpan(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <table>
+        <colgroup>
+          <col span="bad" style="width:25px" />
+        </colgroup>
+        <tr>
+          <td>a</td>
+          <td>a</td>
+        </tr>
+      </table>
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	tableWrapper := body.Box().Children[0]
+	table := tableWrapper.Box().Children[0]
+	rowGroup := table.Box().Children[0]
+	row := rowGroup.Box().Children[0]
+	td_1, _ := unpack2(row)
+	tu.AssertEqual(t, td_1.Box().Width, pr.Float(25), "")
+}
+
+func TestTableBadIntColgroupSpan(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <table>
+        <colgroup span="bad" style="width:25px">
+          <col />
+        </colgroup>
+        <tr>
+          <td>a</td>
+          <td>a</td>
+        </tr>
+      </table>
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	tableWrapper := body.Box().Children[0]
+	table := tableWrapper.Box().Children[0]
+	rowGroup := table.Box().Children[0]
+	row := rowGroup.Box().Children[0]
+	td_1, _ := unpack2(row)
+	tu.AssertEqual(t, td_1.Box().Width, pr.Float(25), "")
+}
+
+func TestTableDifferentDisplay(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Test display attribute set on different table elements
+	renderPages(t, `
+      <table style="font-size: 1px">
+        <colgroup style="display: block"><div>a</div></colgroup>
+        <col style="display: block"><div>a</div></col>
+        <tr style="display: block"><div>a</div></tr>
+        <td style="display: block"><div>a</div></td>
+        <th style="display: block"><div>a</div></th>
+        <thead>
+          <colgroup style="display: block"><div>a</div></colgroup>
+          <col style="display: block"><div>a</div></col>
+          <tr style="display: block"><div>a</div></tr>
+          <td style="display: block"><div>a</div></td>
+          <th style="display: block"><div>a</div></th>
+        </thead>
+        <tbody>
+          <colgroup style="display: block"><div>a</div></colgroup>
+          <col style="display: block"><div>a</div></col>
+          <tr style="display: block"><div>a</div></tr>
+          <td style="display: block"><div>a</div></td>
+          <th style="display: block"><div>a</div></th>
+        </tbody>
+        <tr>
+          <colgroup style="display: block"><div>a</div></colgroup>
+          <col style="display: block"><div>a</div></col>
+          <tr style="display: block"><div>a</div></tr>
+          <td style="display: block"><div>a</div></td>
+          <th style="display: block"><div>a</div></th>
+        </tr>
+        <td>
+          <colgroup style="display: block"><div>a</div></colgroup>
+          <col style="display: block"><div>a</div></col>
+          <tr style="display: block"><div>a</div></tr>
+          <td style="display: block"><div>a</div></td>
+          <th style="display: block"><div>a</div></th>
+        </td>
+      </table>
+    `)
 }

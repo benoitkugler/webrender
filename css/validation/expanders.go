@@ -64,11 +64,10 @@ func defaultFromString(keyword string) pr.DefaultKind {
 	return val
 }
 
-// Decorator helping expanders to handle ``inherit`` && ``initial``.
+// Decorator helping expanders to handle “inherit“ && “initial“.
 // Wrap an expander so that it does not have to handle the "inherit" and
 // "initial" cases, and can just yield name suffixes. Missing suffixes
 // get the initial value.
-//
 func genericExpander(expandedNames ...string) func(beforeGeneric) expander {
 	_expandedNames := utils.Set{}
 	for _, name := range expandedNames {
@@ -144,12 +143,12 @@ func genericExpander(expandedNames ...string) func(beforeGeneric) expander {
 	return genericExpanderDecorator
 }
 
-//@expander("border-color")
-//@expander("border-style")
-//@expander("border-width")
-//@expander("margin")
-//@expander("padding")
-//@expander("bleed")
+// @expander("border-color")
+// @expander("border-style")
+// @expander("border-width")
+// @expander("margin")
+// @expander("padding")
+// @expander("bleed")
 // Expand properties setting a token for the four sides of a box.
 func expandFourSides(baseUrl, name string, tokens []parser.Token) (out pr.NamedProperties, err error) {
 	// Make sure we have 4 tokens
@@ -227,11 +226,11 @@ func _borderRadius(_, _ string, tokens []parser.Token) (out []NamedTokens, err e
 	return out, nil
 }
 
-//@expander("list-style")
-//@genericExpander("-type", "-position", "-image", wantsBaseUrl=true)
-// Expand the ``list-style`` shorthand property.
-//     See http://www.w3.org/TR/CSS21/generate.html#propdef-list-style
+// @expander("list-style")
+// @genericExpander("-type", "-position", "-image", wantsBaseUrl=true)
+// Expand the “list-style“ shorthand property.
 //
+//	See http://www.w3.org/TR/CSS21/generate.html#propdef-list-style
 func _expandListStyle(baseUrl, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	var typeSpecified, imageSpecified bool
 	noneCount := 0
@@ -277,10 +276,10 @@ func _expandListStyle(baseUrl, _ string, tokens []parser.Token) (out []NamedToke
 	return out, nil
 }
 
-//@expander("border")
-// Expand the ``border`` shorthand property.
-//     See http://www.w3.org/TR/CSS21/box.html#propdef-border
+// @expander("border")
+// Expand the “border“ shorthand property.
 //
+//	See http://www.w3.org/TR/CSS21/box.html#propdef-border
 func expandBorder(baseUrl, name string, tokens []parser.Token) (out pr.NamedProperties, err error) {
 	for _, suffix := range [4]string{"-top", "-right", "-bottom", "-left"} {
 		props, err := expandBorderSide(baseUrl, name+suffix, tokens)
@@ -292,16 +291,16 @@ func expandBorder(baseUrl, name string, tokens []parser.Token) (out pr.NamedProp
 	return out, nil
 }
 
-//@expander("border-top")
-//@expander("border-right")
-//@expander("border-bottom")
-//@expander("border-left")
-//@expander("column-rule")
-//@expander("outline")
-//@genericExpander("-width", "-color", "-style")
-// Expand the ``border-*`` shorthand pr.
-//     See http://www.w3.org/TR/CSS21/box.html#propdef-border-top
+// @expander("border-top")
+// @expander("border-right")
+// @expander("border-bottom")
+// @expander("border-left")
+// @expander("column-rule")
+// @expander("outline")
+// @genericExpander("-width", "-color", "-style")
+// Expand the “border-*“ shorthand pr.
 //
+//	See http://www.w3.org/TR/CSS21/box.html#propdef-border-top
 func _expandBorderSide(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	out := make([]NamedTokens, len(tokens))
 	for index, token := range tokens {
@@ -347,8 +346,8 @@ func reverseLayers(a [][]parser.Token) {
 	}
 }
 
-// Expand the ``background`` shorthand property.
-// See http://dev.w3.org/csswg/css3-background/#the-background
+// Expand the “background“ shorthand property.
+// See http://drafts.csswg.org/csswg/css-backgrounds-3/#the-background
 func expandBackground(baseUrl, _ string, tokens []parser.Token) (out pr.NamedProperties, err error) {
 	properties := [8]string{
 		"background_color", "background_image", "background_repeat",
@@ -637,7 +636,7 @@ func _expandTextDecoration(_, _ string, tokens []parser.Token) (out []NamedToken
 	return out, nil
 }
 
-// Expand legacy ``page-break-before`` && ``page-break-after`` pr.
+// Expand legacy “page-break-before“ && “page-break-after“ pr.
 // See https://www.w3.org/TR/css-break-3/#page-break-properties
 func _expandPageBreakBeforeAfter(_, name string, tokens []parser.Token) (out []NamedTokens, err error) {
 	keyword := getSingleKeyword(tokens)
@@ -659,7 +658,7 @@ func _expandPageBreakBeforeAfter(_, name string, tokens []parser.Token) (out []N
 	return out, nil
 }
 
-// Expand the legacy ``page-break-inside`` property.
+// Expand the legacy “page-break-inside“ property.
 // See https://www.w3.org/TR/css-break-3/#page-break-properties
 func _expandPageBreakInside(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	keyword := getSingleKeyword(tokens)
@@ -670,7 +669,7 @@ func _expandPageBreakInside(_, _ string, tokens []parser.Token) ([]NamedTokens, 
 	return nil, InvalidValue
 }
 
-// Expand the ``columns`` shorthand property.
+// Expand the “columns“ shorthand property.
 func _expandColumns(_, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	if len(tokens) == 2 && getKeyword(tokens[0]) == "auto" {
 		tokens = reverse(tokens)
@@ -706,7 +705,7 @@ var (
 	normalFakeToken = parser.IdentToken{Value: "normal"}
 )
 
-// Expand the ``font-variant`` shorthand property.
+// Expand the “font-variant“ shorthand property.
 // https://www.w3.org/TR/css-fonts-3/#font-variant-prop
 func _fontVariant(_, name string, tokens []parser.Token) (out []NamedTokens, err error) {
 	return expandFontVariant(tokens)
@@ -781,7 +780,7 @@ func ExpandFont(tokens []parser.Token) ([]NamedTokens, error) {
 	return l, nil
 }
 
-// Expand the ``font`` shorthand property.
+// Expand the “font“ shorthand property.
 // https://www.w3.org/TR/css-fonts-3/#font-prop
 func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	expandFontKeyword := getSingleKeyword(tokens)
@@ -872,23 +871,20 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	return out, nil
 }
 
-// Expand the ``word-wrap`` legacy property.
-// See http://http://www.w3.org/TR/css3-text/#overflow-wrap
+// Expand the “word-wrap“ legacy property.
+// See https://www.w3.org/TR/css-text-3/#overflow-wrap
 func _expandWordWrap(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	keyword := overflowWrap(tokens, "")
 	if keyword == nil {
 		return nil, InvalidValue
 	}
-	if len(tokens) == 1 {
-		return []NamedTokens{
-			{Name: "overflow-wrap", Tokens: tokens},
-		}, nil
-	}
-	return nil, nil
+	return []NamedTokens{
+		{Name: "overflow-wrap", Tokens: tokens},
+	}, nil
 }
 
 // @expander("flex")
-// Expand the ``flex`` property.
+// Expand the “flex“ property.
 func _expandFlex(_, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	keyword := getSingleKeyword(tokens)
 	if keyword == "none" {
@@ -966,7 +962,7 @@ func _expandFlex(_, _ string, tokens []parser.Token) (out []NamedTokens, err err
 }
 
 // @expander("flex-flow")
-// Expand the ``flex-flow`` property.
+// Expand the “flex-flow“ property.
 func _expandFlexFlow(_, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	if len(tokens) == 2 {
 		hasBroken := false
@@ -1002,7 +998,7 @@ func _expandFlexFlow(_, _ string, tokens []parser.Token) (out []NamedTokens, err
 }
 
 // @expander('line-clamp')
-// Expand the ``line-clamp`` property.
+// Expand the “line-clamp“ property.
 func _expandLineClamp(_, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	if len(tokens) == 1 {
 		keyword := getSingleKeyword(tokens)
@@ -1043,7 +1039,7 @@ func _expandLineClamp(_, _ string, tokens []parser.Token) (out []NamedTokens, er
 	return nil, InvalidValue
 }
 
-// Expand the ``text-align`` property.
+// Expand the “text-align“ property.
 func _expandTextAlign(_, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	keyword := getSingleKeyword(tokens)
 	if keyword == "" {

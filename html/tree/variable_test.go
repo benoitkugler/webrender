@@ -1,6 +1,6 @@
 package tree
 
-// Test CSS custom proproperties, also known as CSS variables.
+// Test CSS custom properties, also known as CSS variables.
 
 import (
 	"fmt"
@@ -8,23 +8,28 @@ import (
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/utils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 // parse a simple html with style and an element and return
 // the computed style for this element
-func setupVar(t *testing.T, html string) pr.ElementStyle {
+func setupVar(t *testing.T, html string) (htmlS, elementS pr.ElementStyle) {
 	page, err := newHtml(utils.InputString(html))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	styleFor := GetAllComputedStyles(page, nil, false, nil, nil, nil, nil, nil)
-	p := page.Root.FirstChild.NextSibling.FirstChild
-	return styleFor.Get((*utils.HTMLNode)(p), "")
+	styleFor := GetAllComputedStyles(page, nil, false, nil, nil, nil, nil, false, nil)
+	htmlNode := page.Root
+	elementNode := htmlNode.FirstChild.NextSibling.FirstChild
+
+	htmlS = styleFor.Get((*utils.HTMLNode)(htmlNode), "")
+	elementS = styleFor.Get((*utils.HTMLNode)(elementNode), "")
+	return
 }
 
 func TestVariableSimple(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         p { --var: 10px; width: var(--var); color: red }
       </style>
@@ -32,13 +37,11 @@ func TestVariableSimple(t *testing.T) {
     `)
 
 	exp := pr.FToPx(10)
-	if got := style.GetWidth(); got != exp {
-		t.Fatalf("expected %v, got %v", exp, got)
-	}
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
 }
 
 func TestVariableInherit(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --var: 10px }
         p { width: var(--var) }
@@ -46,13 +49,11 @@ func TestVariableInherit(t *testing.T) {
       <p></p>
     `)
 	exp := pr.FToPx(10)
-	if got := style.GetWidth(); got != exp {
-		t.Fatalf("expected %v, got %v", exp, got)
-	}
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
 }
 
 func TestVariableInheritOverride(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --var: 20px }
         p { width: var(--var); --var: 10px }
@@ -60,13 +61,11 @@ func TestVariableInheritOverride(t *testing.T) {
       <p></p>
     `)
 	exp := pr.FToPx(10)
-	if got := style.GetWidth(); got != exp {
-		t.Fatalf("expected %v, got %v", exp, got)
-	}
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
 }
 
 func TestVariableCaseSensitive1(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --VAR: 20px }
         p { width: var(--VAR) }
@@ -74,13 +73,11 @@ func TestVariableCaseSensitive1(t *testing.T) {
       <p></p>
     `)
 	exp := pr.FToPx(20)
-	if got := style.GetWidth(); got != exp {
-		t.Fatalf("expected %v, got %v", exp, got)
-	}
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
 }
 
 func TestVariableCaseSensitive2(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --var: 20px }
         body { --VAR: 10px }
@@ -89,13 +86,11 @@ func TestVariableCaseSensitive2(t *testing.T) {
       <p></p>
     `)
 	exp := pr.FToPx(10)
-	if got := style.GetWidth(); got != exp {
-		t.Fatalf("expected %v, got %v", exp, got)
-	}
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
 }
 
 func TestVariableChain(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --foo: 10px }
         body { --var: var(--foo) }
@@ -104,13 +99,31 @@ func TestVariableChain(t *testing.T) {
       <p></p>
     `)
 	exp := pr.FToPx(10)
-	if got := style.GetWidth(); got != exp {
-		t.Fatalf("expected %v, got %v", exp, got)
-	}
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
+}
+
+func TestVariableChainRoot(t *testing.T) {
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1656
+	style, _ := setupVar(t, `
+      <style>
+        html { --var2: 10px; --var1: var(--var2); width: var(--var1) }
+      </style>
+    `)
+	exp := pr.FToPx(10)
+	tu.AssertEqual(t, style.GetWidth(), exp, "")
+}
+
+func TestVariableChainRootMissing(t *testing.T) {
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1656
+	_, _ = setupVar(t, `
+      <style>
+        html { --var1: var(--var-missing); width: var(--var1) }
+      </style>
+    `)
 }
 
 func TestVariablePartial1(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --var: 10px }
         div { margin: 0 0 0 var(--var) }
@@ -133,7 +146,7 @@ func TestVariablePartial1(t *testing.T) {
 }
 
 func TestVariableInitial(t *testing.T) {
-	style := setupVar(t, `
+	_, style := setupVar(t, `
       <style>
         html { --var: initial }
         p { width: var(--var, 10px) }
@@ -148,7 +161,7 @@ func TestVariableInitial(t *testing.T) {
 
 func TestVariableFallback(t *testing.T) {
 	for prop := range pr.KnownProperties {
-		style := setupVar(t, fmt.Sprintf(`
+		_, style := setupVar(t, fmt.Sprintf(`
 		  <style>
 			div {
 			  --var: improperValue;

@@ -174,3 +174,29 @@ func TestTargetFloat(t *testing.T) {
 	tu.AssertEqual(t, textBox.(*bo.TextBox).Text, "link", "textBox")
 	tu.AssertEqual(t, after.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "1", "after")
 }
+
+func TestTargetAbsolute(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <style>
+        a::after {
+          content: target-counter('#h', page);
+        }
+        div {
+           position: absolute;
+        }
+      </style>
+      <div><a id="span">link</a></div>
+      <h1 id="h">abc</h1>
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	div, _ := unpack2(body)
+	line := div.Box().Children[0]
+	inline := line.Box().Children[0]
+	textBox, after := unpack2(inline)
+	assertText(t, textBox, "link")
+	assertText(t, after.Box().Children[0], "1")
+}

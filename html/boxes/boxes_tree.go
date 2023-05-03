@@ -2,6 +2,8 @@ package boxes
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/html/tree"
@@ -22,6 +24,8 @@ type BlockBox struct {
 
 type LineBox struct {
 	BoxFields
+
+	ResumeAt      tree.ResumeStack
 	TextIndent    pr.MaybeFloat
 	TextOverflow  string
 	BlockEllipsis pr.TaggedString
@@ -78,7 +82,7 @@ type TableBox struct {
 	BlockLevelBox
 
 	ColumnWidths, ColumnPositions           []pr.Float
-	ColumnGroups                            []Box
+	ColumnGroups                            []*TableColumnGroupBox
 	CollapsedBorderGrid                     BorderGrids
 	SkippedRows                             int
 	SkipCellBorderTop, SkipCellBorderBottom bool
@@ -273,7 +277,13 @@ func (b *TableBox) Table() *TableBox {
 }
 
 func (b *TableBox) AllChildren() []Box {
-	return append(b.Box().Children, b.ColumnGroups...)
+	out := make([]Box, len(b.Children)+len(b.ColumnGroups))
+	copy(out, b.Children)
+	subSlice := out[len(b.Children):]
+	for i, box := range b.ColumnGroups {
+		subSlice[i] = box
+	}
+	return out
 }
 
 func (b *TableBox) Translate(box Box, dx, dy pr.Float, ignoreFloats bool) {
@@ -318,9 +328,15 @@ func NewTableColumnGroupBox(style pr.ElementStyle, element *html.Node, pseudoTyp
 	out := TableColumnGroupBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
 	out.properTableChild = true
 	out.internalTableOrCaption = true
-	out.span = 1
 	out.GetCells = out.defaultGetCells
 	return &out
+}
+
+func (b *TableColumnGroupBox) span() int {
+	if len(b.Children) != 0 {
+		return len(b.Children)
+	}
+	return integerAttribute(utils.HTMLNode(*b.Element).Get("span"), 1)
 }
 
 // Return cells that originate in the group's columns.
@@ -338,16 +354,39 @@ func NewTableColumnBox(style pr.ElementStyle, element *html.Node, pseudoType str
 	out := TableColumnBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
 	out.properTableChild = true
 	out.internalTableOrCaption = true
-	out.span = 1
 	// GetCells is setup during table layout
 	return &out
+}
+
+func (b *TableColumnBox) span() int {
+	return integerAttribute(utils.HTMLNode(*b.Element).Get("span"), 1)
+}
+
+// Read an integer attribute from the HTML element.
+// If is invalid, it default to 1
+func integerAttribute(attr string, minimum int) int {
+	value := strings.TrimSpace(attr)
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return 1
+	}
+	if intValue < minimum {
+		intValue = minimum
+	}
+	return intValue
 }
 
 func NewTableCellBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) *TableCellBox {
 	out := TableCellBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
 	out.internalTableOrCaption = true
-	out.Colspan = 1
-	out.Rowspan = 1
+
+	// HTML 4.01 gives special meaning to colspan=0
+	// http://www.w3.org/TR/html401/struct/tables.html#adef-rowspan
+	// but HTML 5 removed it
+	// http://www.w3.org/TR/html5/tabular-data.html#attr-tdth-colspan
+	// rowspan=0 is still there though.
+	out.Colspan = integerAttribute(utils.HTMLNode(*element).Get("colspan"), 1)
+	out.Rowspan = integerAttribute(utils.HTMLNode(*element).Get("rowspan"), 0)
 	return &out
 }
 

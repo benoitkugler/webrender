@@ -37,6 +37,19 @@ func init() {
 	fontmap = fcfonts.NewFontMap(fontconfig.Standard, fs)
 }
 
+type dummyStyle struct {
+	pr.Properties
+}
+
+func (ds dummyStyle) Copy() pr.ElementStyle { return ds }
+
+func (dummyStyle) Set(key string, value pr.CssProperty)       {}
+func (dummyStyle) Get(key string) pr.CssProperty              { return nil }
+func (dummyStyle) ParentStyle() pr.ElementStyle               { return nil }
+func (dummyStyle) Variables() map[string]pr.ValidatedProperty { return nil }
+func (dummyStyle) Specified() pr.SpecifiedAttributes          { return pr.SpecifiedAttributes{} }
+func (dummyStyle) Cache() pr.TextRatioCache                   { return pr.TextRatioCache{} }
+
 func assert(t *testing.T, b bool, msg string) {
 	if !b {
 		t.Fatal(msg)
@@ -219,9 +232,9 @@ func TestChWidth(t *testing.T) {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(pr.Strings{"arial"})
 	newStyle.SetFontSize(pr.FToV(16))
-
+	//  pr.FToV(-0.04444)
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
-	if w := ChWidth(newStyle, 16, ct, pr.FToV(-0.04444)); utils.RoundPrec(pr.Fl(w), 3) != 8.854 {
+	if w := CharacterRatio(dummyStyle{newStyle}, pr.NewTextRatioCache(), true, ct); utils.RoundPrec(pr.Fl(w), 3) != 8.854 {
 		t.Fatalf("unexpected ch width %v", w)
 	}
 }

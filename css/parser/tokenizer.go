@@ -303,7 +303,7 @@ func isIdentStart(css []byte, pos int) bool {
 }
 
 func consumeIdent(value []byte, pos int) (string, int) {
-	// http://dev.w3.org/csswg/css-syntax/#consume-a-name
+	// http://drafts.csswg.org/csswg/css-syntax/#consume-a-name
 	var chunks strings.Builder
 	L := len(value)
 	startPos := pos
@@ -327,7 +327,7 @@ func consumeIdent(value []byte, pos int) (string, int) {
 }
 
 // Return the range
-// http://dev.w3.org/csswg/css-syntax/#consume-a-unicode-range-token
+// http://drafts.csswg.org/csswg/css-syntax/#consume-a-unicode-range-token
 func consumeUnicodeRange(css []byte, pos int) (start, end int64, newPos int, err error) {
 	length := len(css)
 	startPos := pos
@@ -379,7 +379,7 @@ func consumeUnicodeRange(css []byte, pos int) (start, end int64, newPos int, err
 	return start, end, pos, err
 }
 
-// http://dev.w3.org/csswg/css-syntax/#consume-a-url-token
+// http://drafts.csswg.org/csswg/css-syntax/#consume-a-url-token
 func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, err error) {
 	length := len(css)
 	// Skip whitespace
@@ -423,7 +423,7 @@ func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, e
 				startPos = pos
 			default:
 				pos += w
-				// http://dev.w3.org/csswg/css-syntax/#non-printable-character
+				// http://drafts.csswg.org/csswg/css-syntax/#non-printable-character
 				if strings.ContainsRune(nonPrintable, c) {
 					err = errors.New("non printable char")
 					break mainLoop
@@ -453,7 +453,7 @@ func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, e
 		}
 	}
 
-	// http://dev.w3.org/csswg/css-syntax/#consume-the-remnants-of-a-bad-url0
+	// http://drafts.csswg.org/csswg/css-syntax/#consume-the-remnants-of-a-bad-url0
 	for pos < length {
 		if bytes.HasPrefix(css[pos:], []byte("\\)")) {
 			pos += 2
@@ -469,7 +469,7 @@ func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, e
 }
 
 // Returns unescapedValue
-// http://dev.w3.org/csswg/css-syntax/#consume-a-string-token
+// http://drafts.csswg.org/csswg/css-syntax/#consume-a-string-token
 // css[pos] is assumed to be a quote
 func consumeQuotedString(css []byte, pos int) (string, int, bool, error) {
 	quote := rune(css[pos])
@@ -517,7 +517,7 @@ mainLoop:
 // Return (unescapedChar, newPos).
 // Assumes a valid escape: pos is just after '\' and not followed by '\n'.
 func consumeEscape(css []byte, pos int) (string, int) {
-	// http://dev.w3.org/csswg/css-syntax/#consume-an-escaped-character
+	// http://drafts.csswg.org/csswg/css-syntax/#consume-an-escaped-character
 	hexMatch := hexEscapeRe.FindSubmatch(css[pos:])
 	if len(hexMatch) >= 2 {
 		codepoint, err := strconv.ParseInt(string(hexMatch[1]), 16, 0)

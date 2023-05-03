@@ -12,7 +12,7 @@ import (
 // Implement the various counter types and list-style-type values.
 //
 // These are defined in the same terms as CSS 3 Lists:
-// http://dev.w3.org/csswg/css3-lists/#predefined-counters
+// http://drafts.csswg.org/csswg/css3-lists/#predefined-counters
 
 type CounterStyle map[string]CounterStyleDescriptors
 

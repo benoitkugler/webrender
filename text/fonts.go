@@ -10,6 +10,7 @@ import (
 
 	"github.com/benoitkugler/textlayout/fonts"
 	fc "github.com/benoitkugler/textprocessing/fontconfig"
+	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
@@ -389,4 +390,29 @@ func getFontFeatures(style pr.StyleAccessor) map[string]int {
 	}
 
 	return features
+}
+
+func getFontDescription(style pr.StyleAccessor) pango.FontDescription {
+	fontDesc := pango.NewFontDescription()
+	fontDesc.SetFamily(strings.Join(style.GetFontFamily(), ","))
+
+	sty, _ := pango.StyleMap.FromString(string(style.GetFontStyle()))
+	fontDesc.SetStyle(pango.Style(sty))
+
+	str, _ := pango.StretchMap.FromString(string(style.GetFontStretch()))
+	fontDesc.SetStretch(pango.Stretch(str))
+
+	fontDesc.SetWeight(pango.Weight(style.GetFontWeight().Int))
+
+	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(pr.Fl(style.GetFontSize().Value)))
+
+	if vs := style.GetFontVariationSettings(); vs.String != "normal" {
+		chunks := make([]string, len(vs.Values))
+		for i, v := range vs.Values {
+			chunks[i] = fmt.Sprintf("%s=%s", v.String, v.Float)
+		}
+		variations := strings.Join(chunks, ",")
+		fontDesc.SetVariations(variations)
+	}
+	return fontDesc
 }

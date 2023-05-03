@@ -60,6 +60,20 @@ func (s *AnonymousStyle) SetAnchor(v pr.String) {
 	s.dict["anchor"] = v
 }
 
+func (s *ComputedStyle) GetAppearance() pr.String {
+	return s.Get("appearance").(pr.String)
+}
+func (s *ComputedStyle) SetAppearance(v pr.String) {
+	s.dict["appearance"] = v
+}
+
+func (s *AnonymousStyle) GetAppearance() pr.String {
+	return s.Get("appearance").(pr.String)
+}
+func (s *AnonymousStyle) SetAppearance(v pr.String) {
+	s.dict["appearance"] = v
+}
+
 func (s *ComputedStyle) GetBackgroundAttachment() pr.Strings {
 	return s.Get("background_attachment").(pr.Strings)
 }
@@ -1180,6 +1194,20 @@ func (s *AnonymousStyle) SetFontVariantPosition(v pr.String) {
 	s.dict["font_variant_position"] = v
 }
 
+func (s *ComputedStyle) GetFontVariationSettings() pr.SFloatStrings {
+	return s.Get("font_variation_settings").(pr.SFloatStrings)
+}
+func (s *ComputedStyle) SetFontVariationSettings(v pr.SFloatStrings) {
+	s.dict["font_variation_settings"] = v
+}
+
+func (s *AnonymousStyle) GetFontVariationSettings() pr.SFloatStrings {
+	return s.Get("font_variation_settings").(pr.SFloatStrings)
+}
+func (s *AnonymousStyle) SetFontVariationSettings(v pr.SFloatStrings) {
+	s.dict["font_variation_settings"] = v
+}
+
 func (s *ComputedStyle) GetFontWeight() pr.IntString {
 	return s.Get("font_weight").(pr.IntString)
 }
@@ -1290,6 +1318,20 @@ func (s *AnonymousStyle) GetHyphens() pr.String {
 }
 func (s *AnonymousStyle) SetHyphens(v pr.String) {
 	s.dict["hyphens"] = v
+}
+
+func (s *ComputedStyle) GetImageOrientation() pr.SBoolFloat {
+	return s.Get("image_orientation").(pr.SBoolFloat)
+}
+func (s *ComputedStyle) SetImageOrientation(v pr.SBoolFloat) {
+	s.dict["image_orientation"] = v
+}
+
+func (s *AnonymousStyle) GetImageOrientation() pr.SBoolFloat {
+	return s.Get("image_orientation").(pr.SBoolFloat)
+}
+func (s *AnonymousStyle) SetImageOrientation(v pr.SBoolFloat) {
+	s.dict["image_orientation"] = v
 }
 
 func (s *ComputedStyle) GetImageRendering() pr.String {

@@ -47,7 +47,8 @@ type StyleFor struct {
 }
 
 func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
-	targetColllector *TargetCollector, textContext text.TextLayoutContext) *StyleFor {
+	targetColllector *TargetCollector, textContext text.TextLayoutContext,
+) *StyleFor {
 	out := StyleFor{
 		cascadedStyles: map[utils.ElementKey]cascadedStyle{},
 		computedStyles: map[utils.ElementKey]pr.ElementStyle{},
@@ -131,23 +132,25 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 			// The pseudo-Element inherits from the Element.
 		}
 	}
+
 	// Clear the cascaded styles, we don't need them anymore. Keep the
 	// dictionary, it is used later for page margins.
 	for k := range out.cascadedStyles {
 		delete(out.cascadedStyles, k)
 	}
+
 	return &out
 }
 
-// Set the computed values of styles to ``Element``.
+// Set the computed values of styles to “Element“.
 //
-// Take the properties left by ``applyStyleRule`` on an Element or
+// Take the properties left by “applyStyleRule“ on an Element or
 // pseudo-Element and assign computed values with respect to the cascade,
-// declaration priority (ie. ``!important``) and selector specificity.
+// declaration priority (ie. “!important“) and selector specificity.
 func (sf *StyleFor) SetComputedStyles(element, parent Element,
 	root *utils.HTMLNode, pseudoType, baseUrl string,
-	targetCollector *TargetCollector) {
-
+	targetCollector *TargetCollector,
+) {
 	var (
 		parentStyle pr.ElementStyle
 		rootStyle   pr.Properties
@@ -231,7 +234,7 @@ func (s StyleFor) addPageDeclarations(page_T utils.PageElement) {
 			// Rule, selectorList, declarations
 			for _, sel := range pageR.selectors {
 				// specificity, pseudoType, selector_page_type = selector
-				if pageMatchT(sel.pageType, page_T) {
+				if pageTypeMatch(sel.pageType, page_T) {
 					specificity := sel.specificity
 					if len(sh.specificity) == 3 {
 						specificity = selector.Specificity{sh.specificity[0], sh.specificity[1], sh.specificity[2]}
@@ -267,22 +270,25 @@ var (
 
 // ComputedStyle provides on demand access of computed properties
 type ComputedStyle struct {
-	dict      pr.Properties
-	variables map[string]pr.ValidatedProperty
+	dict pr.Properties
 
 	textContext text.TextLayoutContext
-
-	rootStyle   pr.Properties
 	parentStyle pr.ElementStyle
-	cascaded    cascadedStyle
 	element     Element
-	pseudoType  string
-	baseUrl     string
-	specified   pr.SpecifiedAttributes
+
+	cache pr.TextRatioCache
+
+	variables  map[string]pr.ValidatedProperty
+	rootStyle  pr.Properties
+	cascaded   cascadedStyle
+	pseudoType string
+	baseUrl    string
+	specified  pr.SpecifiedAttributes
 }
 
 func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
-	element Element, pseudoType string, rootStyle pr.Properties, baseUrl string, textContext text.TextLayoutContext) *ComputedStyle {
+	element Element, pseudoType string, rootStyle pr.Properties, baseUrl string, textContext text.TextLayoutContext,
+) *ComputedStyle {
 	out := &ComputedStyle{
 		dict:        make(pr.Properties),
 		variables:   make(map[string]pr.ValidatedProperty),
@@ -297,7 +303,7 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 
 	// inherit the variables
 	if parentStyle != nil {
-		for k, v := range parentStyle.GetVariables() {
+		for k, v := range parentStyle.Variables() {
 			out.variables[k] = v
 		}
 	}
@@ -305,6 +311,12 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 		if strings.HasPrefix(k, "__") {
 			out.variables[k] = v.value
 		}
+	}
+	// inherit the cache
+	if parentStyle != nil {
+		out.cache = parentStyle.Cache()
+	} else {
+		out.cache = pr.NewTextRatioCache()
 	}
 
 	// Set specified value needed for computed value
@@ -335,11 +347,10 @@ func (c *ComputedStyle) Copy() pr.ElementStyle {
 	return out
 }
 
-func (c *ComputedStyle) GetParentStyle() pr.ElementStyle { return c.parentStyle }
-
-func (c *ComputedStyle) GetVariables() map[string]pr.ValidatedProperty { return c.variables }
-
-func (c *ComputedStyle) Specified() pr.SpecifiedAttributes { return c.specified }
+func (c *ComputedStyle) ParentStyle() pr.ElementStyle               { return c.parentStyle }
+func (c *ComputedStyle) Variables() map[string]pr.ValidatedProperty { return c.variables }
+func (c *ComputedStyle) Cache() pr.TextRatioCache                   { return c.cache }
+func (c *ComputedStyle) Specified() pr.SpecifiedAttributes          { return c.specified }
 
 func (c *ComputedStyle) cascadeValue(key string) (pr.DefaultKind, pr.ValidatedProperty) {
 	var (
@@ -392,7 +403,12 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 		c.dict[key] = value.ToCascaded().ToCSS()
 	}
 
-	if key == "page" && value.SpecialProperty == nil && value.ToCascaded().Default == 0 && value.ToCascaded().ToCSS().(pr.Page).String == "auto" {
+	if strings.HasPrefix(key, "text_decoration_") && c.parentStyle != nil {
+		_, isCascaded := c.cascaded[key]
+		value_ := textDecoration(key, value.ToCascaded().ToCSS(), c.parentStyle.Get(key), isCascaded)
+		value = pr.AsCascaded(value_).AsValidated()
+		delete(c.dict, key)
+	} else if key == "page" && value.SpecialProperty == nil && value.ToCascaded().Default == 0 && value.ToCascaded().ToCSS().(pr.Page).String == "auto" {
 		// The page property does not inherit. However, if the page value on
 		// an Element is auto, then its used value is the value specified on
 		// its nearest ancestor with a non-auto value. When specified on the
@@ -401,8 +417,8 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 		if c.parentStyle != nil {
 			value_ = c.parentStyle.GetPage()
 		}
-		c.dict.SetPage(value_)
 		value = pr.AsCascaded(value_).AsValidated()
+		delete(c.dict, key)
 	}
 
 	// check the cache again
@@ -461,10 +477,13 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 // AnonymousStyle provides on demand access of computed properties,
 // optimized for anonymous boxes
 type AnonymousStyle struct {
-	dict        pr.Properties
+	dict pr.Properties
+
 	parentStyle pr.ElementStyle
+	cache       pr.TextRatioCache
 	variables   map[string]pr.ValidatedProperty
-	specified   pr.SpecifiedAttributes
+
+	specified pr.SpecifiedAttributes
 }
 
 func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
@@ -475,10 +494,17 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	}
 	// inherit the variables
 	if parentStyle != nil {
-		for k, v := range parentStyle.GetVariables() {
+		for k, v := range parentStyle.Variables() {
 			out.variables[k] = v
 		}
 	}
+	// inherit the cache
+	if parentStyle != nil {
+		out.cache = parentStyle.Cache()
+	} else {
+		out.cache = pr.NewTextRatioCache()
+	}
+
 	// border-*-style is none, so border-width computes to zero.
 	// Other than that, properties that would need computing are
 	// border-*-color, but they do not apply.
@@ -502,27 +528,30 @@ func (c *AnonymousStyle) Copy() pr.ElementStyle {
 	return out
 }
 
-func (c *AnonymousStyle) GetParentStyle() pr.ElementStyle { return c.parentStyle }
-
-func (c *AnonymousStyle) GetVariables() map[string]pr.ValidatedProperty { return c.variables }
-
-func (c *AnonymousStyle) Specified() pr.SpecifiedAttributes { return c.specified }
+func (c *AnonymousStyle) ParentStyle() pr.ElementStyle               { return c.parentStyle }
+func (c *AnonymousStyle) Variables() map[string]pr.ValidatedProperty { return c.variables }
+func (c *AnonymousStyle) Cache() pr.TextRatioCache                   { return c.cache }
+func (c *AnonymousStyle) Specified() pr.SpecifiedAttributes          { return c.specified }
 
 func (a *AnonymousStyle) Get(key string) pr.CssProperty {
 	if v, has := a.dict[key]; has {
 		return v
 	}
 
+	var value pr.CssProperty
 	if pr.Inherited.Has(key) || strings.HasPrefix(key, "__") {
-		a.dict[key] = a.parentStyle.Get(key)
+		value = a.parentStyle.Get(key)
 	} else if key == "page" {
 		// page is not inherited but taken from the ancestor if 'auto'
-		a.dict[key] = a.parentStyle.Get(key)
+		value = a.parentStyle.Get(key)
+	} else if strings.HasPrefix(key, "text_decoration_") {
+		value = textDecoration(key, pr.InitialValues[key], a.parentStyle.Get(key), false)
 	} else {
-		a.dict[key] = pr.InitialValues[key]
+		value = pr.InitialValues[key]
 	}
 
-	return a.dict[key]
+	a.dict[key] = value // caches the value
+	return value
 }
 
 // ResolveColor return the color for `key`, replacing
@@ -537,7 +566,7 @@ func ResolveColor(style pr.ElementStyle, key string) pr.Color {
 	return value
 }
 
-func pageMatchT(selectorPageType pageSelector, pageType utils.PageElement) bool {
+func pageTypeMatch(selectorPageType pageSelector, pageType utils.PageElement) bool {
 	if selectorPageType.Side != "" && selectorPageType.Side != pageType.Side {
 		return false
 	}
@@ -553,23 +582,39 @@ func pageMatchT(selectorPageType pageSelector, pageType utils.PageElement) bool 
 	if !selectorPageType.Index.IsNone() {
 		a, b := selectorPageType.Index.A, selectorPageType.Index.B
 		// TODO: handle group
-		if a != 0 {
-			if (pageType.Index+1-b)%a != 0 {
-				return false
-			}
+		offset := pageType.Index + 1 - b
+		if a == 0 {
+			return offset == 0
 		} else {
-			if pageType.Index+1 != b {
-				return false
-			}
+			return offset/a >= 0 && offset%a == 0
 		}
 	}
 	return true
 }
 
-// Yield the stylesheets in ``elementTree``.
+func textDecoration(key string, value, parentValue pr.CssProperty, cascaded bool) pr.CssProperty {
+	// The text-decoration-* properties are not inherited but propagated
+	// using specific rules.
+	// See https://drafts.csswg.org/css-text-decor-3/#line-decoration
+	// TODO: these rules don’t follow the specification.
+	switch key {
+	case "text_decoration_color", "text_decoration_style":
+		if !cascaded {
+			value = parentValue
+		}
+	case "text_decoration_line":
+		pv := parentValue.(pr.Decorations)
+		v := value.(pr.Decorations)
+		value = v.Union(pv)
+	}
+	return value
+}
+
+// Yield the stylesheets in “elementTree“.
 // The output order is the same as the source order.
 func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, urlFetcher utils.UrlFetcher, baseUrl string,
-	fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, pageRules *[]PageRule) (out []CSS) {
+	fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, pageRules *[]PageRule,
+) (out []CSS) {
 	sel := selector.MustCompile("style, link")
 	for _, _element := range selector.MatchAll((*html.Node)(wrapperElement), sel) {
 		element := (*utils.HTMLNode)(_element)
@@ -641,11 +686,11 @@ func isDigit(s string) bool {
 	return true
 }
 
-// Yield ``specificity, (Element, declaration, BaseUrl)`` rules.
+// Yield “specificity, (Element, declaration, BaseUrl)“ rules.
 // Rules from "style" attribute are returned with specificity
-// ``(1, 0, 0)``.
-// If ``presentationalHints`` is ``true``, rules from presentational hints
-// are returned with specificity ``(0, 0, 0)``.
+// “(1, 0, 0)“.
+// If “presentationalHints“ is “true“, rules from presentational hints
+// are returned with specificity “(0, 0, 0)“.
 // presentationalHints=false
 func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl string) (out []styleAttrSpec) {
 	checkStyleAttribute := func(element *utils.HTMLNode, styleAttribute string) styleAttr {
@@ -947,9 +992,8 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 
 // Return the precedence for a declaration.
 // Precedence values have no meaning unless compared to each other.
-// Acceptable values for ``origin`` are the strings ``"author"``, ``"user"``
-// and ``"user agent"``.
-//
+// Acceptable values for “origin“ are the strings “"author"“, “"user"“
+// and “"user agent"“.
 func declarationPrecedence(origin string, importance bool) uint8 {
 	// See http://www.w3.org/TR/CSS21/cascade.html#cascading-order
 	if origin == "user agent" {
@@ -970,14 +1014,15 @@ func declarationPrecedence(origin string, importance bool) uint8 {
 
 // Get a dict of computed style mixed from parent and cascaded styles.
 func ComputedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, rootStyle pr.Properties, pseudoType, baseUrl string,
-	targetCollector *TargetCollector, textContext text.TextLayoutContext) pr.ElementStyle {
+	targetCollector *TargetCollector, textContext text.TextLayoutContext,
+) pr.ElementStyle {
 	if cascaded == nil && parentStyle != nil {
 		return newAnonymousStyle(parentStyle)
 	}
 
 	style := newComputedStyle(parentStyle, cascaded, element, pseudoType, rootStyle, baseUrl, textContext)
-	if targetCollector != nil {
-		targetCollector.collectAnchor(string(style.GetAnchor()))
+	if anchor := string(style.GetAnchor()); targetCollector != nil && anchor != "" {
+		targetCollector.collectAnchor(anchor)
 	}
 	return style
 }
@@ -1009,14 +1054,15 @@ type weigthedValue struct {
 type cascadedStyle = map[string]weigthedValue
 
 // Parse a page selector rule.
-//     Return a list of page data if the rule is correctly parsed. Page data are a
-//     dict containing:
-//     - "side" ("left", "right" or ""),
-//     - "blank" (true or false),
-//     - "first" (true or false),
-//     - "name" (page name string or ""), and
-//     - "specificity" (list of numbers).
-//     Return ``None` if something went wrong while parsing the rule.
+//
+//	Return a list of page data if the rule is correctly parsed. Page data are a
+//	dict containing:
+//	- "side" ("left", "right" or ""),
+//	- "blank" (true or false),
+//	- "first" (true or false),
+//	- "name" (page name string or ""), and
+//	- "specificity" (list of numbers).
+//	Return ``None` if something went wrong while parsing the rule.
 func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 	// See https://drafts.csswg.org/css-page-3/#syntax-page-selector
 
@@ -1163,8 +1209,8 @@ type PageRule struct {
 // ignoreImports = false
 func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Token,
 	urlFetcher utils.UrlFetcher, matcher *matcher, pageRules *[]PageRule,
-	fonts *[]string, fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, ignoreImports bool) {
-
+	fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, ignoreImports bool,
+) {
 	for _, rule := range stylesheetRules {
 		if atRule, isAtRule := rule.(parser.AtRule); _isContentNone(rule) && (!isAtRule || atRule.AtKeyword.Lower() != "import") {
 			continue
@@ -1247,7 +1293,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				contentRules := parser.ParseRuleList(*rule.Content, false, false)
 				preprocessStylesheet(
 					deviceMediaType, baseUrl, contentRules, urlFetcher,
-					matcher, pageRules, fonts, fontConfig, counterStyle, true)
+					matcher, pageRules, fontConfig, counterStyle, true)
 			case "page":
 				data := parsePageSelectors(rule.QualifiedRule)
 				if data == nil {
@@ -1298,10 +1344,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 						rule.Position().Line, rule.Position().Column)
 				}
 				if ruleDescriptors.Src != nil && ruleDescriptors.FontFamily != "" && fontConfig != nil {
-					fontFilename := fontConfig.AddFontFace(ruleDescriptors, urlFetcher)
-					if fontFilename != "" {
-						*fonts = append(*fonts, fontFilename)
-					}
+					fontConfig.AddFontFace(ruleDescriptors, urlFetcher)
 				}
 
 			case "counter-style":
@@ -1353,8 +1396,9 @@ type styleAttrSpec struct {
 func GetAllComputedStyles(html *HTML, userStylesheets []CSS,
 	presentationalHints bool, fontConfig *text.FontConfiguration,
 	counterStyle counters.CounterStyle, pageRules *[]PageRule,
-	targetCollector *TargetCollector, textContext text.TextLayoutContext) *StyleFor {
-
+	targetCollector *TargetCollector, forms bool,
+	textContext text.TextLayoutContext,
+) *StyleFor {
 	if counterStyle == nil {
 		counterStyle = make(counters.CounterStyle)
 	}
@@ -1367,7 +1411,9 @@ func GetAllComputedStyles(html *HTML, userStylesheets []CSS,
 	sheets := []sheet{
 		{sheet: html.UAStyleSheet, origin: "user agent", specificity: nil},
 	}
-
+	if forms {
+		sheets = append(sheets, sheet{sheet: html.FormStyleSheet, origin: "user agent", specificity: nil})
+	}
 	if presentationalHints {
 		sheets = append(sheets, sheet{sheet: html.PHStyleSheet, origin: "author", specificity: []int{0, 0, 0}})
 	}
@@ -1382,7 +1428,7 @@ func GetAllComputedStyles(html *HTML, userStylesheets []CSS,
 	return newStyleFor(html, sheets, presentationalHints, targetCollector, textContext)
 }
 
-// Set style for page types and pseudo-types matching ``pageType``.
+// Set style for page types and pseudo-types matching “pageType“.
 func (styleFor StyleFor) SetPageComputedStylesT(pageType utils.PageElement, html *HTML) {
 	styleFor.addPageDeclarations(pageType)
 

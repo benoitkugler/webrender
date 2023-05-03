@@ -57,7 +57,7 @@ type FontFaceDescriptors struct {
 type fontFaceDescriptorParser = func(tokens []Token, baseUrl string, out *FontFaceDescriptors) error
 
 // @descriptor()
-// ``font-family`` descriptor validation.
+// “font-family“ descriptor validation.
 // allowSpaces = false
 func _fontFamilyDesc(tokens []Token, allowSpaces bool) string {
 	allowedsT := utils.Set{string(parser.IdentTokenT): utils.Has}
@@ -95,9 +95,9 @@ func fontFamilyDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 
 // @descriptor(wantsBaseUrl=true)
 // @commaSeparatedList
-// ``src`` descriptor validation.
+// “src“ descriptor validation.
 func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
-	if len(tokens) > 0 && len(tokens) <= 2 {
+	if L := len(tokens); L == 1 || L == 2 {
 		token := tokens[len(tokens)-1]
 		tokens = tokens[:len(tokens)-1]
 		if fn, ok := token.(parser.FunctionBlock); ok && fn.Name.Lower() == "format" {
@@ -118,23 +118,25 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 }
 
 func src(tokens []Token, baseUrl string, out *FontFaceDescriptors) error {
+	var l []pr.NamedString
 	for _, part := range SplitOnComma(tokens) {
 		result, err := _src(RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return err
 		}
 		if result, ok := result.(pr.NamedString); ok {
-			out.Src = append(out.Src, result)
+			l = append(l, result)
 		} else {
 			return InvalidValue
 		}
 	}
+	out.Src = append(out.Src, l...)
 	return nil
 }
 
 // @descriptor()
 // @singleKeyword
-// ``font-style`` descriptor validation.
+// “font-style“ descriptor validation.
 func fontStyleDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
@@ -148,7 +150,7 @@ func fontStyleDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) err
 
 // @descriptor()
 // @singleToken
-// ``font-weight`` descriptor validation.
+// “font-weight“ descriptor validation.
 func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	if len(tokens) != 1 {
 		return InvalidValue
@@ -172,7 +174,7 @@ func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 
 // @descriptor()
 // @singleKeyword
-// Validation for the ``font-stretch`` descriptor.
+// Validation for the “font-stretch“ descriptor.
 func fontStretchDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
@@ -187,7 +189,7 @@ func fontStretchDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) e
 }
 
 // @descriptor("font-feature-settings")
-// ``font-feature-settings`` descriptor validation.
+// “font-feature-settings“ descriptor validation.
 func fontFeatureSettingsDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	s := _fontFeatureSettings(tokens)
 	if s.IsNone() {
@@ -198,7 +200,7 @@ func fontFeatureSettingsDescriptor(tokens []Token, _ string, out *FontFaceDescri
 }
 
 // @descriptor()
-// ``font-variant`` descriptor validation.
+// “font-variant“ descriptor validation.
 func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	if len(tokens) == 1 {
 		keyword := getKeyword(tokens[0])
@@ -234,7 +236,7 @@ type csDescriptors counters.CounterStyleDescriptors
 
 type counterStyleDescriptorParser = func(tokens []Token, baseUrl string, out *csDescriptors) error
 
-// ``system`` descriptor validation.
+// “system“ descriptor validation.
 func system(tokens []Token, _ string, out *csDescriptors) error {
 	if len(tokens) == 0 || len(tokens) > 2 {
 		return InvalidValue
@@ -283,7 +285,7 @@ func stringIdentOrUrl(token Token, baseUrl string) (pr.NamedString, bool) {
 	return pr.NamedString{}, false
 }
 
-// ``negative`` descriptor validation.
+// “negative“ descriptor validation.
 func negative(tokens []Token, baseUrl string, out *csDescriptors) error {
 	if len(tokens) > 2 {
 		return InvalidValue
@@ -323,7 +325,7 @@ func suffix(tokens []Token, baseUrl string, out *csDescriptors) (err error) {
 	return err
 }
 
-// ``prefix`` && ``suffix`` descriptors validation.
+// “prefix“ && “suffix“ descriptors validation.
 func _prefixSuffix(tokens []Token, baseUrl string) (pr.NamedString, error) {
 	if len(tokens) != 1 {
 		return pr.NamedString{}, InvalidValue
@@ -337,7 +339,7 @@ func _prefixSuffix(tokens []Token, baseUrl string) (pr.NamedString, error) {
 
 // @descriptor("counter-style")
 // @commaSeparatedList
-// ``range`` descriptor validation.
+// “range“ descriptor validation.
 func rangeD(tokens []Token, _ string, out *csDescriptors) error {
 	if len(tokens) == 1 {
 		keyword := getSingleKeyword(tokens)
@@ -383,7 +385,7 @@ func range_(tokens []Token) ([2]int, error) {
 }
 
 // @descriptor("counter-style", wantsBaseUrl=true)
-// ``pad`` descriptor validation.
+// “pad“ descriptor validation.
 func pad(tokens []Token, baseUrl string, out *csDescriptors) error {
 	v, err := pad_(tokens, baseUrl)
 	if err != nil {
@@ -424,7 +426,7 @@ func pad_(tokens []Token, baseUrl string) (out pr.IntNamedString, err error) {
 
 // @descriptor("counter-style")
 // @singleToken
-// ``fallback`` descriptor validation.
+// “fallback“ descriptor validation.
 func fallback(tokens []Token, _ string, out *csDescriptors) error {
 	if len(tokens) != 1 {
 		return InvalidValue
@@ -439,7 +441,7 @@ func fallback(tokens []Token, _ string, out *csDescriptors) error {
 }
 
 // @descriptor("counter-style", wantsBaseUrl=true)
-// ``symbols`` descriptor validation.
+// “symbols“ descriptor validation.
 func symbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 	for _, token := range tokens {
 		if p, ok := stringIdentOrUrl(token, baseUrl); ok {
@@ -452,7 +454,7 @@ func symbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 }
 
 // @descriptor("counter-style", wantsBaseUrl=true)
-// ``additive-symbols`` descriptor validation.
+// “additive-symbols“ descriptor validation.
 func additiveSymbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 	for _, part := range SplitOnComma(tokens) {
 		result, err := pad_(RemoveWhitespace(part), baseUrl)

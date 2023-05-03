@@ -31,6 +31,15 @@ type Display [3]string
 
 type Decorations utils.Set
 
+// Union return the union of  [s] and [other]
+func (dec Decorations) Union(other Decorations) Decorations {
+	out := utils.Set(dec).Copy()
+	for k := range other {
+		out[k] = utils.Has
+	}
+	return Decorations(out)
+}
+
 type Transforms []SDimensions
 
 type Values []Value
@@ -194,6 +203,23 @@ type BoolString struct {
 	Bool   bool
 }
 
+type FloatString struct {
+	String string
+	Float  Fl
+}
+
+type SBoolFloat struct {
+	String string
+	Bool   bool
+	Float  Fl
+}
+
+// SFloatStrings is either a string or a list of (string, float) pairs
+type SFloatStrings struct {
+	String string
+	Values []FloatString
+}
+
 type Quote struct {
 	Open   bool
 	Insert bool
@@ -247,7 +273,9 @@ func (TaggedInt) isCssProperty()    {}
 
 func (Display) isCssProperty() {}
 
-func (BoolString) isCssProperty() {}
+func (BoolString) isCssProperty()    {}
+func (SFloatStrings) isCssProperty() {}
+func (SBoolFloat) isCssProperty()    {}
 
 func (v BoolString) IsNone() bool {
 	return v == BoolString{}

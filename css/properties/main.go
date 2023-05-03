@@ -2,7 +2,8 @@
 // There are 3 groups of types for a property, separated by 2 steps : cascading and computation.
 // Thus the need of 3 types (see below).
 // Schematically, the style computation is :
-//		ValidatedProperty (ComputedFromCascaded)-> CascadedProperty (Compute)-> CssProperty
+//
+//	ValidatedProperty (ComputedFromCascaded)-> CascadedProperty (Compute)-> CssProperty
 package properties
 
 import (
@@ -13,9 +14,9 @@ type Fl = utils.Fl
 
 // ValidatedProperty is the most general CSS input for a property.
 // It covers the following cases:
-//	- a plain CSS value, including "initial" or "inherited" special cases (CssProperty)
-//	- a var() call (VarData)
-//  - an input not yet validated, used as definition of variable (RawTokens)
+//   - a plain CSS value, including "initial" or "inherited" special cases (CssProperty)
+//   - a var() call (VarData)
+//   - an input not yet validated, used as definition of variable (RawTokens)
 type ValidatedProperty struct {
 	SpecialProperty specialProperty
 	prop            CascadedProperty
@@ -142,8 +143,36 @@ type SpecifiedAttributes struct {
 	Position BoolString
 }
 
+// TextRatioCache stores the 1ex/font_size or 1ch/font_size
+// ratios, for each font.
+type TextRatioCache struct {
+	ratioCh map[string]Float
+	ratioEx map[string]Float
+}
+
+func NewTextRatioCache() TextRatioCache {
+	return TextRatioCache{ratioCh: make(map[string]Float), ratioEx: make(map[string]Float)}
+}
+
+func (tr TextRatioCache) Get(fontKey string, isCh bool) (f Float, ok bool) {
+	if isCh {
+		f, ok = tr.ratioCh[fontKey]
+	} else {
+		f, ok = tr.ratioEx[fontKey]
+	}
+	return
+}
+
+func (tr TextRatioCache) Set(fontKey string, isCh bool, f Float) {
+	if isCh {
+		tr.ratioCh[fontKey] = f
+	} else {
+		tr.ratioEx[fontKey] = f
+	}
+}
+
 // ElementStyle defines a common interface to access style properties.
-// Implementations will typically compute the propery on the fly and cache the result.
+// Implementations will typically compute the property on the fly and cache the result.
 type ElementStyle interface {
 	StyleAccessor
 
@@ -158,10 +187,12 @@ type ElementStyle interface {
 	// Copy returns a deep copy of the style.
 	Copy() ElementStyle
 
-	GetParentStyle() ElementStyle
-	GetVariables() map[string]ValidatedProperty
+	ParentStyle() ElementStyle
+	Variables() map[string]ValidatedProperty
 
 	Specified() SpecifiedAttributes
+
+	Cache() TextRatioCache
 }
 
 var _ StyleAccessor = Properties(nil)

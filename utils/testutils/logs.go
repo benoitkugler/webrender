@@ -3,6 +3,7 @@ package testutils
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -54,6 +55,7 @@ func (c *capturedLogs) AssertNoLogs(t *testing.T) {
 
 // IndentLogger enable to write debug message with a tree structure.
 type IndentLogger struct {
+	Color bool
 	level int
 }
 
@@ -69,7 +71,17 @@ func (il *IndentLogger) LineWithDedent(format string, args ...interface{}) {
 	il.Line(format, args...)
 }
 
+var reTag = regexp.MustCompile(`<(\S+)>`)
+
+func colorTag(s string) string {
+	return reTag.ReplaceAllString(s, "\033[1;34m<$1>\033[0m")
+}
+
 // Line simply writes the message without changing the indentation.
 func (il *IndentLogger) Line(format string, args ...interface{}) {
-	fmt.Println(strings.Repeat(" ", il.level) + fmt.Sprintf(format, args...))
+	s := fmt.Sprintf(format, args...)
+	if il.Color {
+		s = colorTag(s)
+	}
+	fmt.Println(strings.Repeat(" ", il.level) + s)
 }

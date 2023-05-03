@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
@@ -46,12 +47,12 @@ func cycle(i, N int) int {
 	return i % N
 }
 
-func resolveImage(image pr.Image, getImageFromUri bo.Gifu) images.Image {
+func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.Gifu) images.Image {
 	switch img := image.(type) {
 	case nil, pr.NoneImage:
 		return nil
 	case pr.UrlImage:
-		return getImageFromUri(string(img), "")
+		return getImageFromUri(string(img), "", orientation)
 	case pr.RadialGradient:
 		return images.NewRadialGradient(img)
 	case pr.LinearGradient:
@@ -77,26 +78,27 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 		style = box.Style
 	}
 
-	if style.GetVisibility() == "hidden" {
-		box.Background = nil
-		if page != box_ { // Pages need a background for bleed box
-			return
+	var (
+		color     parser.RGBA // transparent
+		images_   []images.Image
+		anyImages = false
+	)
+	if style.GetVisibility() != "hidden" {
+		orientation := style.GetImageOrientation()
+		bs := style.GetBackgroundImage()
+		images_ = make([]images.Image, len(bs))
+		for i, v := range bs {
+			images_[i] = resolveImage(v, orientation, getImageFromUri)
+			if images_[i] != nil {
+				anyImages = true
+			}
 		}
+		color = tree.ResolveColor(style, "background_color").RGBA
 	}
 
-	bs := style.GetBackgroundImage()
-	images := make([]images.Image, len(bs))
-	anyImages := false
-	for i, v := range bs {
-		images[i] = resolveImage(v, getImageFromUri)
-		if images[i] != nil {
-			anyImages = true
-		}
-	}
-	color := tree.ResolveColor(style, "background_color").RGBA
 	if color.A == 0 && !anyImages {
-		box.Background = nil
 		if page != box_ { // Pages need a background for bleed box
+			box.Background = nil
 			return
 		}
 	}
@@ -115,8 +117,8 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 	attachmentsN := len(attachments)
 
 	ir := style.GetImageResolution()
-	layers := make([]bo.BackgroundLayer, len(images))
-	for i, img := range images {
+	layers := make([]bo.BackgroundLayer, len(images_))
+	for i, img := range images_ {
 		layers[i] = layoutBackgroundLayer(box_, page, ir, img,
 			sizes[cycle(i, sizesN)],
 			clips[cycle(i, clipsN)],
@@ -131,8 +133,8 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 }
 
 func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, image images.Image, size pr.Size, clip string, repeat [2]string,
-	origin string, position pr.Center, attachment string) bo.BackgroundLayer {
-
+	origin string, position pr.Center, attachment string,
+) bo.BackgroundLayer {
 	var (
 		clippedBoxes []bo.RoundedBox
 		paintingArea pr.Rectangle
@@ -141,7 +143,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 	if box_ == page {
 		paintingArea = [4]pr.Float{0, 0, page.MarginWidth(), page.MarginHeight()}
 		clippedBoxes = []bo.RoundedBox{box.RoundedBorderBox()}
-	} else if bo.TableRowGroupBoxT.IsInstance(box_) {
+	} else if bo.TableRowGroupT.IsInstance(box_) {
 		clippedBoxes = nil
 		var totalHeight pr.Float
 		for _, row_ := range box.Children {
@@ -150,7 +152,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 				var max pr.Float
 				for _, cell := range row.Children {
 					clippedBoxes = append(clippedBoxes, cell.Box().RoundedBorderBox())
-					if v := cell.Box().BorderBoxY() + cell.Box().BorderHeight(); v > max {
+					if v := cell.Box().BorderHeight(); v > max {
 						max = v
 					}
 				}
@@ -159,9 +161,9 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 		}
 		paintingArea = [4]pr.Float{
 			box.BorderBoxX(), box.BorderBoxY(),
-			box.BorderBoxX() + box.BorderWidth(), totalHeight,
+			box.BorderWidth(), totalHeight,
 		}
-	} else if bo.TableRowBoxT.IsInstance(box_) {
+	} else if bo.TableRowT.IsInstance(box_) {
 		if len(box.Children) != 0 {
 			clippedBoxes = nil
 			var max pr.Float
@@ -174,10 +176,10 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 			height := max
 			paintingArea = [4]pr.Float{
 				box.BorderBoxX(), box.BorderBoxY(),
-				box.BorderBoxX() + box.BorderWidth(), box.BorderBoxY() + height,
+				box.BorderWidth(), height,
 			}
 		}
-	} else if bo.TableColumnGroupBoxT.IsInstance(box_) || bo.TableColumnBoxT.IsInstance(box_) {
+	} else if bo.TableColumnGroupT.IsInstance(box_) || bo.TableColumnT.IsInstance(box_) {
 		cells := box.GetCells()
 		if len(cells) != 0 {
 			clippedBoxes = nil
@@ -193,7 +195,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 			}
 			paintingArea = [4]pr.Float{
 				minX, box.BorderBoxY(),
-				maxX - minX, box.BorderBoxY() + box.BorderHeight(),
+				maxX - minX, box.BorderHeight(),
 			}
 		}
 	} else {
@@ -289,14 +291,18 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 	}
 }
 
-// Set a ``canvasBackground`` attribute on the PageBox,
-// with style for the canvas background, taken from the root elememt
-// or a <body> child of the root element.
-// See http://www.w3.org/TR/CSS21/colors.html#background
-func setCanvasBackground(page *bo.PageBox, getImageFromUri bo.Gifu) {
+// Layout backgrounds on the page box and on its children.
+//
+// This function takes care of the canvas background, taken from the root
+// elememt or a <body> child of the root element.
+//
+// See https://www.w3.org/TR/CSS21/colors.html#background
+func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.Gifu) {
+	layoutBoxBackgrounds(page, page, getImageFromUri, true, nil)
+
 	rootBox_ := page.Children[0]
 	rootBox := rootBox_.Box()
-	if bo.MarginBoxT.IsInstance(rootBox_) {
+	if bo.MarginT.IsInstance(rootBox_) {
 		panic("unexpected margin box as first child of page")
 	}
 	chosenBox_ := rootBox_
@@ -324,9 +330,4 @@ func setCanvasBackground(page *bo.PageBox, getImageFromUri bo.Gifu) {
 	} else {
 		page.CanvasBackground = nil
 	}
-}
-
-func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.Gifu) {
-	layoutBoxBackgrounds(page, page, getImageFromUri, true, nil)
-	setCanvasBackground(page, getImageFromUri)
 }

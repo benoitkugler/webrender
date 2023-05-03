@@ -6,50 +6,38 @@ import (
 
 // InitialValues stores the default values for the CSS properties.
 var InitialValues = Properties{
+	// CSS 2.1: https://www.w3.org/TR/CSS21/propidx.html
 	"bottom":       SToV("auto"),
 	"caption_side": String("top"),
 	"clear":        String("none"),
 	"clip":         Values{},                                // computed value for "auto"
 	"color":        Color(parser.ParseColorString("black")), // chosen by the user agent
 
-	// Means "none", but allow `display: list-item` to increment the
-	// list-item counter. If we ever have a way for authors to query
-	// computed values (JavaScript?), this value should serialize to "none".
-	"counter_increment": SIntStrings{String: "auto"},
-	"counter_reset":     SIntStrings{Values: IntStrings{}}, // parsed value for "none"
-	"counter_set":       SIntStrings{Values: IntStrings{}}, // parsed value for "none"
+	"direction":     String("ltr"),
+	"display":       Display{"inline", "flow"},
+	"empty_cells":   String("show"),
+	"float":         String("none"),
+	"left":          SToV("auto"),
+	"right":         SToV("auto"),
+	"line_height":   SToV("normal"),
+	"margin_top":    zeroPixelsValue,
+	"margin_right":  zeroPixelsValue,
+	"margin_bottom": zeroPixelsValue,
+	"margin_left":   zeroPixelsValue,
 
-	"direction":           String("ltr"),
-	"display":             Display{"inline", "flow"},
-	"empty_cells":         String("show"),
-	"float":               String("none"),
-	"height":              SToV("auto"),
-	"left":                SToV("auto"),
-	"right":               SToV("auto"),
-	"line_height":         SToV("normal"),
-	"list_style_image":    Image(NoneImage{}),
-	"list_style_position": String("outside"),
-	"list_style_type":     CounterStyleID{Name: "disc"},
-	"margin_top":          zeroPixelsValue,
-	"margin_right":        zeroPixelsValue,
-	"margin_bottom":       zeroPixelsValue,
-	"margin_left":         zeroPixelsValue,
-	"max_height":          Value{Dimension: Dimension{Value: Inf, Unit: Px}}, // parsed value for "none}"
-	"max_width":           Value{Dimension: Dimension{Value: Inf, Unit: Px}},
-	"padding_top":         zeroPixelsValue,
-	"padding_right":       zeroPixelsValue,
-	"padding_bottom":      zeroPixelsValue,
-	"padding_left":        zeroPixelsValue,
-	"position":            BoolString{String: "static"},
-	"table_layout":        String("auto"),
-	"top":                 SToV("auto"),
-	"unicode_bidi":        String("normal"),
-	"vertical_align":      SToV("baseline"),
-	"visibility":          String("visible"),
-	"width":               SToV("auto"),
-	"z_index":             IntString{String: "auto"},
+	"padding_top":    zeroPixelsValue,
+	"padding_right":  zeroPixelsValue,
+	"padding_bottom": zeroPixelsValue,
+	"padding_left":   zeroPixelsValue,
+	"position":       BoolString{String: "static"},
+	"table_layout":   String("auto"),
+	"top":            SToV("auto"),
+	"unicode_bidi":   String("normal"),
+	"vertical_align": SToV("baseline"),
+	"visibility":     String("visible"),
+	"z_index":        IntString{String: "auto"},
 
-	// Backgrounds and Borders 3 (CR): https://www.w3.org/TR/css3-background/
+	// Backgrounds and Borders 3 (CR): https://www.w3.org/TR/css-backgrounds-3/
 	"background_attachment": Strings{"scroll"},
 	"background_clip":       Strings{"border-box"},
 	"background_color":      Color(parser.ParseColorString("transparent")),
@@ -80,7 +68,7 @@ var InitialValues = Properties{
 	"border_top_left_radius":     Point{ZeroPixels, ZeroPixels},
 	"border_top_right_radius":    Point{ZeroPixels, ZeroPixels},
 
-	// // Color 3 (REC): https://www.w3.org/TR/css3-color/
+	// Color 3 (REC): https://www.w3.org/TR/css-color-3/
 	"opacity": Float(1),
 
 	// Multi-column Layout (WD): https://www.w3.org/TR/css-multicol-1/
@@ -110,6 +98,9 @@ var InitialValues = Properties{
 	"font_variant_position":   String("normal"),
 	"font_weight":             IntString{Int: 400},
 
+	// Fonts 4 (WD): https://www.w3.org/TR/css-fonts-4/
+	"font_variation_settings": SFloatStrings{String: "normal"},
+
 	// Fragmentation 3/4 (CR/WD): https://www.w3.org/TR/css-break-4/
 	"box_decoration_break": String("slice"),
 	"break_after":          String("auto"),
@@ -129,11 +120,11 @@ var InitialValues = Properties{
 	"quotes":           Quotes{Open: []string{"“", "‘"}, Close: []string{"”", "’"}}, // chosen by the user agent
 	"string_set":       StringSet{String: "none"},
 
-	// // Images 3/4 (CR/WD): https://www.w3.org/TR/css4-images/
-	"image_resolution": FToV(1), // dppx
-	"image_rendering":  String("auto"),
-	// https://drafts.csswg.org/css-images-3/
-	"object_fit": String("fill"),
+	// Images 3/4 (CR/WD): https://www.w3.org/TR/css-images-4/
+	"image_resolution":  FToV(1), // dppx
+	"image_rendering":   String("auto"),
+	"image_orientation": SBoolFloat{String: "from-image"},
+	"object_fit":        String("fill"),
 	"object_position": Center{OriginX: "left", OriginY: "top", Pos: Point{
 		Dimension{Value: 50, Unit: Perc}, Dimension{Value: 50, Unit: Perc},
 	}},
@@ -166,12 +157,20 @@ var InitialValues = Properties{
 	"transform_origin": Point{{Value: 50, Unit: Perc}, {Value: 50, Unit: Perc}},
 	"transform":        Transforms{}, // computed value for "none"
 
-	// User Interface 3 (REC): https://www.w3.org/TR/css-ui-3/
-	"box_sizing":    String("content-box"),
+	// User Interface 3/4 (REC/WD): https://www.w3.org/TR/css-ui-4/
+	"appearance":    String("none"),
 	"outline_color": CurrentColor, // invert is not supported
 	"outline_style": String("none"),
 	"outline_width": Value{Dimension: Dimension{Value: 3}}, // computed value for "medium"
-	"overflow_wrap": String("normal"),
+
+	// Sizing 3 (WD): https://www.w3.org/TR/css-sizing-3/
+	"box_sizing": String("content-box"),
+	"height":     SToV("auto"),
+	"max_height": Value{Dimension: Dimension{Value: Inf, Unit: Px}}, // parsed value for "none}"
+	"max_width":  Value{Dimension: Dimension{Value: Inf, Unit: Px}},
+	"min_height": SToV("auto"),
+	"min_width":  SToV("auto"),
+	"width":      SToV("auto"),
 
 	// Flexible Box Layout Module 1 (CR): https://www.w3.org/TR/css-flexbox-1/
 	"align_content":   String("stretch"),
@@ -183,8 +182,6 @@ var InitialValues = Properties{
 	"flex_shrink":     Float(1),
 	"flex_wrap":       String("nowrap"),
 	"justify_content": String("flex-start"),
-	"min_height":      zeroPixelsValue,
-	"min_width":       zeroPixelsValue,
 	"order":           Int(0),
 
 	// Text Decoration Module 3 (CR): https://www.w3.org/TR/css-text-decor-3/
@@ -197,7 +194,19 @@ var InitialValues = Properties{
 	"continue":       String("auto"),
 	"max_lines":      TaggedInt{Tag: None},
 	"overflow":       String("visible"),
+	"overflow_wrap":  String("normal"),
 	"text_overflow":  String("clip"),
+
+	// Lists Module 3 (WD): https://drafts.csswg.org/css-lists-3/
+	// Means "none", but allow `display: list-item` to increment the
+	// list-item counter. If we ever have a way for authors to query
+	// computed values (JavaScript?), this value should serialize to "none".
+	"counter_increment":   SIntStrings{String: "auto"},
+	"counter_reset":       SIntStrings{Values: IntStrings{}}, // parsed value for "none"
+	"counter_set":         SIntStrings{Values: IntStrings{}}, // parsed value for "none"
+	"list_style_image":    Image(NoneImage{}),
+	"list_style_position": String("outside"),
+	"list_style_type":     CounterStyleID{Name: "disc"},
 
 	// Proprietary
 	"anchor": String(""),    // computed value of "none"

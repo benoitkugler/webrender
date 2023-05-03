@@ -33,9 +33,9 @@ func (it *TokenIterator) Next() (t Token) {
 }
 
 // Return the next significant (neither whitespace || comment) token.
-//     :param tokens: An *iterator* yielding :term:`component values`.
-//     :returns: A :term:`component value`, || :obj:`None`.
 //
+//	:param tokens: An *iterator* yielding :term:`component values`.
+//	:returns: A :term:`component value`, || :obj:`None`.
 func nextSignificant(tokens *TokenIterator) Token {
 	for tokens.HasNext() {
 		token := tokens.Next()
@@ -50,7 +50,7 @@ func nextSignificant(tokens *TokenIterator) Token {
 }
 
 // Parse a single `component value`.
-// This is used e.g. for an attribute value referred to by ``attr(foo length)``.
+// This is used e.g. for an attribute value referred to by “attr(foo length)“.
 func ParseOneComponentValue(input []Token) Token {
 	tokens := NewTokenIterator(input)
 	first := nextSignificant(tokens)
@@ -65,7 +65,8 @@ func ParseOneComponentValue(input []Token) Token {
 }
 
 // If `skipComments`,  ignore all CSS comments.
-//   skipComments = false
+//
+//	skipComments = false
 func parseOneComponentValueString(css string, skipComments bool) Token {
 	l := tokenizeString(css, skipComments)
 	return ParseOneComponentValue(l)
@@ -73,8 +74,8 @@ func parseOneComponentValueString(css string, skipComments bool) Token {
 
 // Parse a single `declaration`.
 // This is used e.g. for a declaration in an `@supports
-// <http://dev.w3.org/csswg/css-conditional/#at-supports>`_ test.
-// Any whitespace or comment before the ``:`` colon is dropped.
+// <http://drafts.csswg.org/csswg/css-conditional/#at-supports>`_ test.
+// Any whitespace or comment before the “:“ colon is dropped.
 func ParseOneDeclaration(input []Token) Token {
 	tokens := NewTokenIterator(input)
 	firstToken := nextSignificant(tokens)
@@ -92,9 +93,10 @@ func parseOneDeclarationString(css string, skipComments bool) Token {
 }
 
 // Parse a declaration.
-//     Consume :obj:`tokens` until the end of the declaration or the first error.
-//     :param firstToken: The first :term:`component value` of the rule.
-//     :param tokens: An *iterator* yielding :term:`component values`.
+//
+//	Consume :obj:`tokens` until the end of the declaration or the first error.
+//	:param firstToken: The first :term:`component value` of the rule.
+//	:param tokens: An *iterator* yielding :term:`component values`.
 func parseDeclaration(firstToken Token, tokens *TokenIterator) Token {
 	name, ok := firstToken.(IdentToken)
 	if !ok {
@@ -159,7 +161,7 @@ func parseDeclaration(firstToken Token, tokens *TokenIterator) Token {
 	}
 }
 
-// Like :func:`parseDeclaration`, but stop at the first ``;``.
+// Like :func:`parseDeclaration`, but stop at the first “;“.
 func consumeDeclarationInList(firstToken Token, tokens *TokenIterator) Token {
 	var otherDeclarationTokens []Token
 	for tokens.HasNext() {
@@ -174,7 +176,7 @@ func consumeDeclarationInList(firstToken Token, tokens *TokenIterator) Token {
 
 // Parse a `declaration list` (which may also contain at-rules).
 // This is used e.g. for the `QualifiedRule.content`
-// of a style rule or ``@page`` rule, or for the ``style`` attribute of an HTML element.
+// of a style rule or “@page“ rule, or for the “style“ attribute of an HTML element.
 // In contexts that don’t expect any at-rule, all :class:`AtRule` objects should simply be rejected as invalid.
 // If `skipComments`, ignore CSS comments at the top-level of the list. If the input is a string, ignore all comments.
 // If `skipWhitespace`, ignore whitespace at the top-level of the list. Whitespace is still preserved in
@@ -238,17 +240,20 @@ func parseOneRule(input []Token) Token {
 
 // Parse a non-top-level `rule list`.
 // This is used for parsing the `AtRule.content`
-// of nested rules like ``@media``.
+// of nested rules like “@media“.
 // This differs from :func:`ParseStylesheet` in that
-// top-level ``<!--`` and ``-->`` tokens are not ignored.
+// top-level “<!--“ and “-->“ tokens are not ignored.
 // skipComments:
-//     Ignore CSS comments at the top-level of the list.
-//     If the input is a string, ignore all comments.
+//
+//	Ignore CSS comments at the top-level of the list.
+//	If the input is a string, ignore all comments.
+//
 // skipWhitespace:
-//     Ignore whitespace at the top-level of the list.
-//     Whitespace is still preserved
-//     in the `QualifiedRule.prelude`
-//     and the `QualifiedRule.content` of rules.
+//
+//	Ignore whitespace at the top-level of the list.
+//	Whitespace is still preserved
+//	in the `QualifiedRule.prelude`
+//	and the `QualifiedRule.content` of rules.
 func ParseRuleList(input []Token, skipComments, skipWhitespace bool) []Token {
 	tokens := NewTokenIterator(input)
 	var result []Token
@@ -278,10 +283,10 @@ func ParseRuleListString(css string, skipComments, skipWhitespace bool) []Token 
 }
 
 // Parse a stylesheet from tokens.
-// This is used e.g. for a ``<style>`` HTML element.
+// This is used e.g. for a “<style>“ HTML element.
 // This differs from `parseRuleList` in that
-// top-level ``<!--`` && ``-->`` tokens are ignored.
-// This is a legacy quirk for the ``<style>`` HTML element.
+// top-level “<!--“ && “-->“ tokens are ignored.
+// This is a legacy quirk for the “<style>“ HTML element.
 // If `skipComments` is true, ignore CSS comments at the top-level of the stylesheet.
 // If the input is a string, ignore all comments.
 // If `skipWhitespace` is true, ignore whitespace at the top-level of the stylesheet.

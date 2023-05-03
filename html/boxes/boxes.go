@@ -9,7 +9,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/benoitkugler/webrender/images"
+	"github.com/benoitkugler/webrender/utils"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/html/tree"
@@ -139,7 +141,7 @@ type BackgroundLayer struct {
 
 // BoxFields is an abstract base class for all boxes.
 type BoxFields struct {
-	// Original html node, needed for post-processing
+	// Original html node, needed for post-processing.
 	// May be nil, like for PageBox and MarginBox
 	Element    *html.Node
 	PseudoType string
@@ -158,9 +160,6 @@ type BoxFields struct {
 	properTableChild       bool
 	internalTableOrCaption bool
 	tabularContainer       bool
-
-	IsAttachment bool
-	// isListMarker         bool
 
 	BookmarkLabel string
 
@@ -183,7 +182,6 @@ type BoxFields struct {
 	ViewportOverflow string
 
 	Children []Box
-	// outsideListMarker Box
 
 	missingLink         tree.Box
 	cachedCounterValues tree.CounterValues
@@ -196,10 +194,12 @@ type BoxFields struct {
 	ComputedHeight pr.MaybeFloat
 	ContentHeight  pr.Float
 	VerticalAlign  string
-	Empty          bool
-	span           int
-	Colspan        int
-	Rowspan        int
+
+	// For table cells, [true] when no children is either floated or in normal flow
+	Empty bool
+
+	Colspan int
+	Rowspan int
 
 	GridX int
 	Index int
@@ -210,8 +210,6 @@ type BoxFields struct {
 	Frozen                                                         bool
 
 	GetCells func() []Box // closure which may have default implementation or be set
-
-	ResumeAt tree.ResumeStack
 
 	Background *Background
 
@@ -243,6 +241,28 @@ func (box *BoxFields) ContainingBlock() (width, height pr.MaybeFloat) {
 	return box.Width, box.Height
 }
 
+// Return whether this link should be stored as a PDF attachment
+func (box *BoxFields) IsAttachment() bool {
+	if box.Element != nil && box.Element.DataAtom == atom.A {
+		return utils.ElementHasLinkType((*utils.HTMLNode)(box.Element), "attachment")
+	}
+	return false
+}
+
+// Return whether this box is a form input.
+func IsInput(box Box) bool {
+	// https://html.spec.whatwg.org/multipage/forms.html#category-submit
+	if elem := box.Box().Element; box.Box().Style.GetAppearance() == "auto" && elem != nil {
+		switch elem.DataAtom {
+		case atom.Button, atom.Input, atom.Select, atom.Textarea:
+			return !LineT.IsInstance(box) && !TextT.IsInstance(box)
+		}
+	}
+	return false
+}
+
+// func ()
+
 func (*BoxFields) isBox() {}
 
 // ----------------------- needed by target ----------------------
@@ -265,7 +285,7 @@ func (box *BoxFields) SetMissingLink(b tree.Box) {
 
 func (box *BoxFields) GetBookmarkLabel() string { return box.BookmarkLabel }
 
-// Create a new equivalent box with given ``newChildren``."""
+// Create a new equivalent box with given “newChildren“."""
 func CopyWithChildren(box Box, newChildren []Box) Box {
 	newBox := box.Copy()
 	newBox.Box().Children = newChildren
@@ -424,7 +444,7 @@ func (b *BoxFields) roundedBox(bt, br, bb, bl pr.Float) RoundedBox {
 	height := b.BorderHeight() - bt - bb
 
 	// Fix overlapping curves
-	// See http://www.w3.org/TR/css3-background/#corner-overlap
+	// See http://www.w3.org/TR/css-backgrounds-3/#corner-overlap
 	Points := []Point{
 		{width, tlrx + trrx},
 		{width, blrx + brrx},
@@ -550,7 +570,7 @@ func (s Side) String() string {
 	}
 }
 
-// Set to 0 the margin, padding and border of ``side``.
+// Set to 0 the margin, padding and border of “side“.
 func (b *BoxFields) ResetSpacing(side Side) {
 	b.RemoveDecorationSides[side] = true
 
@@ -590,12 +610,12 @@ func (*BoxFields) RemoveDecoration(box *BoxFields, start, end bool) {
 // the proper parents of `type_`
 func (t BoxType) IsInProperParents(type_ BoxType) bool {
 	switch type_ {
-	case TableRowGroupBoxT, TableColumnGroupBoxT, TableCaptionBoxT:
-		return t == TableBoxT || t == InlineTableBoxT
-	case TableRowBoxT:
-		return t == TableBoxT || t == InlineTableBoxT || t == TableRowGroupBoxT
-	case TableColumnBoxT:
-		return t == TableBoxT || t == InlineTableBoxT || t == TableColumnGroupBoxT
+	case TableRowGroupT, TableColumnGroupT, TableCaptionT:
+		return t == TableT || t == InlineTableT
+	case TableRowT:
+		return t == TableT || t == InlineTableT || t == TableRowGroupT
+	case TableColumnT:
+		return t == TableT || t == InlineTableT || t == TableColumnGroupT
 	default:
 		return false
 	}
@@ -647,7 +667,9 @@ func Serialize(boxList []Box) []SerBox {
 		} else {
 			var cg []Box
 			if table, ok := box.(TableBoxITF); ok {
-				cg = table.Table().ColumnGroups
+				for _, child := range table.Table().ColumnGroups {
+					cg = append(cg, child)
+				}
 			}
 			cg = append(cg, box.Box().Children...)
 			out[i].Content.C = Serialize(cg)

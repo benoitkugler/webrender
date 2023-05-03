@@ -1,0 +1,6 @@
+/* Default stylesheet for PDF forms */
+
+button, input, select, textarea {
+    appearance: auto;
+}
+  

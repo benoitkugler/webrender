@@ -10,7 +10,7 @@ import (
 	"github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/utils"
-	"github.com/benoitkugler/webrender/utils/testutils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 // TODO: cover all properties
@@ -29,8 +29,8 @@ func expandToDict(t *testing.T, css string, expectedError string) map[string]pr.
 
 	declarations := parser.ParseDeclarationListString(css, false, false)
 
-	capt := testutils.CaptureLogs()
-	baseUrl := "http://weasyprint.org/foo/"
+	capt := tu.CaptureLogs()
+	baseUrl := "https://weasyprint.org/foo/"
 	validated := PreprocessDeclarations(baseUrl, declarations)
 	logs := capt.Logs()
 
@@ -72,13 +72,36 @@ func assertValidDict(t *testing.T, css string, ref map[string]pr.ValidatedProper
 }
 
 func TestNotPrint(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
 	assertInvalid(t, "volume: 42", "the property does not apply for the print media")
-	capt.AssertNoLogs(t)
+}
+
+func TestUnstablePrefix(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+	d := expandToDict(t, "-weasy-max-lines: 3",
+		"prefixes on unstable attributes are deprecated")
+
+	tu.AssertEqual(t, d, toValidated(pr.Properties{"max_lines": pr.TaggedInt{I: 3}}), "unstable prefix")
+}
+
+func TestNormalPrefix(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	assertInvalid(t, "-weasy-display: block", "prefix on this attribute is not supported")
+}
+
+func TestUnknownPrefix(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	assertInvalid(t, "-unknown-display: block", "prefixed selectors are ignored")
 }
 
 func TestFunction(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "clip: rect(1px, 3em, auto, auto)", toValidated(pr.Properties{
 		"clip": pr.Values{
 			pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
@@ -110,7 +133,7 @@ func TestFunction(t *testing.T) {
 }
 
 func TestCounters(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "counter-reset: foo bar 2 baz", toValidated(pr.Properties{
 		"counter_reset": pr.SIntStrings{Values: pr.IntStrings{{String: "foo", Int: 0}, {String: "bar", Int: 2}, {String: "baz", Int: 0}}},
 	}))
@@ -137,7 +160,7 @@ func TestCounters(t *testing.T) {
 }
 
 func TestSpacing(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "letter-spacing: normal", toValidated(pr.Properties{
 		"letter_spacing": pr.SToV("normal"),
 	}))
@@ -157,7 +180,7 @@ func TestSpacing(t *testing.T) {
 }
 
 func TestFootnote(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "footnote-policy: auto", toValidated(pr.Properties{
 		"footnote_policy": pr.String("auto"),
 	}))
@@ -186,7 +209,7 @@ func TestFootnote(t *testing.T) {
 }
 
 func TestDecoration(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "text-decoration-line: none", toValidated(pr.Properties{
 		"text_decoration_line": pr.Decorations{},
 	}))
@@ -215,7 +238,7 @@ func TestDecoration(t *testing.T) {
 }
 
 func TestSize(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "size: 200px", toValidated(pr.Properties{
 		"size": pr.Point{{Value: 200, Unit: pr.Px}, {Value: 200, Unit: pr.Px}},
 	}))
@@ -252,7 +275,7 @@ func TestSize(t *testing.T) {
 }
 
 func TestTransforms(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "transform: none", toValidated(pr.Properties{
 		"transform": pr.Transforms{},
 	}))
@@ -304,9 +327,9 @@ func checkPosition(t *testing.T, css string, expected pr.Center) {
 	}
 }
 
-// Test the ``background-position`` property.
+// Test the “background-position“ property.
 func TestExpandBackgroundPosition(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 
 	css_xs := [5]string{"left", "center", "right", "4.5%", "12px"}
 	val_xs := [5]pr.Dimension{{Value: 0, Unit: pr.Perc}, {Value: 50, Unit: pr.Perc}, {Value: 100, Unit: pr.Perc}, {Value: 4.5, Unit: pr.Perc}, {Value: 12, Unit: pr.Px}}
@@ -361,9 +384,9 @@ func TestExpandBackgroundPosition(t *testing.T) {
 	assertInvalid(t, "background-position: bottom top", "invalid")
 }
 
-// Test the ``line-height`` property.
+// Test the “line-height“ property.
 func TestLineHeight(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "line-height: 1px", toValidated(pr.Properties{
 		"line_height": pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
 	}))
@@ -394,7 +417,7 @@ func TestLineHeight(t *testing.T) {
 }
 
 func TestImageResolution(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "image-resolution: .5dppx", toValidated(pr.Properties{
 		"image_resolution": pr.FToV(.5),
 	}))
@@ -406,7 +429,7 @@ func TestImageResolution(t *testing.T) {
 }
 
 func TestObjectFit(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "object-fit: cover", toValidated(pr.Properties{
 		"object_fit": pr.String("cover"),
 	}))
@@ -418,7 +441,7 @@ func TestObjectFit(t *testing.T) {
 }
 
 func TestMinMaxWidthHeight(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "min-width: 30px", toValidated(pr.Properties{
 		"min_width": pr.FToPx(30),
 	}))
@@ -443,9 +466,9 @@ func TestMinMaxWidthHeight(t *testing.T) {
 	assertInvalid(t, "max-height: 1px 1px", "invalid")
 }
 
-// Test the ``string-set`` property.
+// Test the “string-set“ property.
 func TestStringSet(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "string-set: test content(text)", toValidated(pr.Properties{
 		"string_set": pr.StringSet{Contents: []pr.SContent{
 			{String: "test", Contents: []pr.ContentProperty{{Type: "content()", Content: pr.String("text")}}},
@@ -593,7 +616,7 @@ func TestLinearGradient(t *testing.T) {
 	invalid(t, "to bottom up, blue")
 	invalid(t, "bottom left, blue")
 
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	gradient(t, "blue", pr.DirectionType{Angle: pi}, nil, nil)
 	gradient(t, "red", pr.DirectionType{Angle: pi}, []pr.Color{red}, []pr.Dimension{{}})
 	gradient(t, "blue 1%, lime,red 2em ", pr.DirectionType{Angle: pi},
@@ -625,7 +648,7 @@ func TestLinearGradient(t *testing.T) {
 }
 
 func TestOverflowWrap(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	assertValidDict(t, "overflow-wrap: normal", toValidated(pr.Properties{
 		"overflow_wrap": pr.String("normal"),
 	}))
@@ -638,7 +661,7 @@ func TestOverflowWrap(t *testing.T) {
 }
 
 func TestRadialGradient(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 
 	gradient := func(t *testing.T, css string, shape string, size pr.GradientSize, center pr.Center, colors []pr.Color, stopPositions []pr.Dimension) {
 		if colors == nil {
@@ -732,4 +755,28 @@ func TestRadialGradient(t *testing.T) {
 	gradient(t, "closest-side circle at right 5em, blue",
 		"circle", pr.GradientSize{Keyword: "closest-side"},
 		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 100, Unit: pr.Perc}, {Value: 5, Unit: pr.Em}}}, nil, nil)
+}
+
+func TestImageOrientation(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+	assertValidDict(t, "image-orientation: none", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{String: "none"}}))
+	assertValidDict(t, "image-orientation: from-image", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{String: "from-image"}}))
+	assertValidDict(t, "image-orientation: 90deg", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{Float: pi / 2, Bool: false}}))
+	assertValidDict(t, "image-orientation: 30deg", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{Float: pi / 6, Bool: false}}))
+	assertValidDict(t, "image-orientation: 180deg flip", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{Float: pi, Bool: true}}))
+	assertValidDict(t, "image-orientation: 0deg flip", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{Float: 0, Bool: true}}))
+	assertValidDict(t, "image-orientation: flip 90deg", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{Float: pi / 2, Bool: true}}))
+	assertValidDict(t, "image-orientation: flip", toValidated(pr.Properties{"image_orientation": pr.SBoolFloat{Float: 0, Bool: true}}))
+
+	assertInvalid(t, "image-orientation: none none", "invalid")
+	assertInvalid(t, "image-orientation: unknown", "invalid")
+	assertInvalid(t, "image-orientation: none flip", "invalid")
+	assertInvalid(t, "image-orientation: from-image flip", "invalid")
+	assertInvalid(t, "image-orientation: 10", "invalid")
+	assertInvalid(t, "image-orientation: 10 flip", "invalid")
+	assertInvalid(t, "image-orientation: flip 10", "invalid")
+	assertInvalid(t, "image-orientation: flip flip", "invalid")
+	assertInvalid(t, "image-orientation: 90deg flop", "invalid")
+	assertInvalid(t, "image-orientation: 90deg 180deg", "invalid")
 }

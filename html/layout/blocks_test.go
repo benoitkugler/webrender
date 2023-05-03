@@ -58,11 +58,11 @@ func TestBlockWidths(t *testing.T) {
 
 	var paragraphs []Box
 	for _, div := range divs {
-		tu.AssertEqual(t, bo.BlockBoxT.IsInstance(div), true, "isinstance")
+		tu.AssertEqual(t, bo.BlockT.IsInstance(div), true, "isinstance")
 		tu.AssertEqual(t, div.Box().ElementTag(), "div", "div")
 		tu.AssertEqual(t, div.Box().Width, pr.Float(100), "div")
 		for _, paragraph := range div.Box().Children {
-			tu.AssertEqual(t, bo.BlockBoxT.IsInstance(paragraph), true, "isinstance")
+			tu.AssertEqual(t, bo.BlockT.IsInstance(paragraph), true, "isinstance")
 			tu.AssertEqual(t, paragraph.Box().ElementTag(), "p", "paragraph")
 			tu.AssertEqual(t, paragraph.Box().PaddingLeft, pr.Float(2), "paragraph")
 			tu.AssertEqual(t, paragraph.Box().PaddingRight, pr.Float(2), "paragraph")
@@ -292,7 +292,7 @@ func TestBoxSizing(t *testing.T) {
 }
 
 func testBoxSizing(t *testing.T, size string) {
-	// http://www.w3.org/TR/css3-ui/#box-sizing
+	// https://www.w3.org/TR/css-ui-3/#box-sizing
 	page := renderOnePage(t, fmt.Sprintf(`
       <style>
         @page { size: 100000px }
@@ -354,7 +354,7 @@ func TestBoxSizingZero(t *testing.T) {
 }
 
 func testBoxSizingZero(t *testing.T, size string) {
-	// http://www.w3.org/TR/css3-ui/#box-sizing
+	// https://www.w3.org/TR/css-ui-3/#box-sizing
 	page := renderOnePage(t, fmt.Sprintf(`
       <style>
         @page { size: 100000px }
@@ -627,7 +627,7 @@ func TestBoxDecorationBreakBlockSlice(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// http://www.w3.org/TR/css3-background/#the-box-decoration-break
+	// https://www.w3.org/TR/css-backgrounds-3/#the-box-decoration-break
 	pages := renderPages(t, `
       <style>
         @page { size: 100px }
@@ -679,7 +679,7 @@ func TestBoxDecorationBreakBlockClone(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// http://www.w3.org/TR/css3-background/#the-box-decoration-break
+	// https://www.w3.org/TR/css-backgrounds-3/#the-box-decoration-break
 	pages := renderPages(t, `
       <style>
         @page { size: 100px }
@@ -917,7 +917,7 @@ func TestBlockInBlockWithBottomPadding(t *testing.T) {
       <style>
         @font-face { src: url(weasyprint.otf); font-family: weasyprint }
         @page { size: 8em 3.5em }
-        body { line-height: 1; orphans: 1; widows: 1; font-family: weasyprint }
+        body { line-height: 1; font-family: weasyprint }
         div { padding-bottom: 1em }
       </style>
       abc def
@@ -952,4 +952,133 @@ func TestBlockInBlockWithBottomPadding(t *testing.T) {
 	tu.AssertEqual(t, line.Box().Height, pr.Float(16), "line")
 	tu.AssertEqual(t, line.Box().ContentBoxY(), pr.Float(16+16), "line") // p content + div padding
 	tu.AssertEqual(t, line.Box().Children[0].(*bo.TextBox).Text, "stu vwx", "line")
+}
+
+func TestPageBreaks1(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	// last float does not fit, pushed to next page
+	pages := renderPages(t, `
+      <style>
+        @page{
+          size: 110px;
+          margin: 10px;
+          padding: 0;
+        }
+        .large {
+          width: 10px;
+          height: 60px;
+        }
+        .small {
+          width: 10px;
+          height: 20px;
+        }
+      </style>
+      <body>
+        <div class="large"></div>
+        <div class="small"></div>
+        <div class="large"></div>
+    `)
+
+	tu.AssertEqual(t, len(pages), 2, "number of pages")
+
+	var pageDivPosY [][]pr.Float
+	for _, page := range pages {
+		var images []pr.Float
+		for _, d := range bo.Descendants(page) {
+			if d.Box().ElementTag() == "div" {
+				images = append(images, d.Box().PositionY)
+			}
+		}
+		pageDivPosY = append(pageDivPosY, images)
+	}
+	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10, 70}, {10}}, "")
+}
+
+func TestPageBreaks2(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	// last float does not fit, pushed to next page
+	// center div must not
+	pages := renderPages(t, `
+      <style>
+        @page{
+          size: 110px;
+          margin: 10px;
+          padding: 0;
+        }
+        .large {
+          width: 10px;
+          height: 60px;
+        }
+        .small {
+          width: 10px;
+          height: 20px;
+          page-break-after: avoid;
+        }
+      </style>
+      <body>
+        <div class="large"></div>
+        <div class="small"></div>
+        <div class="large"></div>
+    `)
+
+	tu.AssertEqual(t, len(pages), 2, "number of pages")
+
+	var pageDivPosY [][]pr.Float
+	for _, page := range pages {
+		var images []pr.Float
+		for _, d := range bo.Descendants(page) {
+			if d.Box().ElementTag() == "div" {
+				images = append(images, d.Box().PositionY)
+			}
+		}
+		pageDivPosY = append(pageDivPosY, images)
+	}
+	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10}, {10, 30}}, "")
+}
+
+func TestPageBreaks3(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	// center div must be the last element,
+	// but float won't fit and will get pushed anyway
+	pages := renderPages(t, `
+      <style>
+        @page{
+          size: 110px;
+          margin: 10px;
+          padding: 0;
+        }
+        .large {
+          width: 10px;
+          height: 80px;
+        }
+        .small {
+          width: 10px;
+          height: 20px;
+          page-break-after: avoid;
+        }
+      </style>
+      <body>
+        <div class="large"></div>
+        <div class="small"></div>
+        <div class="large"></div>
+    `)
+
+	tu.AssertEqual(t, len(pages), 3, "")
+	var pageDivPosY [][]pr.Float
+	for _, page := range pages {
+		var images []pr.Float
+		for _, d := range bo.Descendants(page) {
+			if d.Box().ElementTag() == "div" {
+				images = append(images, d.Box().PositionY)
+			}
+		}
+		pageDivPosY = append(pageDivPosY, images)
+	}
+	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10}, {10}, {10}}, "")
 }

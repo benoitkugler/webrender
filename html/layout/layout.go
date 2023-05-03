@@ -1,10 +1,10 @@
 // Transform a "before layout" box tree into an "after layout" tree,
-// by breaking boxes across lines and pages; and determining the size and dimension
+// by breaking boxes across lines and pages; and determining the position and dimension
 // of each box fragment.
 //
 // Boxes in the new tree have `used values` in their PositionX,
 // PositionY, Width and Height attributes, amongst others.
-// (see http://www.w3.org/TR/CSS21/cascade.html#used-value)
+// (see https://www.w3.org/TR/CSS21/cascade.html#used-value)
 //
 // The laid out pages are ready to be printed or display on screen,
 // which is done by the higher level `document` package.
@@ -32,12 +32,13 @@ import (
 const (
 	// if true, print debug information into Stdout
 	debugMode = false
+	// if true, save a structured trace in an external file
 	traceMode = false
 )
 
 var (
-	debugLogger testutils.IndentLogger // used only when debugMode is true
-	traceLogger tracer.Tracer          // used only when traceMode is true
+	debugLogger = testutils.IndentLogger{Color: true} // used only when debugMode is true
+	traceLogger tracer.Tracer                         // used only when traceMode is true
 )
 
 func init() {
@@ -70,7 +71,7 @@ func Layout(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, f
 	return layoutDocument(html, rootBox, context, -1)
 }
 
-// Initialize ``context.pageMaker``.
+// Initialize “context.pageMaker“.
 // Collect the pagination's states required for page based counters.
 func initializePageMaker(context *layoutContext, rootBox bo.BoxFields) {
 	context.pageMaker = nil
@@ -119,7 +120,7 @@ func initializePageMaker(context *layoutContext, rootBox bo.BoxFields) {
 	})
 }
 
-// Lay out and yield the fixed boxes of ``pages``.
+// Lay out and yield the fixed boxes of “pages“.
 func layoutFixedBoxes(context *layoutContext, pages []*bo.PageBox, containingPage *bo.PageBox) []Box {
 	var out []Box
 	for _, page := range pages {
@@ -127,7 +128,7 @@ func layoutFixedBoxes(context *layoutContext, pages []*bo.PageBox, containingPag
 			// As replaced boxes are never copied during layout, ensure that we
 			// have different boxes (with a possibly different layout) for
 			// each pages.
-			if bo.ReplacedBoxT.IsInstance(box) {
+			if bo.ReplacedT.IsInstance(box) {
 				box = box.Copy()
 			}
 			// Absolute boxes in fixed boxes are rendered as fixed boxes'
@@ -304,7 +305,7 @@ type layoutContext struct {
 	pageMaker           []tree.PageMaker
 	excludedShapes      *[]*bo.BoxFields
 	excludedShapesLists [][]*bo.BoxFields
-	brokenOutOfFlow     []brokenBox
+	brokenOutOfFlow     map[Box]brokenBox
 
 	footnotes            []Box
 	currentPageFootnotes []Box
@@ -317,20 +318,21 @@ type layoutContext struct {
 
 	marginClearance bool
 	forcedBreak     bool
+	inColumn        bool
 }
 
 // presentationalHints=false,
 func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
-	presentationalHints bool, fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle) *layoutContext {
-
+	presentationalHints bool, fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle,
+) *layoutContext {
 	var (
 		pageRules       []tree.PageRule
 		userStylesheets = stylesheets
 	)
 
 	cache := images.NewCache()
-	getImageFromUri := func(url, forcedMimeType string) images.Image {
-		return images.GetImageFromUri(cache, html.UrlFetcher, false, url, forcedMimeType)
+	getImageFromUri := func(url, forcedMimeType string, orientation pr.SBoolFloat) images.Image {
+		return images.GetImageFromUri(cache, html.UrlFetcher, false, url, forcedMimeType, orientation)
 	}
 
 	self := layoutContext{}
@@ -338,7 +340,8 @@ func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
 	self.fontConfig = fontConfig
 	self.TargetCollector = tree.NewTargetCollector()
 	self.counterStyle = counterStyle
-	self.runningElements = map[string]map[int][]Box{}
+	self.runningElements = make(map[string]map[int][]Box)
+	self.brokenOutOfFlow = make(map[Box]brokenBox)
 
 	// Cache
 	self.stringSet = make(map[string]map[int][]string)
@@ -347,7 +350,7 @@ func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
 	self.tables = map[*bo.TableBox]map[bool]tableContentWidths{}
 
 	self.styleFor = tree.GetAllComputedStyles(html, userStylesheets, presentationalHints, fontConfig,
-		counterStyle, &pageRules, &self.TargetCollector, &self)
+		counterStyle, &pageRules, &self.TargetCollector, false, &self)
 	return &self
 }
 
@@ -363,13 +366,19 @@ func (l *layoutContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float 
 	return l.strutLayouts
 }
 
+func (l *layoutContext) overflowsPage(bottomSpace, positionY pr.Float) bool {
+	// Use a small fudge factor to avoid floating numbers errors.
+	// The 1e-9 value comes from PEP 485.
+	return positionY > (l.pageBottom-bottomSpace)*(1+1e-9)
+}
+
 func (l *layoutContext) createBlockFormattingContext() {
 	l.excludedShapesLists = append(l.excludedShapesLists, nil)
 	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
 }
 
 func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
-	// See http://www.w3.org/TR/CSS2/visudet.html#root-height
+	// See https://www.w3.org/TR/CSS2/visudet.html#root-height
 	rootBox := rootBox_.Box()
 	if rootBox.Style.GetHeight().String == "auto" && len(*l.excludedShapes) != 0 {
 		boxBottom := rootBox.ContentBoxY() + rootBox.Height.V()
@@ -404,7 +413,7 @@ func resolveKeyword(keyword, name string, page Box) string {
 					}
 				}
 			}
-			if bo.ParentBoxT.IsInstance(element) {
+			if bo.ParentT.IsInstance(element) {
 				if len(element.Box().Children) > 0 {
 					element = element.Box().Children[0]
 					continue
@@ -425,10 +434,11 @@ func resolveKeyword(keyword, name string, page Box) string {
 // given page:
 //
 // {1: [u"First Header"], 3: [u"Second Header"],
-//  4: [u"Third Header", u"3.5th Header"]}
+//
+//	4: [u"Third Header", u"3.5th Header"]}
 //
 // Value depends on current page.
-// http://dev.w3.org/csswg/css-gcpm/#funcdef-string
+// https://drafts.csswg.org/csswg/css-gcpm/#funcdef-string
 //
 // `keyword` indicates which value of the named string to use.
 // Default is the first assignment on the current page
@@ -476,34 +486,55 @@ func (self *layoutContext) GetRunningElementFor(page Box, name, keyword string) 
 	return nil
 }
 
-func (l *layoutContext) layoutFootnote(footnote Box) {
+// Add a footnote to the layout for this page.
+func (l *layoutContext) layoutFootnote(footnote Box) bool {
 	removeFromBoxes(&l.footnotes, footnote)
 	l.currentPageFootnotes = append(l.currentPageFootnotes, footnote)
-	if l.currentFootnoteArea.Height != pr.AutoF {
-		l.pageBottom += l.currentFootnoteArea.MarginHeight()
-	}
-	l.currentFootnoteArea.Children = l.currentPageFootnotes
-	footnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(l.currentFootnoteArea)).(bo.BlockLevelBoxITF)
-	footnoteArea, _ = blockLevelLayout(
-		l, footnoteArea, -pr.Inf, nil, &l.currentFootnoteArea.Page.BoxFields,
-		true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
-	l.currentFootnoteArea.Height = footnoteArea.Box().Height
-	l.pageBottom -= footnoteArea.Box().MarginHeight()
+	return l.updateFootnoteArea()
 }
 
+// Remove a footnote from the layout and return it to the waitlist.
+func (l *layoutContext) unlayoutFootnote(footnote Box) {
+	if !isInBoxes(footnote, l.footnotes) {
+		l.footnotes = append(l.footnotes, footnote)
+		if isInBoxes(footnote, l.currentPageFootnotes) {
+			removeFromBoxes(&l.currentPageFootnotes, footnote)
+		} else if isInBoxes(footnote, l.reportedFootnotes) {
+			removeFromBoxes(&l.reportedFootnotes, footnote)
+		}
+		l.updateFootnoteArea()
+	}
+}
+
+// Mark a footnote as being moved to the next page.
 func (l *layoutContext) reportFootnote(footnote Box) {
 	removeFromBoxes(&l.currentPageFootnotes, footnote)
 	l.reportedFootnotes = append(l.reportedFootnotes, footnote)
-	l.pageBottom += l.currentFootnoteArea.MarginHeight()
+	l.updateFootnoteArea()
+}
+
+// Update the page bottom size and our footnote area height.
+func (l *layoutContext) updateFootnoteArea() bool {
+	if l.currentFootnoteArea.Height != pr.AutoF && !l.inColumn {
+		l.pageBottom += l.currentFootnoteArea.MarginHeight()
+	}
 	l.currentFootnoteArea.Children = l.currentPageFootnotes
 	if len(l.currentFootnoteArea.Children) != 0 {
 		footnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(l.currentFootnoteArea)).(bo.BlockLevelBoxITF)
-		footnoteArea, _ = blockLevelLayout(
+		footnoteArea, _, _ = blockLevelLayout(
 			l, footnoteArea, -pr.Inf, nil,
-			&l.currentFootnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
+			&l.currentFootnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false, -1)
 		l.currentFootnoteArea.Height = footnoteArea.Box().Height
-		l.pageBottom -= footnoteArea.Box().MarginHeight()
+		if !l.inColumn {
+			l.pageBottom -= footnoteArea.Box().MarginHeight()
+		}
+		lastChild := footnoteArea.Box().Children[len(footnoteArea.Box().Children)-1]
+		overflow := (lastChild.Box().PositionY+lastChild.Box().MarginHeight() >
+			footnoteArea.Box().PositionY+footnoteArea.Box().MarginHeight()-
+				footnoteArea.Box().MarginBottom.V())
+		return overflow
 	} else {
 		l.currentFootnoteArea.Height = pr.Float(0)
+		return false
 	}
 }

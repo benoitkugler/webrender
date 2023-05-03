@@ -316,17 +316,17 @@ type TextLayout struct {
 	FirstLineDirection   pango.Direction
 }
 
-func NewTextLayout(context TextLayoutContext, fontSize pr.Fl, style pr.StyleAccessor, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayout {
+func NewTextLayout(context TextLayoutContext, style pr.StyleAccessor, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayout {
 	var layout TextLayout
 
 	layout.JustificationSpacing = justificationSpacing
-	layout.setup(context, fontSize, style)
+	layout.setup(context, style)
 	layout.MaxWidth = maxWidth
 
 	return &layout
 }
 
-func (p *TextLayout) setup(context TextLayoutContext, fontSize pr.Fl, style pr.StyleAccessor) {
+func (p *TextLayout) setup(context TextLayoutContext, style pr.StyleAccessor) {
 	p.Context = context
 	p.Style = style
 	p.FirstLineDirection = 0
@@ -344,18 +344,9 @@ func (p *TextLayout) setup(context TextLayoutContext, fontSize pr.Fl, style pr.S
 	}
 	pc.SetLanguage(lang)
 
-	fontDesc := pango.NewFontDescription()
-	fontDesc.SetFamily(strings.Join(style.GetFontFamily(), ","))
-
-	sty, _ := pango.StyleMap.FromString(string(style.GetFontStyle()))
-	fontDesc.SetStyle(pango.Style(sty))
-
-	str, _ := pango.StretchMap.FromString(string(style.GetFontStretch()))
-	fontDesc.SetStretch(pango.Stretch(str))
-
-	fontDesc.SetWeight(pango.Weight(style.GetFontWeight().Int))
-
-	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(fontSize))
+	fontDesc := getFontDescription(style)
+	p.Layout = *pango.NewLayout(pc)
+	p.Layout.SetFontDescription(&fontDesc)
 
 	if !style.GetTextDecorationLine().IsNone() {
 		metrics := pc.GetMetrics(&fontDesc, lang)
@@ -363,9 +354,6 @@ func (p *TextLayout) setup(context TextLayoutContext, fontSize pr.Fl, style pr.S
 	} else {
 		p.Metrics = nil
 	}
-
-	p.Layout = *pango.NewLayout(pc)
-	p.Layout.SetFontDescription(&fontDesc)
 
 	features := getFontFeatures(style)
 	if len(features) != 0 {
@@ -398,8 +386,7 @@ func (p *TextLayout) setText(text string, justify bool) {
 	wordSpacing := pr.Fl(p.Style.GetWordSpacing().Value)
 	if justify {
 		// Justification is needed when drawing text but is useless during
-		// layout. Ignore it before layout is reactivated before the drawing
-		// step.
+		// layout, when it can be ignored.
 		wordSpacing += p.JustificationSpacing
 	}
 
@@ -428,9 +415,19 @@ func (p *TextLayout) setText(text string, justify bool) {
 		}
 
 		if wordSpacing != 0 {
+			if len(textRunes) == 1 && textRunes[0] == ' ' {
+				// We need more than one space to set word spacing
+				p.Layout.SetText(" \u200b") // Space + zero-width space
+			}
+
 			for position, c := range textRunes {
 				if c == ' ' {
-					addAttr(position, position+1, spaceSpacingInt)
+					// Pango gives only half of word-spacing on boundaries
+					factor := int32(1)
+					if position == 0 || position == len(textRunes)-1 {
+						factor = 2
+					}
+					addAttr(position, position+1, factor*spaceSpacingInt)
 				}
 			}
 		}
@@ -454,7 +451,7 @@ func (p *TextLayout) setTabs() {
 	tabSize := p.Style.GetTabSize()
 	width := int(tabSize.Value)
 	if tabSize.Unit == 0 { // no unit, means a multiple of the advance width of the space character
-		layout := NewTextLayout(p.Context, pr.Fl(p.Style.GetFontSize().Value), p.Style, p.JustificationSpacing, nil)
+		layout := NewTextLayout(p.Context, p.Style, p.JustificationSpacing, nil)
 		layout.SetText(strings.Repeat(" ", width))
 		line, _ := layout.GetFirstLine()
 		widthTmp, _ := lineSize(line, p.Style.GetLetterSpacing())

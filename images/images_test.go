@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/svg"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -21,7 +22,7 @@ func TestLoadLocalImages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		out, err := getImageFromUri(utils.DefaultUrlFetcher, false, url, "")
+		out, err := getImageFromUri(utils.DefaultUrlFetcher, false, url, "", properties.SBoolFloat{String: "none"})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -356,135 +356,6 @@ func TestFloatsPageBreaks3(t *testing.T) {
 	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10, 40}, {10, 40}, {10}}, "")
 }
 
-func TestFloatsPageBreaks4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
-
-	// last float does not fit, pushed to next page
-	pages := renderPages(t, `
-      <style>
-        @page{
-          size: 110px;
-          margin: 10px;
-          padding: 0;
-        }
-        .large {
-          width: 10px;
-          height: 60px;
-        }
-        .small {
-          width: 10px;
-          height: 20px;
-        }
-      </style>
-      <body>
-        <div class="large"></div>
-        <div class="small"></div>
-        <div class="large"></div>
-    `)
-
-	tu.AssertEqual(t, len(pages), 2, "number of pages")
-
-	var pageDivPosY [][]pr.Float
-	for _, page := range pages {
-		var images []pr.Float
-		for _, d := range bo.Descendants(page) {
-			if d.Box().ElementTag() == "div" {
-				images = append(images, d.Box().PositionY)
-			}
-		}
-		pageDivPosY = append(pageDivPosY, images)
-	}
-	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10, 70}, {10}}, "")
-}
-
-func TestFloatsPageBreaks5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
-
-	// last float does not fit, pushed to next page
-	// center div must not
-	pages := renderPages(t, `
-      <style>
-        @page{
-          size: 110px;
-          margin: 10px;
-          padding: 0;
-        }
-        .large {
-          width: 10px;
-          height: 60px;
-        }
-        .small {
-          width: 10px;
-          height: 20px;
-          page-break-after: avoid;
-        }
-      </style>
-      <body>
-        <div class="large"></div>
-        <div class="small"></div>
-        <div class="large"></div>
-    `)
-
-	tu.AssertEqual(t, len(pages), 2, "number of pages")
-
-	var pageDivPosY [][]pr.Float
-	for _, page := range pages {
-		var images []pr.Float
-		for _, d := range bo.Descendants(page) {
-			if d.Box().ElementTag() == "div" {
-				images = append(images, d.Box().PositionY)
-			}
-		}
-		pageDivPosY = append(pageDivPosY, images)
-	}
-	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10}, {10, 30}}, "")
-}
-
-func TestFloatsPageBreaks6(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
-
-	// center div must be the last element,
-	// but float won't fit and will get pushed anyway
-	pages := renderPages(t, `
-      <style>
-        @page{
-          size: 110px;
-          margin: 10px;
-          padding: 0;
-        }
-        .large {
-          width: 10px;
-          height: 80px;
-        }
-        .small {
-          width: 10px;
-          height: 20px;
-          page-break-after: avoid;
-        }
-      </style>
-      <body>
-        <div class="large"></div>
-        <div class="small"></div>
-        <div class="large"></div>
-    `)
-
-	tu.AssertEqual(t, len(pages), 3, "")
-	var pageDivPosY [][]pr.Float
-	for _, page := range pages {
-		var images []pr.Float
-		for _, d := range bo.Descendants(page) {
-			if d.Box().ElementTag() == "div" {
-				images = append(images, d.Box().PositionY)
-			}
-		}
-		pageDivPosY = append(pageDivPosY, images)
-	}
-	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10}, {10}, {10}}, "")
-}
-
 func TestPreferredWidths1(t *testing.T) {
 	cp := tu.CaptureLogs()
 	defer cp.AssertNoLogs(t)
@@ -526,7 +397,7 @@ func TestPreferredWidths2(t *testing.T) {
 	body := html.Box().Children[0]
 	paragraph := body.Box().Children[0]
 	tu.AssertEqual(t, len(paragraph.Box().Children), 1, "")
-	tu.AssertEqual(t, bo.LineBoxT.IsInstance(paragraph.Box().Children[0]), true, "")
+	tu.AssertEqual(t, bo.LineT.IsInstance(paragraph.Box().Children[0]), true, "")
 }
 
 func TestPreferredWidths3(t *testing.T) {

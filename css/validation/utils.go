@@ -30,10 +30,10 @@ func init() {
 	}
 }
 
-// Split a list of tokens on commas, ie ``parser.LiteralToken(",")``.
-//     Only "top-level" comma tokens are splitting points, not commas inside a
-//     function or blocks.
+// Split a list of tokens on commas, ie “parser.LiteralToken(",")“.
 //
+//	Only "top-level" comma tokens are splitting points, not commas inside a
+//	function or blocks.
 func SplitOnComma(tokens []Token) [][]Token {
 	var parts [][]Token
 	var thisPart []Token
@@ -50,7 +50,7 @@ func SplitOnComma(tokens []Token) [][]Token {
 	return parts
 }
 
-// Split a list of tokens on optional commas, ie ``LiteralToken(",")``.
+// Split a list of tokens on optional commas, ie “LiteralToken(",")“.
 func splitOnOptionalComma(tokens []Token) (parts []Token) {
 	for _, splitPart := range SplitOnComma(tokens) {
 		if len(splitPart) == 0 {
@@ -63,7 +63,7 @@ func splitOnOptionalComma(tokens []Token) (parts []Token) {
 	return parts
 }
 
-// If ``token`` is a keyword, return its name. Otherwise return empty string.
+// If “token“ is a keyword, return its name. Otherwise return empty string.
 func getCustomIdent(token Token) string {
 	if ident, ok := token.(parser.IdentToken); ok {
 		return string(ident.Value)
@@ -346,6 +346,7 @@ func CheckVarFunction(token Token) (out pr.VarData) {
 }
 
 // Parse functional notation.
+//
 //	Return ``(name, args)`` if the given token is a function with comma- or
 //	space-separated arguments. Return zero values otherwise.
 func parseFunction(functionToken_ Token) (string, []Token) {
@@ -434,7 +435,7 @@ func checkAttrFunction(token parser.FunctionBlock, allowedType string) (out pr.A
 
 // Parse background-position and object-position.
 //
-// See http://dev.w3.org/csswg/css3-background/#the-background-position
+// See http://drafts.csswg.org/csswg/css-backgrounds-3/#the-background-position
 // https://drafts.csswg.org/css-images-3/#propdef-object-position
 func parsePosition(tokens []Token) pr.Center {
 	center := parse2dPosition(tokens)

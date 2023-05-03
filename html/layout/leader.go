@@ -12,13 +12,13 @@ type leaderInd struct {
 	next  *leaderInd
 }
 
-// get the index of the first leader box in ``box``.
+// get the index of the first leader box in “box“.
 func leaderIndex(box Box) (*leaderInd, Box) {
 	for i, child := range box.Box().Children {
 		if child.Box().IsLeader {
 			return &leaderInd{value: i}, child
 		}
-		if bo.ParentBoxT.IsInstance(child) {
+		if bo.ParentT.IsInstance(child) {
 			childLeaderIndex, childLeader := leaderIndex(child)
 			if childLeaderIndex != nil {
 				return &leaderInd{value: i, next: childLeaderIndex}, childLeader
@@ -28,7 +28,7 @@ func leaderIndex(box Box) (*leaderInd, Box) {
 	return nil, nil
 }
 
-// Find a leader box in ``line`` and handle its text and its position.
+// Find a leader box in “line“ and handle its text and its position.
 func handleLeader(context *layoutContext, line *bo.LineBox, containingBlock containingBlock) {
 	index, leaderBox_ := leaderIndex(line)
 	var extraWidth pr.Float

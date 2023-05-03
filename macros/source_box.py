@@ -164,7 +164,7 @@ class Box:
         height = self.border_height() - bt - bb
 
         # Fix overlapping curves
-        # See http://www.w3.org/TR/css3-background/#corner-overlap
+        # See http://www.w3.org/TR/css-backgrounds-3/#corner-overlap
         ratio = min([1] + [
             extent / sum_radii
             for extent, sum_radii in [

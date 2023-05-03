@@ -153,17 +153,15 @@ func countAuto(v1, v2, v3 pr.MaybeFloat) int {
 	return out
 }
 
-// Compute and set a margin box fixed dimension on ``box``, as described in:
-// http://dev.w3.org/csswg/css3-page/#margin-constraints
-// :param box:
-//     The margin box to work on
-// :param outer:
-//     The target outer dimension (value of a page margin)
-// :param vertical:
-//     true to set height, margin-top and margin-bottom; false for width,
+// Compute and set a margin box fixed dimension on “box“.
+//
+// Described in: https://drafts.csswg.org/css-page-3/#margin-constraints
+//
+//   - box: The margin box to work on
+//   - outer: The target outer dimension (value of a page margin)
+//   - vertical: true to set height, margin-top and margin-bottom; false for width,
 //     margin-left and margin-right
-// :param topOrLeft:
-//     true if the margin box in if the top half (for vertical==true) or
+//   - topOrLeft: true if the margin box in if the top half (for vertical==true) or
 //     left half (for vertical==false) of the page.
 //     This determines which margin should be "auto" if the values are
 //     over-constrained. (Rule 3 of the algorithm.)
@@ -194,7 +192,7 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 			// XXX this is not in the spec, but without it box.inner
 			// would end up with a negative value.
 			// Instead, this will trigger rule 3 below.
-			// http://lists.w3.org/Archives/Public/www-style/2012Jul/0006.html
+			// https://lists.w3.org/Archives/Public/www-style/2012Jul/0006.html
 			box.inner = pr.Float(0)
 		}
 	}
@@ -241,17 +239,22 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 	boxOriented.restoreBoxAttributes()
 }
 
-// Compute and set a margin box fixed dimension on ``box``, as described in:
-// http://dev.w3.org/csswg/css3-page/#margin-dimension
-// :param sideBoxes: Three boxes on a same side (as opposed to a corner.)
+// Compute and set a margin box fixed dimension on “box“
+//
+// Described in: https://drafts.csswg.org/css-page-3/#margin-dimension
+//
+//   - sideBoxes: Three boxes on a same side (as opposed to a corner.)
 //     A list of:
-//     - A @*-left or @*-top margin box
-//     - A @*-center or @*-middle margin box
-//     - A @*-right or @*-bottom margin box
-// :param vertical:
+//
+//     -- A @*-left or @*-top margin box
+//     -- A @*-center or @*-middle margin box
+//     -- A @*-right or @*-bottom margin box
+//
+//   - vertical:
 //     true to set height, margin-top and margin-bottom; false for width,
 //     margin-left and margin-right
-// :param outerSum:
+//
+//   - outerSum:
 //     The target total outer dimension (max box width or height)
 func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBox, vertical bool, outerSum pr.Float) {
 	var sideBoxes [3]orientedBoxITF
@@ -385,8 +388,8 @@ func standardizePageBasedCounters(style pr.ElementStyle, pseudoType string) {
 }
 
 // Yield laid-out margin boxes for this page.
-// ``state`` is the actual, up-to-date page-state from
-// ``context.pageMaker[context.currentPage]``.
+// “state“ is the actual, up-to-date page-state from
+// “context.pageMaker[context.currentPage]“.
 func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageState) []Box {
 	// This is a closure only to make calls shorter
 
@@ -448,7 +451,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 	pageEndY := marginTop + maxBoxHeight
 
 	// Margin box dimensions, described in
-	// http://dev.w3.org/csswg/css3-page/#margin-box-dimensions
+	// https://drafts.csswg.org/csswg/css3-page/#margin-box-dimensions
 	var generatedBoxes []*bo.MarginBox
 	prefixs := [4]string{"top", "bottom", "left", "right"}
 	verticals := [4]bool{false, false, true, true}
@@ -531,8 +534,8 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 // Layout a margin box’s content once the box has dimensions.
 func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 	var positionedBoxes []*AbsolutePlaceholder
-	newBox_, tmp := blockContainerLayout(context, mBox, -pr.Inf, nil, true,
-		&positionedBoxes, &positionedBoxes, new([]pr.Float), false)
+	newBox_, tmp, _ := blockContainerLayout(context, mBox, -pr.Inf, nil, true,
+		&positionedBoxes, &positionedBoxes, new([]pr.Float), false, -1)
 
 	if tmp.resumeAt != nil {
 		panic(fmt.Sprintf("resumeAt should be nil, got %v", tmp.resumeAt))
@@ -567,13 +570,15 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 // Take a :class:`OrientedBox` object and set either width, margin-left
 // and margin-right; or height, margin-top and margin-bottom.
 // "The width and horizontal margins of the page box are then calculated
-//  exactly as for a non-replaced block element := range normal flow. The height
-//  and vertical margins of the page box are calculated analogously (instead
-//  of using the block height formulas). In both cases if the values are
-//  over-constrained, instead of ignoring any margins, the containing block
-//  is resized to coincide with the margin edges of the page box."
-// http://dev.w3.org/csswg/css3-page/#page-box-page-rule
-// http://www.w3.org/TR/CSS21/visudet.html#blockwidth
+//
+//	exactly as for a non-replaced block element := range normal flow. The height
+//	and vertical margins of the page box are calculated analogously (instead
+//	of using the block height formulas). In both cases if the values are
+//	over-constrained, instead of ignoring any margins, the containing block
+//	is resized to coincide with the margin edges of the page box."
+//
+// https://drafts.csswg.org/csswg/css3-page/#page-box-page-rule
+// https://www.w3.org/TR/CSS21/visudet.html#blockwidth
 func pageWidthOrHeight(box_ orientedBoxITF, containingBlockSize pr.Float) {
 	box := box_.baseBox()
 	remaining := containingBlockSize - box.paddingPlusBorder
@@ -617,15 +622,17 @@ func pageHeight_(box Box, context *layoutContext, containingBlock containingBloc
 
 // Take just enough content from the beginning to fill one page.
 //
-// Return ``(page, finished)``. ``page`` is a laid out PageBox object
-// and ``resumeAt`` indicates where in the document to start the next page,
-// or is ``None`` if this was the last page.
+// Return “(page, finished)“. “page“ is a laid out PageBox object
+// and “resumeAt“ indicates where in the document to start the next page,
+// or is “None“ if this was the last page.
 //
-// :param pageNumber: integer, start at 1 for the first page
-// :param resumeAt: as returned by ``makePage()`` for the previous page,
-// 	or ``None`` for the first page.
+// pageNumber: integer, start at 1 for the first page
+// resumeAt: as returned by “makePage()“ for the previous page,
+//
+//	or ``None`` for the first page.
 func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType utils.PageElement, resumeAt tree.ResumeStack,
-	pageNumber int, pageState *tree.PageState) (*bo.PageBox, tree.ResumeStack, tree.PageBreak) {
+	pageNumber int, pageState *tree.PageState,
+) (*bo.PageBox, tree.ResumeStack, tree.PageBreak) {
 	style := context.styleFor.Get(pageType, "")
 
 	// Propagated from the root or <body>.
@@ -659,36 +666,38 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	}
 
 	// TODO: handle cases where the root element is something else.
-	// See http://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
-	if !(bo.BlockBoxT.IsInstance(rootBox) || bo.FlexContainerBoxT.IsInstance(rootBox)) {
+	// See https://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
+	if !(bo.BlockT.IsInstance(rootBox) || bo.FlexContainerT.IsInstance(rootBox)) {
 		panic(fmt.Sprintf("expected Block or FlexContainer, got %s", rootBox))
 	}
 	context.createBlockFormattingContext()
 	context.currentPage = pageNumber
-
-	context.currentPageFootnotes = append([]Box(nil), context.reportedFootnotes...) // copy
+	context.currentPageFootnotes = nil
 	context.currentFootnoteArea = footnoteArea
 
-	if len(context.reportedFootnotes) != 0 {
-		footnoteArea.Children = context.reportedFootnotes
-		context.reportedFootnotes = nil
-		reportedFootnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(bo.BlockLevelBoxITF)
-		reportedFootnoteArea, _ = blockLevelLayout(
-			context, reportedFootnoteArea, -pr.Inf, nil,
-			&footnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
-		footnoteArea.Height = reportedFootnoteArea.Box().Height
-		context.pageBottom -= reportedFootnoteArea.Box().MarginHeight()
+	reportedFootnotes := context.reportedFootnotes
+	context.reportedFootnotes = nil
+
+	for i, reportedFootnote := range reportedFootnotes {
+		context.footnotes = append(context.footnotes, reportedFootnote)
+		overflow := context.layoutFootnote(reportedFootnote)
+		if overflow && i != 0 {
+			context.reportFootnote(reportedFootnote)
+			context.reportedFootnotes = context.reportedFootnotes[i:]
+			break
+		}
 	}
 
 	var (
 		adjoiningMargins []pr.Float
 		positionedBoxes  []*AbsolutePlaceholder // Mixed absolute and fixed
 		outOfFlowBoxes   []Box
-		brokenOutOfFlow  []brokenBox
+		contextOutOfFlow = context.brokenOutOfFlow
 	)
-	for _, v := range context.brokenOutOfFlow {
+	context.brokenOutOfFlow = make(map[Box]brokenBox) // new map
+	for _, v := range contextOutOfFlow {
 		box, containingBlock := v.box, v.containingBlock
-		box.Box().PositionY = 0
+		box.Box().PositionY = rootBox.Box().ContentBoxY()
 
 		var (
 			outOfFlowBox      Box
@@ -706,42 +715,46 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		}
 		outOfFlowBoxes = append(outOfFlowBoxes, outOfFlowBox)
 		if outOfFlowResumeAt != nil {
-			brokenOutOfFlow = append(brokenOutOfFlow, brokenBox{box, containingBlock, outOfFlowResumeAt})
+			context.brokenOutOfFlow[outOfFlowBox] = brokenBox{box, containingBlock, outOfFlowResumeAt}
 		}
 	}
-	context.brokenOutOfFlow = brokenOutOfFlow
 
 	if debugMode {
 		debugLogger.LineWithIndent("Making page...")
 	}
 
-	rootBox, tmp := blockLevelLayout(context, rootBox, 0, resumeAt,
-		&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false)
+	rootBox, tmp, _ := blockLevelLayout(context, rootBox, 0, resumeAt,
+		&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
 	resumeAt = tmp.resumeAt
 	if rootBox == nil {
 		panic("expected non nil box for the root element")
 	}
 
+	rootBox.Box().Children = append(outOfFlowBoxes, rootBox.Box().Children...)
+
+	footnoteArea = bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(*bo.FootnoteAreaBox)
+	tmpBox, _, _ := blockLevelLayout(
+		context, footnoteArea, -pr.Inf, nil, &footnoteArea.Page.BoxFields,
+		true, &positionedBoxes, &positionedBoxes, new([]pr.Float), false, -1)
+	footnoteArea = tmpBox.(*bo.FootnoteAreaBox)
+	footnoteArea.Translate(footnoteArea, 0, -footnoteArea.MarginHeight(), false)
+
 	for _, placeholder := range positionedBoxes {
 		if placeholder.Box().Style.GetPosition().String == "fixed" {
-			page.FixedBoxes = append(page.FixedBoxes, placeholder.AliasBox)
+			page.FixedBoxes = append(page.FixedBoxes, placeholder.AliasBox) // page.FixedBox is empty before this loop
 		}
 	}
 	for i := 0; i < len(positionedBoxes); i++ { // note that positionedBoxes may grow over the loop
 		absoluteLayout(context, positionedBoxes[i], page, &positionedBoxes, 0, nil)
 	}
 
-	footnoteArea = bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(*bo.FootnoteAreaBox)
-	tmpBox, _ := blockLevelLayout(
-		context, footnoteArea, -pr.Inf, nil, &footnoteArea.Page.BoxFields,
-		true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false)
-	footnoteArea = tmpBox.(*bo.FootnoteAreaBox)
-	footnoteArea.Translate(footnoteArea, 0, -footnoteArea.MarginHeight(), false)
-
 	context.finishBlockFormattingContext(rootBox)
 
 	page.Children = []Box{rootBox, footnoteArea}
 	descendants := bo.Descendants(page)
+	for _, child := range positionedBoxes {
+		descendants = append(descendants, bo.Descendants(child)...)
+	}
 
 	// Update page counter values
 	standardizePageBasedCounters(style, "")
@@ -863,16 +876,20 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		debugLogger.LineWithDedent("--> Page done (resume at: %s)", resumeAt)
 	}
 
+	if traceMode {
+		traceLogger.DumpTree(page, "makePage done")
+	}
+
 	return page, resumeAt, tmp.nextPage
 }
 
 // Return one laid out page without margin boxes.
-// Start with the initial values from ``context.pageMaker[index]``.
+// Start with the initial values from “context.pageMaker[index]“.
 // The resulting values / initial values for the next page are stored in
-// the ``pageMaker``.
+// the “pageMaker“.
 // As the function"s name suggests: the plan is not to make all pages
 // repeatedly when a missing counter was resolved, but rather re-make the
-// single page where the ``contentChanged`` happened.
+// single page where the “contentChanged“ happened.
 func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF, html *tree.HTML) (*bo.PageBox, tree.ResumeStack) {
 	tmp := context.pageMaker[index]
 
@@ -963,7 +980,10 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 // Return a list of laid out pages without margin boxes.
 // Re-make pages only if necessary.
 func (context *layoutContext) makeAllPages(rootBox bo.BlockLevelBoxITF, html *tree.HTML, pages []*bo.PageBox) []*bo.PageBox {
-	var out []*bo.PageBox
+	var (
+		out               []*bo.PageBox
+		reportedFootnotes []Box
+	)
 	i := 0
 	for {
 		remakeState := context.pageMaker[i].RemakeState
@@ -976,17 +996,23 @@ func (context *layoutContext) makeAllPages(rootBox bo.BlockLevelBoxITF, html *tr
 			// Reset remakeState
 			context.pageMaker[i].RemakeState = tree.RemakeState{}
 			page, resumeAt = context.remakePage(i, rootBox, html)
+			reportedFootnotes = context.reportedFootnotes
 			out = append(out, page)
 		} else {
 			logger.ProgressLogger.Printf("Step 5 - Creating layout - Page %d (up-to-date)", i+1)
 			resumeAt = context.pageMaker[i+1].InitialResumeAt
+			reportedFootnotes = nil
 			out = append(out, pages[i])
 		}
 
 		i += 1
-		if resumeAt == nil && len(context.reportedFootnotes) == 0 {
-			// Throw away obsolete pages
+		if resumeAt == nil && len(reportedFootnotes) == 0 {
+			// Throw away obsolete pages and content
 			context.pageMaker = context.pageMaker[:i+1]
+			for k := range context.brokenOutOfFlow {
+				delete(context.brokenOutOfFlow, k)
+			}
+			context.reportedFootnotes = context.reportedFootnotes[:0]
 			return out
 		}
 	}

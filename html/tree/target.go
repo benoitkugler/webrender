@@ -177,11 +177,11 @@ const (
 
 // Item controlling Pending targets and page based target counters.
 //
-// Collected in the TargetCollector"s ``items``.
+// Collected in the TargetCollector"s “items“.
 type TargetLookupItem struct {
 	// Required by target-counter and target-counters to access the
 	// target's .cachedCounterValues.
-	// Needed for target-text via TEXTCONTENTEXTRACTORS.
+	// Needed for target-text via extract_text.
 	TargetBox Box
 
 	// Functions that have to been called to check Pending targets.
@@ -214,7 +214,7 @@ func NewOptionnalInt(i int) optionnalInt {
 
 // Item controlling page based counters.
 //
-// Collected in the TargetCollector's ``CounterLookupItems``.
+// Collected in the TargetCollector's “CounterLookupItems“.
 type CounterLookupItem struct {
 	// Function that have to been called to check Pending counter.
 	ParseAgain ParseFunc
@@ -243,7 +243,7 @@ func NewCounterLookupItem(parseAgain ParseFunc, missingCounters utils.Set, missi
 	}
 }
 
-// Collector of HTML targets used by CSS content with ``target-*``.
+// Collector of HTML targets used by CSS content with “target-*“.
 type TargetCollector struct {
 	// Lookup items for targets and page counters
 	TargetLookupItems  map[string]*TargetLookupItem
@@ -294,7 +294,7 @@ func (tc *TargetCollector) collectAnchor(anchorName string) {
 	}
 }
 
-// Get a TargetLookupItem corresponding to ``anchorToken``.
+// Get a TargetLookupItem corresponding to “anchorToken“.
 //
 // If it is already filled by a previous anchor-Element, the status is
 // "up-to-date". Otherwise, it is "Pending", we must parse the whole
@@ -321,7 +321,7 @@ func (tc *TargetCollector) LookupTarget(anchorToken pr.ContentProperty, sourceBo
 	return item
 }
 
-// Store a target called ``anchorName``.
+// Store a target called “anchorName“.
 //
 // If there is a Pending TargetLookupItem, it is updated. Only previously
 // collected anchors are stored.
@@ -340,13 +340,13 @@ func (tc *TargetCollector) StoreTarget(anchorName string, targetCounterValues Co
 
 // Collect missing (probably page-based) counters during formatting.
 //
-// The ``MissingCounters`` are re-used during pagination.
+// The “MissingCounters“ are re-used during pagination.
 //
-// The ``missingLink`` attribute added to the parentBox is required to
-// connect the paginated boxes to their originating ``parentBox``.
+// The “missingLink“ attribute added to the parentBox is required to
+// connect the paginated boxes to their originating “parentBox“.
 func (tc *TargetCollector) CollectMissingCounters(parentBox Box, cssToken string,
-	parseAgainFunction ParseFunc, missingCounters utils.Set, missingTargetCounters map[string]utils.Set) {
-
+	parseAgainFunction ParseFunc, missingCounters utils.Set, missingTargetCounters map[string]utils.Set,
+) {
 	// No counter collection during pagination
 	if !tc.collecting {
 		return
@@ -382,12 +382,12 @@ func (tc *TargetCollector) CheckPendingTargets() {
 	tc.collecting = false
 }
 
-// Store target's current ``PageMakerIndex`` and page counter values.
+// Store target's current “PageMakerIndex“ and page counter values.
 //
 // Eventually update associated targeting boxes.
 func (tc *TargetCollector) CacheTargetPageCounters(anchorName string, pageCounterValues CounterValues, pageMakerIndex int,
-	pageMaker []PageMaker) {
-
+	pageMaker []PageMaker,
+) {
 	// Only store page counters when paginating
 	if tc.collecting {
 		return

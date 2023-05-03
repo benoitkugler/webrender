@@ -75,7 +75,7 @@ func TestBreakingLinebox(t *testing.T) {
 		for _, child := range line.Box().Children {
 			tu.AssertEqual(t, child.Box().ElementTag() == "em" || child.Box().ElementTag() == "p", true, "child")
 			tu.AssertEqual(t, child.Box().Style.GetFontSize(), pr.FToV(13), "child")
-			if bo.ParentBoxT.IsInstance(child) {
+			if bo.ParentT.IsInstance(child) {
 				for _, childChild := range child.Box().Children {
 					tu.AssertEqual(t, childChild.Box().ElementTag() == "em" || childChild.Box().ElementTag() == "strong" || childChild.Box().ElementTag() == "span", true, "childChild")
 					tu.AssertEqual(t, childChild.Box().Style.GetFontSize(), pr.FToV(13), "childChild")
@@ -153,7 +153,7 @@ func TestBreakingLineboxRegression1(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// See http://unicode.org/reports/tr14/
+	// See https://unicode.org/reports/tr14/
 	page := renderOnePage(t, "<pre>a\nb\rc\r\nd\u2029e</pre>")
 	html := page.Box().Children[0]
 	body := html.Box().Children[0]
@@ -497,6 +497,25 @@ func TestBreakingLineboxRegression13(t *testing.T) {
 	tu.AssertEqual(t, line3.Box().Children[1].(*bo.TextBox).Text, "x", "line3")
 }
 
+func TestBreakingLineboxRegression14(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1638
+	page := renderOnePage(t, `
+        <style>
+          @font-face {src: url(weasyprint.otf); font-family: weasyprint}
+          body {font-family: weasyprint; width: 3em}
+        </style>
+        <span> <span>a</span> b</span><span>c</span>`)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	line1, line2 := unpack2(body)
+	assertText(t, line1.Box().Children[0].Box().Children[0].Box().Children[0], "a")
+	assertText(t, line2.Box().Children[0].Box().Children[0], "b")
+	assertText(t, line2.Box().Children[1].Box().Children[0], "c")
+}
+
 func TestLineboxText(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
@@ -586,7 +605,7 @@ func TestForcedLineBreaksPre(t *testing.T) {
 	lines := pre.Box().Children
 	tu.AssertEqual(t, len(lines), 7, "len")
 	for _, line := range lines {
-		if !bo.LineBoxT.IsInstance(line) {
+		if !bo.LineT.IsInstance(line) {
 			t.Fatal()
 		}
 		tu.AssertEqual(t, line.Box().Height, pr.Float(42), "line")
@@ -613,7 +632,7 @@ func TestForcedLineBreaksParagraph(t *testing.T) {
 	lines := paragraph.Box().Children
 	tu.AssertEqual(t, len(lines), 7, "len")
 	for _, line := range lines {
-		if !bo.LineBoxT.IsInstance(line) {
+		if !bo.LineT.IsInstance(line) {
 			t.Fatal()
 		}
 		tu.AssertEqual(t, line.Box().Height, pr.Float(42), "line")
@@ -1113,7 +1132,7 @@ func TestBoxDecorationBreakInlineSlice(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// http://www.w3.org/TR/css3-background/#the-box-decoration-break
+	// https://www.w3.org/TR/css-backgrounds-3/#the-box-decoration-break
 	page1 := renderOnePage(t, `
       <style>
         @font-face { src: url(weasyprint.otf); font-family: weasyprint }
@@ -1146,7 +1165,7 @@ func TestBoxDecorationBreakInlineClone(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// http://www.w3.org/TR/css3-background/#the-box-decoration-break
+	// https://www.w3.org/TR/css-backgrounds-3/#the-box-decoration-break
 	page1 := renderOnePage(t, `
       <style>
         @font-face { src: url(weasyprint.otf); font-family: weasyprint }

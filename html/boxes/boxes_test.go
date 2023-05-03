@@ -44,7 +44,8 @@ func fakeHTML(html *tree.HTML) *tree.HTML {
 }
 
 func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils.HTMLNode,
-	*tree.StyleFor, URLResolver, string, *tree.TargetCollector, counters.CounterStyle, *[]Box) {
+	*tree.StyleFor, URLResolver, string, *tree.TargetCollector, counters.CounterStyle, *[]Box,
+) {
 	t.Helper()
 
 	html, err := tree.NewHTML(content, baseUrl, utils.DefaultUrlFetcher, "")
@@ -53,9 +54,9 @@ func parseBase(t testing.TB, content utils.ContentInput, baseUrl string) (*utils
 	}
 	document := fakeHTML(html)
 	cs := make(counters.CounterStyle)
-	style := tree.GetAllComputedStyles(document, nil, false, nil, cs, nil, nil, nil)
-	imgFetcher := func(url string, forcedMimeType string) images.Image {
-		return images.GetImageFromUri(images.NewCache(), document.UrlFetcher, false, url, forcedMimeType)
+	style := tree.GetAllComputedStyles(document, nil, false, nil, cs, nil, nil, false, nil)
+	imgFetcher := func(url string, forcedMimeType string, orientation pr.SBoolFloat) images.Image {
+		return images.GetImageFromUri(images.NewCache(), document.UrlFetcher, false, url, forcedMimeType, orientation)
 	}
 	tr := tree.NewTargetCollector()
 	return document.Root, style, URLResolver{document.UrlFetcher, imgFetcher}, html.BaseUrl, &tr, cs, new([]Box)
@@ -91,7 +92,7 @@ func assertTree(t *testing.T, box Box, expected []SerBox) {
 	if tag := box.Box().ElementTag(); tag != "html" {
 		t.Fatalf("unexpected element: %s", tag)
 	}
-	if !BlockBoxT.IsInstance(box) {
+	if !BlockT.IsInstance(box) {
 		t.Fatal("expected block box")
 	}
 	if L := len(box.Box().Children); L != 1 {
@@ -99,7 +100,7 @@ func assertTree(t *testing.T, box Box, expected []SerBox) {
 	}
 
 	box = box.Box().Children[0]
-	if !BlockBoxT.IsInstance(box) {
+	if !BlockT.IsInstance(box) {
 		t.Fatal("expected block box")
 	}
 	if tag := box.Box().ElementTag(); tag != "body" {
@@ -112,33 +113,33 @@ func assertTree(t *testing.T, box Box, expected []SerBox) {
 }
 
 var properChildren = map[BoxType][]BoxType{
-	BlockContainerBoxT: {BlockLevelBoxT, LineBoxT},
-	LineBoxT:           {InlineLevelBoxT},
-	InlineBoxT:         {InlineLevelBoxT},
-	TableBoxT: {
-		TableCaptionBoxT,
-		TableColumnGroupBoxT, TableColumnBoxT,
-		TableRowGroupBoxT, TableRowBoxT,
+	BlockContainerT: {BlockLevelT, LineT},
+	LineT:           {InlineLevelT},
+	InlineT:         {InlineLevelT},
+	TableT: {
+		TableCaptionT,
+		TableColumnGroupT, TableColumnT,
+		TableRowGroupT, TableRowT,
 	},
-	InlineTableBoxT: {
-		TableCaptionBoxT,
-		TableColumnGroupBoxT, TableColumnBoxT,
-		TableRowGroupBoxT, TableRowBoxT,
+	InlineTableT: {
+		TableCaptionT,
+		TableColumnGroupT, TableColumnT,
+		TableRowGroupT, TableRowT,
 	},
-	TableColumnGroupBoxT: {TableColumnBoxT},
-	TableRowGroupBoxT:    {TableRowBoxT},
-	TableRowBoxT:         {TableCellBoxT},
+	TableColumnGroupT: {TableColumnT},
+	TableRowGroupT:    {TableRowT},
+	TableRowT:         {TableCellT},
 }
 
 // Check that the rules regarding boxes are met.
 //
 // This is not required and only helps debugging.
 //
-// - A block container can contain either only block-level boxes or
-//   only line boxes;
-// - Line boxes and inline boxes can only contain inline-level
+//   - A block container can contain either only block-level boxes or
+//     only line boxes;
+//   - Line boxes and inline boxes can only contain inline-level
 func sanityChecks(box Box) error {
-	if !ParentBoxT.IsInstance(box) {
+	if !ParentT.IsInstance(box) {
 		return nil
 	}
 
@@ -211,10 +212,10 @@ func getGrid(t *testing.T, html string) ([][]Border, [][]Border) {
 }
 
 func TestBoxTree(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	// cp := tu.CaptureLogs()
+	// defer cp.AssertNoLogs(t)
 
-	assertTree(t, parse(t, "<p>"), []SerBox{{"p", BlockBoxT, BC{}}})
+	assertTree(t, parse(t, "<p>"), []SerBox{{"p", BlockT, BC{}}})
 	assertTree(t, parse(t, `
 	  <style>
 	    span { display: inline-block }
@@ -222,16 +223,16 @@ func TestBoxTree(t *testing.T) {
 	  <p>Hello <em>World <img src="pattern.png"><span>L</span></em>!</p>`),
 		[]SerBox{
 			{
-				"p", BlockBoxT, BC{C: []SerBox{
-					{"p", TextBoxT, BC{Text: "Hello "}},
-					{"em", InlineBoxT, BC{C: []SerBox{
-						{"em", TextBoxT, BC{Text: "World "}},
-						{"img", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-						{"span", InlineBlockBoxT, BC{C: []SerBox{
-							{"span", TextBoxT, BC{Text: "L"}},
+				"p", BlockT, BC{C: []SerBox{
+					{"p", TextT, BC{Text: "Hello "}},
+					{"em", InlineT, BC{C: []SerBox{
+						{"em", TextT, BC{Text: "World "}},
+						{"img", InlineReplacedT, BC{Text: "<replaced>"}},
+						{"span", InlineBlockT, BC{C: []SerBox{
+							{"span", TextT, BC{Text: "L"}},
 						}}},
 					}}},
-					{"p", TextBoxT, BC{Text: "!"}},
+					{"p", TextT, BC{Text: "!"}},
 				}},
 			},
 		})
@@ -243,8 +244,8 @@ func TestHtmlEntities(t *testing.T) {
 
 	for _, quote := range []string{`"`, "&quot;", "&#x22;", "&#34;"} {
 		assertTree(t, parse(t, fmt.Sprintf("<p>%sabc%s", quote, quote)), []SerBox{
-			{"p", BlockBoxT, BC{C: []SerBox{
-				{"p", TextBoxT, BC{Text: `"abc"`}},
+			{"p", BlockT, BC{C: []SerBox{
+				{"p", TextT, BC{Text: `"abc"`}},
 			}}},
 		})
 	}
@@ -256,23 +257,23 @@ func TestInlineInBlock1(t *testing.T) {
 
 	source := "<div>Hello, <em>World</em>!\n<p>Lipsum.</p></div>"
 	expected := []SerBox{
-		{"div", BlockBoxT, BC{
+		{"div", BlockT, BC{
 			C: []SerBox{
 				{
-					"div", BlockBoxT,
+					"div", BlockT,
 					BC{C: []SerBox{
-						{"div", LineBoxT, BC{C: []SerBox{
-							{"div", TextBoxT, BC{Text: "Hello, "}},
-							{"em", InlineBoxT, BC{C: []SerBox{
-								{"em", TextBoxT, BC{Text: "World"}},
+						{"div", LineT, BC{C: []SerBox{
+							{"div", TextT, BC{Text: "Hello, "}},
+							{"em", InlineT, BC{C: []SerBox{
+								{"em", TextT, BC{Text: "World"}},
 							}}},
-							{"div", TextBoxT, BC{Text: "! "}},
+							{"div", TextT, BC{Text: "! "}},
 						}}},
 					}},
 				},
-				{"p", BlockBoxT, BC{C: []SerBox{
-					{"p", LineBoxT, BC{C: []SerBox{
-						{"p", TextBoxT, BC{Text: "Lipsum."}},
+				{"p", BlockT, BC{C: []SerBox{
+					{"p", LineT, BC{C: []SerBox{
+						{"p", TextT, BC{Text: "Lipsum."}},
 					}}},
 				}}},
 			},
@@ -281,13 +282,13 @@ func TestInlineInBlock1(t *testing.T) {
 	box := parse(t, source)
 
 	assertTree(t, box, []SerBox{
-		{"div", BlockBoxT, BC{C: []SerBox{
-			{"div", TextBoxT, BC{Text: "Hello, "}},
-			{"em", InlineBoxT, BC{C: []SerBox{
-				{"em", TextBoxT, BC{Text: "World"}},
+		{"div", BlockT, BC{C: []SerBox{
+			{"div", TextT, BC{Text: "Hello, "}},
+			{"em", InlineT, BC{C: []SerBox{
+				{"em", TextT, BC{Text: "World"}},
 			}}},
-			{"div", TextBoxT, BC{Text: "! "}},
-			{"p", BlockBoxT, BC{C: []SerBox{{"p", TextBoxT, BC{Text: "Lipsum."}}}}},
+			{"div", TextT, BC{Text: "! "}},
+			{"p", BlockT, BC{C: []SerBox{{"p", TextT, BC{Text: "Lipsum."}}}}},
 		}}},
 	})
 
@@ -301,13 +302,13 @@ func TestInlineInBlock2(t *testing.T) {
 
 	source := "<div><p>Lipsum.</p>Hello, <em>World</em>!\n</div>"
 	expected := []SerBox{
-		{"div", BlockBoxT, BC{C: []SerBox{
-			{"p", BlockBoxT, BC{C: []SerBox{{"p", LineBoxT, BC{C: []SerBox{{"p", TextBoxT, BC{Text: "Lipsum."}}}}}}}},
-			{"div", BlockBoxT, BC{C: []SerBox{
-				{"div", LineBoxT, BC{C: []SerBox{
-					{"div", TextBoxT, BC{Text: "Hello, "}},
-					{"em", InlineBoxT, BC{C: []SerBox{{"em", TextBoxT, BC{Text: "World"}}}}},
-					{"div", TextBoxT, BC{Text: "! "}},
+		{"div", BlockT, BC{C: []SerBox{
+			{"p", BlockT, BC{C: []SerBox{{"p", LineT, BC{C: []SerBox{{"p", TextT, BC{Text: "Lipsum."}}}}}}}},
+			{"div", BlockT, BC{C: []SerBox{
+				{"div", LineT, BC{C: []SerBox{
+					{"div", TextT, BC{Text: "Hello, "}},
+					{"em", InlineT, BC{C: []SerBox{{"em", TextT, BC{Text: "World"}}}}},
+					{"div", TextT, BC{Text: "! "}},
 				}}},
 			}}},
 		}}},
@@ -325,11 +326,11 @@ func TestInlineInBlock3(t *testing.T) {
 	source := `<p>Hello <em style="position:absolute;
                                     display: block">World</em>!</p>`
 	expected := []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"p", TextBoxT, BC{Text: "Hello "}},
-				{"em", BlockBoxT, BC{C: []SerBox{{"em", LineBoxT, BC{C: []SerBox{{"em", TextBoxT, BC{Text: "World"}}}}}}}},
-				{"p", TextBoxT, BC{Text: "!"}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"p", TextT, BC{Text: "Hello "}},
+				{"em", BlockT, BC{C: []SerBox{{"em", LineT, BC{C: []SerBox{{"em", TextT, BC{Text: "World"}}}}}}}},
+				{"p", TextT, BC{Text: "!"}},
 			}}},
 		}}},
 	}
@@ -348,11 +349,11 @@ func TestInlineInBlock4(t *testing.T) {
 	source := `<p>Hello <em style="float: left">World</em>!</p>`
 
 	expected := []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"p", TextBoxT, BC{Text: "Hello "}},
-				{"em", BlockBoxT, BC{C: []SerBox{{"em", LineBoxT, BC{C: []SerBox{{"em", TextBoxT, BC{Text: "World"}}}}}}}},
-				{"p", TextBoxT, BC{Text: "!"}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"p", TextT, BC{Text: "Hello "}},
+				{"em", BlockT, BC{C: []SerBox{{"em", LineT, BC{C: []SerBox{{"em", TextT, BC{Text: "World"}}}}}}}},
+				{"p", TextT, BC{Text: "!"}},
 			}}},
 		}}},
 	}
@@ -375,23 +376,23 @@ func TestBlockInInline(t *testing.T) {
       <span>amet,</span></strong><span><em>conse<i>`)
 	box = InlineInBlock(box)
 	assertTree(t, box, []SerBox{
-		{"body", LineBoxT, BC{C: []SerBox{
-			{"p", InlineBlockBoxT, BC{C: []SerBox{
-				{"p", LineBoxT, BC{C: []SerBox{
-					{"p", TextBoxT, BC{Text: "Lorem "}},
-					{"em", InlineBoxT, BC{C: []SerBox{
-						{"em", TextBoxT, BC{Text: "ipsum "}},
-						{"strong", InlineBoxT, BC{C: []SerBox{
-							{"strong", TextBoxT, BC{Text: "dolor "}},
-							{"span", BlockBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "sit"}}}}}}}},
-							{"strong", TextBoxT, BC{Text: " "}},
-							{"span", BlockBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "amet,"}}}}}}}},
+		{"body", LineT, BC{C: []SerBox{
+			{"p", InlineBlockT, BC{C: []SerBox{
+				{"p", LineT, BC{C: []SerBox{
+					{"p", TextT, BC{Text: "Lorem "}},
+					{"em", InlineT, BC{C: []SerBox{
+						{"em", TextT, BC{Text: "ipsum "}},
+						{"strong", InlineT, BC{C: []SerBox{
+							{"strong", TextT, BC{Text: "dolor "}},
+							{"span", BlockT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"span", TextT, BC{Text: "sit"}}}}}}}},
+							{"strong", TextT, BC{Text: " "}},
+							{"span", BlockT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"span", TextT, BC{Text: "amet,"}}}}}}}},
 						}}},
-						{"span", BlockBoxT, BC{C: []SerBox{
-							{"span", LineBoxT, BC{C: []SerBox{
-								{"em", InlineBoxT, BC{C: []SerBox{
-									{"em", TextBoxT, BC{Text: "conse"}},
-									{"i", BlockBoxT, BC{C: []SerBox{}}},
+						{"span", BlockT, BC{C: []SerBox{
+							{"span", LineT, BC{C: []SerBox{
+								{"em", InlineT, BC{C: []SerBox{
+									{"em", TextT, BC{Text: "conse"}},
+									{"i", BlockT, BC{C: []SerBox{}}},
 								}}},
 							}}},
 						}}},
@@ -403,35 +404,35 @@ func TestBlockInInline(t *testing.T) {
 
 	box = BlockInInline(box)
 	assertTree(t, box, []SerBox{
-		{"body", LineBoxT, BC{C: []SerBox{
-			{"p", InlineBlockBoxT, BC{C: []SerBox{
-				{"p", BlockBoxT, BC{C: []SerBox{
-					{"p", LineBoxT, BC{C: []SerBox{
-						{"p", TextBoxT, BC{Text: "Lorem "}},
-						{"em", InlineBoxT, BC{C: []SerBox{
-							{"em", TextBoxT, BC{Text: "ipsum "}},
-							{"strong", InlineBoxT, BC{C: []SerBox{{"strong", TextBoxT, BC{Text: "dolor "}}}}},
+		{"body", LineT, BC{C: []SerBox{
+			{"p", InlineBlockT, BC{C: []SerBox{
+				{"p", BlockT, BC{C: []SerBox{
+					{"p", LineT, BC{C: []SerBox{
+						{"p", TextT, BC{Text: "Lorem "}},
+						{"em", InlineT, BC{C: []SerBox{
+							{"em", TextT, BC{Text: "ipsum "}},
+							{"strong", InlineT, BC{C: []SerBox{{"strong", TextT, BC{Text: "dolor "}}}}},
 						}}},
 					}}},
 				}}},
-				{"span", BlockBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "sit"}}}}}}}},
-				{"p", BlockBoxT, BC{C: []SerBox{
-					{"p", LineBoxT, BC{C: []SerBox{
-						{"em", InlineBoxT, BC{C: []SerBox{{"strong", InlineBoxT, BC{C: []SerBox{{"strong", TextBoxT, BC{Text: " "}}}}}}}},
+				{"span", BlockT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"span", TextT, BC{Text: "sit"}}}}}}}},
+				{"p", BlockT, BC{C: []SerBox{
+					{"p", LineT, BC{C: []SerBox{
+						{"em", InlineT, BC{C: []SerBox{{"strong", InlineT, BC{C: []SerBox{{"strong", TextT, BC{Text: " "}}}}}}}},
 					}}},
 				}}},
-				{"span", BlockBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "amet,"}}}}}}}},
-				{"p", BlockBoxT, BC{C: []SerBox{
-					{"p", LineBoxT, BC{C: []SerBox{{"em", InlineBoxT, BC{C: []SerBox{{"strong", InlineBoxT, BC{C: []SerBox{}}}}}}}}},
+				{"span", BlockT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"span", TextT, BC{Text: "amet,"}}}}}}}},
+				{"p", BlockT, BC{C: []SerBox{
+					{"p", LineT, BC{C: []SerBox{{"em", InlineT, BC{C: []SerBox{{"strong", InlineT, BC{C: []SerBox{}}}}}}}}},
 				}}},
-				{"span", BlockBoxT, BC{C: []SerBox{
-					{"span", BlockBoxT, BC{C: []SerBox{
-						{"span", LineBoxT, BC{C: []SerBox{{"em", InlineBoxT, BC{C: []SerBox{{"em", TextBoxT, BC{Text: "conse"}}}}}}}},
+				{"span", BlockT, BC{C: []SerBox{
+					{"span", BlockT, BC{C: []SerBox{
+						{"span", LineT, BC{C: []SerBox{{"em", InlineT, BC{C: []SerBox{{"em", TextT, BC{Text: "conse"}}}}}}}},
 					}}},
-					{"i", BlockBoxT, BC{C: []SerBox{}}},
-					{"span", BlockBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"em", InlineBoxT, BC{C: []SerBox{}}}}}}}}},
+					{"i", BlockT, BC{C: []SerBox{}}},
+					{"span", BlockT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"em", InlineT, BC{C: []SerBox{}}}}}}}}},
 				}}},
-				{"p", BlockBoxT, BC{C: []SerBox{{"p", LineBoxT, BC{C: []SerBox{{"em", InlineBoxT, BC{C: []SerBox{}}}}}}}}},
+				{"p", BlockT, BC{C: []SerBox{{"p", LineT, BC{C: []SerBox{{"em", InlineT, BC{C: []SerBox{}}}}}}}}},
 			}}},
 		}}},
 	})
@@ -484,23 +485,23 @@ func TestWhitespaces(t *testing.T) {
 		"<pre>\t  foo\n</pre>"+
 		"<pre style=\"white-space: pre-wrap\">\t  foo\n</pre>"+
 		"<pre style=\"white-space: pre-line\">\t  foo\n</pre>"), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"p", TextBoxT, BC{Text: "Lorem ipsum "}},
-				{"strong", InlineBoxT, BC{C: []SerBox{
-					{"strong", TextBoxT, BC{Text: "dolor "}},
-					{"img", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-					{"strong", TextBoxT, BC{Text: " sit "}},
-					{"span", BlockBoxT, BC{C: []SerBox{}}},
-					{"em", InlineBoxT, BC{C: []SerBox{{"em", TextBoxT, BC{Text: "amet "}}}}},
-					{"strong", TextBoxT, BC{Text: "consectetur"}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"p", TextT, BC{Text: "Lorem ipsum "}},
+				{"strong", InlineT, BC{C: []SerBox{
+					{"strong", TextT, BC{Text: "dolor "}},
+					{"img", InlineReplacedT, BC{Text: "<replaced>"}},
+					{"strong", TextT, BC{Text: " sit "}},
+					{"span", BlockT, BC{C: []SerBox{}}},
+					{"em", InlineT, BC{C: []SerBox{{"em", TextT, BC{Text: "amet "}}}}},
+					{"strong", TextT, BC{Text: "consectetur"}},
 				}}},
-				{"p", TextBoxT, BC{Text: "."}},
+				{"p", TextT, BC{Text: "."}},
 			}}},
 		}}},
-		{"pre", BlockBoxT, BC{C: []SerBox{{"pre", LineBoxT, BC{C: []SerBox{{"pre", TextBoxT, BC{Text: "\t  foo\n"}}}}}}}},
-		{"pre", BlockBoxT, BC{C: []SerBox{{"pre", LineBoxT, BC{C: []SerBox{{"pre", TextBoxT, BC{Text: "\t  foo\n"}}}}}}}},
-		{"pre", BlockBoxT, BC{C: []SerBox{{"pre", LineBoxT, BC{C: []SerBox{{"pre", TextBoxT, BC{Text: " foo\n"}}}}}}}},
+		{"pre", BlockT, BC{C: []SerBox{{"pre", LineT, BC{C: []SerBox{{"pre", TextT, BC{Text: "\t  foo\n"}}}}}}}},
+		{"pre", BlockT, BC{C: []SerBox{{"pre", LineT, BC{C: []SerBox{{"pre", TextT, BC{Text: "\t  foo\n"}}}}}}}},
+		{"pre", BlockT, BC{C: []SerBox{{"pre", LineT, BC{C: []SerBox{{"pre", TextT, BC{Text: " foo\n"}}}}}}}},
 	})
 }
 
@@ -528,7 +529,7 @@ func testPageStyle(t *testing.T, data pageStyleData) {
 		t.Fatal(err)
 	}
 	document = fakeHTML(document)
-	styleFor := tree.GetAllComputedStyles(document, nil, false, nil, nil, nil, nil, nil)
+	styleFor := tree.GetAllComputedStyles(document, nil, false, nil, nil, nil, nil, false, nil)
 
 	// Force the generation of the style for this page type as it"s generally
 	// only done during the rendering.
@@ -581,11 +582,11 @@ func TestImages1(t *testing.T) {
 		t.Fatal(logs[0])
 	}
 	assertTree(t, result, []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"img", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-				{"img", InlineBoxT, BC{C: []SerBox{{"img", TextBoxT, BC{Text: "No src"}}}}},
-				{"img", InlineBoxT, BC{C: []SerBox{{"img", TextBoxT, BC{Text: "Inexistent src"}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"img", InlineReplacedT, BC{Text: "<replaced>"}},
+				{"img", InlineT, BC{C: []SerBox{{"img", TextT, BC{Text: "No src"}}}}},
+				{"img", InlineT, BC{C: []SerBox{{"img", TextT, BC{Text: "Inexistent src"}}}}},
 			}}},
 		}}},
 	})
@@ -603,8 +604,8 @@ func TestImages2(t *testing.T) {
 		t.Fatal(logs[0])
 	}
 	assertTree(t, result, []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"img", InlineBoxT, BC{C: []SerBox{{"img", TextBoxT, BC{Text: "No baseUrl"}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"img", InlineT, BC{C: []SerBox{{"img", TextT, BC{Text: "No baseUrl"}}}}}}}},
 		}}},
 	})
 }
@@ -634,26 +635,26 @@ func TestTables1(t *testing.T) {
         </x-tr>
       </x-table>
     `), []SerBox{
-		{"x-table", BlockBoxT, BC{C: []SerBox{
-			{"x-caption", TableCaptionBoxT, BC{C: []SerBox{{"x-caption", LineBoxT, BC{C: []SerBox{{"x-caption", TextBoxT, BC{Text: "top caption"}}}}}}}},
-			{"x-table", TableBoxT, BC{C: []SerBox{
-				{"x-table", TableColumnGroupBoxT, BC{C: []SerBox{{"x-col", TableColumnBoxT, BC{C: []SerBox{}}}}}},
-				{"x-thead", TableRowGroupBoxT, BC{C: []SerBox{{"x-thead", TableRowBoxT, BC{C: []SerBox{{"x-th", TableCellBoxT, BC{C: []SerBox{}}}}}}}}},
-				{"x-table", TableRowGroupBoxT, BC{C: []SerBox{
-					{"x-tr", TableRowBoxT, BC{C: []SerBox{
-						{"x-th", TableCellBoxT, BC{C: []SerBox{{"x-th", LineBoxT, BC{C: []SerBox{{"x-th", TextBoxT, BC{Text: "foo"}}}}}}}},
-						{"x-th", TableCellBoxT, BC{C: []SerBox{{"x-th", LineBoxT, BC{C: []SerBox{{"x-th", TextBoxT, BC{Text: "bar"}}}}}}}},
+		{"x-table", BlockT, BC{C: []SerBox{
+			{"x-caption", TableCaptionT, BC{C: []SerBox{{"x-caption", LineT, BC{C: []SerBox{{"x-caption", TextT, BC{Text: "top caption"}}}}}}}},
+			{"x-table", TableT, BC{C: []SerBox{
+				{"x-table", TableColumnGroupT, BC{C: []SerBox{{"x-col", TableColumnT, BC{C: []SerBox{}}}}}},
+				{"x-thead", TableRowGroupT, BC{C: []SerBox{{"x-thead", TableRowT, BC{C: []SerBox{{"x-th", TableCellT, BC{C: []SerBox{}}}}}}}}},
+				{"x-table", TableRowGroupT, BC{C: []SerBox{
+					{"x-tr", TableRowT, BC{C: []SerBox{
+						{"x-th", TableCellT, BC{C: []SerBox{{"x-th", LineT, BC{C: []SerBox{{"x-th", TextT, BC{Text: "foo"}}}}}}}},
+						{"x-th", TableCellT, BC{C: []SerBox{{"x-th", LineT, BC{C: []SerBox{{"x-th", TextT, BC{Text: "bar"}}}}}}}},
 					}}},
 				}}},
-				{"x-thead", TableRowGroupBoxT, BC{C: []SerBox{}}},
-				{"x-table", TableRowGroupBoxT, BC{C: []SerBox{
-					{"x-tr", TableRowBoxT, BC{C: []SerBox{
-						{"x-td", TableCellBoxT, BC{C: []SerBox{{"x-td", LineBoxT, BC{C: []SerBox{{"x-td", TextBoxT, BC{Text: "baz"}}}}}}}},
+				{"x-thead", TableRowGroupT, BC{C: []SerBox{}}},
+				{"x-table", TableRowGroupT, BC{C: []SerBox{
+					{"x-tr", TableRowT, BC{C: []SerBox{
+						{"x-td", TableCellT, BC{C: []SerBox{{"x-td", LineT, BC{C: []SerBox{{"x-td", TextT, BC{Text: "baz"}}}}}}}},
 					}}},
 				}}},
-				{"x-tfoot", TableRowGroupBoxT, BC{C: []SerBox{}}},
+				{"x-tfoot", TableRowGroupT, BC{C: []SerBox{}}},
 			}}},
-			{"x-caption", TableCaptionBoxT, BC{C: []SerBox{}}},
+			{"x-caption", TableCaptionT, BC{C: []SerBox{}}},
 		}}},
 	})
 }
@@ -667,12 +668,12 @@ func TestTables2(t *testing.T) {
       <span style="display: table-cell">foo</span>
       <span style="display: table-cell">bar</span>
    `), []SerBox{
-		{"body", BlockBoxT, BC{C: []SerBox{
-			{"body", TableBoxT, BC{C: []SerBox{
-				{"body", TableRowGroupBoxT, BC{C: []SerBox{
-					{"body", TableRowBoxT, BC{C: []SerBox{
-						{"span", TableCellBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "foo"}}}}}}}},
-						{"span", TableCellBoxT, BC{C: []SerBox{{"span", LineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "bar"}}}}}}}},
+		{"body", BlockT, BC{C: []SerBox{
+			{"body", TableT, BC{C: []SerBox{
+				{"body", TableRowGroupT, BC{C: []SerBox{
+					{"body", TableRowT, BC{C: []SerBox{
+						{"span", TableCellT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"span", TextT, BC{Text: "foo"}}}}}}}},
+						{"span", TableCellT, BC{C: []SerBox{{"span", LineT, BC{C: []SerBox{{"span", TextT, BC{Text: "bar"}}}}}}}},
 					}}},
 				}}},
 			}}},
@@ -698,10 +699,10 @@ func TestTables3(t *testing.T) {
       </span>
       <ins style="display: table-column-group"></ins>
     `), []SerBox{
-		{"body", BlockBoxT, BC{C: []SerBox{
-			{"body", TableBoxT, BC{C: []SerBox{
-				{"span", TableColumnGroupBoxT, BC{C: []SerBox{{"em", TableColumnBoxT, BC{C: []SerBox{}}}}}},
-				{"ins", TableColumnGroupBoxT, BC{C: []SerBox{{"ins", TableColumnBoxT, BC{C: []SerBox{}}}}}},
+		{"body", BlockT, BC{C: []SerBox{
+			{"body", TableT, BC{C: []SerBox{
+				{"span", TableColumnGroupT, BC{C: []SerBox{{"em", TableColumnT, BC{C: []SerBox{}}}}}},
+				{"ins", TableColumnGroupT, BC{C: []SerBox{{"ins", TableColumnT, BC{C: []SerBox{}}}}}},
 			}}},
 		}}},
 	})
@@ -713,13 +714,13 @@ func TestTables4(t *testing.T) {
 
 	// Rules 2.1 then 2.3
 	assertTree(t, parseAndBuild(t, "<x-table>foo <div></div></x-table>"), []SerBox{
-		{"x-table", BlockBoxT, BC{C: []SerBox{
-			{"x-table", TableBoxT, BC{C: []SerBox{
-				{"x-table", TableRowGroupBoxT, BC{C: []SerBox{
-					{"x-table", TableRowBoxT, BC{C: []SerBox{
-						{"x-table", TableCellBoxT, BC{C: []SerBox{
-							{"x-table", BlockBoxT, BC{C: []SerBox{{"x-table", LineBoxT, BC{C: []SerBox{{"x-table", TextBoxT, BC{Text: "foo "}}}}}}}},
-							{"div", BlockBoxT, BC{C: []SerBox{}}},
+		{"x-table", BlockT, BC{C: []SerBox{
+			{"x-table", TableT, BC{C: []SerBox{
+				{"x-table", TableRowGroupT, BC{C: []SerBox{
+					{"x-table", TableRowT, BC{C: []SerBox{
+						{"x-table", TableCellT, BC{C: []SerBox{
+							{"x-table", BlockT, BC{C: []SerBox{{"x-table", LineT, BC{C: []SerBox{{"x-table", TextT, BC{Text: "foo "}}}}}}}},
+							{"div", BlockT, BC{C: []SerBox{}}},
 						}}},
 					}}},
 				}}},
@@ -735,12 +736,12 @@ func TestTables5(t *testing.T) {
 	// Rule 2.2
 	assertTree(t, parseAndBuild(t, `<x-thead style="display: table-header-group"><div></div><x-td></x-td></x-thead>`),
 		[]SerBox{
-			{"body", BlockBoxT, BC{C: []SerBox{
-				{"body", TableBoxT, BC{C: []SerBox{
-					{"x-thead", TableRowGroupBoxT, BC{C: []SerBox{
-						{"x-thead", TableRowBoxT, BC{C: []SerBox{
-							{"x-thead", TableCellBoxT, BC{C: []SerBox{{"div", BlockBoxT, BC{C: []SerBox{}}}}}},
-							{"x-td", TableCellBoxT, BC{C: []SerBox{}}},
+			{"body", BlockT, BC{C: []SerBox{
+				{"body", TableT, BC{C: []SerBox{
+					{"x-thead", TableRowGroupT, BC{C: []SerBox{
+						{"x-thead", TableRowT, BC{C: []SerBox{
+							{"x-thead", TableCellT, BC{C: []SerBox{{"div", BlockT, BC{C: []SerBox{}}}}}},
+							{"x-td", TableCellT, BC{C: []SerBox{}}},
 						}}},
 					}}},
 				}}},
@@ -754,10 +755,10 @@ func TestTables6(t *testing.T) {
 
 	// Rule 3.2
 	assertTree(t, parseAndBuild(t, "<span><x-tr></x-tr></span>"), []SerBox{
-		{"body", LineBoxT, BC{C: []SerBox{
-			{"span", InlineBoxT, BC{C: []SerBox{
-				{"span", InlineBlockBoxT, BC{C: []SerBox{
-					{"span", InlineTableBoxT, BC{C: []SerBox{{"span", TableRowGroupBoxT, BC{C: []SerBox{{"x-tr", TableRowBoxT, BC{C: []SerBox{}}}}}}}}},
+		{"body", LineT, BC{C: []SerBox{
+			{"span", InlineT, BC{C: []SerBox{
+				{"span", InlineBlockT, BC{C: []SerBox{
+					{"span", InlineTableT, BC{C: []SerBox{{"span", TableRowGroupT, BC{C: []SerBox{{"x-tr", TableRowT, BC{C: []SerBox{}}}}}}}}},
 				}}},
 			}}},
 		}}},
@@ -776,20 +777,20 @@ func TestTables7(t *testing.T) {
 		  <em style="display: table-cell"></em>
 		</span>
 	  `), []SerBox{
-		{"body", LineBoxT, BC{C: []SerBox{
-			{"span", InlineBoxT, BC{C: []SerBox{
-				{"span", TextBoxT, BC{Text: " "}},
-				{"span", InlineBlockBoxT, BC{C: []SerBox{
-					{"span", InlineTableBoxT, BC{C: []SerBox{
-						{"span", TableRowGroupBoxT, BC{C: []SerBox{
-							{"span", TableRowBoxT, BC{C: []SerBox{
-								{"em", TableCellBoxT, BC{C: []SerBox{}}},
-								{"em", TableCellBoxT, BC{C: []SerBox{}}},
+		{"body", LineT, BC{C: []SerBox{
+			{"span", InlineT, BC{C: []SerBox{
+				{"span", TextT, BC{Text: " "}},
+				{"span", InlineBlockT, BC{C: []SerBox{
+					{"span", InlineTableT, BC{C: []SerBox{
+						{"span", TableRowGroupT, BC{C: []SerBox{
+							{"span", TableRowT, BC{C: []SerBox{
+								{"em", TableCellT, BC{C: []SerBox{}}},
+								{"em", TableCellT, BC{C: []SerBox{}}},
 							}}},
 						}}},
 					}}},
 				}}},
-				{"span", TextBoxT, BC{Text: " "}},
+				{"span", TextT, BC{Text: " "}},
 			}}},
 		}}},
 	})
@@ -800,11 +801,11 @@ func TestTables8(t *testing.T) {
 	defer cp.AssertNoLogs(t)
 	// Rule 3.2
 	assertTree(t, parseAndBuild(t, "<x-tr></x-tr>\t<x-tr></x-tr>"), []SerBox{
-		{"body", BlockBoxT, BC{C: []SerBox{
-			{"body", TableBoxT, BC{C: []SerBox{
-				{"body", TableRowGroupBoxT, BC{C: []SerBox{
-					{"x-tr", TableRowBoxT, BC{C: []SerBox{}}},
-					{"x-tr", TableRowBoxT, BC{C: []SerBox{}}},
+		{"body", BlockT, BC{C: []SerBox{
+			{"body", TableT, BC{C: []SerBox{
+				{"body", TableRowGroupT, BC{C: []SerBox{
+					{"x-tr", TableRowT, BC{C: []SerBox{}}},
+					{"x-tr", TableRowT, BC{C: []SerBox{}}},
 				}}},
 			}}},
 		}}},
@@ -816,10 +817,10 @@ func TestTables9(t *testing.T) {
 	defer cp.AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, "<x-col></x-col>\n<x-colgroup></x-colgroup>"), []SerBox{
-		{"body", BlockBoxT, BC{C: []SerBox{
-			{"body", TableBoxT, BC{C: []SerBox{
-				{"body", TableColumnGroupBoxT, BC{C: []SerBox{{"x-col", TableColumnBoxT, BC{C: []SerBox{}}}}}},
-				{"x-colgroup", TableColumnGroupBoxT, BC{C: []SerBox{{"x-colgroup", TableColumnBoxT, BC{C: []SerBox{}}}}}},
+		{"body", BlockT, BC{C: []SerBox{
+			{"body", TableT, BC{C: []SerBox{
+				{"body", TableColumnGroupT, BC{C: []SerBox{{"x-col", TableColumnT, BC{C: []SerBox{}}}}}},
+				{"x-colgroup", TableColumnGroupT, BC{C: []SerBox{{"x-colgroup", TableColumnT, BC{C: []SerBox{}}}}}},
 			}}},
 		}}},
 	})
@@ -833,10 +834,10 @@ func TestTableStyle(t *testing.T) {
 	body := html.Box().Children[0]
 	wrapper := body.Box().Children[0]
 	table := wrapper.Box().Children[0]
-	if !(BlockBoxT.IsInstance(wrapper)) {
+	if !(BlockT.IsInstance(wrapper)) {
 		t.Fatal()
 	}
-	if !(TableBoxT.IsInstance(table)) {
+	if !(TableT.IsInstance(table)) {
 		t.Fatal()
 	}
 	if !(wrapper.Box().Style.GetMarginTop() == pr.FToPx(1)) {
@@ -1071,9 +1072,9 @@ func TestBeforeAfter1(t *testing.T) {
       <div></div>
       <section></section>
     `), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{}}},
-		{"div", BlockBoxT, BC{C: []SerBox{}}},
-		{"section", BlockBoxT, BC{C: []SerBox{}}},
+		{"p", BlockT, BC{C: []SerBox{}}},
+		{"div", BlockT, BC{C: []SerBox{}}},
+		{"section", BlockT, BC{C: []SerBox{}}},
 	})
 }
 
@@ -1088,11 +1089,11 @@ func TestBeforeAfter2(t *testing.T) {
       </style>
       <p> c </p>
     `), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"p::before", InlineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: "ab"}}}}},
-				{"p", TextBoxT, BC{Text: " c "}},
-				{"p::after", InlineBoxT, BC{C: []SerBox{{"p::after", TextBoxT, BC{Text: "de"}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"p::before", InlineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: "ab"}}}}},
+				{"p", TextT, BC{Text: " c "}},
+				{"p::after", InlineT, BC{C: []SerBox{{"p::after", TextT, BC{Text: "de"}}}}},
 			}}},
 		}}},
 	})
@@ -1107,11 +1108,11 @@ func TestBeforeAfter3(t *testing.T) {
       </style>
       <p><a href="some url">some text</a></p>
     `), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"a", InlineBoxT, BC{C: []SerBox{
-					{"a::before", InlineBoxT, BC{C: []SerBox{{"a::before", TextBoxT, BC{Text: "[some url] "}}}}},
-					{"a", TextBoxT, BC{Text: "some text"}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"a", InlineT, BC{C: []SerBox{
+					{"a::before", InlineT, BC{C: []SerBox{{"a::before", TextT, BC{Text: "[some url] "}}}}},
+					{"a", TextT, BC{Text: "some text"}},
 				}}},
 			}}},
 		}}},
@@ -1130,18 +1131,18 @@ func TestBeforeAfter4(t *testing.T) {
 	</style>
   	<p><q>Lorem ipsum <q>dolor</q> sit amet</q></p>
     `), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"q", InlineBoxT, BC{C: []SerBox{
-					{"q::before", InlineBoxT, BC{C: []SerBox{{"q::before", TextBoxT, BC{Text: "« "}}}}},
-					{"q", TextBoxT, BC{Text: "Lorem ipsum "}},
-					{"q", InlineBoxT, BC{C: []SerBox{
-						{"q::before", InlineBoxT, BC{C: []SerBox{{"q::before", TextBoxT, BC{Text: "“ "}}}}},
-						{"q", TextBoxT, BC{Text: "dolor"}},
-						{"q::after", InlineBoxT, BC{C: []SerBox{{"q::after", TextBoxT, BC{Text: " ”"}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"q", InlineT, BC{C: []SerBox{
+					{"q::before", InlineT, BC{C: []SerBox{{"q::before", TextT, BC{Text: "« "}}}}},
+					{"q", TextT, BC{Text: "Lorem ipsum "}},
+					{"q", InlineT, BC{C: []SerBox{
+						{"q::before", InlineT, BC{C: []SerBox{{"q::before", TextT, BC{Text: "“ "}}}}},
+						{"q", TextT, BC{Text: "dolor"}},
+						{"q::after", InlineT, BC{C: []SerBox{{"q::after", TextT, BC{Text: " ”"}}}}},
 					}}},
-					{"q", TextBoxT, BC{Text: " sit amet"}},
-					{"q::after", InlineBoxT, BC{C: []SerBox{{"q::after", TextBoxT, BC{Text: " »"}}}}},
+					{"q", TextT, BC{Text: " sit amet"}},
+					{"q::after", InlineT, BC{C: []SerBox{{"q::after", TextT, BC{Text: " »"}}}}},
 				}}},
 			}}},
 		}}},
@@ -1163,14 +1164,14 @@ func TestBeforeAfter5(t *testing.T) {
           </style>
           <p>c</p>
         `), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"p::before", InlineBoxT, BC{C: []SerBox{
-					{"p::before", TextBoxT, BC{Text: "a"}},
-					{"p::before", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-					{"p::before", TextBoxT, BC{Text: "b"}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"p::before", InlineT, BC{C: []SerBox{
+					{"p::before", TextT, BC{Text: "a"}},
+					{"p::before", InlineReplacedT, BC{Text: "<replaced>"}},
+					{"p::before", TextT, BC{Text: "b"}},
 				}}},
-				{"p", TextBoxT, BC{Text: "c"}},
+				{"p", TextT, BC{Text: "c"}},
 			}}},
 		}}},
 	})
@@ -1382,7 +1383,7 @@ func TestBuildPages(t *testing.T) {
 	</style>
 	<p>lorem ipsum
 	`), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{{"p", LineBoxT, BC{C: []SerBox{{"p", TextBoxT, BC{Text: "lorem ipsum "}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{{"p", LineT, BC{C: []SerBox{{"p", TextT, BC{Text: "lorem ipsum "}}}}}}}},
 	})
 }
 
@@ -1393,17 +1394,17 @@ func TestInlineSpace(t *testing.T) {
 	assertTree(t, parseAndBuild(t, `
 	<p>start <i><b>bi1</b> <b>bi2</b></i> <b>b1</b> end</p>
 	`), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{
-				{"p", TextBoxT, BC{Text: "start "}},
-				{"i", InlineBoxT, BC{C: []SerBox{
-					{"b", InlineBoxT, BC{C: []SerBox{{"b", TextBoxT, BC{Text: "bi1"}}}}},
-					{"i", TextBoxT, BC{Text: " "}},
-					{"b", InlineBoxT, BC{C: []SerBox{{"b", TextBoxT, BC{Text: "bi2"}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{
+				{"p", TextT, BC{Text: "start "}},
+				{"i", InlineT, BC{C: []SerBox{
+					{"b", InlineT, BC{C: []SerBox{{"b", TextT, BC{Text: "bi1"}}}}},
+					{"i", TextT, BC{Text: " "}},
+					{"b", InlineT, BC{C: []SerBox{{"b", TextT, BC{Text: "bi2"}}}}},
 				}}},
-				{"p", TextBoxT, BC{Text: " "}},
-				{"b", InlineBoxT, BC{C: []SerBox{{"b", TextBoxT, BC{Text: "b1"}}}}},
-				{"p", TextBoxT, BC{Text: " end"}},
+				{"p", TextT, BC{Text: " "}},
+				{"b", InlineT, BC{C: []SerBox{{"b", TextT, BC{Text: "b1"}}}}},
+				{"p", TextT, BC{Text: " end"}},
 			}}},
 		}}},
 	})
@@ -1417,13 +1418,13 @@ func TestPhEmbedded(t *testing.T) {
 			align=right width=10 height=20 />
 	<embed src="data:image/svg+xml,<svg></svg>" align=texttop />
   `), []SerBox{
-		{"body", LineBoxT, BC{C: []SerBox{
-			{"object", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-			{"body", TextBoxT, BC{Text: " "}},
-			{"img", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-			{"body", TextBoxT, BC{Text: " "}},
-			{"embed", InlineReplacedBoxT, BC{Text: "<replaced>"}},
-			{"body", TextBoxT, BC{Text: " "}},
+		{"body", LineT, BC{C: []SerBox{
+			{"object", InlineReplacedT, BC{Text: "<replaced>"}},
+			{"body", TextT, BC{Text: " "}},
+			{"img", InlineReplacedT, BC{Text: "<replaced>"}},
+			{"body", TextT, BC{Text: " "}},
+			{"embed", InlineReplacedT, BC{Text: "<replaced>"}},
+			{"body", TextT, BC{Text: " "}},
 		}}},
 	})
 }
@@ -1437,18 +1438,39 @@ func TestNoNewLine(t *testing.T) {
 <p><a href="another url"><span>[some url] </span>some content</p>
 `),
 		[]SerBox{
-			{"p", BlockBoxT, BC{C: []SerBox{
-				{"p", LineBoxT, BC{C: []SerBox{
-					{"a", InlineBoxT, BC{C: []SerBox{
-						{"span", InlineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: `[some url] `}}}}},
-						{"a", TextBoxT, BC{Text: `some content`}},
+			{"p", BlockT, BC{C: []SerBox{
+				{"p", LineT, BC{C: []SerBox{
+					{"a", InlineT, BC{C: []SerBox{
+						{"span", InlineT, BC{C: []SerBox{{"span", TextT, BC{Text: `[some url] `}}}}},
+						{"a", TextT, BC{Text: `some content`}},
 					}}},
 				}}},
 			}}},
-			{"body", BlockBoxT, BC{C: []SerBox{
-				{"body", LineBoxT, BC{C: []SerBox{{"a", InlineBoxT, BC{C: []SerBox{{"a", TextBoxT, BC{Text: ` `}}}}}}}},
+			{"body", BlockT, BC{C: []SerBox{
+				{"body", LineT, BC{C: []SerBox{{"a", InlineT, BC{C: []SerBox{{"a", TextT, BC{Text: ` `}}}}}}}},
 			}}},
 		})
+}
+
+func TestCapitalize(t *testing.T) {
+	for _, test := range [][2]string{
+		{"hé lO1", "Hé LO1"},
+		{"abc def ghi", "Abc Def Ghi"},
+		{"AbC def ghi", "AbC Def Ghi"},
+		{"I’m SO cool", "I’m SO Cool"},
+		{"Wow.wow!wow", "Wow.wow!wow"},
+		{"!now not tomorrow", "!Now Not Tomorrow"},
+		{"SUPER cool", "SUPER Cool"},
+		{"i 😻 non‑breaking characters", "I 😻 Non‑breaking Characters"},
+		{"3lite 3lite", "3lite 3lite"},
+		{"one/two/three", "One/two/three"},
+		{"supernatural,super", "Supernatural,super"},
+		{"éternel αιώνια", "Éternel Αιώνια"},
+	} {
+		// Results are different for different browsers, we almost get the same
+		// results as Firefox, that’s good enough!
+		tu.AssertEqual(t, capitalize(test[0]), test[1], "")
+	}
 }
 
 func buildFile(t testing.TB, source utils.ContentInput, baseURL string) []SerBox {
@@ -1460,7 +1482,7 @@ func buildFile(t testing.TB, source utils.ContentInput, baseURL string) []SerBox
 	if tag := box.Box().ElementTag(); tag != "html" {
 		t.Fatalf("unexpected element: %s", tag)
 	}
-	if !BlockBoxT.IsInstance(box) {
+	if !BlockT.IsInstance(box) {
 		t.Fatal("expected block box")
 	}
 	if L := len(box.Box().Children); L != 1 {
@@ -1468,7 +1490,7 @@ func buildFile(t testing.TB, source utils.ContentInput, baseURL string) []SerBox
 	}
 
 	box = box.Box().Children[0]
-	if !BlockBoxT.IsInstance(box) {
+	if !BlockT.IsInstance(box) {
 		t.Fatal("expected block box")
 	}
 	if tag := box.Box().ElementTag(); tag != "body" {

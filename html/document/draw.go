@@ -234,7 +234,7 @@ func (ctx drawContext) drawBoxBackgroundAndBorder(box Box) error {
 	return nil
 }
 
-// Draw a ``stackingContext`` on ``context``.
+// Draw a “stackingContext“ on “context“.
 func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 	// See http://www.w3.org/TR/CSS2/zindex.html
 	ctx.dst.OnNewStack(func() {
@@ -290,16 +290,16 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		// Point 1 is done in drawPage
 
 		// Point 2
-		if bo.BlockBoxT.IsInstance(box_) || bo.MarginBoxT.IsInstance(box_) ||
-			bo.InlineBlockBoxT.IsInstance(box_) || bo.TableCellBoxT.IsInstance(box_) ||
-			bo.FlexContainerBoxT.IsInstance(box_) {
+		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
+			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
+			bo.FlexContainerT.IsInstance(box_) {
 			// The canvas background was removed by setCanvasBackground
 			ctx.drawBoxBackgroundAndBorder(box_)
 		}
 
 		ctx.dst.OnNewStack(func() {
 			// dont clip the PageBox, see #35
-			if box.Style.GetOverflow() != "visible" && !bo.PageBoxT.IsInstance(box_) {
+			if box.Style.GetOverflow() != "visible" && !bo.PageT.IsInstance(box_) {
 				// Only clip the content and the children:
 				// - the background is already clipped
 				// - the border must *not* be clipped
@@ -323,7 +323,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			}
 
 			// Point 6
-			if bo.InlineBoxT.IsInstance(box_) {
+			if bo.InlineT.IsInstance(box_) {
 				ctx.drawInlineLevel(stackingContext.page, box_, 0, "clip", pr.TaggedString{Tag: pr.None})
 			}
 
@@ -333,7 +333,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 					ctx.drawReplacedbox(blockRep)
 				} else {
 					for _, child := range block.Box().Children {
-						if bo.LineBoxT.IsInstance(child) {
+						if bo.LineT.IsInstance(child) {
 							ctx.drawInlineLevel(stackingContext.page, child, 0, "clip", pr.TaggedString{Tag: pr.None})
 						}
 					}
@@ -367,7 +367,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 }
 
 // Draw the path of the border radius box.
-// ``widths`` is a tuple of the inner widths (top, right, bottom, left) from
+// “widths“ is a tuple of the inner widths (top, right, bottom, left) from
 // the border box. Radii are adjusted from these values. Default is (0, 0, 0,
 // 0).
 func roundedBoxPath(context backend.Canvas, radii bo.RoundedBox) {
@@ -423,7 +423,7 @@ func (ctx drawContext) drawBackgroundDefaut(bg *bo.Background) {
 }
 
 // Draw the background color and image
-// If ``clipBox`` is set to ``false``, the background is not clipped to the
+// If “clipBox“ is set to “false“, the background is not clipped to the
 // border box of the background, but only to the painting area
 // clipBox=true bleed=nil marks=()
 func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Bleed, marks pr.Marks) {
@@ -516,9 +516,9 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 func (ctx drawContext) drawTableBackgrounds(table_ bo.TableBoxITF) {
 	table := table_.Table()
 	for _, columnGroup := range table.ColumnGroups {
-		ctx.drawBackgroundDefaut(columnGroup.Box().Background)
+		ctx.drawBackgroundDefaut(columnGroup.Background)
 
-		for _, column := range columnGroup.Box().Children {
+		for _, column := range columnGroup.Children {
 			ctx.drawBackgroundDefaut(column.Box().Background)
 		}
 	}
@@ -645,7 +645,7 @@ func (ctx drawContext) drawBorder(box_ Box) {
 
 	// Draw column borders.
 	drawColumnBorder := func() {
-		columns := bo.BlockContainerBoxT.IsInstance(box_) && (box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto")
+		columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto")
 		if crw := box.Style.GetColumnRuleWidth(); columns && !crw.IsNone() {
 			borderWidths := pr.Rectangle{0, 0, 0, crw.Value}
 			for _, child := range box.Children[1:] {
@@ -727,8 +727,8 @@ func (ctx drawContext) drawBorder(box_ Box) {
 // The strategy is to remove the zones not needed because of the style or the
 // side before painting.
 func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side string,
-	borderBox pr.Rectangle, borderWidths *pr.Rectangle, radii *[4]bo.Point) {
-
+	borderBox pr.Rectangle, borderWidths *pr.Rectangle, radii *[4]bo.Point,
+) {
 	bbx, bby, bbw, bbh := borderBox.Unpack()
 	var tlh, tlv, trh, trv, brh, brv, blh, blv fl
 	if radii != nil {
@@ -1004,7 +1004,7 @@ func (ctx drawContext) drawOutlines(box_ Box) {
 		}
 	}
 
-	if bo.ParentBoxT.IsInstance(box_) {
+	if bo.ParentT.IsInstance(box_) {
 		for _, child := range box.Children {
 			if child.IsClassicalBox() {
 				ctx.drawOutlines(child)
@@ -1221,7 +1221,7 @@ func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 // offsetX=0, textOverflow="clip"
 func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, textOverflow string, blockEllipsis pr.TaggedString) {
 	if stackingContext, ok := box_.(StackingContext); ok {
-		if !(bo.InlineBlockBoxT.IsInstance(stackingContext.box) || bo.InlineFlexBoxT.IsInstance(stackingContext.box)) {
+		if !(bo.InlineBlockT.IsInstance(stackingContext.box) || bo.InlineFlexT.IsInstance(stackingContext.box)) {
 			panic(fmt.Sprintf("expected InlineBlock or InlineFlex, got %v", stackingContext.box))
 		}
 		ctx.drawStackingContext(stackingContext)
@@ -1258,8 +1258,9 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 	}
 }
 
-// Draw ``textbox`` to a ``cairo.Context`` from ``PangoCairo.Context``
-// 	(offsetX=0,textOverflow="clip")
+// Draw “textbox“ to a “cairo.Context“ from “PangoCairo.Context“
+//
+//	(offsetX=0,textOverflow="clip")
 func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow string, blockEllipsis pr.TaggedString) {
 	if textbox.Style.GetVisibility() != "visible" {
 		return
@@ -1326,7 +1327,7 @@ func (ctx drawContext) drawWave(x, y, width, offsetX, radius pr.Fl) {
 	}
 }
 
-// Draw text-decoration of ``textbox`` to a ``context``.
+// Draw text-decoration of “textbox“ to a “context“.
 func (ctx drawContext) drawTextDecoration(textbox *bo.TextBox, offsetX, offsetY, thickness pr.Fl, color Color) {
 	style := textbox.Style.GetTextDecorationStyle()
 

@@ -70,6 +70,7 @@ type Bool bool
 
 func (Bool) isMaybeBool() {}
 
+// MaybeBool stores a tree state boolean : true, false or nil
 type MaybeBool interface {
 	isMaybeBool()
 }

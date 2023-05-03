@@ -117,6 +117,8 @@ var (
 
 	// Do not list shorthand properties here as we handle them before inheritance.
 	//
+	// Values inherited but not applicable to print are not included.
+	//
 	// text_decoration is not a really inherited, see
 	// http://www.w3.org/TR/CSS2/text.html#propdef-text-decoration
 	//
@@ -143,6 +145,7 @@ var (
 		"font_variant_ligatures",
 		"font_variant_numeric",
 		"font_variant_position",
+		"font_variation_settings",
 		"font_weight",
 		"hyphens",
 		"hyphenate_character",
@@ -163,9 +166,6 @@ var (
 		"tab_size",
 		"text_align_all",
 		"text_align_last",
-		"text_decoration_line",
-		"text_decoration_color",
-		"text_decoration_style",
 		"text_indent",
 		"text_transform",
 		"visibility",

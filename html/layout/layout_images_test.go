@@ -20,8 +20,11 @@ func getImg(t *testing.T, input string) (Box, Box) {
 	page := renderOnePage(t, input)
 	html := page.Box().Children[0]
 	body := html.Box().Children[0]
-	line := body.Box().Children[0]
-	img := line.Box().Children[0]
+	var img Box
+	if len(body.Box().Children) != 0 {
+		line := body.Box().Children[0]
+		img = line.Box().Children[0]
+	}
 	return body, img
 }
 
@@ -84,7 +87,7 @@ func TestImages3(t *testing.T) {
 		capt := tu.CaptureLogs()
 		_, img := getImg(t, fmt.Sprintf(`<img src="%s" alt="invalid image">`, urlString))
 		tu.AssertEqual(t, len(capt.Logs()), 1, urlString)
-		tu.AssertEqual(t, img.Type(), bo.InlineBoxT, urlString) // not a replaced box
+		tu.AssertEqual(t, img.Type(), bo.InlineT, urlString) // not a replaced box
 		text := img.Box().Children[0]
 		tu.AssertEqual(t, text.(*bo.TextBox).Text, "invalid image", "")
 	}
@@ -357,6 +360,29 @@ func TestImages18(t *testing.T) {
 			">`)
 }
 
+func TestImages19(t *testing.T) {
+	for _, test := range []struct {
+		html  string
+		types []bo.BoxType
+	}{
+		{"<embed>", nil},
+		{"<embed src='unknown'>", nil},
+		{"<object></object>", nil},
+		{"<object data='unknown'></object>", nil},
+		{"<object>abc</object>", []bo.BoxType{bo.TextT}},
+		{"<object data='unknown'>abc</object>", []bo.BoxType{bo.TextT}},
+	} {
+		_, img := getImg(t, test.html)
+		var types []bo.BoxType
+		if img != nil {
+			for _, child := range img.Box().Children {
+				types = append(types, child.Type())
+			}
+		}
+		tu.AssertEqual(t, types, test.types, "")
+	}
+}
+
 func approxEqual(t *testing.T, got, exp pr.Fl, context string) {
 	t.Helper()
 	const float32EqualityThreshold = 1e-3
@@ -393,7 +419,8 @@ func TestLinearGradient(t *testing.T) {
 
 	// type="linear" positions=[0, 1] colors = [blue, lime]
 	layout := func(gradientCss string, type_ string, init [6]pr.Fl,
-		positions []pr.Fl, colors []parser.RGBA) {
+		positions []pr.Fl, colors []parser.RGBA,
+	) {
 		page := renderOnePage(t, "<style>@page { background: "+gradientCss)
 		layer := page.Background.Layers[0]
 		result := layer.Image.(images.LinearGradient).Layout(400, 300)
@@ -449,7 +476,8 @@ func TestRadialGradient(t *testing.T) {
 
 	// type="radial" positions=[0, 1] colors = [blue, lime], 1
 	layout := func(gradientCss string, type_ string, init [6]pr.Fl,
-		positions []pr.Fl, colors []parser.RGBA, scaleY pr.Fl) {
+		positions []pr.Fl, colors []parser.RGBA, scaleY pr.Fl,
+	) {
 		page := renderOnePage(t, "<style>@page { background: "+gradientCss)
 		layer := page.Background.Layers[0]
 		result := layer.Image.(images.RadialGradient).Layout(400, 300)

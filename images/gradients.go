@@ -16,7 +16,7 @@ import (
 // Gradient line size: distance between the starting point and ending point.
 // Positions: list of Dimension in px or % (possibliy zero)
 // 0 is the starting point, 1 the ending point.
-// http://dev.w3.org/csswg/css-images-3/#color-stop-syntax
+// http://drafts.csswg.org/csswg/css-images-3/#color-stop-syntax
 // Return processed color stops, as a list of floats in px.
 func processColorStops(gradientLineSize pr.Float, positions_ []pr.Dimension) []pr.Fl {
 	L := len(positions_)
@@ -63,7 +63,7 @@ func processColorStops(gradientLineSize pr.Float, positions_ []pr.Dimension) []p
 	return out
 }
 
-// http://dev.w3.org/csswg/css-images-3/#find-the-average-color-of-a-gradient
+// http://drafts.csswg.org/csswg/css-images-3/#find-the-average-color-of-a-gradient
 func gradientAverageColor(colors []Color, positions []pr.Fl) Color {
 	nbStops := len(positions)
 	if nbStops <= 1 || nbStops != len(colors) {
@@ -267,7 +267,7 @@ func NewRadialGradient(from pr.RadialGradient) RadialGradient {
 }
 
 func handleDegenerateRadial(sizeX, sizeY pr.Float) (pr.Float, pr.Float) {
-	// http://dev.w3.org/csswg/css-images-3/#degenerate-radials
+	// http://drafts.csswg.org/csswg/css-images-3/#degenerate-radials
 	if sizeX == 0 && sizeY == 0 {
 		sizeX = 1e-7
 		sizeY = 1e-7

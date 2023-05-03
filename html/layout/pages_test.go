@@ -13,7 +13,7 @@ import (
 
 // Tests for pages layout.
 
-// Test the layout for ``@page`` properties.
+// Test the layout for “@page“ properties.
 func TestPageSizeBasic(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
@@ -175,6 +175,42 @@ func TestPageBreaks(t *testing.T) {
 	}
 }
 
+func TestPageBreaksBoxSplit(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// If floats round the wrong way, a block that gets filled to the end of a
+	// page due to breaking over the page may be forced onto the next page
+	// because it is slightly taller than can fit on the previous page, even if
+	// it wouldn't have been without being filled. These numbers aren't ideal,
+	// but they do seem to trigger the issue.
+	page1, page2 := renderTwoPages(t, `
+      <style>
+        @page { size: 982.4146981627297px; margin: 0 }
+        div { font-size: 5px; height: 200.0123456789px; margin: 0; padding: 0 }
+        figure { margin: 0; padding: 0 }
+      </style>
+      <div>text</div>
+      <div>text</div><!-- no page break here -->
+      <section>
+        <div>line1</div>
+        <div>line2</div><!-- page break here -->
+        <div>line3</div>
+        <div>line4</div>
+      </section>
+     `)
+	html := page1.Box().Children[0]
+	body := html.Box().Children[0]
+	tu.AssertEqual(t, len(body.Box().Children), 3, "")
+	_, _, section := unpack3(body)
+	tu.AssertEqual(t, len(section.Box().Children), 2, "")
+
+	html = page2.Box().Children[0]
+	body = html.Box().Children[0]
+	section = body.Box().Children[0]
+	tu.AssertEqual(t, len(section.Box().Children), 2, "")
+}
+
 func TestPageBreaksComplex1(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
@@ -244,7 +280,6 @@ func TestPageBreaksComplex2(t *testing.T) {
       <style>
         @page { size: 140px; margin: 0 }
         img { height: 25px; vertical-align: top }
-        p { orphans: 1; widows: 1 }
       </style>
       <img src=pattern.png>
       <div>
@@ -280,7 +315,6 @@ func TestPageBreaksComplex3(t *testing.T) {
       <style>
         @page { size: 140px; margin: 0 }
         img { height: 25px; vertical-align: top }
-        p { orphans: 1; widows: 1 }
       </style>
       <img src=pattern.png><!-- page break here -->
       <div>
@@ -316,7 +350,6 @@ func TestPageBreaksComplex4(t *testing.T) {
       <style>
         @page { size: 140px; margin: 0 }
         img { height: 25px; vertical-align: top }
-        p { orphans: 1; widows: 1 }
       </style>
       <img src=pattern.png><!-- page break here -->
       <div>
@@ -356,7 +389,6 @@ func TestPageBreaksComplex5(t *testing.T) {
       <style>
         @page { size: 100px; margin: 0 }
         img { height: 30px; display: block; }
-        p { orphans: 1; widows: 1 }
       </style>
       <div>
         <img src=pattern.png style="page-break-after: always">
@@ -393,7 +425,6 @@ func TestPageBreaksComplex6(t *testing.T) {
       <style>
         @page { size: 100px; margin: 0 }
         img { height: 30px; display: block; }
-        p { orphans: 1; widows: 1 }
       </style>
       <div>
         <img src=pattern.png style="page-break-after: always">
@@ -594,6 +625,37 @@ func TestRectoVersoBreak(t *testing.T) {
       <p>def</p>
     `, data.direction, data.pageBreak))
 		tu.AssertEqual(t, len(pages), data.pagesNumber, "len")
+	}
+}
+
+func TestRectoVersoBreakRoot(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	for _, test := range []struct {
+		direction string
+		pageBreak string
+		width     int
+	}{
+		{"ltr", "recto", 5},
+		{"ltr", "verso", 4},
+		{"rtl", "recto", 4},
+		{"rtl", "verso", 5},
+		{"ltr", "right", 5},
+		{"ltr", "left", 4},
+		{"rtl", "right", 5},
+		{"rtl", "left", 4},
+	} {
+
+		page := renderOnePage(t, fmt.Sprintf(`
+		<style>
+        @page:left { size: 4px /* for 'left' */ }
+        @page:right { size: 5px /* for 'right' */ }
+        html { direction: %s; break-before: %s }
+		</style>
+		abc
+		`, test.direction, test.pageBreak))
+		tu.AssertEqual(t, page.Width, pr.Float(test.width), "")
 	}
 }
 
@@ -1380,7 +1442,54 @@ func TestMarginBoxesVerticalAlign(t *testing.T) {
 	tu.AssertEqual(t, line3.Box().PositionY, pr.Float(83), "line3")
 }
 
+func textFromBoxes(boxes []Box) string {
+	var s strings.Builder
+	for _, box := range boxes {
+		if box, ok := box.(*bo.TextBox); ok {
+			s.WriteString(box.Text)
+		}
+	}
+	return s.String()
+}
+
 func TestMarginBoxesElement(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	pages := renderPages(t, `
+      <style>
+        @page {
+          counter-increment: count;
+          counter-reset: page pages;
+          margin: 50px;
+          size: 200px;
+          @bottom-center {
+            content: counter(page) ' of ' counter(pages)
+                     ' (' counter(count) ')';
+          }
+        }
+        h1 {
+          height: 40px;
+        }
+      </style>
+      <h1>test1</h1>
+      <h1>test2</h1>
+      <h1>test3</h1>
+      <h1>test4</h1>
+      <h1>test5</h1>
+      <h1>test6</h1>
+    `)
+	footer1Text := textFromBoxes(bo.Descendants(pages[0].Box().Children[1]))
+	tu.AssertEqual(t, footer1Text, "0 of 3 (1)", "")
+
+	footer2Text := textFromBoxes(bo.Descendants(pages[1].Box().Children[1]))
+	tu.AssertEqual(t, footer2Text, "0 of 3 (2)", "")
+
+	footer3Text := textFromBoxes(bo.Descendants(pages[2].Box().Children[1]))
+	tu.AssertEqual(t, footer3Text, "0 of 3 (3)", "")
+}
+
+func TestMarginBoxesRunningElement(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
@@ -1396,6 +1505,9 @@ func TestMarginBoxesElement(t *testing.T) {
             content: element(footer);
           }
         }
+		body {
+			font-size: 1px
+		}
         h1 {
           height: 40px;
         }
@@ -1449,7 +1561,6 @@ func TestRunningElements(t *testing.T) {
 		argument string
 		texts    [5]string
 	}{
-
 		// TODO: start doesn’t work because running elements are removed from the
 		// original tree, and the current implentation in
 		// layout.getRunningElementFor uses the tree to know if it’s at the
@@ -1601,5 +1712,51 @@ func TestRunningAbsolute(t *testing.T) {
         }
       </style>
       <footer>Hello!<p>Bonjour!</p></footer>
+    `)
+}
+
+func TestRunningFlex(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Test regression
+	_ = renderPages(t, `
+      <style>
+        footer {
+          display: flex;
+          position: running(footer);
+        }
+        @page {
+          @bottom-center {
+            content: element(footer);
+          }
+        }
+      </style>
+      <footer>
+        Hello!
+      </footer>
+    `)
+}
+
+func TestRunningFloat(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Test regression
+	_ = renderPages(t, `
+      <style>
+        footer {
+          float: left;
+          position: running(footer);
+        }
+        @page {
+          @bottom-center {
+            content: element(footer);
+          }
+        }
+      </style>
+      <footer>
+        Hello!
+      </footer>
     `)
 }

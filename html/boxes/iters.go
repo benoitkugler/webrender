@@ -28,3 +28,19 @@ func collectBoxes(iter boxIterator) []Box {
 	}
 	return out
 }
+
+func collectTableColumnGroupBoxs(iter boxIterator) []*TableColumnGroupBox {
+	var out []*TableColumnGroupBox
+	for iter.Next() {
+		out = append(out, iter.Box().(*TableColumnGroupBox))
+	}
+	return out
+}
+
+func collectTableRowGroupBoxs(iter boxIterator) []*TableRowGroupBox {
+	var out []*TableRowGroupBox
+	for iter.Next() {
+		out = append(out, iter.Box().(*TableRowGroupBox))
+	}
+	return out
+}

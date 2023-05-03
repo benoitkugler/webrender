@@ -120,3 +120,33 @@ func TestListsPageBreak(t *testing.T) {
 		tu.AssertEqual(t, len(li.Box().Children), 2, "len")
 	}
 }
+
+func TestListsPageBreakMargin(t *testing.T) {
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1058
+	pages := renderPages(t, `
+      <style>
+        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
+        @page { size: 300px 100px }
+        ul { font-size: 30px; font-family: weasyprint; margin: 0 }
+        p { margin: 10px 0 }
+      </style>
+      <ul>
+        <li><p>a</p></li>
+        <li><p>a</p></li>
+        <li><p>a</p></li>
+        <li><p>a</p></li>
+      </ul>
+   `)
+	tu.AssertEqual(t, len(pages), 2, "")
+	for _, page := range pages {
+		html := page.Box().Children[0]
+		body := html.Box().Children[0]
+		ul := body.Box().Children[0]
+		tu.AssertEqual(t, len(ul.Box().Children), 2, "")
+		for _, li := range ul.Box().Children {
+			tu.AssertEqual(t, len(li.Box().Children), 2, "")
+			tu.AssertEqual(t, li.Box().Children[0].Box().PositionY,
+				li.Box().Children[1].Box().Children[0].Box().PositionY, "")
+		}
+	}
+}

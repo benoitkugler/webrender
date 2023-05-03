@@ -62,6 +62,14 @@ func renderOnePage(t *testing.T, htmlContent string) *bo.PageBox {
 	return pages[0]
 }
 
+func renderTwoPages(t *testing.T, htmlContent string) (page1, page2 *bo.PageBox) {
+	pages := renderPages(t, htmlContent)
+	if len(pages) != 2 {
+		t.Fatalf("expected two pages, got %v", pages)
+	}
+	return pages[0], pages[1]
+}
+
 // unpack 2 children
 func unpack2(box Box) (c1, c2 Box) {
 	return box.Box().Children[0], box.Box().Children[1]
@@ -95,6 +103,55 @@ func unpack7(box Box) (c1, c2, c3, c4, c5, c6, c7 Box) {
 // unpack 8 children
 func unpack8(box Box) (c1, c2, c3, c4, c5, c6, c7, c8 Box) {
 	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6], box.Box().Children[7]
+}
+
+func asBoxes(pages []*bo.PageBox) []Box {
+	out := make([]Box, len(pages))
+	for i, p := range pages {
+		out[i] = p
+	}
+	return out
+}
+
+type nodePos []int
+
+func (np nodePos) isLess(other nodePos) bool {
+	for i := 0; i < len(np) && i < len(other); i++ {
+		if np[i] < other[i] {
+			return true
+		} else if np[i] > other[i] {
+			return false
+		} else {
+			continue
+		}
+	}
+	return len(np) < len(other)
+}
+
+type nodePosList []nodePos
+
+func (a nodePosList) Len() int           { return len(a) }
+func (a nodePosList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a nodePosList) Less(i, j int) bool { return a[i].isLess(a[j]) }
+
+// Return a list identifying the first matching box's tree position.
+//
+// Given a list of Boxes, this function returns a list containing the first
+// (depth-first) Box that the matcher function identifies. This list can then
+// be compared to another similarly-obtained list to assert that one Box is in
+// the document tree before or after another.
+func treePosition(boxList []Box, matcher func(Box) bool) nodePos {
+	for i, box := range boxList {
+		if matcher(box) {
+			return []int{i}
+		} else {
+			position := treePosition(box.Box().Children, matcher)
+			if len(position) != 0 {
+				return append([]int{i}, position...)
+			}
+		}
+	}
+	return nil
 }
 
 func TestMarginBoxes(t *testing.T) {
@@ -435,6 +492,44 @@ func TestMarginBoxStringSet9(t *testing.T) {
 	textBox := lineBox.Box().Children[0].(*bo.TextBox)
 
 	tu.AssertEqual(t, textBox.Text, "first assignment second assignment", "textBox")
+}
+
+func TestMarginBoxStringSet10(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	pages := renderPages(t, `
+	<style>
+		@page { @top-left  { content: '[' string(p, start) ']' } }
+		p { string-set: p content(); page-break-after: always }
+	</style>
+	<article></article>
+	<p>1</p>
+	<article></article>
+	<p>2</p>
+	<p>3</p>
+	<article></article>
+	`)
+	if len(pages) != 4 {
+		t.Fatalf("expected 4 pages, got %v", pages)
+	}
+	page1, page2, page3, page4 := pages[0], pages[1], pages[2], pages[3]
+
+	topLeft := page1.Children[1]
+	leftLineBox := topLeft.Box().Children[0]
+	assertText(t, leftLineBox.Box().Children[0], "[]")
+
+	topLeft = page2.Children[1]
+	leftLineBox = topLeft.Box().Children[0]
+	assertText(t, leftLineBox.Box().Children[0], "[1]")
+
+	topLeft = page3.Children[1]
+	leftLineBox = topLeft.Box().Children[0]
+	assertText(t, leftLineBox.Box().Children[0], "[3]")
+
+	topLeft = page4.Children[1]
+	leftLineBox = topLeft.Box().Children[0]
+	assertText(t, leftLineBox.Box().Children[0], "[3]")
 }
 
 // Test page-based counters.

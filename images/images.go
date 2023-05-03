@@ -51,13 +51,13 @@ func NewCache() Cache { return make(Cache) }
 
 // Gets an image from an image URI.
 // In case of an error, a log is printed and nil is returned
-func GetImageFromUri(cache Cache, fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMimeType string) Image {
+func GetImageFromUri(cache Cache, fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMimeType string, orientation pr.SBoolFloat) Image {
 	res, in := cache[url]
 	if in {
 		return res
 	}
 
-	img, err := getImageFromUri(fetcher, optimizeSize, url, forcedMimeType)
+	img, err := getImageFromUri(fetcher, optimizeSize, url, forcedMimeType, orientation)
 
 	cache[url] = img
 
@@ -68,7 +68,7 @@ func GetImageFromUri(cache Cache, fetcher utils.UrlFetcher, optimizeSize bool, u
 	return img
 }
 
-func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMimeType string) (Image, error) {
+func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMimeType string, orientation pr.SBoolFloat) (Image, error) {
 	var (
 		img     Image
 		err     error
@@ -115,7 +115,7 @@ func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMim
 			}
 		} else {
 			content.Content.Seek(0, io.SeekStart)
-			img = newRasterImage(imageConfig, content.Content, "image/"+imageFormat, utils.Hash(url), optimizeSize)
+			img = newRasterImage(imageConfig, content.Content, "image/"+imageFormat, utils.Hash(url), optimizeSize, orientation)
 		}
 	}
 
@@ -131,7 +131,7 @@ type rasterImage struct {
 	optimizeSize    bool
 }
 
-func newRasterImage(imageConfig image.Config, content io.Reader, mimeType string, id int, optimizeSize bool) rasterImage {
+func newRasterImage(imageConfig image.Config, content io.Reader, mimeType string, id int, optimizeSize bool, orientation pr.SBoolFloat) rasterImage {
 	self := rasterImage{}
 	self.optimizeSize = optimizeSize
 	self.image.Content = content

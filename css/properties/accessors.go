@@ -30,6 +30,13 @@ func (s Properties) SetAnchor(v String) {
 	s["anchor"] = v
 }
 
+func (s Properties) GetAppearance() String {
+	return s["appearance"].(String)
+}
+func (s Properties) SetAppearance(v String) {
+	s["appearance"] = v
+}
+
 func (s Properties) GetBackgroundAttachment() Strings {
 	return s["background_attachment"].(Strings)
 }
@@ -590,6 +597,13 @@ func (s Properties) SetFontVariantPosition(v String) {
 	s["font_variant_position"] = v
 }
 
+func (s Properties) GetFontVariationSettings() SFloatStrings {
+	return s["font_variation_settings"].(SFloatStrings)
+}
+func (s Properties) SetFontVariationSettings(v SFloatStrings) {
+	s["font_variation_settings"] = v
+}
+
 func (s Properties) GetFontWeight() IntString {
 	return s["font_weight"].(IntString)
 }
@@ -644,6 +658,13 @@ func (s Properties) GetHyphens() String {
 }
 func (s Properties) SetHyphens(v String) {
 	s["hyphens"] = v
+}
+
+func (s Properties) GetImageOrientation() SBoolFloat {
+	return s["image_orientation"].(SBoolFloat)
+}
+func (s Properties) SetImageOrientation(v SBoolFloat) {
+	s["image_orientation"] = v
 }
 
 func (s Properties) GetImageRendering() String {
@@ -1107,6 +1128,9 @@ type StyleAccessor interface {
 	GetAnchor() String
 	SetAnchor(v String)
 
+	GetAppearance() String
+	SetAppearance(v String)
+
 	GetBackgroundAttachment() Strings
 	SetBackgroundAttachment(v Strings)
 
@@ -1347,6 +1371,9 @@ type StyleAccessor interface {
 	GetFontVariantPosition() String
 	SetFontVariantPosition(v String)
 
+	GetFontVariationSettings() SFloatStrings
+	SetFontVariationSettings(v SFloatStrings)
+
 	GetFontWeight() IntString
 	SetFontWeight(v IntString)
 
@@ -1370,6 +1397,9 @@ type StyleAccessor interface {
 
 	GetHyphens() String
 	SetHyphens(v String)
+
+	GetImageOrientation() SBoolFloat
+	SetImageOrientation(v SBoolFloat)
 
 	GetImageRendering() String
 	SetImageRendering(v String)

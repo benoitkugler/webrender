@@ -10,6 +10,8 @@ import (
 	"github.com/benoitkugler/webrender/html/tree"
 )
 
+// ---------------------- Absolutely positioned boxes management. ----------------
+
 type AliasBox = bo.Box
 
 // AbsolutePlaceholder is left where an absolutely-positioned box was taken out of the flow.
@@ -74,15 +76,14 @@ var absoluteWidth = handleMinMaxWidth(_absoluteWidth)
 // @handleMinMaxWidth
 // containingBlock must be block
 func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containingBlock) (bool, pr.Float) {
-	// http://www.w3.org/TR/CSS2/visudet.html#abs-replaced-width
+	// https://www.w3.org/TR/CSS2/visudet.html#abs-replaced-width
 	box := box_.Box()
-	// These names are waaay too long
+
+	ltr := box.Style.ParentStyle() == nil || box.Style.ParentStyle().GetDirection() == "ltr"
+	paddingsBorders := box.PaddingLeft.V() + box.PaddingRight.V() + box.BorderLeftWidth.V() + box.BorderRightWidth.V()
+
 	marginL := box.MarginLeft
 	marginR := box.MarginRight
-	paddingL := box.PaddingLeft
-	paddingR := box.PaddingRight
-	borderL := box.BorderLeftWidth
-	borderR := box.BorderRightWidth
 	width := box.Width
 	left := box.Left
 	right := box.Right
@@ -90,7 +91,6 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 	cb_ := containingBlock.(block)
 	cbX, cbWidth := cb_.X, cb_.Width
 
-	paddingPlusBordersX := paddingL.V() + paddingR.V() + borderL.V() + borderR.V()
 	var translateX pr.Float = 0
 	translateBoxWidth := false
 	defaultTranslateX := cbX - box.PositionX
@@ -101,24 +101,35 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 		if marginR == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
-		availableWidth := cbWidth - (paddingPlusBordersX + box.MarginLeft.V() + box.MarginRight.V())
+		availableWidth := cbWidth - (paddingsBorders + box.MarginLeft.V() + box.MarginRight.V())
 		box.Width = shrinkToFit(context, box_, availableWidth)
+		if !ltr {
+			translateBoxWidth = true
+			translateX = defaultTranslateX + availableWidth
+		}
 	} else if left != pr.AutoF && right != pr.AutoF && width != pr.AutoF {
-		widthForMargins := cbWidth - (right.V() + left.V() + width.V() + paddingPlusBordersX)
+		widthForMargins := cbWidth - (right.V() + left.V() + width.V() + paddingsBorders)
 		if marginL == pr.AutoF && marginR == pr.AutoF {
-			if width.V()+paddingPlusBordersX+right.V()+left.V() <= cbWidth {
+			if width.V()+paddingsBorders+right.V()+left.V() <= cbWidth {
 				box.MarginLeft = widthForMargins / 2
 				box.MarginRight = box.MarginLeft
 			} else {
-				box.MarginLeft = pr.Float(0)
-				box.MarginRight = widthForMargins
+				if ltr {
+					box.MarginLeft = pr.Float(0)
+					box.MarginRight = widthForMargins
+				} else {
+					box.MarginLeft = widthForMargins
+					box.MarginRight = pr.Float(0)
+				}
 			}
 		} else if marginL == pr.AutoF {
 			box.MarginLeft = widthForMargins
 		} else if marginR == pr.AutoF {
 			box.MarginRight = widthForMargins
-		} else {
+		} else if ltr {
 			box.MarginRight = widthForMargins
+		} else {
+			box.MarginLeft = widthForMargins
 		}
 		translateX = left.V() + defaultTranslateX
 	} else {
@@ -128,13 +139,17 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 		if marginR == pr.AutoF {
 			box.MarginRight = pr.Float(0)
 		}
-		spacing := paddingPlusBordersX + box.MarginLeft.V() + box.MarginRight.V()
+		spacing := paddingsBorders + box.MarginLeft.V() + box.MarginRight.V()
 		if left == pr.AutoF && width == pr.AutoF {
 			box.Width = shrinkToFit(context, box_, cbWidth-spacing-right.V())
 			translateX = cbWidth - right.V() - spacing + defaultTranslateX
 			translateBoxWidth = true
 		} else if left == pr.AutoF && right == pr.AutoF {
-			// Keep the static position
+			if !ltr {
+				availableWidth := cbWidth - (paddingsBorders + box.MarginLeft.V() + box.MarginRight.V())
+				translateBoxWidth = true
+				translateX = defaultTranslateX + availableWidth
+			}
 		} else if width == pr.AutoF && right == pr.AutoF {
 			box.Width = shrinkToFit(context, box_, cbWidth-spacing-left.V())
 			translateX = left.V() + defaultTranslateX
@@ -152,22 +167,19 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 
 func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 	box := box_.Box()
-	// These names are waaay too long
+
+	paddingsBorders := box.PaddingTop.V() + box.PaddingBottom.V() + box.BorderTopWidth.V() + box.BorderBottomWidth.V()
+
 	marginT := box.MarginTop
 	marginB := box.MarginBottom
-	paddingT := box.PaddingTop
-	paddingB := box.PaddingBottom
-	borderT := box.BorderTopWidth
-	borderB := box.BorderBottomWidth
 	height := box.Height
 	top := box.Top
 	bottom := box.Bottom
 
 	cbY, cbHeight := containingBlock.Y, containingBlock.Height
 
-	// http://www.w3.org/TR/CSS2/visudet.html#abs-non-replaced-height
+	// https://www.w3.org/TR/CSS2/visudet.html#abs-non-replaced-height
 
-	paddingsPlusBordersY := paddingT.V() + paddingB.V() + borderT.V() + borderB.V()
 	var translateY pr.Float = 0
 	translateBoxHeight := false
 	defaultTranslateY := cbY - box.PositionY
@@ -180,7 +192,7 @@ func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 			box.MarginBottom = pr.Float(0)
 		}
 	} else if top != pr.AutoF && bottom != pr.AutoF && height != pr.AutoF {
-		heightForMargins := cbHeight - (top.V() + bottom.V() + height.V() + paddingsPlusBordersY)
+		heightForMargins := cbHeight - (top.V() + bottom.V() + height.V() + paddingsBorders)
 		if marginT == pr.AutoF && marginB == pr.AutoF {
 			box.MarginTop = heightForMargins / 2
 			box.MarginBottom = box.MarginTop
@@ -199,7 +211,7 @@ func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 		if marginB == pr.AutoF {
 			box.MarginBottom = pr.Float(0)
 		}
-		spacing := paddingsPlusBordersY + box.MarginTop.V() + box.MarginBottom.V()
+		spacing := paddingsBorders + box.MarginTop.V() + box.MarginBottom.V()
 		if top == pr.AutoF && height == pr.AutoF {
 			translateY = cbHeight.V() - bottom.V() - spacing + defaultTranslateY
 			translateBoxHeight = true
@@ -220,12 +232,24 @@ func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 }
 
 // performs either blockContainerLayout or flexLayout on box_
-func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack, isBlock bool) (Box, tree.ResumeStack) {
+func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder,
+	bottomSpace pr.Float, skipStack tree.ResumeStack,
+	isBlock bool,
+) (Box, tree.ResumeStack) {
 	box := box_.Box()
 	cbWidth, cbHeight := containingBlock.Width, containingBlock.Height
 
 	translateBoxWidth, translateX := absoluteWidth(box_, context, containingBlock)
-	translateBoxHeight, translateY := absoluteHeight(box_, containingBlock)
+	translateBoxHeight, translateY := false, pr.Float(0)
+	if len(skipStack) == 0 {
+		translateBoxHeight, translateY = absoluteHeight(box_, containingBlock)
+	}
+
+	if translateBoxHeight {
+		bottomSpace -= box.PositionY
+	} else {
+		bottomSpace += translateY
+	}
 
 	// This box is the containing block for absolute descendants.
 	var absoluteBoxes []*AbsolutePlaceholder
@@ -239,7 +263,8 @@ func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock bloc
 		bl     blockLayout
 	)
 	if isBlock {
-		newBox, bl = blockContainerLayout(context, box_, bottomSpace, skipStack, true, &absoluteBoxes, fixedBoxes, new([]pr.Float), false)
+		newBox, bl, _ = blockContainerLayout(context, box_, bottomSpace, skipStack, true,
+			&absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 	} else {
 		newBox, bl = flexLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes)
 	}
@@ -268,9 +293,10 @@ func absoluteFlex(context *layoutContext, box_ Box, containingBlock block, fixed
 	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, bottomSpace, skipStack, false)
 }
 
-// Set the width of absolute positioned ``box``.
+// Set the width of absolute positioned “box“.
 func absoluteLayout(context *layoutContext, placeholder *AbsolutePlaceholder, containingBlock Box,
-	fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) {
+	fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack,
+) {
 	if placeholder.layoutDone {
 		panic("placeholder can't have its layout done.")
 	}
@@ -278,17 +304,18 @@ func absoluteLayout(context *layoutContext, placeholder *AbsolutePlaceholder, co
 	newBox, resumeAt := absoluteBoxLayout(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
 	placeholder.setLaidOutBox(newBox)
 	if resumeAt != nil {
-		context.brokenOutOfFlow = append(context.brokenOutOfFlow, brokenBox{
+		context.brokenOutOfFlow[placeholder] = brokenBox{
 			box:             box,
 			containingBlock: containingBlock,
 			resumeAt:        resumeAt,
-		})
+		}
 	}
 }
 
 func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*AbsolutePlaceholder,
-	bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
-	// http://www.w3.org/TR/CSS2/visudet.html1#containing-block-details
+	bottomSpace pr.Float, skipStack tree.ResumeStack,
+) (Box, tree.ResumeStack) {
+	// https://www.w3.org/TR/CSS2/visudet.html1#containing-block-details
 
 	if traceMode {
 		traceLogger.DumpTree(box, "absoluteBoxLayout")
@@ -317,12 +344,12 @@ func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*
 		newBox   Box
 		resumeAt tree.ResumeStack
 	)
-	if bo.BlockBoxT.IsInstance(box) {
+	if bo.BlockT.IsInstance(box) {
 		newBox, resumeAt = absoluteBlock(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
-	} else if bo.FlexContainerBoxT.IsInstance(box) {
+	} else if bo.FlexContainerT.IsInstance(box) {
 		newBox, resumeAt = absoluteFlex(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
 	} else {
-		if !bo.BlockReplacedBoxT.IsInstance(box) {
+		if !bo.BlockReplacedT.IsInstance(box) {
 			panic(fmt.Sprintf("box should be a BlockReplaced, got %T", box))
 		}
 		newBox = absoluteReplaced(box, containingBlock)
@@ -339,9 +366,10 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 	inlineReplacedBoxWidthHeight(box_, containingBlock)
 	box := box_.Box()
 	cbX, cbY, cbWidth, cbHeight := containingBlock.X, containingBlock.Y, containingBlock.Width, containingBlock.Height
-	ltr := box.Style.GetDirection() == "ltr"
 
-	// http://www.w3.org/TR/CSS21/visudet.html#abs-replaced-width
+	ltr := box.Style.ParentStyle() == nil || box.Style.ParentStyle().GetDirection() == "ltr"
+
+	// https://www.w3.org/TR/CSS21/visudet.html#abs-replaced-width
 	if box.Left == pr.AutoF && box.Right == pr.AutoF {
 		// static position:
 		if ltr {
@@ -391,7 +419,7 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 		}
 	}
 
-	// http://www.w3.org/TR/CSS21/visudet.html#abs-replaced-height
+	// https://www.w3.org/TR/CSS21/visudet.html#abs-replaced-height
 	if box.Top == pr.AutoF && box.Bottom == pr.AutoF {
 		box.Top = box.PositionY - cbY
 	}
@@ -404,10 +432,10 @@ func absoluteReplaced(box_ Box, containingBlock block) Box {
 		}
 		remaining := cbHeight - box.MarginHeight()
 		if box.Top == pr.AutoF {
-			box.Top = remaining
+			box.Top = remaining - box.Bottom.V()
 		}
 		if box.Bottom == pr.AutoF {
-			box.Bottom = remaining
+			box.Bottom = remaining - box.Top.V()
 		}
 	} else if box.MarginTop == pr.AutoF || box.MarginBottom == pr.AutoF {
 		remaining := cbHeight - (box.BorderHeight() + box.Top.V() + box.Bottom.V())

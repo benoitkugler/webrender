@@ -2,6 +2,7 @@ package tree
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -106,6 +107,7 @@ var (
 		"bleed_bottom":        bleed,
 		"letter_spacing":      pixelLength,
 		"background_size":     backgroundSize,
+		"image_orientation":   imageOrientation,
 		"border_top_width":    borderWidth,
 		"border_right_width":  borderWidth,
 		"border_left_width":   borderWidth,
@@ -339,11 +341,9 @@ func _lengthOrPercentageTuple2(computer *ComputedStyle, name string, value []pr.
 	return out
 }
 
-// Compute the ``break-before`` and ``break-after`` pr.
+// Compute the “break-before“ and “break-after“ pr.
 func break_(_ *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.String)
-	// "always" is defined as an alias to "page" in multi-column
-	// https://www.w3.org/TR/css3-multicol/#column-breaks
 	if value == "always" {
 		return pr.String("page")
 	}
@@ -362,11 +362,11 @@ func asPixels(v pr.Value, pixelsOnly bool) pr.Value {
 	return v
 }
 
-// Computes a length ``value``.
+// Computes a length “value“.
 // passing a negative fontSize means null
 // Always returns a Value which is interpreted as float64 if Unit is zero.
 // pixelsOnly=false
-func length2(computer *ComputedStyle, name string, value pr.Value, fontSize pr.Float, pixelsOnly bool) pr.Value {
+func length2(computer *ComputedStyle, _ string, value pr.Value, fontSize pr.Float, pixelsOnly bool) pr.Value {
 	if value.String == "auto" || value.String == "content" {
 		return value
 	}
@@ -387,13 +387,11 @@ func length2(computer *ComputedStyle, name string, value pr.Value, fontSize pr.F
 		}
 		switch unit {
 		case pr.Ex:
-			result = value.Value * fontSize * text.ExRatio(computer, computer.textContext)
+			ratio := text.CharacterRatio(computer, computer.cache, false, computer.textContext)
+			result = value.Value * fontSize * ratio
 		case pr.Ch:
-			var letterSpacing pr.Value
-			if name != "letter_spacing" { // avoid infinite recursion
-				letterSpacing = computer.GetLetterSpacing()
-			}
-			result = value.Value * text.ChWidth(computer, fontSize, computer.textContext, letterSpacing)
+			ratio := text.CharacterRatio(computer, computer.cache, true, computer.textContext)
+			result = value.Value * fontSize * ratio
 		case pr.Em:
 			result = value.Value * fontSize
 		case pr.Rem:
@@ -428,7 +426,7 @@ func pixelLength(computer *ComputedStyle, name string, _value pr.CssProperty) pr
 	return out
 }
 
-// Compute the ``background-size`` pr.
+// Compute the “background-size“ pr.
 func backgroundSize(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Sizes)
 	out := make(pr.Sizes, len(value))
@@ -445,7 +443,18 @@ func backgroundSize(computer *ComputedStyle, name string, _value pr.CssProperty)
 	return out
 }
 
-// Compute the ``border-*-width`` pr.
+// Compute the “image-orientation“ properties.
+func imageOrientation(_ *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
+	value := _value.(pr.SBoolFloat)
+	if value.String == "none" || value.String == "from-image" {
+		return _value
+	}
+	angle := value.Float
+	value.Float = pr.Fl(int(math.Round(float64(angle)/math.Pi*2)) % 4 * 90)
+	return value
+}
+
+// Compute the “border-*-width“ pr.
 // value.String may be the string representation of an int
 func borderWidth(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
@@ -461,13 +470,13 @@ func borderWidth(computer *ComputedStyle, name string, _value pr.CssProperty) pr
 	return d
 }
 
-// Compute the ``column-width`` property.
+// Compute the “column-width“ property.
 func columnWidth(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	return length(computer, name, value)
 }
 
-// Compute the ``column-gap`` property.
+// Compute the “column-gap“ property.
 func columnGap(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	if value.String == "normal" {
@@ -598,7 +607,7 @@ func contentList(computer *ComputedStyle, values pr.ContentProperties) (pr.Conte
 	return computedValues, nil
 }
 
-// Compute the ``bookmark-label`` property.
+// Compute the “bookmark-label“ property.
 func bookmarkLabel(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	if value, ok := _value.(pr.ContentProperties); ok {
 		out, err := contentList(computer, value)
@@ -611,7 +620,7 @@ func bookmarkLabel(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.
 	return pr.ContentProperties{}
 }
 
-// Compute the ``string-set`` property.
+// Compute the “string-set“ property.
 func stringSet(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	// Spec asks for strings after custom keywords, but we allow content-lists
 	if stringset, ok := _value.(pr.StringSet); ok {
@@ -629,7 +638,7 @@ func stringSet(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssP
 	return pr.StringSet{}
 }
 
-// Compute the ``content`` property.
+// Compute the “content“ property.
 func content(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	if value, ok := _value.(pr.SContent); ok {
 		if value.String == "normal" {
@@ -651,7 +660,7 @@ func content(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssPro
 	return pr.SContent{}
 }
 
-// Compute the ``display`` property.
+// Compute the “display“ property.
 // See http://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
 func display(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Display)
@@ -673,18 +682,18 @@ func display(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssPro
 	return value
 }
 
-// Compute the ``float`` property.
+// Compute the “float“ property.
 // See http://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
 func floating(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.String)
 	position := computer.specified.Position
-	if position.String == "absolute" || position.String == "fixed" {
+	if position.String == "absolute" || position.String == "fixed" || position.Bool /* running*/ {
 		return pr.String("none")
 	}
 	return value
 }
 
-// Compute the ``font-size`` property.
+// Compute the “font-size“ property.
 func fontSize(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	if fs, in := pr.FontSizeKeywords[value.String]; in {
@@ -717,7 +726,7 @@ func fontSize(computer *ComputedStyle, name string, _value pr.CssProperty) pr.Cs
 	}
 }
 
-// Compute the ``font-weight`` property.
+// Compute the “font-weight“ property.
 func fontWeight(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.IntString)
 	var out int
@@ -738,7 +747,7 @@ func fontWeight(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.Css
 	return pr.IntString{Int: out}
 }
 
-// Compute the ``line-height`` property.
+// Compute the “line-height“ property.
 func lineHeight(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	var pixels pr.Float
@@ -757,7 +766,7 @@ func lineHeight(computer *ComputedStyle, name string, _value pr.CssProperty) pr.
 	return pr.Dimension{Value: pixels, Unit: pr.Px}.ToValue()
 }
 
-// Compute the ``anchor`` property.
+// Compute the “anchor“ property.
 func anchor(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	// _value is either "none" or an AttrData
 	attrData, ok := _value.(pr.AttrData)
@@ -774,7 +783,7 @@ func anchor(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProp
 	return pr.String("")
 }
 
-// Compute the ``link`` property.
+// Compute the “link“ property.
 func link(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	switch value := _value.(type) {
 	case pr.NamedString:
@@ -796,7 +805,7 @@ func link(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProper
 	return pr.NamedString{}
 }
 
-// Compute the ``lang`` property.
+// Compute the “lang“ property.
 func lang(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.NamedString)
 	if value.String == "none" {
@@ -814,7 +823,7 @@ func lang(computer *ComputedStyle, _ string, _value pr.CssProperty) pr.CssProper
 	return pr.NamedString{}
 }
 
-// Compute the ``tab-size`` property.
+// Compute the “tab-size“ property.
 func tabSize(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	if value.Unit == pr.Scalar {
@@ -823,7 +832,7 @@ func tabSize(computer *ComputedStyle, name string, _value pr.CssProperty) pr.Css
 	return length(computer, name, value)
 }
 
-// Compute the ``transform`` property.
+// Compute the “transform“ property.
 func transforms(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Transforms)
 	result := make(pr.Transforms, len(value))
@@ -836,7 +845,7 @@ func transforms(computer *ComputedStyle, name string, _value pr.CssProperty) pr.
 	return result
 }
 
-// Compute the ``vertical-align`` property.
+// Compute the “vertical-align“ property.
 func verticalAlign(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	// Use +/- half an em for super and sub, same as Pango.
@@ -863,7 +872,7 @@ func verticalAlign(computer *ComputedStyle, name string, _value pr.CssProperty) 
 	return out
 }
 
-// Compute the ``word-spacing`` property.
+// Compute the “word-spacing“ property.
 func wordSpacing(computer *ComputedStyle, name string, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Value)
 	if value.String == "normal" {

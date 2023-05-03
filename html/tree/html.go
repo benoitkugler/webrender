@@ -17,17 +17,20 @@ type HTML struct {
 	UrlFetcher utils.UrlFetcher
 	BaseUrl    string
 
-	UAStyleSheet CSS
-	PHStyleSheet CSS
+	UAStyleSheet   CSS
+	FormStyleSheet CSS
+	PHStyleSheet   CSS
 }
 
 // `baseUrl` is the base used to resolve relative URLs
-// (e.g. in ``<img src="../foo.png">``). If not provided, try to use
-// the input filename, URL, or ``name`` attribute of :term:`file objects
-//        <file object>`.
+// (e.g. in “<img src="../foo.png">“). If not provided, try to use
+// the input filename, URL, or “name“ attribute of :term:`file objects
+//
+//	<file object>`.
+//
 // `urlFetcher` is a function called to
 // fetch external resources such as stylesheets and images, UTF-8 encoded
-// `mediaType` is the media type to use for ``@media``, and defaults to ``'print'``.
+// `mediaType` is the media type to use for “@media“, and defaults to “'print'“.
 func NewHTML(htmlContent utils.ContentInput, baseUrl string, urlFetcher utils.UrlFetcher, mediaType string) (*HTML, error) {
 	logger.ProgressLogger.Println("Step 1 - Fetching and parsing HTML")
 	if urlFetcher == nil {

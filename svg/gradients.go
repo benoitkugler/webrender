@@ -48,7 +48,7 @@ func normalizeStopPositions(positions []Fl) (Fl, Fl) {
 	return first, last
 }
 
-// http://dev.w3.org/csswg/css-images-3/#find-the-average-color-of-a-gradient
+// http://drafts.csswg.org/csswg/css-images-3/#find-the-average-color-of-a-gradient
 func gradientAverageColor(colors []parser.RGBA, positions []Fl) parser.RGBA {
 	nbStops := len(positions)
 	if nbStops <= 1 || nbStops != len(colors) {

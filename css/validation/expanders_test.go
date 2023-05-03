@@ -60,7 +60,7 @@ func TestExpandFourSides(t *testing.T) {
 	assertInvalid(t, "border-width: 12%", "invalid")
 }
 
-// Test the ``border`` property.
+// Test the “border“ property.
 func TestExpandBorders(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "border-top: 3px dotted red", toValidated(pr.Properties{
@@ -156,7 +156,7 @@ func TestExpandBorderRadius(t *testing.T) {
 	assertInvalid(t, "border-radius: 1px /", `value after '/'`)
 }
 
-// Test the ``list_style`` property.
+// Test the “list_style“ property.
 func TestExpandList_style(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "list-style: inherit", map[string]pr.ValidatedProperty{
@@ -165,7 +165,7 @@ func TestExpandList_style(t *testing.T) {
 		"list_style_type":     pr.Inherit.AsCascaded().AsValidated(),
 	})
 	assertValidDict(t, "list-style: url(../bar/lipsum.png)", toValidated(pr.Properties{
-		"list_style_image": pr.UrlImage("http://weasyprint.org/bar/lipsum.png"),
+		"list_style_image": pr.UrlImage("https://weasyprint.org/bar/lipsum.png"),
 	}))
 	assertValidDict(t, "list-style: square", toValidated(pr.Properties{
 		"list_style_type": pr.CounterStyleID{Name: "square"},
@@ -191,7 +191,7 @@ func TestExpandList_style(t *testing.T) {
 		"got multiple type values in a list-style shorthand")
 }
 
-// Test the ``font`` property.
+// Test the “font“ property.
 func TestFont(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "font: 12px My Fancy Font, serif", toValidated(pr.Properties{
@@ -238,7 +238,7 @@ func TestFont(t *testing.T) {
 	assertInvalid(t, "font: small-caps italic 700 condensed normal large serif", "invalid")
 }
 
-// Test the ``font-variant`` property.
+// Test the “font-variant“ property.
 func TestFontVariant(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "font-variant: normal", toValidated(pr.Properties{
@@ -342,6 +342,12 @@ func TestExpandTextDecoration(t *testing.T) {
 		"text_decoration_line":  inherit,
 		"text_decoration_style": inherit,
 	})
+
+	assertInvalid(t, "text-decoration: solid solid", "invalid")
+	assertInvalid(t, "text-decoration: red red", "invalid")
+	assertInvalid(t, "text-decoration: 1px", "invalid")
+	assertInvalid(t, "text-decoration: underline none", "invalid")
+	assertInvalid(t, "text-decoration: none none", "invalid")
 
 	capt.AssertNoLogs(t)
 }
@@ -548,6 +554,10 @@ func TestExpandTextAlign(t *testing.T) {
 	assertInvalid(t, "text-align: none", "invalid")
 	assertInvalid(t, "text-align: start end", "invalid")
 	assertInvalid(t, "text-align: 1", "invalid")
+	assertInvalid(t, `text-align: left left`, "invalid")
+	assertInvalid(t, `text-align: top`, "invalid")
+	assertInvalid(t, `text-align: "right"`, "invalid")
+	assertInvalid(t, `text-align: 1px`, "invalid")
 }
 
 // Helper checking the background pr.
@@ -586,7 +596,7 @@ func assertBackground(t *testing.T, css string, expected map[string]pr.Validated
 	}
 }
 
-// Test the ``background`` property.
+// Test the “background“ property.
 func TestExpandBackground(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertBackground(t, "none", toValidated(pr.Properties{}))
@@ -594,7 +604,7 @@ func TestExpandBackground(t *testing.T) {
 		"background_color": pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "url(lipsum.png)", toValidated(pr.Properties{
-		"background_image": pr.Images{pr.UrlImage("http://weasyprint.org/foo/lipsum.png")},
+		"background_image": pr.Images{pr.UrlImage("https://weasyprint.org/foo/lipsum.png")},
 	}))
 	assertBackground(t, "no-repeat", toValidated(pr.Properties{
 		"background_repeat": pr.Repeats{{"no-repeat", "no-repeat"}},
@@ -646,7 +656,7 @@ func TestExpandBackground(t *testing.T) {
 	}))
 	assertBackground(t, "url(bar) #f00 repeat-y center left fixed", toValidated(pr.Properties{
 		"background_color":      pr.NewColor(1, 0, 0, 1),
-		"background_image":      pr.Images{pr.UrlImage("http://weasyprint.org/foo/bar")},
+		"background_image":      pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar")},
 		"background_repeat":     pr.Repeats{{"no-repeat", "repeat"}},
 		"background_attachment": pr.Strings{"fixed"},
 		"background_position":   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
@@ -689,7 +699,7 @@ func TestExpandBackground(t *testing.T) {
 	}))
 	assertBackground(t, "url(bar) center, no-repeat", toValidated(pr.Properties{
 		"background_color": pr.NewColor(0, 0, 0, 0),
-		"background_image": pr.Images{pr.UrlImage("http://weasyprint.org/foo/bar"), pr.NoneImage{}},
+		"background_image": pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar"), pr.NoneImage{}},
 		"background_position": pr.Centers{
 			{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}},
 			{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}},

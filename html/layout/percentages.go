@@ -25,7 +25,7 @@ func resolveOnePercentage(value pr.Value, propertyName string, referTo pr.Float,
 
 	if traceMode {
 		traceLogger.Dump(fmt.Sprintf("resolveOnePercentage %s: %v %s -> %s", propertyName,
-			tracer.FormatMaybeFloat(value.Dimension.Value), tracer.FormatMaybeFloat(referTo),
+			tracer.FormatMaybeFloat(value.ToMaybeFloat()), tracer.FormatMaybeFloat(referTo),
 			tracer.FormatMaybeFloat(percent)))
 	}
 
@@ -55,7 +55,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 	}
 
 	maybeHeight := cbWidth
-	if bo.PageBoxT.IsInstance(box_) {
+	if bo.PageT.IsInstance(box_) {
 		maybeHeight = cbHeight
 	}
 	box := box_.Box()
@@ -141,6 +141,11 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 }
 
 func resoudRadius(box *bo.BoxFields, v pr.Point, side1, side2 bo.Side) bo.MaybePoint {
+	// rx, ry = v
+	if v[0] == pr.ZeroPixels || v[1] == pr.ZeroPixels { // Short track for common case
+		return bo.MaybePoint{pr.Float(0), pr.Float(0)}
+	}
+
 	if box.RemoveDecorationSides[side1] || box.RemoveDecorationSides[side2] {
 		return bo.MaybePoint{pr.Float(0), pr.Float(0)}
 	}

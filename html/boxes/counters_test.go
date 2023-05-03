@@ -14,8 +14,8 @@ func TestCounters1(t *testing.T) {
 	defer cp.AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
-		return SerBox{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::before", InlineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: counter}}}}}}}},
+		return SerBox{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::before", InlineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: counter}}}}}}}},
 		}}}
 	}
 	var expected []SerBox
@@ -59,34 +59,34 @@ func TestCounters2(t *testing.T) {
         </ol></li>
         <li></li>
       </ol>`), []SerBox{
-		{"ol", BlockBoxT, BC{C: []SerBox{
-			{"li", BlockBoxT, BC{C: []SerBox{
-				{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "1. "}}}}}}}},
+		{"ol", BlockT, BC{C: []SerBox{
+			{"li", BlockT, BC{C: []SerBox{
+				{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "1. "}}}}}}}},
 			}}},
-			{"li", BlockBoxT, BC{C: []SerBox{
-				{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "2. "}}}}}}}},
+			{"li", BlockT, BC{C: []SerBox{
+				{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "2. "}}}}}}}},
 			}}},
-			{"li", BlockBoxT, BC{C: []SerBox{
-				{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "3. "}}}}}}}},
+			{"li", BlockT, BC{C: []SerBox{
+				{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "3. "}}}}}}}},
 			}}},
-			{"li", BlockBoxT, BC{C: []SerBox{
-				{"li", BlockBoxT, BC{C: []SerBox{
-					{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "4. "}}}}}}}},
+			{"li", BlockT, BC{C: []SerBox{
+				{"li", BlockT, BC{C: []SerBox{
+					{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "4. "}}}}}}}},
 				}}},
-				{"ol", BlockBoxT, BC{C: []SerBox{
-					{"li", BlockBoxT, BC{C: []SerBox{
-						{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "1. "}}}}}}}},
+				{"ol", BlockT, BC{C: []SerBox{
+					{"li", BlockT, BC{C: []SerBox{
+						{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "1. "}}}}}}}},
 					}}},
-					{"li", BlockBoxT, BC{C: []SerBox{
-						{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "1. "}}}}}}}},
+					{"li", BlockT, BC{C: []SerBox{
+						{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "1. "}}}}}}}},
 					}}},
-					{"li", BlockBoxT, BC{C: []SerBox{
-						{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "2. "}}}}}}}},
+					{"li", BlockT, BC{C: []SerBox{
+						{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "2. "}}}}}}}},
 					}}},
 				}}},
 			}}},
-			{"li", BlockBoxT, BC{C: []SerBox{
-				{"li", LineBoxT, BC{C: []SerBox{{"li::marker", InlineBoxT, BC{C: []SerBox{{"li::marker", TextBoxT, BC{Text: "5. "}}}}}}}},
+			{"li", BlockT, BC{C: []SerBox{
+				{"li", LineT, BC{C: []SerBox{{"li::marker", InlineT, BC{C: []SerBox{{"li::marker", TextT, BC{Text: "5. "}}}}}}}},
 			}}},
 		}}},
 	})
@@ -106,19 +106,19 @@ func TestCounters3(t *testing.T) {
         <p style="counter-reset: list-item 7 list-item -56"></p>
       </div>
       <p></p>`), []SerBox{
-		{"div", BlockBoxT, BC{C: []SerBox{
-			{"p", BlockBoxT, BC{C: []SerBox{
-				{"p", LineBoxT, BC{C: []SerBox{{"p::marker", InlineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "1. "}}}}}}}},
+		{"div", BlockT, BC{C: []SerBox{
+			{"p", BlockT, BC{C: []SerBox{
+				{"p", LineT, BC{C: []SerBox{{"p::marker", InlineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "1. "}}}}}}}},
 			}}},
-			{"p", BlockBoxT, BC{C: []SerBox{
-				{"p", LineBoxT, BC{C: []SerBox{{"p::marker", InlineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "2. "}}}}}}}},
+			{"p", BlockT, BC{C: []SerBox{
+				{"p", LineT, BC{C: []SerBox{{"p::marker", InlineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "2. "}}}}}}}},
 			}}},
-			{"p", BlockBoxT, BC{C: []SerBox{
-				{"p", LineBoxT, BC{C: []SerBox{{"p::marker", InlineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "-55. "}}}}}}}},
+			{"p", BlockT, BC{C: []SerBox{
+				{"p", LineT, BC{C: []SerBox{{"p::marker", InlineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "-55. "}}}}}}}},
 			}}},
 		}}},
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::marker", InlineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "1. "}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::marker", InlineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "1. "}}}}}}}},
 		}}},
 	})
 }
@@ -141,25 +141,25 @@ func TestCounters4(t *testing.T) {
           <h1></h1>
         </section>
       </body>`), []SerBox{
-		{"section", BlockBoxT, BC{C: []SerBox{
-			{"section", BlockBoxT, BC{C: []SerBox{{"section", LineBoxT, BC{C: []SerBox{{"section::before", InlineBoxT, BC{C: []SerBox{}}}}}}}}},
-			{"h1", BlockBoxT, BC{C: []SerBox{
-				{"h1", LineBoxT, BC{C: []SerBox{{"h1::before", InlineBoxT, BC{C: []SerBox{{"h1::before", TextBoxT, BC{Text: "1"}}}}}}}},
+		{"section", BlockT, BC{C: []SerBox{
+			{"section", BlockT, BC{C: []SerBox{{"section", LineT, BC{C: []SerBox{{"section::before", InlineT, BC{C: []SerBox{}}}}}}}}},
+			{"h1", BlockT, BC{C: []SerBox{
+				{"h1", LineT, BC{C: []SerBox{{"h1::before", InlineT, BC{C: []SerBox{{"h1::before", TextT, BC{Text: "1"}}}}}}}},
 			}}},
-			{"h1", BlockBoxT, BC{C: []SerBox{
-				{"h1", LineBoxT, BC{C: []SerBox{{"h1::before", InlineBoxT, BC{C: []SerBox{{"h1::before", TextBoxT, BC{Text: "2"}}}}}}}},
+			{"h1", BlockT, BC{C: []SerBox{
+				{"h1", LineT, BC{C: []SerBox{{"h1::before", InlineT, BC{C: []SerBox{{"h1::before", TextT, BC{Text: "2"}}}}}}}},
 			}}},
-			{"section", BlockBoxT, BC{C: []SerBox{
-				{"section", BlockBoxT, BC{C: []SerBox{{"section", LineBoxT, BC{C: []SerBox{{"section::before", InlineBoxT, BC{C: []SerBox{}}}}}}}}},
-				{"h1", BlockBoxT, BC{C: []SerBox{
-					{"h1", LineBoxT, BC{C: []SerBox{{"h1::before", InlineBoxT, BC{C: []SerBox{{"h1::before", TextBoxT, BC{Text: "2.1"}}}}}}}},
+			{"section", BlockT, BC{C: []SerBox{
+				{"section", BlockT, BC{C: []SerBox{{"section", LineT, BC{C: []SerBox{{"section::before", InlineT, BC{C: []SerBox{}}}}}}}}},
+				{"h1", BlockT, BC{C: []SerBox{
+					{"h1", LineT, BC{C: []SerBox{{"h1::before", InlineT, BC{C: []SerBox{{"h1::before", TextT, BC{Text: "2.1"}}}}}}}},
 				}}},
-				{"h1", BlockBoxT, BC{C: []SerBox{
-					{"h1", LineBoxT, BC{C: []SerBox{{"h1::before", InlineBoxT, BC{C: []SerBox{{"h1::before", TextBoxT, BC{Text: "2.2"}}}}}}}},
+				{"h1", BlockT, BC{C: []SerBox{
+					{"h1", LineT, BC{C: []SerBox{{"h1::before", InlineT, BC{C: []SerBox{{"h1::before", TextT, BC{Text: "2.2"}}}}}}}},
 				}}},
 			}}},
-			{"h1", BlockBoxT, BC{C: []SerBox{
-				{"h1", LineBoxT, BC{C: []SerBox{{"h1::before", InlineBoxT, BC{C: []SerBox{{"h1::before", TextBoxT, BC{Text: "3"}}}}}}}},
+			{"h1", BlockT, BC{C: []SerBox{
+				{"h1", LineT, BC{C: []SerBox{{"h1::before", InlineT, BC{C: []SerBox{{"h1::before", TextT, BC{Text: "3"}}}}}}}},
 			}}},
 		}}},
 	})
@@ -179,11 +179,11 @@ func TestCounters5(t *testing.T) {
         </span>
       </div>
       <p></p>`), []SerBox{
-		{"div", BlockBoxT, BC{C: []SerBox{
-			{"div", LineBoxT, BC{C: []SerBox{{"span", InlineBoxT, BC{C: []SerBox{{"span", TextBoxT, BC{Text: "Scope created now, deleted after the div "}}}}}}}},
+		{"div", BlockT, BC{C: []SerBox{
+			{"div", LineT, BC{C: []SerBox{{"span", InlineT, BC{C: []SerBox{{"span", TextT, BC{Text: "Scope created now, deleted after the div "}}}}}}}},
 		}}},
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::before", InlineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: "0"}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::before", InlineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: "0"}}}}}}}},
 		}}},
 	})
 }
@@ -196,8 +196,8 @@ func TestCounters6(t *testing.T) {
 	assertTree(t, parseAndBuild(t, `
       <p style="counter-increment: c;
                 display: list-item; list-style: inside decimal">`), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::marker", InlineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "0. "}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::marker", InlineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "0. "}}}}}}}},
 		}}},
 	})
 }
@@ -207,8 +207,8 @@ func TestCounters7(t *testing.T) {
 	defer cp.AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
-		return SerBox{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::before", InlineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: counter}}}}}}}},
+		return SerBox{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::before", InlineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: counter}}}}}}}},
 		}}}
 	}
 	var expected []SerBox
@@ -237,16 +237,16 @@ func TestCounters8(t *testing.T) {
       </style>
       <p></p>
       <p></p>`), []SerBox{
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p::before", BlockBoxT, BC{C: []SerBox{
-				{"p::marker", BlockBoxT, BC{C: []SerBox{{"p::marker", LineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "• "}}}}}}}},
-				{"p::before", BlockBoxT, BC{C: []SerBox{{"p::before", LineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: "a"}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p::before", BlockT, BC{C: []SerBox{
+				{"p::marker", BlockT, BC{C: []SerBox{{"p::marker", LineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "• "}}}}}}}},
+				{"p::before", BlockT, BC{C: []SerBox{{"p::before", LineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: "a"}}}}}}}},
 			}}},
 		}}},
-		{"p", BlockBoxT, BC{C: []SerBox{
-			{"p::before", BlockBoxT, BC{C: []SerBox{
-				{"p::marker", BlockBoxT, BC{C: []SerBox{{"p::marker", LineBoxT, BC{C: []SerBox{{"p::marker", TextBoxT, BC{Text: "• "}}}}}}}},
-				{"p::before", BlockBoxT, BC{C: []SerBox{{"p::before", LineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: "a"}}}}}}}},
+		{"p", BlockT, BC{C: []SerBox{
+			{"p::before", BlockT, BC{C: []SerBox{
+				{"p::marker", BlockT, BC{C: []SerBox{{"p::marker", LineT, BC{C: []SerBox{{"p::marker", TextT, BC{Text: "• "}}}}}}}},
+				{"p::before", BlockT, BC{C: []SerBox{{"p::before", LineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: "a"}}}}}}}},
 			}}},
 		}}},
 	})
@@ -257,8 +257,8 @@ func TestCounterStyles1(t *testing.T) {
 	defer cp.AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
-		return SerBox{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::before", InlineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: counter}}}}}}}},
+		return SerBox{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::before", InlineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: counter}}}}}}}},
 		}}}
 	}
 	var expected []SerBox
@@ -292,8 +292,8 @@ func TestCounterStyles2(t *testing.T) {
 	defer cp.AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
-		return SerBox{"p", BlockBoxT, BC{C: []SerBox{
-			{"p", LineBoxT, BC{C: []SerBox{{"p::before", InlineBoxT, BC{C: []SerBox{{"p::before", TextBoxT, BC{Text: counter}}}}}}}},
+		return SerBox{"p", BlockT, BC{C: []SerBox{
+			{"p", LineT, BC{C: []SerBox{{"p::before", InlineT, BC{C: []SerBox{{"p::before", TextT, BC{Text: counter}}}}}}}},
 		}}}
 	}
 	var expected []SerBox

@@ -108,15 +108,15 @@ func TestImageContexts(t *testing.T) {
 	// The image is *not* := range this context:
 	tu.AssertEqual(t, bo.Serialize([]Box{context.box}), []bo.SerBox{
 		{
-			Tag: "html", Type: bo.BlockBoxT, Content: bo.BC{
+			Tag: "html", Type: bo.BlockT, Content: bo.BC{
 				C: []bo.SerBox{
 					{
-						Tag: "body", Type: bo.BlockBoxT, Content: bo.BC{
+						Tag: "body", Type: bo.BlockT, Content: bo.BC{
 							C: []bo.SerBox{
 								{
-									Tag: "body", Type: bo.LineBoxT, Content: bo.BC{
+									Tag: "body", Type: bo.LineT, Content: bo.BC{
 										C: []bo.SerBox{
-											{Tag: "body", Type: bo.TextBoxT, Content: bo.BC{Text: "Some text: "}},
+											{Tag: "body", Type: bo.TextT, Content: bo.BC{Text: "Some text: "}},
 										},
 									},
 								},
@@ -134,6 +134,6 @@ func TestImageContexts(t *testing.T) {
 	}
 	got := bo.Serialize(boxes)
 	tu.AssertEqual(t, got, []bo.SerBox{
-		{Tag: "img", Type: bo.InlineReplacedBoxT, Content: bo.BC{Text: "<replaced>"}},
+		{Tag: "img", Type: bo.InlineReplacedT, Content: bo.BC{Text: "<replaced>"}},
 	}, "")
 }

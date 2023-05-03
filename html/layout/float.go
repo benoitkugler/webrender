@@ -23,17 +23,18 @@ func floatWidth_(box Box, context *layoutContext, containingBlock containingBloc
 	return false, 0
 }
 
-// Set the width and position of floating ``box``.
+// Set the width and position of floating “box“.
 func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields, absoluteBoxes,
-	fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
+	fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack,
+) (Box, tree.ResumeStack) {
 	cbWidth, cbHeight := containingBlock.Width, containingBlock.Height
 	resolvePercentages(box_, bo.MaybePoint{cbWidth, cbHeight}, "")
 
 	if debugMode {
-		debugLogger.LineWithIndent("Layout FLOAT: %T", box_)
+		debugLogger.LineWithIndent("Layout FLOAT: <%s> (%s)", box_.Box().ElementTag(), box_.Type())
 	}
 	// TODO: This is only handled later in blocks.blockContainerLayout
-	// http://www.w3.org/TR/CSS21/visudet.html#normal-block
+	// https://www.w3.org/TR/CSS21/visudet.html#normal-block
 	if cbHeight == pr.AutoF {
 		cbHeight = containingBlock.PositionY - containingBlock.ContentBoxY()
 	}
@@ -59,7 +60,7 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 		box.PositionY += clearance.V()
 	}
 
-	if bo.BlockReplacedBoxT.IsInstance(box_) {
+	if bo.BlockReplacedT.IsInstance(box_) {
 		inlineReplacedBoxWidthHeight(box_, containingBlock)
 	} else if box.Width == pr.AutoF {
 		floatWidth(box_, context, block{Width: containingBlock.Width.V()})
@@ -73,17 +74,17 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 		resumeAt tree.ResumeStack
 		tmp      blockLayout
 	)
-	if bo.BlockContainerBoxT.IsInstance(box_) {
+	if bo.BlockContainerT.IsInstance(box_) {
 		context.createBlockFormattingContext()
-		box_, tmp = blockContainerLayout(context, box_, bottomSpace,
-			skipStack, true, absoluteBoxes, fixedBoxes, new([]pr.Float), false)
+		box_, tmp, _ = blockContainerLayout(context, box_, bottomSpace,
+			skipStack, true, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 		resumeAt = tmp.resumeAt
 		context.finishBlockFormattingContext(box_)
-	} else if bo.FlexContainerBoxT.IsInstance(box_) {
+	} else if bo.FlexContainerT.IsInstance(box_) {
 		box_, tmp = flexLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			true, absoluteBoxes, fixedBoxes)
 		resumeAt = tmp.resumeAt
-	} else if !bo.BlockReplacedBoxT.IsInstance(box_) {
+	} else if !bo.BlockReplacedT.IsInstance(box_) {
 		panic(fmt.Sprintf("expected BlockReplaced , got %v", box))
 	}
 
@@ -98,10 +99,10 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 	return box_, resumeAt
 }
 
-// Get the right position of the float ``box``.
+// Get the right position of the float “box“.
 func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.BoxFields) Box {
 	box := box_.Box()
-	// See http://www.w3.org/TR/CSS2/visuren.html#float-position
+	// See https://www.w3.org/TR/CSS2/visuren.html#float-position
 
 	// Point 4 is already handled as box.positionY is set according to the
 	// containing box top position, with collapsing margins handled
@@ -235,8 +236,8 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 	// - block-level replaced box
 	// - element establishing new formatting contexts (not handled)
 	if debugMode {
-		if fl := box.Style.GetFloat(); !(fl == "right" || fl == "left" || bo.LineBoxT.IsInstance(box_) ||
-			box.IsTableWrapper || bo.BlockReplacedBoxT.IsInstance(box_)) {
+		if fl := box.Style.GetFloat(); !(fl == "right" || fl == "left" || bo.LineT.IsInstance(box_) ||
+			box.IsTableWrapper || bo.BlockReplacedT.IsInstance(box_)) {
 			panic("assertion failed")
 		}
 	}
@@ -245,7 +246,7 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 	positionX = maxLeftBound
 	if box.Style.GetFloat() == "none" {
 		if containingBlock.Style.GetDirection() == "rtl" {
-			if bo.LineBoxT.IsInstance(box_) {
+			if bo.LineT.IsInstance(box_) {
 				// The position of the line is the position of the cursor, at
 				// the right bound.
 				positionX = maxRightBound

@@ -1,6 +1,7 @@
 package text
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -41,8 +42,7 @@ type Splitted struct {
 // `maxWidth` is the maximum available width in the same unit as style.GetFontSize(),
 // or `nil` for unlimited width.
 func CreateLayout(text string, style pr.StyleAccessor, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayout {
-	fontSize := style.GetFontSize().Value
-	layout := NewTextLayout(context, pr.Fl(fontSize), style, pr.Fl(justificationSpacing), maxWidth)
+	layout := NewTextLayout(context, style, pr.Fl(justificationSpacing), maxWidth)
 	ws := style.GetWhiteSpace()
 	textWrap := "normal" == ws || "pre-wrap" == ws || "pre-line" == ws
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
@@ -84,44 +84,44 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 		layout           *TextLayout
 		fontSize         = style.GetFontSize().Value
 		firstLine        *pango.LayoutLine
-		index            int
+		resumeIndex      int
 	)
 	if !textWrap {
 		maxWidth = nil
 	}
 	// Step #1: Get a draft layout with the first line
 	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
-		var expectedLength int
+		// shortText := text_
+		cut := len(text_)
 		if maxWidth <= 0 {
 			// Trying to find minimum size, let's naively split on spaces and
 			// keep one word + one letter
 
 			if spaceIndex := strings.IndexByte(text_, ' '); spaceIndex != -1 {
-				expectedLength = spaceIndex + 2 // index + space + one letter
-			} else {
-				expectedLength = len(text_)
+				cut = spaceIndex + 2 // index + space + one letter
 			}
 		} else {
-			expectedLength = int(maxWidth / fontSize * 2.5)
+			cut = int(maxWidth / fontSize * 2.5)
 		}
 
-		if expectedLength < len(text_) {
-			// Try to use a small amount of text instead of the whole text
-			layout = CreateLayout(text_[:expectedLength], style, context, maxWidth, justificationSpacing)
-			firstLine, index = layout.GetFirstLine()
-			if index == -1 {
-				// The small amount of text fits in one line, give up and use the whole text
-				layout = nil
-			}
+		if cut > len(text_) {
+			cut = len(text_)
 		}
-	}
+		shortText := text_[:cut]
 
-	if layout == nil {
+		// Try to use a small amount of text instead of the whole text
+		layout = CreateLayout(shortText, style, context, maxWidth, justificationSpacing)
+		firstLine, resumeIndex = layout.GetFirstLine()
+		if resumeIndex == -1 && shortText != text_ {
+			// The small amount of text fits in one line, give up and use the whole text
+			layout.SetText(text_)
+			firstLine, resumeIndex = layout.GetFirstLine()
+		}
+	} else {
 		layout = CreateLayout(text_, style, context, originalMaxWidth, justificationSpacing)
-		firstLine, index = layout.GetFirstLine()
+		firstLine, resumeIndex = layout.GetFirstLine()
 	}
 
-	resumeIndex := index
 	text := []rune(text_)
 
 	// Step #2: Don't split lines when it's not needed
@@ -133,7 +133,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 
 	firstLineWidth, _ := lineSize(firstLine, style.GetLetterSpacing())
 
-	if index == -1 && firstLineWidth <= maxWidthV {
+	if resumeIndex == -1 && firstLineWidth <= maxWidthV {
 		// The first line fits in the available width
 		return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
 	}
@@ -143,8 +143,8 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	// is a good thread related to this problem.
 
 	firstLineText := text_
-	if index != -1 && index <= len(text) {
-		firstLineText = string(text[:index])
+	if resumeIndex != -1 && resumeIndex <= len(text) {
+		firstLineText = string(text[:resumeIndex])
 	}
 	firstLineFits := (firstLineWidth <= maxWidthV ||
 		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
@@ -152,10 +152,10 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	var secondLineText []rune
 	if firstLineFits {
 		// The first line fits but may have been cut too early by Pango
-		if index == -1 {
+		if resumeIndex == -1 {
 			secondLineText = text
 		} else {
-			secondLineText = text[index:]
+			secondLineText = text[resumeIndex:]
 		}
 	} else {
 		// The line can't be split earlier, try to hyphenate the first word.
@@ -170,20 +170,19 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 			// only try when space collapsing is allowed
 			newFirstLineText := firstLineText + nextWord
 			layout.SetText(newFirstLineText)
-			firstLine, index = layout.GetFirstLine()
-			firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
-			if index == -1 && firstLineText != "" {
-				// The next word fits in the first line, keep the layout
-				resumeIndex = len([]rune(newFirstLineText)) + 1
-				return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
-			} else if index != -1 && index != 0 {
-				// Text may have been split elsewhere by Pango earlier
-				resumeIndex = index
-			} else {
-				// Second line is none
-				resumeIndex = firstLine.Length + 1
-				if resumeIndex >= len(text) {
-					resumeIndex = -1
+			firstLine, resumeIndex = layout.GetFirstLine()
+			// firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
+			if resumeIndex == -1 {
+				if firstLineText != "" {
+					// The next word fits in the first line, keep the layout
+					resumeIndex = len([]rune(newFirstLineText)) + 1
+					return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
+				} else {
+					// Second line is none
+					resumeIndex = firstLine.Length + 1
+					if resumeIndex >= len(text) {
+						resumeIndex = -1
+					}
 				}
 			}
 		}
@@ -200,15 +199,18 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 		lang = hyphen.LanguageFallback(lang)
 	}
 	limit := style.GetHyphenateLimitChars()
+	hyphenateCharacter := string(style.GetHyphenateCharacter())
 	total, left, right := limit[0], limit[1], limit[2]
 	hyphenated := false
 	softHyphen := '\u00ad'
 
-	hyphenateCharacter := string(style.GetHyphenateCharacter())
-
-	tryHyphenate := false
-	var startWord, stopWord int
+	autoHyphenation, manualHyphenation := false, false
 	if hyphens != "none" {
+		manualHyphenation = strings.ContainsRune(firstLineText, softHyphen) || strings.ContainsRune(nextWord, softHyphen)
+	}
+
+	var startWord, stopWord int
+	if hyphens == "auto" && lang != "" {
 		nextWordBoundaries := getNextWordBoundaries(secondLineText)
 		if len(nextWordBoundaries) == 2 {
 			// We have a word to hyphenate
@@ -226,92 +228,77 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 				if space > limitZone || space < 0 {
 					// Available space is worth the try, or the line is even too
 					// long to fit: try to hyphenate
-					tryHyphenate = true
+					autoHyphenation = true
 				}
 			}
 		}
+	}
 
-		var manualHyphenation, autoHyphenation bool
-		if tryHyphenate {
-			// Automatic hyphenation possible and next word is long enough
-			autoHyphenation = hyphens == "auto" && lang != ""
-			manualHyphenation = false
-			if autoHyphenation {
-				if strings.ContainsRune(firstLineText, softHyphen) || strings.ContainsRune(nextWord, softHyphen) {
-					// Automatic hyphenation opportunities within a word must be
-					// ignored if the word contains a conditional hyphen, in favor
-					// of the conditional hyphen(s).
-					// See https://drafts.csswg.org/css-text-3/#valdef-hyphens-auto
-					manualHyphenation = true
-				}
+	// Automatic hyphenation opportunities within a word must be ignored if the
+	// word contains a conditional hyphen, in favor of the conditional
+	// hyphen(s).
+	// See https://drafts.csswg.org/css-text-3/#valdef-hyphens-auto
+	var dictionaryIterations []string
+	if manualHyphenation {
+		// Manual hyphenation: check that the line ends with a soft
+		// hyphen and add the missing hyphen
+		if strings.HasSuffix(firstLineText, string(softHyphen)) {
+			// The first line has been split on a soft hyphen
+			if id := strings.LastIndexByte(firstLineText, ' '); id != -1 {
+				firstLineText, nextWord = firstLineText[:id], firstLineText[id+1:]
+				nextWord = " " + nextWord
+				layout.SetText(firstLineText)
+				firstLine, _ = layout.GetFirstLine()
+				resumeIndex = len([]rune(firstLineText + " "))
 			} else {
-				manualHyphenation = hyphens == "manual"
+				firstLineText, nextWord = "", firstLineText
 			}
 		}
-
-		var dictionaryIterations []string
-		if manualHyphenation {
-			// Manual hyphenation: check that the line ends with a soft
-			// hyphen and add the missing hyphen
-			if strings.HasSuffix(firstLineText, string(softHyphen)) {
-				// The first line has been split on a soft hyphen
-				if id := strings.LastIndexByte(firstLineText, ' '); id != -1 {
-					firstLineText, nextWord = firstLineText[:id], firstLineText[id+1:]
-					nextWord = " " + nextWord
-					layout.SetText(firstLineText)
-					firstLine, index = layout.GetFirstLine()
-					resumeIndex = len([]rune(firstLineText + " "))
-				} else {
-					firstLineText, nextWord = "", firstLineText
-				}
-			}
-			dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
-		} else if autoHyphenation {
-			dictionaryKey := HyphenDictKey{lang, left, right, total}
-			dictionary, ok := context.HyphenCache()[dictionaryKey]
-			if !ok {
-				dictionary = hyphen.NewHyphener(lang, left, right)
-				context.HyphenCache()[dictionaryKey] = dictionary
-			}
-			dictionaryIterations = dictionary.Iterate(nextWord)
+		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
+	} else if autoHyphenation {
+		dictionaryKey := HyphenDictKey{lang, left, right, total}
+		dictionary, ok := context.HyphenCache()[dictionaryKey]
+		if !ok {
+			dictionary = hyphen.NewHyphener(lang, left, right)
+			context.HyphenCache()[dictionaryKey] = dictionary
 		}
+		dictionaryIterations = dictionary.Iterate(nextWord)
+	}
 
-		if len(dictionaryIterations) != 0 {
-			var newFirstLineText, hyphenatedFirstLineText string
-			for _, firstWordPart := range dictionaryIterations {
-				newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
-				hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
-				newLayout := CreateLayout(hyphenatedFirstLineText, style, context, maxWidth, justificationSpacing)
-				newFirstLine, newIndex := newLayout.GetFirstLine()
-				newFirstLineWidth, _ := lineSize(newFirstLine, style.GetLetterSpacing())
-				newSpace := maxWidthV - newFirstLineWidth
-				if newIndex == -1 && (newSpace >= 0 || firstWordPart == dictionaryIterations[len(dictionaryIterations)-1]) {
-					hyphenated = true
-					layout = newLayout
-					firstLine = newFirstLine
-					index = newIndex
-					resumeIndex = len([]rune(newFirstLineText))
-					if text[resumeIndex] == softHyphen {
-						// Recreate the layout with no maxWidth to be sure that
-						// we don't break before the soft hyphen
-						layout.Layout.SetWidth(-1)
-						resumeIndex += 1
-					}
-					break
-				}
-			}
-
-			if !hyphenated && firstLineText == "" {
-				// Recreate the layout with no maxWidth to be sure that
-				// we don't break before or inside the hyphenate character
-				hyphenated = true
-				layout.SetText(hyphenatedFirstLineText)
-				layout.Layout.SetWidth(-1)
-				firstLine, index = layout.GetFirstLine()
+	if len(dictionaryIterations) != 0 {
+		var newFirstLineText, hyphenatedFirstLineText string
+		for _, firstWordPart := range dictionaryIterations {
+			newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
+			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
+			newLayout := CreateLayout(hyphenatedFirstLineText, style, context, maxWidth, justificationSpacing)
+			newFirstLine, newIndex := newLayout.GetFirstLine()
+			newFirstLineWidth, _ := lineSize(newFirstLine, style.GetLetterSpacing())
+			newSpace := maxWidthV - newFirstLineWidth
+			hyphenated = newIndex == -1 && (newSpace >= 0 || firstWordPart == dictionaryIterations[len(dictionaryIterations)-1])
+			if hyphenated {
+				layout = newLayout
+				firstLine = newFirstLine
 				resumeIndex = len([]rune(newFirstLineText))
 				if text[resumeIndex] == softHyphen {
+					// Recreate the layout with no maxWidth to be sure that
+					// we don't break before the soft hyphen
+					layout.Layout.SetWidth(-1)
 					resumeIndex += 1
 				}
+				break
+			}
+		}
+
+		if !hyphenated && firstLineText == "" {
+			// Recreate the layout with no maxWidth to be sure that
+			// we don't break before or inside the hyphenate character
+			hyphenated = true
+			layout.SetText(hyphenatedFirstLineText)
+			layout.Layout.SetWidth(-1)
+			firstLine, _ = layout.GetFirstLine()
+			resumeIndex = len([]rune(newFirstLineText))
+			if text[resumeIndex] == softHyphen {
+				resumeIndex += 1
 			}
 		}
 	}
@@ -323,7 +310,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 		hyphenatedFirstLineText := firstLineText + hyphenateCharacter
 		layout.SetText(hyphenatedFirstLineText)
 		layout.Layout.SetWidth(-1)
-		firstLine, index = layout.GetFirstLine()
+		firstLine, _ = layout.GetFirstLine()
 		resumeIndex = len([]rune(firstLineText))
 	}
 
@@ -340,6 +327,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 		layout.SetText(string(text))
 		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(maxWidthV)))
 		layout.Layout.SetWrap(pango.WRAP_CHAR)
+		var index int
 		firstLine, index = layout.GetFirstLine()
 		resumeIndex = index
 		if resumeIndex == 0 {
@@ -376,19 +364,13 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 			firstLineText = strings.TrimRight(firstLineText, " ")
 		}
 
-		// Remove soft hyphens
-		textNoHyphens := strings.ReplaceAll(firstLineText, "\u00ad", "")
-		layout.SetText(textNoHyphens)
+		layout.SetText(firstLineText)
 
 		firstLine, _ = layout.GetFirstLine()
 		length = 0
-
 		if firstLine != nil {
 			length = firstLine.Length
 		}
-
-		// add the number of hypen chars (\u00ad is 2 bytes in utf8)
-		length += (len(firstLineText) - len(textNoHyphens)) / 2
 	}
 
 	width, height := lineSize(firstLine, style.GetLetterSpacing())
@@ -499,7 +481,7 @@ func StrutLayout(style pr.StyleAccessor, context TextLayoutContext) [2]pr.Float 
 		return v
 	}
 
-	layout := NewTextLayout(context, pr.Fl(fontSize), style, 0, nil)
+	layout := NewTextLayout(context, style, 0, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
 	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
@@ -521,46 +503,66 @@ func StrutLayout(style pr.StyleAccessor, context TextLayoutContext) [2]pr.Float 
 	return result
 }
 
-// ExRatio returns the ratio 1ex/font_size, according to given style.
+// CharacterRatio returns the ratio 1ex/font_size or 1ch/font_size, according to given style.
 // It should be used with a valid text context to get accurate result.
 // Otherwise, if context is `nil`, it returns 1 as a default value.
 // It does not query WordSpacing or LetterSpacing from the style.
-func ExRatio(style pr.ElementStyle, context TextLayoutContext) pr.Float {
+func CharacterRatio(style pr.ElementStyle, cache pr.TextRatioCache, isCh bool, context TextLayoutContext) pr.Float {
 	if context == nil {
 		return 1
+	}
+
+	key := fontStyleCacheKey(style)
+	if f, ok := cache.Get(key, isCh); ok {
+		return f
 	}
 
 	// Random big value
+	style = style.Copy()
 	var fontSize pr.Fl = 1000
+	style.SetFontSize(pr.FToV(fontSize))
 
-	layout := NewTextLayout(context, fontSize, style, 0, nil)
-	layout.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
+	layout := NewTextLayout(context, style, 0, nil)
+	character := "x"
+	if isCh {
+		character = "0"
+	}
+	layout.Layout.SetText(character) // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := layout.GetFirstLine()
 
-	var inkExtents pango.Rectangle
-	line.GetExtents(&inkExtents, nil)
-	heightAboveBaseline := PangoUnitsToFloat(inkExtents.Y)
+	var inkExtents, logicalExtents pango.Rectangle
+	line.GetExtents(&inkExtents, &logicalExtents)
+	var measure pr.Fl
+	if isCh {
+		measure = PangoUnitsToFloat(logicalExtents.Width)
+	} else {
+		measure = -PangoUnitsToFloat(inkExtents.Y)
+	}
 
 	// Zero means some kind of failure, fallback is 0.5.
 	// We round to try keeping exact values that were altered by Pango.
-	v := math.Round(float64(-heightAboveBaseline/fontSize)*100000) / 100000
+	v := math.Round(float64(measure/fontSize)*100000) / 100000
 	if v == 0 {
 		return 0.5
 	}
-	return pr.Float(v)
+	out := pr.Float(v)
+	cache.Set(key, isCh, out)
+	return out
 }
 
-// ChWidth returns the logical width of the "0" text,
-// without querying WordSpacing or LetterSpacing from the style,
-// so that is may be used to compute these style properties.
-func ChWidth(style pr.StyleAccessor, fontSize pr.Float, context TextLayoutContext, letterSpacing pr.Value) pr.Float {
-	if context == nil {
-		return 1
-	}
-
-	layout := NewTextLayout(context, pr.Fl(fontSize), style, 0, nil)
-	layout.Layout.SetText("0")
-	line, _ := layout.GetFirstLine()
-	logicalWidth, _ := lineSize(line, letterSpacing)
-	return pr.Float(logicalWidth)
+func fontStyleCacheKey(style pr.StyleAccessor) string {
+	return fmt.Sprint(
+		style.GetFontFamily(),
+		style.GetFontStyle(),
+		style.GetFontStretch(),
+		style.GetFontWeight(),
+		style.GetFontVariantLigatures(),
+		style.GetFontVariantPosition(),
+		style.GetFontVariantCaps(),
+		style.GetFontVariantNumeric(),
+		style.GetFontVariantAlternates(),
+		style.GetFontVariantEastAsian(),
+		style.GetFontFeatureSettings(),
+		style.GetFontVariationSettings(),
+	)
 }

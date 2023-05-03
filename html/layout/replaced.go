@@ -9,13 +9,13 @@ import (
 )
 
 // Layout for images and other replaced elements.
-// http://dev.w3.org/csswg/css-images-3/#sizing
+// https://drafts.csswg.org/csswg/css-images-3/#sizing
 
 // Default sizing algorithm for the concrete object size.
-// http://dev.w3.org/csswg/css-images-3/#default-sizing
+// https://drafts.csswg.org/csswg/css-images-3/#default-sizing
 func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
-	specifiedWidth, specifiedHeight pr.MaybeFloat, defaultWidth, defaultHeight pr.Float) (concreteWidth, concreteHeight pr.Float) {
-
+	specifiedWidth, specifiedHeight pr.MaybeFloat, defaultWidth, defaultHeight pr.Float,
+) (concreteWidth, concreteHeight pr.Float) {
 	if specifiedWidth == pr.AutoF {
 		specifiedWidth = nil
 	}
@@ -54,13 +54,13 @@ func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 }
 
 // Cover constraint sizing algorithm for the concrete object size.
-// http://dev.w3.org/csswg/css-images-3/#contain-constraint
+// https://drafts.csswg.org/csswg/css-images-3/#contain-constraint
 func containConstraintImageSizing(constraintWidth, constraintHeight pr.Float, intrinsicRatio pr.MaybeFloat) (concreteWidth, concreteHeight pr.Float) {
 	return constraintImageSizing(constraintWidth, constraintHeight, intrinsicRatio, false)
 }
 
 // Cover constraint sizing algorithm for the concrete object size.
-// http://dev.w3.org/csswg/css-images-3/#cover-constraint
+// https://drafts.csswg.org/csswg/css-images-3/#cover-constraint
 func coverConstraintImageSizing(constraintWidth, constraintHeight pr.Float, intrinsicRatio pr.MaybeFloat) (concreteWidth, concreteHeight pr.Float) {
 	return constraintImageSizing(constraintWidth, constraintHeight, intrinsicRatio, true)
 }
@@ -140,7 +140,7 @@ func replacedBoxWidth_(box_ Box, _ *layoutContext, containingBlock containingBlo
 	intrinsicWidth, intrinsicHeight, ratio := box.Replacement.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
 
 	// This algorithm simply follows the different points of the specification
-	// http://www.w3.org/TR/CSS21/visudet.html#inline-replaced-width
+	// https://www.w3.org/TR/CSS21/visudet.html#inline-replaced-width
 	if box.Height == pr.AutoF && box.Width == pr.AutoF {
 		if intrinsicWidth != nil {
 			// Point #1
@@ -182,7 +182,7 @@ func replacedBoxHeight_(box_ Box, _ *layoutContext, _ containingBlock) (bool, pr
 		panic(fmt.Sprintf("expected ReplacedBox instance, got %s", box_))
 	}
 	box := box__.Replaced()
-	// http://www.w3.org/TR/CSS21/visudet.html#inline-replaced-height
+	// https://www.w3.org/TR/CSS21/visudet.html#inline-replaced-height
 	_, intrinsicHeight, ratio := box.Replacement.GetIntrinsicSize(
 		box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
 
@@ -278,7 +278,7 @@ func minMaxAutoReplaced(box *bo.BoxFields) {
 	}
 }
 
-// Lay out an inline :class:`boxes.ReplacedBox` ``box``.
+// Lay out an inline :class:`boxes.ReplacedBox` “box“.
 func inlineReplacedBoxLayout(box_ Box, containingBlock *bo.BoxFields) {
 	resolveMarginAuto(box_.Box())
 	inlineReplacedBoxWidthHeight(box_, containingBlock)
@@ -295,7 +295,7 @@ func inlineReplacedBoxWidthHeight(box Box, containingBlock containingBlock) {
 	}
 }
 
-// Lay out the block :class:`boxes.ReplacedBox` ``box``.
+// Lay out the block :class:`boxes.ReplacedBox` “box“.
 func blockReplacedBoxLayout(context *layoutContext, box_ bo.ReplacedBoxITF, containingBlock *bo.BoxFields) (bo.ReplacedBoxITF, blockLayout) {
 	box_ = box_.Copy().(bo.ReplacedBoxITF) // Copy is type stable
 	box := box_.Box()
@@ -312,7 +312,7 @@ func blockReplacedBoxLayout(context *layoutContext, box_ bo.ReplacedBoxITF, cont
 	}
 
 	// Don't collide with floats
-	// http://www.w3.org/TR/CSS21/visuren.html#floats
+	// https://www.w3.org/TR/CSS21/visuren.html#floats
 	box.PositionX, box.PositionY, _ = avoidCollisions(context, box_, containingBlock, false)
 	nextPage := tree.PageBreak{Break: "any"}
 

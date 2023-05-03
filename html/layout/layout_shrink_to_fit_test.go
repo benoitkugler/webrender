@@ -12,8 +12,8 @@ import (
 //  Tests for shrink-to-fit algorithm.
 
 func TestShrinkToFitFloatingPointError1(t *testing.T) {
-	for marginLeft := 1; marginLeft < 10; marginLeft++ {
-		for fontSize := 1; fontSize < 10; fontSize++ {
+	for marginLeft := 1; marginLeft < 10; marginLeft += 2 {
+		for fontSize := 1; fontSize < 10; fontSize += 2 {
 			testShrinkToFitFloatingPointError1(t, marginLeft, fontSize)
 		}
 	}

@@ -87,6 +87,53 @@ func TestRelativePositioning2(t *testing.T) {
 	tu.AssertEqual(t, span2.Box().Width, pr.Float(120), "")
 }
 
+func TestRelativePositioning3(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <style>
+        img { width: 20px }
+        body { font-size: 0 } /* Remove spaces */
+      </style>
+      <body>
+      <span><img src=pattern.png></span>
+      <span style="position: relative; left: 10px; right: 5px
+        "><img src=pattern.png></span>
+      <span><img src=pattern.png></span>
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	line := body.Box().Children[0]
+
+	_, span2, _ := unpack3(line)
+	tu.AssertEqual(t, span2.Box().PositionX, pr.Float(20+10), "")
+}
+
+func TestRelativePositioning4(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <style>
+        img { width: 20px }
+        body { direction: rtl; width: 100px;
+               font-size: 0 } /* Remove spaces */
+      </style>
+      <body>
+      <span><img src=pattern.png></span>
+      <span style="position: relative; left: 10px; right: 5px
+        "><img src=pattern.png></span>
+      <span><img src=pattern.png></span>
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	line := body.Box().Children[0]
+
+	_, span2, _ := unpack3(line)
+	tu.AssertEqual(t, span2.Box().PositionX, pr.Float(100-20-5-20), "")
+}
+
 func TestAbsolutePositioning1(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
@@ -315,24 +362,29 @@ func TestAbsoluteImages(t *testing.T) {
 
 	page := renderOnePage(t, `
       <style>
+	  	@page { size: 50px; }
         img { display: block; position: absolute }
       </style>
       <div style="margin: 10px">
         <img src=pattern.png />
         <img src=pattern.png style="left: 15px" />
+		<img src=pattern.png style="top: 15px" />
+        <img src=pattern.png style="bottom: 25px" />
       </div>
     `)
 	html := page.Box().Children[0]
 	body := html.Box().Children[0]
 	div := body.Box().Children[0]
-	img1, img2 := unpack2(div)
+	img1, img2, img3, img4 := unpack4(div)
 	tu.AssertEqual(t, div.Box().Height, pr.Float(0), "")
-	tu.AssertEqual(t, [2]pr.Float{div.Box().PositionX, div.Box().PositionY}, [2]pr.Float{0, 0}, "")
-	tu.AssertEqual(t, [2]pr.Float{img1.Box().PositionX, img1.Box().PositionY}, [2]pr.Float{10, 10}, "")
-	tu.AssertEqual(t, [2]pr.Float{img1.Box().Width.V(), img1.Box().Height.V()}, [2]pr.Float{4, 4}, "")
-	tu.AssertEqual(t, [2]pr.Float{img2.Box().PositionX, img2.Box().PositionY}, [2]pr.Float{15, 10}, "")
-	tu.AssertEqual(t, [2]pr.Float{img2.Box().Width.V(), img2.Box().Height.V()}, [2]pr.Float{4, 4}, "")
-	// TODO: test the various cases in absoluteReplaced()
+	assertPos(t, div.Box().PositionX, div.Box().PositionY, 0, 0)
+	assertPos(t, img1.Box().PositionX, img1.Box().PositionY, 10, 10)
+	assertPos(t, img1.Box().Width.V(), img1.Box().Height.V(), 4, 4)
+	assertPos(t, img2.Box().PositionX, img2.Box().PositionY, 15, 10)
+	assertPos(t, img3.Box().PositionX, img3.Box().PositionY, 10, 15)
+	assertPos(t, img3.Box().Width.V(), img3.Box().Height.V(), 4, 4)
+	assertPos(t, img4.Box().PositionX, img4.Box().PositionY, 10, 21)
+	assertPos(t, img4.Box().Width.V(), img4.Box().Height.V(), 4, 4)
 }
 
 func TestFixedPositioning(t *testing.T) {
@@ -370,7 +422,7 @@ func TestFixedPositioningRegression1(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
-	// Regression test for https://github.com/Kozea/WeasyPrint/issues/641
+	// Regression test for https://github.com/Kozea/WeasyPrint/pull/641
 	pages := renderPages(t, `
       <style>
         @page:first { size: 100px 200px }

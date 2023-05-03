@@ -11,6 +11,41 @@ import (
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
+func TestLineBreakingNbsp(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1561
+	page := renderOnePage(t, `
+      <style>
+        @font-face {src: url(weasyprint.otf); font-family: weasyprint}
+        body { font-family: weasyprint; width: 7.5em }
+      </style>
+      <body>a <span>b</span> c d&nbsp;<span>ef
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	line1, line2 := unpack2(body)
+	assertText(t, line1.Box().Children[0], "a ")
+	assertText(t, line1.Box().Children[1].Box().Children[0], "b")
+	assertText(t, line1.Box().Children[2], " c")
+	assertText(t, line2.Box().Children[0], "d\u00a0")
+	assertText(t, line2.Box().Children[1].Box().Children[0], "ef")
+}
+
+func TestLineBreakBeforeTrailingSpace(t *testing.T) {
+	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1852
+	page := renderOnePage(t, `
+        <p style="display: inline-block">test\u2028 </p>a
+        <p style="display: inline-block">test\u2028</p>a
+    `)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	line := body.Box().Children[0]
+	p1, _, p2, _ := unpack4(line)
+	tu.AssertEqual(t, p1.Box().Width, p2.Box().Width, "")
+}
+
 func TestTextFontSizeZero(t *testing.T) {
 	cp := tu.CaptureLogs()
 	defer cp.AssertNoLogs(t)
@@ -409,6 +444,7 @@ func TestTextAlignJustifyNoBreakBetweenChildren(t *testing.T) {
 func TestWordSpacing(t *testing.T) {
 	cp := tu.CaptureLogs()
 	defer cp.AssertNoLogs(t)
+
 	// keep the empty <style> as a regression test: element.text is nil
 	// (Not a string.)
 	page := renderOnePage(t, `
@@ -419,14 +455,24 @@ func TestWordSpacing(t *testing.T) {
 	line := body.Box().Children[0]
 	strong1 := line.Box().Children[0]
 
-	page = renderOnePage(t, `
-      <style>strong { word-spacing: 11px }</style>
-      <body><strong>Lorem ipsum dolor<em>sit amet</em></strong>`)
-	html = page.Box().Children[0]
-	body = html.Box().Children[0]
-	line = body.Box().Children[0]
-	strong2 := line.Box().Children[0]
-	tu.AssertEqual(t, strong2.Box().Width.V()-strong1.Box().Width.V(), pr.Float(33), "strong distance")
+	for _, text := range []string{
+		"Lorem ipsum dolor<em>sit amet</em>",
+		"Lorem ipsum <em>dolorsit</em> amet",
+		"Lorem ipsum <em></em>dolorsit amet",
+		"Lorem ipsum<em> </em>dolorsit amet",
+		"Lorem ipsum<em> dolorsit</em> amet",
+		"Lorem ipsum <em>dolorsit </em>amet",
+	} {
+		page = renderOnePage(t, fmt.Sprintf(`
+		  <style>strong { word-spacing: 11px }</style>
+		  <body><strong>%s</strong>`, text))
+		html = page.Box().Children[0]
+		body = html.Box().Children[0]
+		line = body.Box().Children[0]
+		strong2 := line.Box().Children[0]
+
+		tu.AssertEqual(t, strong2.Box().Width.V()-strong1.Box().Width.V(), pr.Float(33), "strong distance")
+	}
 }
 
 func TestLetterSpacing1(t *testing.T) {
@@ -658,30 +704,28 @@ func TestHyphenateManual2(t *testing.T) {
 			word := string(total[:i]) + "\u00ad" + string(total[i:])
 
 			page := renderOnePage(t, fmt.Sprintf(`
-		<html style="width: 5em; font-family: weasyprint" >
-		<style>
-		  @font-face {src: url(weasyprint.otf); font-family: weasyprint}
-		</style>
-		<body style="hyphens: manual;  hyphenate-character: '%s'" lang=fr>%s`, hyphenateCharacter, word))
+			<html style="width: 5em; font-family: weasyprint" >
+			<style>
+				@font-face {src: url(weasyprint.otf); font-family: weasyprint}
+			</style>
+			<body style="hyphens: manual;  hyphenate-character: '%s'" lang=fr>%s`, hyphenateCharacter, word))
 			html := page.Box().Children[0]
 			body := html.Box().Children[0]
 			lines := body.Box().Children
-			if !(len(lines) > 1) {
+			if L := len(lines); !(L == 2 || L == 3) {
 				t.Fatalf("expected > 1, got %v", lines)
 			}
 			fullText := ""
 			for _, line := range lines {
-				fullText += line.Box().Children[0].(*bo.TextBox).Text
+				fullText += textFromBoxes(line.Box().Children)
 			}
 			fullText = strings.ReplaceAll(fullText, hyphenateCharacter, "")
 			if text := lines[0].Box().Children[0].(*bo.TextBox).Text; strings.HasSuffix(text, hyphenateCharacter) {
 				tu.AssertEqual(t, fullText, word, "")
 			} else {
-				if !strings.HasSuffix(text, "y") {
-					t.Fatal()
-				}
+				tu.AssertEqual(t, strings.HasSuffix(strings.TrimSuffix(text, "\u00ad"), "y"), true, "")
 				if len(lines) == 3 {
-					if text := lines[1].Box().Children[0].(*bo.TextBox).Text; !strings.HasSuffix(text, hyphenateCharacter) {
+					if text := lines[1].Box().Children[0].(*bo.TextBox).Text; !strings.HasSuffix(strings.TrimSuffix(text, "\u00ad"), hyphenateCharacter) {
 						t.Fatalf("unexpected %s", text)
 					}
 				}
@@ -1187,15 +1231,13 @@ func TestTextTransform(t *testing.T) {
 	html := page.Box().Children[0]
 	body := html.Box().Children[0]
 	expected := []string{
-		"Hé Lo1",
+		"Hé LO1",
 		"HÉ LO1",
 		"hé lo1",
 		"\uff48é\u3000\uff4c\uff2f\uff11",
 		"hé lO1",
 	}
-	if len(body.Box().Children) != len(expected) {
-		t.Fatal()
-	}
+	tu.AssertEqual(t, len(body.Box().Children), len(expected), "")
 	for i, child := range body.Box().Children {
 		line := child.Box().Children[0]
 		text := line.Box().Children[0].(*bo.TextBox)

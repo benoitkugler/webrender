@@ -180,3 +180,35 @@ func TestCounterMultipleExtends(t *testing.T) {
 	tu.AssertEqual(t, li7.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "7. ", "li7")
 	tu.AssertEqual(t, li8.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "8. ", "li8")
 }
+
+func TestCounters9(t *testing.T) {
+	// See https://github.com/Kozea/WeasyPrint/issues/1685
+	t.Skip("nested counters are broken")
+
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+		  <ol>
+			<li></li>
+			<li>
+			  <ol style="counter-reset: a">
+				<li></li>
+				<li></li>
+			  </ol>
+			</li>
+			<li></li>
+		  </ol>
+		`)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	ol1 := body.Box().Children[0]
+	oli1, oli2, oli3 := unpack3(ol1)
+	_, ol2 := unpack2(oli2)
+	oli21, oli22 := unpack2(ol2)
+	assertText(t, oli1.Box().Children[0].Box().Children[0].Box().Children[0], "1. ")
+	assertText(t, oli2.Box().Children[0].Box().Children[0].Box().Children[0], "2. ")
+	assertText(t, oli21.Box().Children[0].Box().Children[0].Box().Children[0], "1. ")
+	assertText(t, oli22.Box().Children[0].Box().Children[0].Box().Children[0], "2. ")
+	assertText(t, oli3.Box().Children[0].Box().Children[0].Box().Children[0], "3. ")
+}

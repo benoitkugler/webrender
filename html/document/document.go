@@ -40,7 +40,7 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 	// http://www.w3.org/TR/css3-2d-transforms/#introduction
 	box := box_.Box()
 	trans := box.Style.GetTransform()
-	if len(trans) == 0 || bo.InlineBoxT.IsInstance(box_) {
+	if len(trans) == 0 || bo.InlineT.IsInstance(box_) {
 		return mt.Transform{}, false
 	}
 
@@ -85,7 +85,7 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 }
 
 // Apply a transformation matrix to an axis-aligned rectangle
-// and return its axis-aligned bounding box as ``(x_min, y_min, x_max, y_max)``
+// and return its axis-aligned bounding box as “(x_min, y_min, x_max, y_max)“
 func rectangleAabb(matrix mt.Transform, posX, posY, width, height fl) [4]fl {
 	x1, y1 := matrix.Apply(posX, posY)
 	x2, y2 := matrix.Apply(posX+width, posY)
@@ -98,7 +98,7 @@ func rectangleAabb(matrix mt.Transform, posX, posY, width, height fl) [4]fl {
 	return [4]fl{boxX1, boxY1, boxX2, boxY2}
 }
 
-//  Link is a positionned link in a page.
+// Link is a positionned link in a page.
 type Link struct {
 	// Type is one of three strings :
 	// - "external": `target` is an absolute URL
@@ -144,11 +144,11 @@ func gatherLinksAndBookmarks(box_ bo.Box, bookmarks *[]bookmarkData, links *[]Li
 	anchorName := string(box.Style.GetAnchor())
 	hasBookmark := bookmarkLabel != "" && bookmarkLevel != 0
 	// "link" is inherited but redundant on text boxes
-	hasLink := !link.IsNone() && !(bo.TextBoxT.IsInstance(box_) || bo.LineBoxT.IsInstance(box_))
+	hasLink := !link.IsNone() && !(bo.TextT.IsInstance(box_) || bo.LineT.IsInstance(box_))
 	// In case of duplicate IDs, only the first is an anchor.
 	_, inAnchors := anchors[anchorName]
 	hasAnchor := anchorName != "" && !inAnchors
-	isAttachment := box.IsAttachment
+	isAttachment := box.IsAttachment()
 
 	if hasBookmark || hasLink || hasAnchor {
 		posX, posY, width, height := bo.HitArea(box_).Unpack()
@@ -313,10 +313,10 @@ func Render(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, f
 // Links to a missing anchor are removed with a warning.
 // If multiple anchors have the same name, the first one is used.
 // Returns lists (one per page) like :attr:`Page.links`,
-// except that ``target`` for internal hyperlinks is
-// ``(pageNumber, x, y)`` instead of an anchor name.
+// except that “target“ for internal hyperlinks is
+// “(pageNumber, x, y)“ instead of an anchor name.
 // The page number is a 0-based index into the :attr:`pages` list,
-// and ``x, y`` have been scaled (origin is at the top-left of the page).
+// and “x, y“ have been scaled (origin is at the top-left of the page).
 func (d *Document) resolveLinks() ([][]Link, [][]backend.Anchor) {
 	anchors := utils.NewSet()
 	pagedAnchors := make([][]backend.Anchor, len(d.Pages))

@@ -8,9 +8,9 @@ import (
 
 var nDashDigitRe = regexp.MustCompile("^n(-[0-9]+)$")
 
-// Parse `<An+B> <http://dev.w3.org/csswg/css-syntax-3/#anb>`_,
+// Parse `<An+B> <http://drafts.csswg.org/csswg/css-syntax-3/#anb>`_,
 // as found in `:nth-child()
-// <http://dev.w3.org/csswg/selectors/#nth-child-pseudo>`
+// <http://drafts.csswg.org/csswg/selectors/#nth-child-pseudo>`
 // and related Selector pseudo-classes.
 // Although tinycss2 does not include a full Selector parser,
 // this bit of syntax is included as it is particularly tricky to define
