@@ -27,13 +27,13 @@ type Splitted struct {
 	// newline characters.
 	ResumeAt int
 
-	// width in pixels of the first line
+	// Width is the width in pixels of the first line
 	Width pr.Float
 
-	// height in pixels of the first line
+	// Height is the height in pixels of the first line
 	Height pr.Float
 
-	// baseline in pixels of the first line
+	// Baselineis the baseline in pixels of the first line
 	Baseline pr.Float
 }
 
