@@ -34,10 +34,149 @@ type svgContext struct {
 	pathParser pathParser
 }
 
+// newSVGContextReader parses the html [rootText]
+// and call newSVGContext
+func newSVGContextReader(rootText io.Reader, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
+	root, err := html.Parse(rootText)
+	if err != nil {
+		return nil, err
+	}
+
+	return newSVGContext(root, baseURL, urlFetcher)
+}
+
+// newSVGContext converts from the html representation to an internal,
+// simplified form, suitable for post-processing.
+//
+// The stylesheets are processed and applied, the values
+// of the CSS properties begin stored as attributes.
+//
+// Inheritable attributes are cascaded and 'inherit' special values are resolved.
+func newSVGContext(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
+	// extract the root svg node, which is not
+	// always the first one
+	iter := utils.NewHtmlIterator(root, atom.Svg)
+	if !iter.HasNext() {
+		return nil, errors.New("missing <svg> element")
+	}
+	svgRoot := iter.Next()
+
+	stylesheets, trefs := fetchStyleAndTextRefs(svgRoot)
+	normalMatcher, importantMatcher := parseStylesheets(stylesheets, baseURL)
+
+	// build the SVG tree and apply style attribute
+	var out svgContext
+	out.baseURL = baseURL
+	out.urlFetcher = urlFetcher
+	out.defs = make(map[string]*cascadedNode)
+	out.inUseIDs = make(utils.Set)
+
+	// may return nil to discard the node
+	var buildTree func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode
+
+	buildTree = func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode {
+		// text is handled by the parent
+		// style elements are no longer useful
+		if node.Type != html.ElementNode || node.DataAtom == atom.Style {
+			return nil
+		}
+
+		childAttrs := newNodeAttributes(node.Attr)
+		// Cascade attributes
+		for key, value := range parentAttrs {
+			if _, isNotInherited := notInheritedAttributes[key]; !isNotInherited {
+				if _, isSet := childAttrs[key]; !isSet {
+					childAttrs[key] = value
+				}
+			}
+		}
+
+		// Apply style
+		childAttrs.applyStyle(baseURL, (*html.Node)(node), normalMatcher, importantMatcher)
+
+		// Replace 'currentColor' value
+		for key := range colorAttributes {
+			if childAttrs[key] == "currentColor" {
+				if c, has := childAttrs["color"]; has {
+					childAttrs[key] = c
+				} else {
+					childAttrs[key] = "black"
+				}
+			}
+		}
+
+		// Handle 'inherit' values
+		for key, value := range childAttrs {
+			if value == "inherit" {
+				childAttrs[key] = parentAttrs[key]
+			}
+		}
+
+		nodeSVG := &cascadedNode{
+			tag:   node.Data,
+			text:  (*utils.HTMLNode)(node).GetChildrenText(),
+			attrs: childAttrs,
+		}
+
+		// recurse
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			if childSVG := buildTree(child, childAttrs); childSVG != nil {
+				nodeSVG.children = append(nodeSVG.children, childSVG)
+			}
+		}
+
+		// Fix text in text tags
+		if node.Data == "text" || node.Data == "textPath" || node.Data == "a" {
+			handleText(nodeSVG, true, true, trefs)
+		}
+
+		if ID := childAttrs["id"]; ID != "" {
+			out.defs[ID] = nodeSVG
+		}
+
+		return nodeSVG
+	}
+
+	out.root = buildTree((*html.Node)(svgRoot), nil)
+
+	out.inheritDefs()
+
+	return &out, nil
+}
+
+// Handle inheritance of different defined elements lists.
+func (tree *svgContext) inheritDefs() {
+	for _, element := range tree.defs {
+		if t := element.tag; t == "linearGradient" || t == "radialGradient" || t == "pattern" {
+			tree.inheritElement(element)
+		}
+	}
+}
+
+// Recursively handle inheritance of defined element.
+func (tree *svgContext) inheritElement(node *cascadedNode) {
+	href := node.attrs["href"]
+	url, err := utils.SafeUrljoin(tree.baseURL, href, true)
+	if err != nil {
+		return
+	}
+	delete(node.attrs, "href")
+
+	parent := tree.defs[parseURLFragment(url)]
+	if parent == nil {
+		return
+	}
+	tree.inheritElement(parent)
+	for key, value := range parent.attrs {
+		if _, in := node.attrs[key]; !in {
+			node.attrs[key] = value
+		}
+	}
+}
+
 // cascadedNode is a node in an SVG document.
 // we use this intermediate representation to
-// ease the cascading of the properties
-// and the text handling
+// ease the cascading of the properties and the text handling
 type cascadedNode struct {
 	tag      string
 	text     []byte
@@ -46,7 +185,7 @@ type cascadedNode struct {
 }
 
 // returns a copy
-// attrs id deepcopied, but the children and text are shallow copies
+// attrs is deepcopied, but the children and text are shallow copied
 func (c *cascadedNode) copy() cascadedNode {
 	out := *c
 	out.attrs = make(nodeAttributes, len(c.attrs))
@@ -56,8 +195,9 @@ func (c *cascadedNode) copy() cascadedNode {
 	return out
 }
 
-// raw attributes value of a node
-// attibutes will be updated in the post processing
+// nodeAttributes stores the raw attributes value of a node
+//
+// attributes will be updated in the post processing
 // step due to the cascade
 type nodeAttributes map[string]string
 
@@ -204,110 +344,6 @@ func fetchStyleAndTextRefs(root *utils.HTMLNode) ([][]byte, map[string][]byte) {
 		}
 	}
 	return stylesheets, trefs
-}
-
-// Convert from the html representation to an internal,
-// simplified form, suitable for post-processing.
-// The stylesheets are processed and applied, the values
-// of the CSS properties begin stored as attributes
-// Inheritable attributes are cascaded and 'inherit' special values are resolved.
-func buildSVGTreeReader(svg io.Reader, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
-	root, err := html.Parse(svg)
-	if err != nil {
-		return nil, err
-	}
-
-	return buildSVGTree(root, baseURL, urlFetcher)
-}
-
-func buildSVGTree(root *html.Node, baseURL string, urlFetcher utils.UrlFetcher) (*svgContext, error) {
-	// extract the root svg node, which is not
-	// always the first one
-	iter := utils.NewHtmlIterator(root, atom.Svg)
-	if !iter.HasNext() {
-		return nil, errors.New("missing <svg> element")
-	}
-	svgRoot := iter.Next()
-
-	stylesheets, trefs := fetchStyleAndTextRefs(svgRoot)
-	normalMatcher, importantMatcher := parseStylesheets(stylesheets, baseURL)
-
-	// build the SVG tree and apply style attribute
-	var out svgContext
-	out.baseURL = baseURL
-	out.urlFetcher = urlFetcher
-	out.defs = make(map[string]*cascadedNode)
-	out.inUseIDs = make(utils.Set)
-
-	// may return nil to discard the node
-	var buildTree func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode
-
-	buildTree = func(node *html.Node, parentAttrs nodeAttributes) *cascadedNode {
-		// text is handled by the parent
-		// style elements are no longer useful
-		if node.Type != html.ElementNode || node.DataAtom == atom.Style {
-			return nil
-		}
-
-		attrs := newNodeAttributes(node.Attr)
-		// Cascade attributes
-		for key, value := range parentAttrs {
-			if _, isNotInherited := notInheritedAttributes[key]; !isNotInherited {
-				if _, isSet := attrs[key]; !isSet {
-					attrs[key] = value
-				}
-			}
-		}
-
-		// Apply style
-		attrs.applyStyle(baseURL, (*html.Node)(node), normalMatcher, importantMatcher)
-
-		// Replace 'currentColor' value
-		for key := range colorAttributes {
-			if attrs[key] == "currentColor" {
-				if c, has := attrs["color"]; has {
-					attrs[key] = c
-				} else {
-					attrs[key] = "black"
-				}
-			}
-		}
-
-		// Handle 'inherit' values
-		for key, value := range attrs {
-			if value == "inherit" {
-				attrs[key] = parentAttrs[key]
-			}
-		}
-
-		nodeSVG := &cascadedNode{
-			tag:   node.Data,
-			text:  (*utils.HTMLNode)(node).GetChildrenText(),
-			attrs: attrs,
-		}
-
-		// recurse
-		for child := node.FirstChild; child != nil; child = child.NextSibling {
-			if childSVG := buildTree(child, attrs); childSVG != nil {
-				nodeSVG.children = append(nodeSVG.children, childSVG)
-			}
-		}
-
-		// Fix text in text tags
-		if node.Data == "text" || node.Data == "textPath" || node.Data == "a" {
-			handleText(nodeSVG, true, true, trefs)
-		}
-
-		if ID := attrs["id"]; ID != "" {
-			out.defs[ID] = nodeSVG
-		}
-
-		return nodeSVG
-	}
-
-	out.root = buildTree((*html.Node)(svgRoot), nil)
-
-	return &out, nil
 }
 
 var (

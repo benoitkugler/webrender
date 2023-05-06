@@ -93,7 +93,7 @@ func TestBuildTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tree, err := buildSVGTree(root, "", nil)
+	tree, err := newSVGContext(root, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestTrefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	img, err := buildSVGTree(root, "", nil)
+	img, err := newSVGContext(root, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,5 +182,12 @@ func TestTrefs(t *testing.T) {
 	}
 	if string(t2.text) != "Referenced character data" {
 		t.Fatalf("unexpected text %s", t2.text)
+	}
+}
+
+func TestParseURL(t *testing.T) {
+	_, err := parseURL("")
+	if err != nil {
+		t.Fatal(err)
 	}
 }

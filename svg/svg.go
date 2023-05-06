@@ -1,7 +1,7 @@
 // Package svg implements parsing of SVG images.
 // It transforms SVG text files into an in-memory structure
 // that is easy to draw.
-// CSS is supported via the style and cascadia packages.
+// CSS is supported via the `css` package.
 package svg
 
 import (
@@ -108,13 +108,14 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		var originalDst backend.Canvas
 		if paint && 0 <= opacity && opacity < 1 {
 			originalDst = dst
-			var x, y, width, height Fl = 0, 0, dims.concreteWidth, dims.concreteHeight
+			var x, y, width, height Fl = 0, 0, dims.innerWidth, dims.innerHeight
 			if box, ok := node.resolveBoundingBox(dims, true); ok {
 				x, y, width, height = box.X, box.Y, box.Width, box.Height
 			}
 			dst = dst.NewGroup(x, y, width, height)
 		}
 
+		// apply transform attribute
 		applyTransform(dst, node.attributes.transforms, dims)
 
 		// clip
@@ -217,7 +218,7 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 		)
 		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
 		translateX, translateY := dims.point(marker.refX, marker.refY)
-		if vb := node.attributes.viewbox; vb != nil {
+		if vb := marker.viewbox; vb != nil {
 			scaleX, scaleY, translateX, translateY = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
 
 			clipViewbox := *vb
@@ -452,7 +453,7 @@ func Parse(svg io.Reader, baseURL string, imageLoader ImageLoader, urlFetcher ut
 // ParseNode is the same as Parse but works with an already parsed
 // svg input.
 func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetcher utils.UrlFetcher) (*SVGImage, error) {
-	tree, err := buildSVGTree(root, baseURL, urlFetcher)
+	tree, err := newSVGContext(root, baseURL, urlFetcher)
 	if err != nil {
 		return nil, err
 	}
@@ -470,6 +471,7 @@ func ParseNode(root *html.Node, baseURL string, imageLoader ImageLoader, urlFetc
 	return &out, nil
 }
 
+// svgNode is a node in a drawable SVG tree
 type svgNode struct {
 	graphicContent drawable
 	children       []*svgNode

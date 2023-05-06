@@ -719,10 +719,6 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		}
 	}
 
-	if debugMode {
-		debugLogger.LineWithIndent("Making page...")
-	}
-
 	rootBox, tmp, _ := blockLevelLayout(context, rootBox, 0, resumeAt,
 		&initialContainingBlock.BoxFields, true, &positionedBoxes, &positionedBoxes, &adjoiningMargins, false, -1)
 	resumeAt = tmp.resumeAt
@@ -870,10 +866,6 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	if pageType.Blank {
 		resumeAt = previousResumeAt
-	}
-
-	if debugMode {
-		debugLogger.LineWithDedent("--> Page done (resume at: %s)", resumeAt)
 	}
 
 	if traceMode {

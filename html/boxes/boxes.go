@@ -528,7 +528,7 @@ func (b *BoxFields) IsInNormalFlow() bool {
 // Start and end page values for named pages
 
 // Return start and end page values.
-func (b BoxFields) PageValues() (pr.Page, pr.Page) {
+func (b *BoxFields) PageValues() (pr.Page, pr.Page) {
 	start := b.Style.GetPage()
 	end := start
 	children := b.Children

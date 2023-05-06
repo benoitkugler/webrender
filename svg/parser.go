@@ -34,6 +34,7 @@ const (
 	Perc
 	// Special case : relative to the font size
 	Em
+	Rem
 	// Special case : relative to the font size
 	Ex
 
@@ -42,7 +43,7 @@ const (
 	autoStartReverse
 )
 
-var units = [...]string{Px: "px", Cm: "cm", Mm: "mm", Pt: "pt", In: "in", Q: "Q", Pc: "pc", Perc: "%", Em: "em", Ex: "ex"}
+var units = [...]string{Px: "px", Cm: "cm", Mm: "mm", Pt: "pt", In: "in", Q: "Q", Pc: "pc", Perc: "%", Em: "em", Rem: "rem", Ex: "ex"}
 
 func (u Unit) String() string {
 	if int(u) < len(units) {
@@ -99,7 +100,7 @@ func (v Value) Resolve(fontSize, percentageReference Fl) Fl {
 		return v.V
 	case Perc:
 		return v.V * percentageReference / 100
-	case Em:
+	case Em, Rem:
 		return v.V * fontSize
 	case Ex: // assume that 1em == 2ex
 		return v.V * fontSize / 2

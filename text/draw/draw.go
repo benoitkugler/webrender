@@ -54,16 +54,16 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 		}
 	}
 
-	firstLine, secondLine := layout.GetFirstLine()
+	firstLine, index := layout.GetFirstLine()
 	if blockEllipsis.Tag != pr.None {
-		for secondLine != 0 && secondLine != -1 {
+		for index != 0 && index != -1 {
 			lastWordEnd := text.GetLastWordEnd(pl.Text[:len(pl.Text)-len([]rune(ellipsis))])
 			if lastWordEnd == -1 {
 				break
 			}
 			newText := pl.Text[:lastWordEnd]
 			layout.SetText(string(newText) + ellipsis)
-			firstLine, secondLine = layout.GetFirstLine()
+			firstLine, index = layout.GetFirstLine()
 		}
 	}
 
@@ -86,7 +86,7 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 		// Pango objects
 		glyphItem := run.Data
 		glyphString := glyphItem.Glyphs
-		runStart := glyphItem.Item.Offset
+		offset := glyphItem.Item.Offset
 
 		// Font content
 		pangoFont := glyphItem.Item.Analysis.Font
@@ -101,13 +101,21 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 		}
 		runDst := &output.Runs[len(output.Runs)-1]
 
+		// Positions of the glyphs in the UTF-8 string
+		utf8Positions := make([]int, len(glyphString.Glyphs)-1)
+		for i := range utf8Positions {
+			utf8Positions[i] = offset + glyphString.LogClusters[i+1]
+		}
+		utf8Positions = append(utf8Positions, offset+glyphItem.Item.Length)
+
 		runDst.Glyphs = make([]backend.TextGlyph, len(glyphString.Glyphs))
+		var prevUtf8Position int
 		for i, glyphInfo := range glyphString.Glyphs {
 			outGlyph := &runDst.Glyphs[i]
 			width := glyphInfo.Geometry.Width
 			glyph := glyphInfo.Glyph
 
-			if glyph == pango.GLYPH_EMPTY {
+			if glyph == pango.GLYPH_EMPTY || glyph&pango.GLYPH_UNKNOWN_FLAG != 0 {
 				outGlyph.Offset = pr.Fl(width) / fontSize
 				outGlyph.Glyph = fonts.EmptyGlyph
 				continue
@@ -144,18 +152,15 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - text.PangoUnitsToFloat(width*1000)/fontSize + outGlyph.Offset)
 
 			// Mapping between glyphs and characters
-			startPos := runStart + glyphString.LogClusters[i] // Positions of the glyphs in the UTF-8 string
-			endPos := runStart + glyphItem.Item.Length
-			if i < len(glyphString.Glyphs)-1 {
-				endPos = runStart + glyphString.LogClusters[i+1]
-			}
+			utf8Position := utf8Positions[i]
 			if _, in := outFont.Cmap[outGlyph.Glyph]; !in {
-				outFont.Cmap[outGlyph.Glyph] = textRunes[startPos:endPos]
+				outFont.Cmap[outGlyph.Glyph] = textRunes[prevUtf8Position:utf8Position]
 			}
+			prevUtf8Position = utf8Position
 
 			// advance
 			outGlyph.XAdvance = xAdvance
-			xAdvance += pr.Fl(outFont.Extents[outGlyph.Glyph].Width) + outGlyph.Offset
+			xAdvance += pr.Fl(outFont.Extents[outGlyph.Glyph].Width) + outGlyph.Offset - pr.Fl(outGlyph.Kerning)
 		}
 	}
 

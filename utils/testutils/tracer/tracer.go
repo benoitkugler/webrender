@@ -29,7 +29,7 @@ func NewTracer(outFile string) Tracer {
 
 func FormatMaybeFloat(v properties.MaybeFloat) string {
 	if v, ok := v.(properties.Float); ok {
-		return strconv.FormatFloat(float64(utils.RoundPrec(float32(v), -1)), 'g', -1, 32)
+		return strconv.FormatFloat(float64(utils.RoundPrec(float32(v), 1)), 'g', -1, 32)
 	}
 	return fmt.Sprintf("%v", v)
 }
@@ -44,14 +44,24 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 	var printer func(box boxes.Box, indent int)
 	printer = func(box boxes.Box, indent int) {
 		fmt.Fprint(t.out, strings.Repeat(" ", indent))
-		fmt.Fprintf(t.out, "%s: %s %s %s %s\n", box.Type(),
+		fmt.Fprintf(t.out, "%s: %s %s %s %s ; %s %s %s %s ; %s %s %s %s\n", box.Type(),
 			FormatMaybeFloat(box.Box().PositionX),
 			FormatMaybeFloat(box.Box().PositionY),
 			FormatMaybeFloat(box.Box().Width),
 			FormatMaybeFloat(box.Box().Height),
+
+			FormatMaybeFloat(box.Box().MarginBottom),
+			FormatMaybeFloat(box.Box().MarginTop),
+			FormatMaybeFloat(box.Box().MarginRight),
+			FormatMaybeFloat(box.Box().MarginLeft),
+
+			FormatMaybeFloat(box.Box().BorderBottomWidth),
+			FormatMaybeFloat(box.Box().BorderTopWidth),
+			FormatMaybeFloat(box.Box().BorderRightWidth),
+			FormatMaybeFloat(box.Box().BorderLeftWidth),
 		)
-		if box, ok := box.(*boxes.TextBox); ok {
-			fmt.Fprintln(t.out, box.Text)
+		if tb, ok := box.(*boxes.TextBox); ok {
+			fmt.Fprintln(t.out, tb.Text)
 		}
 
 		for _, child := range box.Box().Children {

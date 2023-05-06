@@ -10,6 +10,7 @@ package backend
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textprocessing/pango"
@@ -43,7 +44,7 @@ type TextGlyph struct {
 	Glyph    fonts.GID
 	Offset   Fl  // normalized by FontSize
 	Kerning  int // normalized by FontSize
-	XAdvance Fl  // how much to move before drawing
+	XAdvance Fl  // how much to move before drawing, used for emojis
 }
 
 type GradientKind struct {
@@ -156,6 +157,20 @@ const (
 	FillEvenOdd
 	FillNonZero // mutually exclusive with FillEvenOdd
 )
+
+func (op PaintOp) String() string {
+	var chunks []string
+	if op&Stroke != 0 {
+		chunks = append(chunks, "stroke")
+	}
+	if op&FillEvenOdd != 0 {
+		chunks = append(chunks, "fill even odd")
+	}
+	if op&FillNonZero != 0 {
+		chunks = append(chunks, "fill non zero")
+	}
+	return strings.Join(chunks, " ")
+}
 
 // GraphicState exposes the settings for a group of graphic
 // operations.

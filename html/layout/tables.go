@@ -592,7 +592,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 		if header != nil && footer != nil {
 			// Try with both the header and footer
-			newTableChildren, resumeAt, nextPage, endPositionY := bodyGroupsLayout(skipStack, positionY+headerHeight,
+			var (
+				newTableChildren []Box
+				endPositionY     pr.Float
+			)
+			newTableChildren, resumeAt, nextPage, endPositionY = bodyGroupsLayout(skipStack, positionY+headerHeight,
 				bottomSpace+footerHeight, avoidBreaks)
 			if len(newTableChildren) != 0 || len(tableRows) == 0 || !pageIsEmpty {
 				footer.Translate(footer, 0, endPositionY-footer.Box().PositionY, false)
@@ -606,7 +610,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 		if header != nil && footer == nil {
 			// Try with just the header
-			newTableChildren, resumeAt, nextPage, endPositionY := bodyGroupsLayout(skipStack, positionY+headerHeight, bottomSpace, avoidBreaks)
+			var (
+				newTableChildren []Box
+				endPositionY     pr.Float
+			)
+			newTableChildren, resumeAt, nextPage, endPositionY = bodyGroupsLayout(skipStack, positionY+headerHeight, bottomSpace, avoidBreaks)
 			if len(newTableChildren) != 0 || len(tableRows) == 0 || !pageIsEmpty {
 				return header, newTableChildren, footer, endPositionY, resumeAt, nextPage
 			} else {
@@ -617,7 +625,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 		if footer != nil && header == nil {
 			// Try with just the footer
-			newTableChildren, resumeAt, nextPage, endPositionY := bodyGroupsLayout(skipStack, positionY, bottomSpace+footerHeight, avoidBreaks)
+			var (
+				newTableChildren []Box
+				endPositionY     pr.Float
+			)
+			newTableChildren, resumeAt, nextPage, endPositionY = bodyGroupsLayout(skipStack, positionY, bottomSpace+footerHeight, avoidBreaks)
 			if len(newTableChildren) != 0 || len(tableRows) == 0 || !pageIsEmpty {
 				footer.Translate(footer, 0, endPositionY-footer.Box().PositionY, false)
 				endPositionY += footerHeight
@@ -670,7 +682,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	}
 	table_ = bo.CopyWithChildren(table_, newChildren).(bo.TableBoxITF) // CopyWithChildren is type stable
 	table = table_.Table()
-	removeEndDecoration := skipStack != nil && !hasFooter
+	removeEndDecoration := resumeAt != nil && !hasFooter
 	table_.RemoveDecoration(&table.BoxFields, removeStartDecoration, removeEndDecoration)
 	if collapse {
 		table.SkippedRows = skippedRows

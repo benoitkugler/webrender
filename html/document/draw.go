@@ -210,27 +210,13 @@ func (ctx drawContext) drawPage(page *bo.PageBox) {
 }
 
 func (ctx drawContext) drawBoxBackgroundAndBorder(box Box) error {
-	ctx.drawBackground(box.Box().Background, true, Bleed{}, pr.Marks{})
 	if box_, ok := box.(bo.TableBoxITF); ok {
-		box := box_.Table()
-		ctx.drawTableBackgrounds(box_)
-		if box.Style.GetBorderCollapse() == "separate" {
-			ctx.drawBorder(box)
-			for _, rowGroup := range box.Children {
-				for _, row := range rowGroup.Box().Children {
-					for _, cell := range row.Box().Children {
-						if cell.Box().Style.GetEmptyCells() == "show" || !cell.Box().Empty {
-							ctx.drawBorder(cell)
-						}
-					}
-				}
-			}
-		} else {
-			ctx.drawCollapsedBorders(box)
-		}
+		ctx.drawTable(box_.Table())
 	} else {
+		ctx.drawBackgroundDefaut(box.Box().Background)
 		ctx.drawBorder(box)
 	}
+
 	return nil
 }
 
@@ -293,7 +279,7 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
 			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
 			bo.FlexContainerT.IsInstance(box_) {
-			// The canvas background was removed by setCanvasBackground
+			// The canvas background was removed by layoutBackground
 			ctx.drawBoxBackgroundAndBorder(box_)
 		}
 
@@ -330,10 +316,11 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			// Point 7
 			for _, block := range append([]Box{box_}, stackingContext.blocksAndCells...) {
 				if blockRep, ok := block.(bo.ReplacedBoxITF); ok {
+					ctx.drawBorder(blockRep)
 					ctx.drawReplacedbox(blockRep)
-				} else {
-					for _, child := range block.Box().Children {
-						if bo.LineT.IsInstance(child) {
+				} else if children := block.Box().Children; len(children) != 0 {
+					if bo.LineT.IsInstance(children[len(children)-1]) {
+						for _, child := range children {
 							ctx.drawInlineLevel(stackingContext.page, child, 0, "clip", pr.TaggedString{Tag: pr.None})
 						}
 					}
@@ -442,21 +429,23 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 		// Background color
 		if bg.Color.A > 0 {
 			ctx.dst.OnNewStack(func() {
+				ctx.dst.State().SetColorRgba(bg.Color, false)
 				paintingArea := bg.Layers[len(bg.Layers)-1].PaintingArea
 				if !paintingArea.IsNone() {
-					ptx, pty, ptw, pth := paintingArea.Unpack()
 					if (bleed != Bleed{}) {
 						// Painting area is the PDF BleedBox
-						ptx -= bleed.Left
-						pty -= bleed.Top
-						ptw += bleed.Left + bleed.Right
-						pth += bleed.Top + bleed.Bottom
+						ptx, pty, ptw, pth := paintingArea.Unpack()
+						paintingArea = pr.Rectangle{
+							pr.Float(ptx - bleed.Left),
+							pr.Float(pty - bleed.Top),
+							pr.Float(ptw + bleed.Left + bleed.Right),
+							pr.Float(pth + bleed.Top + bleed.Bottom),
+						}
 					}
-					ctx.dst.Rectangle(ptx, pty, ptw, pth)
+					ctx.dst.Rectangle(paintingArea.Unpack())
 					ctx.dst.State().Clip(false)
 				}
-				ctx.dst.Rectangle(ctx.dst.GetRectangle())
-				ctx.dst.State().SetColorRgba(bg.Color, false)
+				ctx.dst.Rectangle(paintingArea.Unpack())
 				ctx.dst.Paint(backend.FillNonZero)
 			})
 		}
@@ -512,33 +501,6 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 	})
 }
 
-// Draw the background color and image of the table children.
-func (ctx drawContext) drawTableBackgrounds(table_ bo.TableBoxITF) {
-	table := table_.Table()
-	for _, columnGroup := range table.ColumnGroups {
-		ctx.drawBackgroundDefaut(columnGroup.Background)
-
-		for _, column := range columnGroup.Children {
-			ctx.drawBackgroundDefaut(column.Box().Background)
-		}
-	}
-	for _, rowGroup := range table.Children {
-		ctx.drawBackgroundDefaut(rowGroup.Box().Background)
-
-		for _, row := range rowGroup.Box().Children {
-			ctx.drawBackgroundDefaut(row.Box().Background)
-
-			for _, cell := range row.Box().Children {
-				cell := cell.Box()
-				if table.Style.GetBorderCollapse() == "collapse" ||
-					cell.Style.GetEmptyCells() == "show" || !cell.Empty {
-					ctx.drawBackgroundDefaut(cell.Background)
-				}
-			}
-		}
-	}
-}
-
 func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRendering pr.String) {
 	if layer.Image == nil || layer.Size[0] == 0 || layer.Size[1] == 0 {
 		return
@@ -571,7 +533,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 			positionX = pr.Float(0)
 		} else {
 			// We don't repeat the image.
-			repeatWidth = imageWidth
+			repeatWidth = positioningWidth
 		}
 	default:
 		panic(fmt.Sprintf("unexpected repeatX %s", repeatX))
@@ -589,7 +551,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 			repeatHeight = (positioningHeight - imageHeight) / (nRepeats - 1)
 			positionY = pr.Float(0)
 		} else {
-			repeatHeight = imageHeight
+			repeatHeight = positioningHeight
 		}
 	default:
 		panic(fmt.Sprintf("unexpected repeatY %s", repeatY))
@@ -613,11 +575,6 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 		}
 		ctx.dst.Paint(backend.FillNonZero)
 	})
-}
-
-// Increment X and Y coordinates by the given offsets.
-func xyOffset(x, y, offsetX, offsetY, offset float64) (float64, float64) {
-	return x + offsetX*offset, y + offsetY*offset
 }
 
 func styledColor(style pr.String, color Color, side string) []Color {
@@ -648,13 +605,27 @@ func (ctx drawContext) drawBorder(box_ Box) {
 		columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto")
 		if crw := box.Style.GetColumnRuleWidth(); columns && !crw.IsNone() {
 			borderWidths := pr.Rectangle{0, 0, 0, crw.Value}
-			for _, child := range box.Children[1:] {
+
+			// columns that have a rule drawn on the left.
+			var columnsWithRule []Box
+			skipNext := true
+			for _, child := range box.Children {
+				if child.Box().Style.GetColumnSpan() == "all" {
+					skipNext = true
+				} else if skipNext {
+					skipNext = false
+				} else {
+					columnsWithRule = append(columnsWithRule, child)
+				}
+			}
+
+			for _, child := range columnsWithRule {
 				ctx.dst.OnNewStack(func() {
 					positionX := child.Box().PositionX - (crw.Value+
 						box.Style.GetColumnGap().Value)/2
 					borderBox := pr.Rectangle{
 						positionX, child.Box().PositionY,
-						crw.Value, box.Height.V(),
+						crw.Value, child.Box().Height.V(),
 					}
 					clipBorderSegment(ctx.dst, box.Style.GetColumnRuleStyle(),
 						fl(crw.Value), "left", borderBox, &borderWidths, nil)
@@ -941,33 +912,35 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 }
 
 func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, colors []Color) {
-	roundedBoxPath(ctx.dst, box.RoundedPaddingBox())
 	if style == "ridge" || style == "groove" {
-		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
 		ctx.dst.State().SetColorRgba(colors[0], false)
+		roundedBoxPath(ctx.dst, box.RoundedPaddingBox())
+		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
 		ctx.dst.Paint(backend.FillEvenOdd)
+		ctx.dst.State().SetColorRgba(colors[1], false)
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./2))
 		roundedBoxPath(ctx.dst, box.RoundedBorderBox())
-		ctx.dst.State().SetColorRgba(colors[1], false)
 		ctx.dst.Paint(backend.FillEvenOdd)
 		return
 	}
+
+	ctx.dst.State().SetColorRgba(colors[0], false)
+	roundedBoxPath(ctx.dst, box.RoundedPaddingBox())
 	if style == "double" {
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(1./3))
 		roundedBoxPath(ctx.dst, box.RoundedBoxRatio(2./3))
 	}
 	roundedBoxPath(ctx.dst, box.RoundedBorderBox())
-	ctx.dst.State().SetColorRgba(colors[0], false)
 	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
 func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String, color []Color) {
 	bbx, bby, bbw, bbh := box.Unpack()
 	bt, br, bb, bl := widths.Unpack()
-	ctx.dst.Rectangle(box.Unpack())
 	if style == "ridge" || style == "groove" {
-		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
 		ctx.dst.State().SetColorRgba(color[0], false)
+		ctx.dst.Rectangle(box.Unpack())
+		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
 		ctx.dst.Paint(backend.FillEvenOdd)
 		ctx.dst.Rectangle(bbx+bl/2, bby+bt/2, bbw-(bl+br)/2, bbh-(bt+bb)/2)
 		ctx.dst.Rectangle(bbx+bl, bby+bt, bbw-bl-br, bbh-bt-bb)
@@ -975,12 +948,13 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 		ctx.dst.Paint(backend.FillEvenOdd)
 		return
 	}
+	ctx.dst.State().SetColorRgba(color[0], false)
+	ctx.dst.Rectangle(box.Unpack())
 	if style == "double" {
 		ctx.dst.Rectangle(bbx+bl/3, bby+bt/3, bbw-(bl+br)/3, bbh-(bt+bb)/3)
 		ctx.dst.Rectangle(bbx+bl*2/3, bby+bt*2/3, bbw-(bl+br)*2/3, bbh-(bt+bb)*2/3)
 	}
 	ctx.dst.Rectangle(bbx+bl, bby+bt, bbw-bl-br, bbh-bt-bb)
-	ctx.dst.State().SetColorRgba(color[0], false)
 	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
@@ -1008,6 +982,47 @@ func (ctx drawContext) drawOutlines(box_ Box) {
 		for _, child := range box.Children {
 			if child.IsClassicalBox() {
 				ctx.drawOutlines(child)
+			}
+		}
+	}
+}
+
+func (ctx drawContext) drawTable(table *bo.TableBox) {
+	// Draw the background color and image of the table children.
+	ctx.drawBackgroundDefaut(table.Background)
+	for _, columnGroup := range table.ColumnGroups {
+		ctx.drawBackgroundDefaut(columnGroup.Background)
+		for _, column := range columnGroup.Children {
+			ctx.drawBackgroundDefaut(column.Box().Background)
+		}
+	}
+	for _, rowGroup := range table.Children {
+		ctx.drawBackgroundDefaut(rowGroup.Box().Background)
+		for _, row := range rowGroup.Box().Children {
+			ctx.drawBackgroundDefaut(row.Box().Background)
+			for _, cell := range row.Box().Children {
+				cell := cell.Box()
+				if table.Style.GetBorderCollapse() == "collapse" ||
+					cell.Style.GetEmptyCells() == "show" || !cell.Empty {
+					ctx.drawBackgroundDefaut(cell.Background)
+				}
+			}
+		}
+	}
+
+	// Draw borders
+	if table.Style.GetBorderCollapse() == "collapse" {
+		ctx.drawCollapsedBorders(table)
+		return
+	}
+
+	ctx.drawBorder(table)
+	for _, rowGroup := range table.Children {
+		for _, row := range rowGroup.Box().Children {
+			for _, cell := range row.Box().Children {
+				if cell.Box().Style.GetEmptyCells() == "show" || !cell.Box().Empty {
+					ctx.drawBorder(cell)
+				}
 			}
 		}
 	}
@@ -1258,9 +1273,7 @@ func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, t
 	}
 }
 
-// Draw “textbox“ to a “cairo.Context“ from “PangoCairo.Context“
-//
-//	(offsetX=0,textOverflow="clip")
+// (offsetX=0,textOverflow="clip")
 func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow string, blockEllipsis pr.TaggedString) {
 	if textbox.Style.GetVisibility() != "visible" {
 		return
@@ -1288,22 +1301,31 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	if utils.Set(decoration).Has("overline") {
 		thickness = text.PangoUnitsToFloat((metrics.UnderlineThickness))
 		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.Ascent)) + pr.Float(thickness)/2
+		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 	if utils.Set(decoration).Has("underline") {
 		thickness = text.PangoUnitsToFloat((metrics.UnderlineThickness))
 		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.UnderlinePosition)) + pr.Float(thickness)/2
+		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 	if utils.Set(decoration).Has("line-through") {
 		thickness = text.PangoUnitsToFloat((metrics.StrikethroughThickness))
 		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.StrikethroughPosition))
-	}
-
-	if !decoration.IsNone() {
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 }
 
 func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
+	// Don’t draw lines with only invisible characters
+	if strings.TrimSpace(textbox.Text) == "" {
+		return
+	}
+
+	fontSize := textbox.Style.GetFontSize().Value
+	if fontSize < 1e-6 { // Default float precision used by pydyf
+		return
+	}
+
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
 	text := textContext.CreateFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
 	ctx.dst.DrawText([]backend.TextDrawing{text})

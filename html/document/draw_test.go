@@ -13,6 +13,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
+	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 )
 
 const fontmapCache = "../../text/test/cache.fc"
@@ -69,7 +70,7 @@ func TestWriteSimpleDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 	finalDoc := Render(doc, nil, true, fc)
-	finalDoc.Write(output{}, 1, nil)
+	finalDoc.Write(tracer.NewDrawerNoOp(), 1, nil)
 }
 
 func TestWriteDocument(t *testing.T) {
@@ -78,7 +79,7 @@ func TestWriteDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 	finalDoc := Render(doc, nil, true, fc)
-	finalDoc.Write(output{}, 1, nil)
+	finalDoc.Write(tracer.NewDrawerNoOp(), 1, nil)
 }
 
 func TestCrash(t *testing.T) {
@@ -87,7 +88,7 @@ func TestCrash(t *testing.T) {
 		t.Fatal(err)
 	}
 	finalDoc := Render(doc, nil, true, fc)
-	finalDoc.Write(output{}, 1, nil)
+	finalDoc.Write(tracer.NewDrawerNoOp(), 1, nil)
 }
 
 func renderUrl(t testing.TB, url string) {
@@ -96,14 +97,11 @@ func renderUrl(t testing.TB, url string) {
 		t.Fatal(err)
 	}
 	finalDoc := Render(doc, nil, true, fc)
-	finalDoc.Write(output{}, 1, nil)
+	finalDoc.Write(tracer.NewDrawerNoOp(), 1, nil)
 }
 
 func TestRealPage(t *testing.T) {
-	// t.Skip()
-
-	// Simply test for crashes
-	outputLog.SetOutput(io.Discard)
+	t.Skip()
 
 	logger.WarningLogger.SetOutput(io.Discard)
 	defer logger.WarningLogger.SetOutput(os.Stdout)
@@ -152,4 +150,54 @@ func BenchmarkRenderText(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Render(doc, nil, true, fc)
 	}
+}
+
+func TestLeaderCrash(t *testing.T) {
+	input := `
+	<style>
+		@font-face {src: url(../../resources_test/weasyprint.otf); font-family: weasyprint}
+		@page {
+		background: white;
+		size: 16px 6px;
+		}
+		body {
+		color: red;
+		counter-reset: count;
+		direction: rtl;
+		font-family: weasyprint;
+		font-size: 2px;
+		line-height: 1;
+		}
+		div::after {
+		color: blue;
+		/* RTL Mark used in second space */
+		content: ' ' leader(dotted) '‏ ' counter(count, lower-roman);
+		counter-increment: count;
+		}
+  	</style>
+	<div>a</div>
+	<div>bb</div>
+	<div>c</div>`
+	doc, err := tree.NewHTML(utils.InputString(input), ".", nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc.UAStyleSheet = tree.TestUAStylesheet
+	finalDoc := Render(doc, nil, true, fc)
+	finalDoc.Write(tracer.NewDrawerNoOp(), 4./30, nil)
+}
+
+func TestDebug(t *testing.T) {
+	input := `
+	<style>
+         @page { size: 2px; background: red; bleed: 1px }
+      </style>
+      <body>`
+	doc, err := tree.NewHTML(utils.InputString(input), ".", nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc.UAStyleSheet = tree.TestUAStylesheet
+	finalDoc := Render(doc, nil, true, fc)
+	finalDoc.Write(tracer.NewDrawerFile("/tmp/drawer_go.txt"), 4./30, nil)
 }

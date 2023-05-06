@@ -72,11 +72,6 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 	fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, discard bool,
 	maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
-	if debugMode {
-		debugLogger.LineWithIndent("Layout BLOCK-LEVEL <%s> (%s) (resume at : %s)", box_.Box().ElementTag(), box_.Type(), skipStack)
-		defer debugLogger.LineWithDedent("")
-	}
-
 	if traceMode {
 		traceLogger.Dump(fmt.Sprintf("skipStack %s", skipStack))
 		traceLogger.DumpTree(box_, "blockLevelLayoutSwitch")
@@ -314,6 +309,10 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		panic(fmt.Sprintf("expected BlockContainer or Flex, got %T", box_))
 	}
 
+	if traceMode {
+		traceLogger.DumpTree(box_, "at blockContainerLayout start")
+	}
+
 	// See https://www.w3.org/TR/CSS21/visuren.html#block-formatting
 	if establishesFormattingContext(box_) {
 		context.createBlockFormattingContext()
@@ -376,11 +375,6 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		index := i + skip
 		child_ := box.Children[skip:][i]
 		child := child_.Box()
-
-		if debugMode {
-			debugLogger.LineWithIndent("Block container layout child %d: <%s> (%s), in normal flow: %v", i, child.ElementTag(), child_.Type(), child.IsInNormalFlow())
-		}
-
 		child.PositionX = positionX
 		child.PositionY = positionY // does not count margins in adjoiningMargins
 		var newFootnotes []Box
@@ -436,10 +430,6 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 				}
 			}
 
-		}
-
-		if debugMode {
-			debugLogger.LineWithDedent("--> block child done (resume at: %s, positionY: %g)", resumeAt, positionY)
 		}
 
 		if traceMode {
@@ -688,6 +678,11 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 		positionY += collapseMargin(adjoiningMargins)
 		adjoiningMargins = nil
 	}
+
+	if traceMode {
+		traceLogger.DumpTree(child_, "at lineBoxLayout")
+	}
+
 	linesIterator := iterLineBoxes(context, child_, positionY, bottomSpace, skipStack,
 		box_, absoluteBoxes, fixedBoxes, firstLetterStyle)
 	for i := 0; linesIterator.Has(); i++ {
@@ -700,6 +695,11 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 		if maxLines != -1 {
 			if maxLines == 0 {
 				newChildren[len(newChildren)-1].(*bo.LineBox).BlockEllipsis = box.Style.GetBlockEllipsis()
+
+				if traceMode {
+					traceLogger.Dump("lineBoxLayout -> maxLines == 0")
+				}
+
 				break
 			}
 			maxLines -= 1
@@ -720,6 +720,11 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 		if overflow {
 			abort, stop, resumeAt = breakLine(context, box, line_, &newChildren, linesIterator,
 				pageIsEmpty, index, skipStack, resumeAt, absoluteBoxes, fixedBoxes)
+
+			if traceMode {
+				traceLogger.Dump("lineBoxLayout -> overflow")
+			}
+
 			break
 			// See https://drafts.csswg.org/css-page-3/#allowed-pg-brk
 			// "When an unforced page break occurs here, both the adjoining
@@ -765,6 +770,11 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 				}
 			}
 			if breakLinebox {
+
+				if traceMode {
+					traceLogger.Dump("lineBoxLayout -> break for footnotes")
+				}
+
 				break
 			}
 		}

@@ -287,14 +287,19 @@ func (p path) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, _ drawingDims
 
 // <svg> tag
 type svg struct {
-	preserveRatio preserveAspectRatio
-	isRoot        bool
+	preserveRatio    preserveAspectRatio
+	isRoot           bool
+	isOverflowHidden bool
 }
 
 func newSvg(node *cascadedNode, tree *svgContext) (drawable, error) {
 	var out svg
 	out.preserveRatio = node.attrs.aspectRatio()
 	out.isRoot = node == tree.root
+	if overflow := node.attrs["overflow"]; overflow == "" || overflow == "hidden" {
+		out.isOverflowHidden = true
+	}
+
 	return out, nil
 }
 
@@ -317,7 +322,7 @@ func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims dra
 	}
 
 	sx, sy, tx, ty := s.preserveRatio.resolveTransforms(width, height, viewbox, nil)
-	if !s.isRoot {
+	if !s.isRoot && s.isOverflowHidden {
 		dst.Rectangle(0, 0, width, height)
 		dst.State().Clip(false)
 	}
@@ -341,7 +346,7 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 	}
 
 	href := node.attrs["href"]
-	url, err := utils.SafeUrljoin(baseURL, href, false)
+	url, err := utils.SafeUrljoin(baseURL, href, true)
 	if err != nil {
 		return nil, fmt.Errorf("invalid image source: %s", err)
 	}
@@ -384,9 +389,16 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 	if err != nil {
 		return nil, err
 	}
-
+	svgURL, err := parseURL(context.baseURL)
+	if err != nil {
+		return nil, err
+	}
+	if svgURL.Scheme == "data" {
+		svgURL, _ = parseURL("")
+	}
+	sameOrigin := href.Path == "" || href.Path == svgURL.Path
 	var useTarget cascadedNode
-	if ID := href.Fragment; href.Path == "" && ID != "" {
+	if ID := href.Fragment; ID != "" && sameOrigin {
 		if context.inUseIDs.Has(ID) {
 			return nil, fmt.Errorf("invalid recursive <use>")
 		}
@@ -406,7 +418,7 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 	} else {
 		// remote child : fetch the url
 		url := href.String()
-		url, err = utils.SafeUrljoin(context.baseURL, url, false)
+		url, err = utils.SafeUrljoin(context.baseURL, url, true)
 		if err != nil {
 			return nil, err
 		}
@@ -416,7 +428,7 @@ func (context *svgContext) resolveUse(node *cascadedNode, defs definitions) (*sv
 			return nil, nil
 		}
 
-		parsedTarget, err := buildSVGTreeReader(content.Content, url, context.urlFetcher)
+		parsedTarget, err := newSVGContextReader(content.Content, url, context.urlFetcher)
 		if err != nil {
 			logger.WarningLogger.Printf("SVG: parsing <use> content: %s", err)
 			return nil, nil

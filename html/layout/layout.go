@@ -24,22 +24,14 @@ import (
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
-	"github.com/benoitkugler/webrender/utils/testutils"
 	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 	"golang.org/x/net/html"
 )
 
-const (
-	// if true, print debug information into Stdout
-	debugMode = false
-	// if true, save a structured trace in an external file
-	traceMode = false
-)
+// if true, save a structured trace in an external file
+const traceMode = false
 
-var (
-	debugLogger = testutils.IndentLogger{Color: true} // used only when debugMode is true
-	traceLogger tracer.Tracer                         // used only when traceMode is true
-)
+var traceLogger tracer.Tracer // used only when traceMode is true
 
 func init() {
 	if traceMode {
@@ -275,6 +267,10 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 		page.Children = append(page.Children, makeMarginBoxes(context, page, state)...)
 		layoutBackgrounds(page, context.resolver.FetchImage)
 		out[i] = page
+
+		if traceMode {
+			traceLogger.DumpTree(page, fmt.Sprintf("Final page %d", i))
+		}
 	}
 	return out
 }

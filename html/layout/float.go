@@ -30,9 +30,6 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 	cbWidth, cbHeight := containingBlock.Width, containingBlock.Height
 	resolvePercentages(box_, bo.MaybePoint{cbWidth, cbHeight}, "")
 
-	if debugMode {
-		debugLogger.LineWithIndent("Layout FLOAT: <%s> (%s)", box_.Box().ElementTag(), box_.Type())
-	}
 	// TODO: This is only handled later in blocks.blockContainerLayout
 	// https://www.w3.org/TR/CSS21/visudet.html#normal-block
 	if cbHeight == pr.AutoF {
@@ -91,10 +88,6 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 	box_ = findFloatPosition(context, box_, containingBlock)
 
 	*context.excludedShapes = append(*context.excludedShapes, box_.Box())
-
-	if debugMode {
-		debugLogger.LineWithDedent("")
-	}
 
 	return box_, resumeAt
 }
@@ -235,7 +228,7 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 	// - table wrappers
 	// - block-level replaced box
 	// - element establishing new formatting contexts (not handled)
-	if debugMode {
+	if traceMode {
 		if fl := box.Style.GetFloat(); !(fl == "right" || fl == "left" || bo.LineT.IsInstance(box_) ||
 			box.IsTableWrapper || bo.BlockReplacedT.IsInstance(box_)) {
 			panic("assertion failed")

@@ -57,10 +57,6 @@ func (l *lineBoxeIterator) Has() bool {
 	line, resumeAt := getNextLinebox(l.context, l.box, l.positionY, l.bottomSpace, l.skipStack, l.containingBlock,
 		l.absoluteBoxes, l.fixedBoxes, l.firstLetterStyle)
 
-	if debugMode {
-		debugLogger.Line("getNextLinebox resumeAt: %s", resumeAt)
-	}
-
 	if traceMode {
 		traceLogger.Dump(fmt.Sprintf("lineBoxeIterator.Has: %s", resumeAt))
 	}
@@ -597,10 +593,6 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 	containingBlock Box, absoluteBoxes, fixedBoxes,
 	linePlaceholders *[]*AbsolutePlaceholder, waitingFloats *[]Box, lineChildren []indexedBox,
 ) splitedInline {
-	if debugMode {
-		debugLogger.LineWithIndent("Split inline level: <%s> (%s) (maxX: %.02f, positionX: %.02f)...", box_.Box().ElementTag(), box_.Type(), maxX, positionX)
-	}
-
 	if traceMode {
 		traceLogger.DumpTree(box_, "splitInlineLevel")
 	}
@@ -673,10 +665,6 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 	} else { // pragma: no cover
 		logger.WarningLogger.Printf("Layout for %v not handled yet", box)
 		return splitedInline{}
-	}
-
-	if debugMode {
-		debugLogger.LineWithDedent("--> split inline level %T done (resumeAt :%s)", box_, resumeAt)
 	}
 
 	if traceMode {
@@ -801,10 +789,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 		skip, skipStack = skipStack.Unpack()
 	}
 
-	if debugMode {
-		debugLogger.LineWithIndent("Split inline box <%s> (%s) (with width %v)", box.ElementTag(), box_.Type(), box.Width)
-	}
-
 	if traceMode {
 		traceLogger.DumpTree(box_, fmt.Sprintf("splitInlineBox %d", skip))
 	}
@@ -857,10 +841,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 		lastChild := index == len(box.Children)-1
 		availableWidth := maxX
 		var childWaitingFloats []Box
-
-		if debugMode {
-			debugLogger.LineWithIndent("Recursing for inline-level child <%s> (%s)...", child.ElementTag(), child_.Type())
-		}
 		v := splitInlineLevel(context, child_, positionX, availableWidth, bottomSpace, skipStack,
 			containingBlock, absoluteBoxes, fixedBoxes, linePlaceholders, &childWaitingFloats, lineChildren)
 		resumeAt = v.resumeAt
@@ -883,10 +863,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			v := splitInlineLevel(context, child_, positionX, availableWidth, bottomSpace, skipStack,
 				containingBlock, absoluteBoxes, fixedBoxes, linePlaceholders, &childWaitingFloats, lineChildren)
 			newChild, resumeAt, preserved, first, last, newFloatWidths = v.newBox, v.resumeAt, v.preservedLineBreak, v.firstLetter, v.lastLetter, v.floatWidths
-		}
-
-		if debugMode {
-			debugLogger.LineWithDedent("--> inline level child %T done (resumeAt : %s).", child_, resumeAt)
 		}
 
 		skipStack = nil
@@ -1048,10 +1024,6 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 		lastLetter = letterFalse
 	}
 
-	if debugMode {
-		debugLogger.LineWithDedent("--> split inline box %T done (resumeAt: %s)", box_, resumeAt)
-	}
-
 	return splitedInline{
 		newBox:             newBox_,
 		resumeAt:           resumeAt,
@@ -1119,16 +1091,8 @@ func inlineOutOfFlowLayout(context *layoutContext, box Box, containingBlock Box,
 			// added here, and not in iterLineBoxes
 			*waitingFloats = append(*waitingFloats, child_)
 		} else {
-			if debugMode {
-				debugLogger.LineWithIndent("Recursing for float child <%s> (%s)...", child.ElementTag(), child_.Type())
-			}
-
 			newChild, floatResumeAt := floatLayout(context, child_, containingBlock.Box(), absoluteBoxes, fixedBoxes,
 				bottomSpace, nil)
-
-			if debugMode {
-				debugLogger.LineWithDedent("--> Float child %T done.", child_)
-			}
 
 			if floatResumeAt != nil {
 				context.brokenOutOfFlow[child_] = brokenBox{child_, containingBlock, floatResumeAt}
