@@ -31,7 +31,7 @@ var encodings = map[string]encoding.Encoding{
 	"iso8859-15":       charmap.ISO8859_15,
 }
 
-func parseHyphDic(datas fs.FS, filename string) (out HyphDicReference, err error) {
+func parseHyphDic(datas fs.FS, filename string) (out hyphDicReference, err error) {
 	b, err := fs.ReadFile(datas, filename)
 	if err != nil {
 		return out, err
@@ -50,10 +50,10 @@ func parseHyphDic(datas fs.FS, filename string) (out HyphDicReference, err error
 	}
 	dec := enco.NewDecoder()
 
-	out.Patterns = make(map[string]Pattern, len(patterns)/2)
+	out.Patterns = make(map[string]pattern, len(patterns)/2)
 	var (
 		tags    []string
-		values  []DataInt
+		values  []dataOrInt
 		matches [][2]rune
 	)
 	for _, line := range patterns {
@@ -86,7 +86,7 @@ func parseHyphDic(datas fs.FS, filename string) (out HyphDicReference, err error
 
 		matches = parsePattern(pat, matches)
 		tags = append(tags, make([]string, len(matches))...)
-		values = append(values, make([]DataInt, len(matches))...)
+		values = append(values, make([]dataOrInt, len(matches))...)
 
 		for j, match := range matches {
 			i, str := match[0], match[1]
@@ -118,10 +118,10 @@ func parseHyphDic(datas fs.FS, filename string) (out HyphDicReference, err error
 
 		key := strings.Join(tags, "")
 
-		valuesOut := make([]DataInt, end-start)
+		valuesOut := make([]dataOrInt, end-start)
 		copy(valuesOut, values[start:end])
 
-		out.Patterns[key] = Pattern{Start: start, Values: valuesOut}
+		out.Patterns[key] = pattern{Start: start, Values: valuesOut}
 
 		if len([]rune(key)) > out.MaxLength {
 			out.MaxLength = len(tags)
@@ -131,7 +131,7 @@ func parseHyphDic(datas fs.FS, filename string) (out HyphDicReference, err error
 	return out, nil
 }
 
-func max(values []DataInt) int {
+func max(values []dataOrInt) int {
 	ma := math.MinInt32
 	for _, val := range values {
 		if val.V > ma {
@@ -142,18 +142,18 @@ func max(values []DataInt) int {
 }
 
 type parser interface {
-	parse(c rune) DataInt
+	parse(c rune) dataOrInt
 }
 
 type defaultParser struct{}
 
-func (defaultParser) parse(c rune) DataInt {
+func (defaultParser) parse(c rune) dataOrInt {
 	v := int(c - '0')
-	return DataInt{V: v}
+	return dataOrInt{V: v}
 }
 
 type alternativeParser struct {
-	Data
+	complexHyphenation
 }
 
 func newAlternativeParser(pattern, alternative string) (*alternativeParser, error) {
@@ -174,21 +174,21 @@ func newAlternativeParser(pattern, alternative string) (*alternativeParser, erro
 	if strings.HasPrefix(pattern, ".") {
 		index += 1
 	}
-	return &alternativeParser{Data: Data{
+	return &alternativeParser{complexHyphenation: complexHyphenation{
 		Changes: [2]string{changes[0], changes[1]},
 		Index:   index, Cut: cut,
 	}}, nil
 }
 
-func (p *alternativeParser) parse(c rune) DataInt {
+func (p *alternativeParser) parse(c rune) dataOrInt {
 	p.Index = -1
 	v := int(c - '0')
-	var data *Data
+	var data *complexHyphenation
 	if v&1 != 0 {
-		tmp := p.Data
+		tmp := p.complexHyphenation
 		data = &tmp // copy
 	}
-	return DataInt{V: v, Data: data}
+	return dataOrInt{V: v, Data: data}
 }
 
 func getLanguages(dir embed.FS) (map[language.Language]string, error) {

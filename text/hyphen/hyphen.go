@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	dictionariesCache     = map[string]HyphDicReference{}
+	dictionariesCache     = map[string]hyphDicReference{}
 	dictionariesCacheLock sync.Mutex
 )
 
 type Hyphener struct {
-	hd          HyphDic
+	hd          hyphDic
 	left, right int
 }
 
@@ -37,16 +37,16 @@ func NewHyphener(lang language.Language, left, right int) Hyphener {
 		out.hd.data = dic
 	}
 
-	out.hd.cache = make(map[string][]DataInt)
+	out.hd.cache = make(map[string][]dataOrInt)
 	return out
 }
 
 // Get a list of positions where the word can be hyphenated.
 // See also `HyphDict.positions`. The points that are too far to the
 // left or right are removed.
-func (h Hyphener) positions(word []rune) []DataInt {
+func (h Hyphener) positions(word []rune) []dataOrInt {
 	right := len(word) - h.right
-	var out []DataInt
+	var out []dataOrInt
 	for _, index := range h.hd.positions(word) {
 		if h.left <= index.V && index.V <= right {
 			out = append(out, index)
@@ -74,7 +74,6 @@ func (h Hyphener) Iterate(word string) []string {
 			c1, _ := data.Changes[0], data.Changes[1]
 			if wordIsUpper {
 				c1 = strings.ToUpper(c1)
-				// _ = strings.ToUpper(_)
 			}
 			subs = string(word_[:data.Index]) + c1
 		} else {
@@ -85,14 +84,14 @@ func (h Hyphener) Iterate(word string) []string {
 	return out
 }
 
-type HyphDicReference struct {
-	Patterns  map[string]Pattern
+type hyphDicReference struct {
+	Patterns  map[string]pattern
 	MaxLength int // in runes
 }
 
-type HyphDic struct {
-	cache map[string][]DataInt
-	data  HyphDicReference
+type hyphDic struct {
+	cache map[string][]dataOrInt
+	data  hyphDicReference
 }
 
 // Get a list of positions where the word can be hyphenated.
@@ -104,13 +103,13 @@ type HyphDic struct {
 // If the data attribute is not `None`, it contains a tuple with
 // information about nonstandard hyphenation at that point: `(change,
 // index, cut)`.
-func (dic HyphDic) positions(word_ []rune) []DataInt {
+func (dic hyphDic) positions(word_ []rune) []dataOrInt {
 	word := strings.ToLower(string(word_))
 	if points, ok := dic.cache[word]; ok {
 		return points
 	}
 	pointedWord := []rune("." + word + ".")
-	references := make([]DataInt, len(pointedWord)+1)
+	references := make([]dataOrInt, len(pointedWord)+1)
 
 	for i := 0; i < len(pointedWord)-1; i++ {
 		for j := i + 1; j <= i+dic.data.MaxLength && j <= len(pointedWord); j++ {
@@ -128,10 +127,10 @@ func (dic HyphDic) positions(word_ []rune) []DataInt {
 			}
 		}
 	}
-	var points []DataInt
+	var points []dataOrInt
 	for i, reference := range references {
 		if reference.V%2 != 0 {
-			points = append(points, DataInt{V: i - 1, Data: reference.Data})
+			points = append(points, dataOrInt{V: i - 1, Data: reference.Data})
 		}
 	}
 
@@ -139,18 +138,18 @@ func (dic HyphDic) positions(word_ []rune) []DataInt {
 	return points
 }
 
-type Pattern struct {
-	Values []DataInt
+type pattern struct {
+	Values []dataOrInt
 	Start  int
 }
 
-type DataInt struct {
-	Data *Data // optional
+type dataOrInt struct {
+	Data *complexHyphenation // optional
 	V    int
 }
 
-// Data stores information about nonstandard hyphenation at a point.
-type Data struct {
+// complexHyphenation stores information about nonstandard hyphenation at a point.
+type complexHyphenation struct {
 	//  a string like `'ff=f'`, that describes how hyphenation should
 	//  take place.
 	Changes [2]string
