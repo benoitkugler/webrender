@@ -159,7 +159,7 @@ func expandFourSides(baseUrl, name string, tokens []parser.Token) (out pr.NamedP
 	} else if len(tokens) == 3 {
 		tokens = append(tokens, tokens[1]) // left defaults to right
 	} else if len(tokens) != 4 {
-		return out, fmt.Errorf("Expected 1 to 4 token components got %d", len(tokens))
+		return out, fmt.Errorf("expected 1 to 4 token components got %d", len(tokens))
 	}
 	var newName string
 	for index, suffix := range [4]string{"-top", "-right", "-bottom", "-left"} {
@@ -254,7 +254,7 @@ func _expandListStyle(baseUrl, _ string, tokens []parser.Token) (out []NamedToke
 			suffix = "-type"
 			typeSpecified = true
 		} else {
-			return nil, InvalidValue
+			return nil, ErrInvalidValue
 		}
 		out = append(out, NamedTokens{Name: suffix, Tokens: []parser.Token{token}})
 	}
@@ -271,7 +271,7 @@ func _expandListStyle(baseUrl, _ string, tokens []parser.Token) (out []NamedToke
 
 	if noneCount > 0 {
 		// Too many none tokens.
-		return nil, InvalidValue
+		return nil, ErrInvalidValue
 	}
 	return out, nil
 }
@@ -312,7 +312,7 @@ func _expandBorderSide(_, _ string, tokens []parser.Token) ([]NamedTokens, error
 		} else if borderStyle([]parser.Token{token}, "") != nil {
 			suffix = "-style"
 		} else {
-			return nil, InvalidValue
+			return nil, ErrInvalidValue
 		}
 		out[index] = NamedTokens{Name: suffix, Tokens: []parser.Token{token}}
 	}
@@ -498,7 +498,7 @@ func expandBackground(baseUrl, _ string, tokens []parser.Token) (out pr.NamedPro
 				}
 				continue
 			}
-			return pr.Color{}, backgroundProps{}, InvalidValue
+			return pr.Color{}, backgroundProps{}, ErrInvalidValue
 		}
 
 		var color pr.CssProperty = pr.InitialValues.GetBackgroundColor()
@@ -601,22 +601,22 @@ func _expandTextDecoration(_, _ string, tokens []parser.Token) (out []NamedToken
 		case "none", "underline", "overline", "line-through", "blink":
 			textDecorationLine = append(textDecorationLine, token)
 			if noneInLine {
-				return nil, InvalidValue
+				return nil, ErrInvalidValue
 			} else if keyword == "none" {
 				noneInLine = true
 			}
 		case "solid", "double", "dotted", "dashed", "wavy":
 			if len(textDecorationStyle) != 0 {
-				return nil, InvalidValue
+				return nil, ErrInvalidValue
 			} else {
 				textDecorationStyle = append(textDecorationStyle, token)
 			}
 		default:
 			color := parser.ParseColor(token)
 			if color.IsNone() {
-				return nil, InvalidValue
+				return nil, ErrInvalidValue
 			} else if len(textDecorationColor) != 0 {
-				return nil, InvalidValue
+				return nil, ErrInvalidValue
 			} else {
 				textDecorationColor = append(textDecorationColor, token)
 			}
@@ -653,7 +653,7 @@ func _expandPageBreakBeforeAfter(_, name string, tokens []parser.Token) (out []N
 			Pos:   tokens[0].Position(),
 		}}})
 	} else {
-		return nil, InvalidValue
+		return nil, ErrInvalidValue
 	}
 	return out, nil
 }
@@ -666,7 +666,7 @@ func _expandPageBreakInside(_, _ string, tokens []parser.Token) ([]NamedTokens, 
 		return []NamedTokens{{Name: "break-inside", Tokens: tokens}}, nil
 	}
 
-	return nil, InvalidValue
+	return nil, ErrInvalidValue
 }
 
 // Expand the “columns“ shorthand property.
@@ -682,7 +682,7 @@ func _expandColumns(_, _ string, tokens []parser.Token) (out []NamedTokens, err 
 		} else if columnCount(l, "") != nil {
 			name = "column-count"
 		} else {
-			return nil, InvalidValue
+			return nil, ErrInvalidValue
 		}
 		out = append(out, NamedTokens{Name: name, Tokens: l})
 	}
@@ -825,7 +825,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 		out = append(out, NamedTokens{Name: suffix, Tokens: []parser.Token{token}})
 
 		if len(tokens) == 0 {
-			return nil, InvalidValue
+			return nil, ErrInvalidValue
 		}
 	}
 	if !hasBroken {
@@ -839,14 +839,14 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 		return nil, err
 	}
 	if fs == nil {
-		return nil, errors.New("invalid : font-size is mandatory for short font attribute !")
+		return nil, errors.New("invalid : font-size is mandatory for short font attribute")
 	}
 	out = append(out, NamedTokens{Name: "-size", Tokens: []parser.Token{token}})
 
 	// Then line-height is optional, but font-family is not so the list
 	// must not be empty yet
 	if len(tokens) == 0 {
-		return nil, errors.New("invalid : font-familly is mandatory for short font attribute !")
+		return nil, errors.New("invalid : font-familly is mandatory for short font attribute")
 	}
 
 	token = tokens[len(tokens)-1]
@@ -855,7 +855,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 		token = tokens[len(tokens)-1]
 		tokens = tokens[:len(tokens)-1]
 		if lineHeight([]parser.Token{token}, "") == nil {
-			return nil, InvalidValue
+			return nil, ErrInvalidValue
 		}
 		out = append(out, NamedTokens{Name: "line-height", Tokens: []parser.Token{token}})
 	} else {
@@ -865,7 +865,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	// Reverse the stack to get normal list
 	tokens = reverse(tokens)
 	if fontFamily(tokens, "") == nil {
-		return nil, InvalidValue
+		return nil, ErrInvalidValue
 	}
 	out = append(out, NamedTokens{Name: "-family", Tokens: tokens})
 	return out, nil
@@ -876,7 +876,7 @@ func _expandFont(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 func _expandWordWrap(_, _ string, tokens []parser.Token) ([]NamedTokens, error) {
 	keyword := overflowWrap(tokens, "")
 	if keyword == nil {
-		return nil, InvalidValue
+		return nil, ErrInvalidValue
 	}
 	return []NamedTokens{
 		{Name: "overflow-wrap", Tokens: tokens},
@@ -919,7 +919,7 @@ func _expandFlex(_, _ string, tokens []parser.Token) (out []NamedTokens, err err
 			if !growFound {
 				newGrow, ok := _flexGrowShrink([]Token{token})
 				if !ok {
-					return nil, InvalidValue
+					return nil, ErrInvalidValue
 				} else {
 					grow = newGrow
 					growFound = true
@@ -928,14 +928,14 @@ func _expandFlex(_, _ string, tokens []parser.Token) (out []NamedTokens, err err
 			} else if !shrinkFound {
 				newShrink, ok := _flexGrowShrink([]Token{token})
 				if !ok {
-					return nil, InvalidValue
+					return nil, ErrInvalidValue
 				} else {
 					shrink = newShrink
 					shrinkFound = true
 					continue
 				}
 			} else {
-				return nil, InvalidValue
+				return nil, ErrInvalidValue
 			}
 		}
 		pos := tokens[0].Position()
@@ -977,7 +977,7 @@ func _expandFlexFlow(_, _ string, tokens []parser.Token) (out []NamedTokens, err
 			}
 		}
 		if !hasBroken {
-			return nil, InvalidValue
+			return nil, ErrInvalidValue
 		}
 	} else if len(tokens) == 1 {
 		direction := flexDirection(tokens[0:1], "")
@@ -988,11 +988,11 @@ func _expandFlexFlow(_, _ string, tokens []parser.Token) (out []NamedTokens, err
 			if wrap != nil {
 				out = append(out, NamedTokens{Name: "flex-wrap", Tokens: tokens[0:1]})
 			} else {
-				return nil, InvalidValue
+				return nil, ErrInvalidValue
 			}
 		}
 	} else {
-		return nil, InvalidValue
+		return nil, ErrInvalidValue
 	}
 	return out, nil
 }
@@ -1036,14 +1036,14 @@ func _expandLineClamp(_, _ string, tokens []parser.Token) (out []NamedTokens, er
 			}
 		}
 	}
-	return nil, InvalidValue
+	return nil, ErrInvalidValue
 }
 
 // Expand the “text-align“ property.
 func _expandTextAlign(_, _ string, tokens []parser.Token) (out []NamedTokens, err error) {
 	keyword := getSingleKeyword(tokens)
 	if keyword == "" {
-		return nil, InvalidValue
+		return nil, ErrInvalidValue
 	}
 
 	pos := tokens[0].Position()

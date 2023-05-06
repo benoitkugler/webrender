@@ -1,12 +1,10 @@
 package boxes
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -575,7 +573,7 @@ func TestImages1(t *testing.T) {
 	if L := len(logs); L != 1 {
 		t.Fatalf("expected one log, got %d", L)
 	}
-	if !strings.Contains(logs[0], "Failed to load image") {
+	if !strings.Contains(logs[0], "failed to load image") {
 		t.Fatal(logs[0])
 	}
 	if !strings.Contains(logs[0], "inexistent.jpg") {
@@ -1499,34 +1497,6 @@ func buildFile(t testing.TB, source utils.ContentInput, baseURL string) []SerBox
 
 	return Serialize(box.Box().Children)
 }
-
-func loadExpected(filename string) ([]SerBox, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	var out []SerBox
-	err = json.NewDecoder(f).Decode(&out)
-	return out, err
-}
-
-// func TestRealPage(t *testing.T) {
-// 	// Requires network to load the linked ressources
-
-// 	// log.Default().SetOutput(io.Discard)
-// 	got := buildFile(t, utils.InputFilename("../../resources_test/Wikipedia-Go.html"), "https://en.wikipedia.org/wiki/Go_(programming_language)")
-
-// 	expected, err := loadExpected("../../resources_test/Wikipedia-Go-expected.json")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	if !reflect.DeepEqual(expected, got) {
-// 		// ioutil.WriteFile("expected.tmp", []byte(fmt.Sprintf("%v", expected)), os.ModePerm)
-// 		// ioutil.WriteFile("got.tmp", []byte(fmt.Sprintf("%v", got)), os.ModePerm)
-// 		t.Fatal("diff")
-// 	}
-// }
 
 func BenchmarkRealPage(b *testing.B) {
 	log.Default().SetOutput(io.Discard)

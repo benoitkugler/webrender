@@ -1037,9 +1037,8 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				} else if alignSelf == "baseline" {
 					if cross == "height" {
 						child.PositionY += line.lowerBaseline - child.Baseline.V()
-					} else {
-						// Handle vertical text
 					}
+					// else Handle vertical text
 				} else if alignSelf == "stretch" {
 					if getCross(child, cross).String == "auto" {
 						var margins pr.Float

@@ -77,7 +77,7 @@ func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMim
 
 	content, err = fetcher(url)
 	if err != nil {
-		err = fmt.Errorf(`Failed to load image at "%s" (%s)`, url, err)
+		err = fmt.Errorf(`failed to load image at "%s" (%s)`, url, err)
 		return nil, err
 	}
 
@@ -102,7 +102,7 @@ func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMim
 		imageConfig, imageFormat, errRaster := image.DecodeConfig(content.Content)
 		if errRaster != nil {
 			if errSvg != nil { // Tried SVGImage then raster for a SVG, abort
-				err = fmt.Errorf(`Failed to load image at "%s" (%s)`, url, errSvg)
+				err = fmt.Errorf(`failed to load image at "%s" (%s)`, url, errSvg)
 				return nil, err
 			}
 
@@ -110,7 +110,7 @@ func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMim
 			content.Content.Seek(0, io.SeekStart)
 			img, errSvg = NewSVGImage(content.Content, url, fetcher)
 			if errSvg != nil {
-				err = fmt.Errorf(`Failed to load image at "%s" (%s)`, url, errRaster)
+				err = fmt.Errorf(`failed to load image at "%s" (%s)`, url, errRaster)
 				return nil, err
 			}
 		} else {

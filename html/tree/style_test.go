@@ -120,9 +120,7 @@ func TestFindStylesheets(t *testing.T) {
 		for _, sheetRules := range sheet.Matcher {
 			rules = append(rules, sheetRules.selector...)
 		}
-		for _, rule := range sheet.pageRules {
-			pagesRules = append(pagesRules, rule)
-		}
+		pagesRules = append(pagesRules, sheet.pageRules...)
 	}
 	if len(rules)+len(pagesRules) != 10 {
 		t.Errorf("expected 10 rules, got %d", len(rules)+len(pagesRules))

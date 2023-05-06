@@ -97,8 +97,8 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 			var outRun backend.TextRun
 			outRun.Font = pangoFont
 			output.Runs = append(output.Runs, outRun)
-		} else { // use the last one
-		}
+		} // else use the last one
+
 		runDst := &output.Runs[len(output.Runs)-1]
 
 		// Positions of the glyphs in the UTF-8 string

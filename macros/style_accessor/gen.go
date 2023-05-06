@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"reflect"
@@ -80,10 +79,10 @@ func main() {
 
 	code_ITF += "}"
 
-	if err := ioutil.WriteFile(OUT_1, []byte(code_1+code_ITF), os.ModePerm); err != nil {
+	if err := os.WriteFile(OUT_1, []byte(code_1+code_ITF), os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := ioutil.WriteFile(OUT_2, []byte(code_2), os.ModePerm); err != nil {
+	if err := os.WriteFile(OUT_2, []byte(code_2), os.ModePerm); err != nil {
 		panic(err)
 	}
 

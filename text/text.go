@@ -44,7 +44,7 @@ type Splitted struct {
 func CreateLayout(text string, style pr.StyleAccessor, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayout {
 	layout := NewTextLayout(context, style, pr.Fl(justificationSpacing), maxWidth)
 	ws := style.GetWhiteSpace()
-	textWrap := "normal" == ws || "pre-wrap" == ws || "pre-line" == ws
+	textWrap := ws == "normal" || ws == "pre-wrap" || ws == "pre-line"
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
 		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
 		// signed integer. Treat bigger values same as None: unconstrained width.
@@ -78,8 +78,8 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
 		ws               = style.GetWhiteSpace()
-		textWrap         = "normal" == ws || "pre-wrap" == ws || "pre-line" == ws
-		spaceCollapse    = "normal" == ws || "nowrap" == ws || "pre-line" == ws
+		textWrap         = ws == "normal" || ws == "pre-wrap" || ws == "pre-line"
+		spaceCollapse    = ws == "normal" || ws == "nowrap" || ws == "pre-line"
 		originalMaxWidth = maxWidth
 		layout           *TextLayout
 		fontSize         = style.GetFontSize().Value

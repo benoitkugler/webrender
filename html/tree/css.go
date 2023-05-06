@@ -141,14 +141,6 @@ func newMatcher() *matcher {
 	return &matcher{}
 }
 
-func (m matcher) selectors() []selector.SelectorGroup {
-	out := make([]selector.SelectorGroup, len(m))
-	for i, v := range m {
-		out[i] = v.selector
-	}
-	return out
-}
-
 type matchResult struct {
 	pseudoType  string
 	payload     []validation.ValidatedProperty

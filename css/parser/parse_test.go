@@ -3,7 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -11,7 +11,7 @@ import (
 func loadJson(t *testing.T, filename string) ([]string, []string) {
 	t.Helper()
 
-	b, err := ioutil.ReadFile(filepath.Join("css-parsing-tests", filename))
+	b, err := os.ReadFile(filepath.Join("css-parsing-tests", filename))
 	if err != nil {
 		t.Fatal(err)
 	}

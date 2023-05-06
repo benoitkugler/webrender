@@ -127,7 +127,7 @@ func TestImages5(t *testing.T) {
 	// Failures are cached too: only one error
 	logs := capt.Logs()
 	tu.AssertEqual(t, len(logs), 1, fmt.Sprintf("%v", logs))
-	tu.AssertEqual(t, strings.Contains(logs[0], "Failed to load image"), true, "")
+	tu.AssertEqual(t, strings.Contains(logs[0], "failed to load image"), true, "")
 }
 
 func TestImages6(t *testing.T) {

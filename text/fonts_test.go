@@ -3,7 +3,7 @@ package text
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/benoitkugler/textlayout/fonts"
@@ -72,7 +72,7 @@ func TestAddFace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected, err := ioutil.ReadFile("../resources_test/weasyprint.otf")
+	expected, err := os.ReadFile("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
 	}

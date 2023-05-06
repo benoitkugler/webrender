@@ -391,7 +391,7 @@ func consumeUrl(css []byte, pos int) (value string, newPos int, addValue bool, e
 	}
 	c := rune(css[pos])
 	if c == '"' || c == '\'' {
-		value, pos, addValue, err = consumeQuotedString(css, pos)
+		value, pos, _, err = consumeQuotedString(css, pos)
 	} else if c == ')' {
 		return "", pos + 1, true, nil
 	} else {

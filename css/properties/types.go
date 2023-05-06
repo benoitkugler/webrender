@@ -408,7 +408,7 @@ func (v GradientSize) IsNone() bool {
 }
 
 func (v LinearGradient) IsNone() bool {
-	return v.ColorStops == nil && v.Direction == DirectionType{} && v.Repeating == false
+	return v.ColorStops == nil && v.Direction == DirectionType{} && !v.Repeating
 }
 
 func (v Quote) IsNone() bool {
@@ -416,7 +416,7 @@ func (v Quote) IsNone() bool {
 }
 
 func (v OptionalRanges) IsNone() bool {
-	return v.Ranges == nil && v.Auto == false
+	return v.Ranges == nil && !v.Auto
 }
 
 func (v Size) IsNone() bool {
@@ -424,7 +424,7 @@ func (v Size) IsNone() bool {
 }
 
 func (v RadialGradient) IsNone() bool {
-	return v.ColorStops == nil && v.Shape == "" && v.Size == GradientSize{} && v.Center == Center{} && v.Repeating == false
+	return v.ColorStops == nil && v.Shape == "" && v.Size == GradientSize{} && v.Center == Center{} && !v.Repeating
 }
 
 func (v SContentProp) IsNone() bool {

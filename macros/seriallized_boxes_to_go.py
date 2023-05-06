@@ -1,3 +1,4 @@
+# This script is used to converted Python box tree to test references
 import pyperclip
 from typing import *
 

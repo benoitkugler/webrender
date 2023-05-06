@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,7 +15,7 @@ import (
 var validSelectors []validSelector
 
 func init() {
-	c, err := ioutil.ReadFile("test_resources/valid_selectors.json")
+	c, err := os.ReadFile("test_resources/valid_selectors.json")
 	if err != nil {
 		panic(err)
 	}

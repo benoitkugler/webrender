@@ -41,12 +41,6 @@ func init() {
 
 type Box = bo.Box
 
-func printBoxes(boxes []Box) {
-	for _, b := range boxes {
-		fmt.Printf("<%s %s> ", b.Type(), b.Box().ElementTag())
-	}
-}
-
 // Layout lay out the whole document, returning one box per pages.
 //
 // This includes line breaks, page breaks, absolute size and position for all
@@ -250,7 +244,6 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 	// Add margin boxes
 	for i, page := range pages {
 		var rootChildren []Box
-		root := page.Box().Children[0]
 		root, footnoteArea := page.Box().Children[0], page.Box().Children[1]
 		rootChildren = append(rootChildren, layoutFixedBoxes(context, pages[:i], page)...)
 		rootChildren = append(rootChildren, root.Box().Children...)
@@ -307,7 +300,6 @@ type layoutContext struct {
 	currentPageFootnotes []Box
 	reportedFootnotes    []Box
 	currentFootnoteArea  *bo.FootnoteAreaBox
-	pageFootnotes        map[int]Box
 
 	currentPage int
 	pageBottom  pr.Float
@@ -440,8 +432,8 @@ func resolveKeyword(keyword, name string, page Box) string {
 // Default is the first assignment on the current page
 // else the most recent assignment (entry value)
 // keyword="first"
-func (self *layoutContext) GetStringSetFor(page Box, name, keyword string) string {
-	if currentS, in := self.stringSet[name][self.currentPage]; in {
+func (lc *layoutContext) GetStringSetFor(page Box, name, keyword string) string {
+	if currentS, in := lc.stringSet[name][lc.currentPage]; in {
 		// A value was assigned on this page
 		switch resolveKeyword(keyword, name, page) {
 		case "first":
@@ -453,16 +445,16 @@ func (self *layoutContext) GetStringSetFor(page Box, name, keyword string) strin
 		}
 	}
 	// Search backwards through previous pages
-	for previousPage := self.currentPage - 1; previousPage > 0; previousPage -= 1 {
-		if currentS, in := self.stringSet[name][previousPage]; in {
+	for previousPage := lc.currentPage - 1; previousPage > 0; previousPage -= 1 {
+		if currentS, in := lc.stringSet[name][previousPage]; in {
 			return currentS[len(currentS)-1]
 		}
 	}
 	return ""
 }
 
-func (self *layoutContext) GetRunningElementFor(page Box, name, keyword string) Box {
-	if currentS, in := self.runningElements[name][self.currentPage]; in {
+func (lc *layoutContext) GetRunningElementFor(page Box, name, keyword string) Box {
+	if currentS, in := lc.runningElements[name][lc.currentPage]; in {
 		// A value was assigned on this page
 		switch resolveKeyword(keyword, name, page) {
 		case "first":
@@ -474,8 +466,8 @@ func (self *layoutContext) GetRunningElementFor(page Box, name, keyword string) 
 		}
 	}
 	// Search backwards through previous pages
-	for previousPage := self.currentPage - 1; previousPage > 0; previousPage -= 1 {
-		if currentS, in := self.runningElements[name][previousPage]; in {
+	for previousPage := lc.currentPage - 1; previousPage > 0; previousPage -= 1 {
+		if currentS, in := lc.runningElements[name][previousPage]; in {
 			return currentS[len(currentS)-1]
 		}
 	}

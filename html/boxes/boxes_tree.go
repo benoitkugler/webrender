@@ -343,9 +343,7 @@ func (b *TableColumnGroupBox) span() int {
 func (b *TableColumnGroupBox) defaultGetCells() []Box {
 	var out []Box
 	for _, column := range b.Box().Children {
-		for _, cell := range column.Box().GetCells() {
-			out = append(out, cell)
-		}
+		out = append(out, column.Box().GetCells()...)
 	}
 	return out
 }

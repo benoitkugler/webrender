@@ -189,16 +189,16 @@ func (element HTMLNode) GetText() string {
 }
 
 // Transform (only) ASCII letters to lower case: A-Z is mapped to a-z.
-//     This is used for `ASCII case-insensitive
-//     <http://whatwg.org/C#ascii-case-insensitive>`_ matching.
-//     This is different from the strings.ToLower function
-//     which also affect non-ASCII characters,
-//     sometimes mapping them into the ASCII range:
-//     		keyword = u"Bac\u212Aground"
-//     		assert strings.ToLower(keyword) == u"background"
-//     		assert asciiLower(keyword) != strings.ToLower(keyword)
-//     		assert asciiLower(keyword) == u"bac\u212Aground"
 //
+//	This is used for `ASCII case-insensitive
+//	<http://whatwg.org/C#ascii-case-insensitive>`_ matching.
+//	This is different from the strings.ToLower function
+//	which also affect non-ASCII characters,
+//	sometimes mapping them into the ASCII range:
+//			keyword = u"Bac\u212Aground"
+//			assert strings.ToLower(keyword) == u"background"
+//			assert asciiLower(keyword) != strings.ToLower(keyword)
+//			assert asciiLower(keyword) == u"bac\u212Aground"
 func AsciiLower(s string) string {
 	rs := []rune(s)
 	out := make([]rune, len(rs))
@@ -310,11 +310,11 @@ type Attachment struct {
 }
 
 // Relevant specs:
-//     http://www.whatwg.org/html#the-title-element
-//     http://www.whatwg.org/html#standard-metadata-names
-//     http://wiki.whatwg.org/wiki/MetaExtensions
-//     http://microformats.org/wiki/existing-rel-values#HTML5LinkExtensionsT
 //
+//	http://www.whatwg.org/html#the-title-element
+//	http://www.whatwg.org/html#standard-metadata-names
+//	http://wiki.whatwg.org/wiki/MetaExtensions
+//	http://microformats.org/wiki/existing-rel-values#HTML5LinkExtensionsT
 func GetHtmlMetadata(wrapperElement *HTMLNode, baseUrl string) DocumentMetadata {
 	var (
 		title, description, generator string
@@ -395,10 +395,10 @@ func GetHtmlMetadata(wrapperElement *HTMLNode, baseUrl string) DocumentMetadata 
 }
 
 // Use the HTML definition of "space character",
-//     not all Unicode Whitespace.
-//     http://www.whatwg.org/html#strip-leading-and-trailing-whitespace
-//     http://www.whatwg.org/html#space-character
 //
+//	not all Unicode Whitespace.
+//	http://www.whatwg.org/html#strip-leading-and-trailing-whitespace
+//	http://www.whatwg.org/html#space-character
 func stripWhitespace(s string) string {
 	return strings.Trim(s, htmlWhitespace)
 }
@@ -458,7 +458,7 @@ func toInt(s string, defaut ...int) int {
 func parseW3cDate(metaName, str string) (time.Time, error) {
 	match := w3CDateRe.FindStringSubmatch(str)
 	if len(match) == 0 {
-		return time.Time{}, fmt.Errorf("Invalid %s date: %s", metaName, str)
+		return time.Time{}, fmt.Errorf("invalid %s date: %s", metaName, str)
 	}
 	year := toInt(match[W3CDateReGroupsIndexes["year"]])
 	month := toInt(match[W3CDateReGroupsIndexes["month"]], 1)

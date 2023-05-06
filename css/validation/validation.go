@@ -22,7 +22,7 @@ import (
 const proprietaryPrefix = "-weasy-"
 
 var (
-	InvalidValue = errors.New("invalid or unsupported values for a known CSS property")
+	ErrInvalidValue = errors.New("invalid or unsupported values for a known CSS property")
 
 	LENGTHUNITS = map[string]pr.Unit{"ex": pr.Ex, "em": pr.Em, "ch": pr.Ch, "rem": pr.Rem, "px": pr.Px, "pt": pr.Pt, "pc": pr.Pc, "in": pr.In, "cm": pr.Cm, "mm": pr.Mm, "q": pr.Q}
 	AngleUnits  = map[string]pr.Unit{"rad": pr.Rad, "turn": pr.Turn, "deg": pr.Deg, "grad": pr.Grad}
@@ -93,6 +93,7 @@ var (
 	// For properties that take a single value, that value is returned by itself
 	// instead of a list.
 	validators = map[string]validator{
+		"appearance":                 appearance,
 		"background-attachment":      backgroundAttachment,
 		"background-color":           otherColors,
 		"border-top-color":           otherColors,
@@ -1302,7 +1303,7 @@ func counter(tokens []Token, defaultInteger int) ([]pr.IntString, error) {
 		}
 		counterName := ident.Value
 		if counterName == "none" || counterName == "initial" || counterName == "inherit" {
-			return nil, fmt.Errorf("Invalid counter name: %s", counterName)
+			return nil, fmt.Errorf("invalid counter name: %s", counterName)
 		}
 		token = iter.Next()
 		if number, ok := token.(parser.NumberToken); ok && number.IsInteger { // implies token != nil
@@ -2946,7 +2947,7 @@ func blockEllipsis_(tokens []Token) (out pr.TaggedString, ok bool) {
 func transformFunction(token Token) (pr.SDimensions, error) {
 	name, args := parseFunction(token)
 	if name == "" {
-		return pr.SDimensions{}, InvalidValue
+		return pr.SDimensions{}, ErrInvalidValue
 	}
 
 	lengths, values := make([]pr.Dimension, len(args)), make([]pr.Dimension, len(args))
@@ -3010,7 +3011,7 @@ func transformFunction(token Token) (pr.SDimensions, error) {
 			return pr.SDimensions{String: name, Dimensions: values}, nil
 		}
 	}
-	return pr.SDimensions{}, InvalidValue
+	return pr.SDimensions{}, ErrInvalidValue
 }
 
 func maxLines(tokens []Token, _ string) pr.CssProperty {

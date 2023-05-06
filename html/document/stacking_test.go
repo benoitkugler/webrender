@@ -12,21 +12,6 @@ import (
 
 // Test CSS stacking contexts.
 
-const zIndexSource = `
-  <style>
-    @page { size: 10px }
-    body { background: white }
-    div, div * { width: 10px; height: 10px; position: absolute }
-    article { background: red; z-index: %s }
-    section { background: blue; z-index: %s }
-    nav { background: lime; z-index: %s }
-  </style>
-  <div>
-    <article></article>
-    <section></section>
-    <nav></nav>
-  </div>`
-
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
 
 // lay out a document and return a list of PageBox objects

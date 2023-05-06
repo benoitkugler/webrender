@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/benoitkugler/webrender/css/properties"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
-	"github.com/benoitkugler/webrender/utils/testutils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -19,10 +17,10 @@ func TestErrorRecovery(t *testing.T) {
 		`<style> html { color red; color: blue; color`,
 		`<html style="color; color: blue; color red">`,
 	} {
-		capt := testutils.CaptureLogs()
+		capt := tu.CaptureLogs()
 		page := renderOnePage(t, style)
 		html := page.Box().Children[0]
-		tu.AssertEqual(t, html.Box().Style.GetColor(), properties.NewColor(0, 0, 1, 1), "blue") // blue
+		tu.AssertEqual(t, html.Box().Style.GetColor(), pr.NewColor(0, 0, 1, 1), "blue") // blue
 		tu.AssertEqual(t, len(capt.Logs()), 2, "")
 	}
 }
@@ -40,7 +38,7 @@ func newTextContext() textContext {
 }
 
 func TestLineHeightInheritance(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
 	page := renderOnePage(t, `
@@ -69,7 +67,7 @@ func TestLineHeightInheritance(t *testing.T) {
 }
 
 func TestImportant(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
 	htmlContent := `
@@ -116,7 +114,7 @@ func TestImportant(t *testing.T) {
 }
 
 func TestNamedPages(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
 	page := renderOnePage(t, `
@@ -140,7 +138,7 @@ func TestNamedPages(t *testing.T) {
 }
 
 func TestUnits(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
 	for _, data := range []struct {

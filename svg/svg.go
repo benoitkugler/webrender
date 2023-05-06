@@ -335,10 +335,8 @@ func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Recta
 		}
 	}
 
-	if viewbox != nil {
-		translateX -= viewbox.X * scaleX
-		translateY -= viewbox.Y * scaleY
-	}
+	translateX -= viewbox.X * scaleX
+	translateY -= viewbox.Y * scaleY
 
 	return
 }

@@ -7,7 +7,6 @@ import (
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
-	"github.com/benoitkugler/webrender/utils/testutils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -984,7 +983,7 @@ func TestOverflowWrap_2(t *testing.T) {
 }
 
 func TestWrapOverflowWordBreak(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
 
 	for _, data := range []struct {

@@ -140,49 +140,6 @@ func (l lineBezier) evaluateCurve(t Fl) (x, y Fl) {
 	return evaluateBezierLine(p0x, p1x, t), evaluateBezierLine(p0y, p1y, t)
 }
 
-type quadBezier [3]point
-
-// quadratic polinomial
-// x = At^2 + Bt + C
-// where
-// A = p0 + p2 - 2p1
-// B = 2(p1 - p0)
-// C = p0
-func bezierQuad(p0, p1, p2, t Fl) Fl {
-	return (p0+p2-2*p1)*t*t + 2*(p1-p0)*t + p0
-}
-
-// derivative as at + b where a,b :
-func quadraticDerivative(p0, p1, p2 Fl) (a, b Fl) {
-	return 2 * (p2 - p1 - (p1 - p0)), 2 * (p1 - p0)
-}
-
-// handle the case where a = 0
-func linearRoots(a, b Fl) []Fl {
-	if a == 0 {
-		return nil
-	}
-	return []Fl{-b / a}
-}
-
-func (cu quadBezier) criticalPoints() (tX, tY []Fl) {
-	p0x, p0y := cu[0].x, cu[0].y
-	p1x, p1y := cu[1].x, cu[1].y
-	p2x, p2y := cu[2].x, cu[2].y
-
-	aX, bX := quadraticDerivative(p0x, p1x, p2x)
-	aY, bY := quadraticDerivative(p0y, p1y, p2y)
-
-	return linearRoots(aX, bX), linearRoots(aY, bY)
-}
-
-func (cu quadBezier) evaluateCurve(t Fl) (x, y Fl) {
-	p0x, p0y := cu[0].x, cu[0].y
-	p1x, p1y := cu[1].x, cu[1].y
-	p2x, p2y := cu[2].x, cu[2].y
-	return bezierQuad(p0x, p1x, p2x, t), bezierQuad(p0y, p1y, p2y, t)
-}
-
 type cubicBezier [4]point
 
 func (cu cubicBezier) criticalPoints() (tX, tY []Fl) {

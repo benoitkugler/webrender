@@ -83,19 +83,19 @@ func newVerticalBox(context *layoutContext, box Box) *verticalBox {
 	return self
 }
 
-func (self *verticalBox) restoreBoxAttributes() {
-	box := self.box.Box()
-	box.Height = self.inner
-	box.MarginTop = self.marginA
-	box.MarginBottom = self.marginB
+func (vb *verticalBox) restoreBoxAttributes() {
+	box := vb.box.Box()
+	box.Height = vb.inner
+	box.MarginTop = vb.marginA
+	box.MarginBottom = vb.marginB
 }
 
 // TODO: Define what are the min-content && max-content heights
-func (self *verticalBox) minContentSize() pr.Float {
+func (vb *verticalBox) minContentSize() pr.Float {
 	return 0
 }
 
-func (self *verticalBox) maxContentSize() pr.Float {
+func (vb *verticalBox) maxContentSize() pr.Float {
 	return 1e6
 }
 
@@ -118,25 +118,25 @@ func newHorizontalBox(context *layoutContext, box Box) *horizontalBox {
 	return self
 }
 
-func (self *horizontalBox) restoreBoxAttributes() {
-	box := self.box.Box()
-	box.Width = self.inner
-	box.MarginLeft = self.marginA
-	box.MarginRight = self.marginB
+func (hb *horizontalBox) restoreBoxAttributes() {
+	box := hb.box.Box()
+	box.Width = hb.inner
+	box.MarginLeft = hb.marginA
+	box.MarginRight = hb.marginB
 }
 
-func (self *horizontalBox) minContentSize() pr.Float {
-	if self._minContentSize == nil {
-		self._minContentSize = minContentWidth(self.context, self.box, false)
+func (hb *horizontalBox) minContentSize() pr.Float {
+	if hb._minContentSize == nil {
+		hb._minContentSize = minContentWidth(hb.context, hb.box, false)
 	}
-	return self._minContentSize.V()
+	return hb._minContentSize.V()
 }
 
-func (self *horizontalBox) maxContentSize() pr.Float {
-	if self._maxContentSize == nil {
-		self._maxContentSize = maxContentWidth(self.context, self.box, false)
+func (hb *horizontalBox) maxContentSize() pr.Float {
+	if hb._maxContentSize == nil {
+		hb._maxContentSize = maxContentWidth(hb.context, hb.box, false)
 	}
-	return self._maxContentSize.V()
+	return hb._maxContentSize.V()
 }
 
 func countAuto(v1, v2, v3 pr.MaybeFloat) int {

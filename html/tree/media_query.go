@@ -11,7 +11,7 @@ import (
 func evaluateMediaQuery(queryList []string, deviceMediaType string) bool {
 	// TODO: actual support for media queries, not just media types
 	for _, query := range queryList {
-		if "all" == query || deviceMediaType == query {
+		if query == "all" || query == deviceMediaType {
 			return true
 		}
 	}

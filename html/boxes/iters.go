@@ -36,11 +36,3 @@ func collectTableColumnGroupBoxs(iter boxIterator) []*TableColumnGroupBox {
 	}
 	return out
 }
-
-func collectTableRowGroupBoxs(iter boxIterator) []*TableRowGroupBox {
-	var out []*TableRowGroupBox
-	for iter.Next() {
-		out = append(out, iter.Box().(*TableRowGroupBox))
-	}
-	return out
-}

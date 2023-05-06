@@ -2,7 +2,6 @@ package document
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 	"text/template"
@@ -45,7 +44,7 @@ func TestStacking(t *testing.T) {
 func TestSVG(t *testing.T) {
 	tmp := headerSVG + crop + cross
 	tp := template.Must(template.New("svg").Parse(tmp))
-	if err := tp.Execute(ioutil.Discard, svgArgs{}); err != nil {
+	if err := tp.Execute(io.Discard, svgArgs{}); err != nil {
 		t.Fatal(err)
 	}
 }

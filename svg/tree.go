@@ -284,21 +284,6 @@ func (na nodeAttributes) miterLimit() (Fl, error) {
 	return Fl(v), err
 }
 
-func (na nodeAttributes) markerWidth() (Value, error) {
-	attrValue := na["markerWidth"]
-	return parseValue(attrValue)
-}
-
-func (na nodeAttributes) markerHeight() (Value, error) {
-	attrValue := na["markerHeight"]
-	return parseValue(attrValue)
-}
-
-func (na nodeAttributes) markerUnitsUserSpace() bool {
-	attrValue := na["markerUnits"]
-	return attrValue == "userSpaceOnUse"
-}
-
 func (na nodeAttributes) display() bool {
 	attrValue := na["display"]
 	return attrValue != "none"
@@ -308,16 +293,6 @@ func (na nodeAttributes) visible() bool {
 	attrValue := na["visibility"]
 	visible := attrValue != "hidden"
 	return na.display() && visible
-}
-
-func (na nodeAttributes) strokeDasharray() ([]Value, error) {
-	attrValue := na["stroke-dasharray"]
-	return parseValues(attrValue)
-}
-
-func (na nodeAttributes) strokeDashoffset() (Value, error) {
-	attrValue := na["stroke-dashoffset"]
-	return parseValue(attrValue)
 }
 
 func (na nodeAttributes) spacePreserve() bool {

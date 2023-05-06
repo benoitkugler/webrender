@@ -55,22 +55,6 @@ func (abs AbsolutePlaceholder) String() string {
 	return fmt.Sprintf("<Placeholder %s (%s)>", abs.AliasBox.Type(), abs.AliasBox.Box().ElementTag())
 }
 
-func toBoxes(children []*AbsolutePlaceholder) []Box {
-	asBox := make([]Box, len(children))
-	for i, v := range children {
-		asBox[i] = v
-	}
-	return asBox
-}
-
-func fromBoxes(children []Box) []*AbsolutePlaceholder {
-	asPlac := make([]*AbsolutePlaceholder, len(children))
-	for i, v := range children {
-		asPlac[i] = v.(*AbsolutePlaceholder)
-	}
-	return asPlac
-}
-
 var absoluteWidth = handleMinMaxWidth(_absoluteWidth)
 
 // @handleMinMaxWidth

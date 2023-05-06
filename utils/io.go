@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/benoitkugler/webrender/logger"
@@ -53,10 +53,10 @@ type Source struct {
 }
 
 // FetchSource fetch the html input, and returns it with the
-// normalized ``BaseUrl`` (checkCssMimeType=false).
+// normalized “BaseUrl“ (checkCssMimeType=false).
 func FetchSource(input ContentInput, baseUrl string, urlFetcher UrlFetcher,
-	checkCssMimeType bool) (out Source, err error) {
-
+	checkCssMimeType bool,
+) (out Source, err error) {
 	if baseUrl != "" {
 		baseUrl, err = ensureUrl(baseUrl)
 		if err != nil {
@@ -71,7 +71,7 @@ func FetchSource(input ContentInput, baseUrl string, urlFetcher UrlFetcher,
 				return
 			}
 		}
-		f, err := ioutil.ReadFile(string(data))
+		f, err := os.ReadFile(string(data))
 		if err != nil {
 			return Source{}, err
 		}
@@ -99,7 +99,7 @@ func FetchSource(input ContentInput, baseUrl string, urlFetcher UrlFetcher,
 			return Source{Content: decoded, BaseUrl: baseUrl}, nil
 		}
 	case InputReader:
-		bt, err := ioutil.ReadAll(data.ReadCloser)
+		bt, err := io.ReadAll(data.ReadCloser)
 		if err != nil {
 			return Source{}, err
 		}
@@ -116,11 +116,11 @@ func FetchSource(input ContentInput, baseUrl string, urlFetcher UrlFetcher,
 
 func decodeToUtf8(data io.Reader, encod string) ([]byte, error) {
 	if encod == "" { // assume UTF8
-		return ioutil.ReadAll(data)
+		return io.ReadAll(data)
 	}
 	enc, _ := charset.Lookup(encod)
 	if enc == nil {
 		return nil, fmt.Errorf("unsupported encoding %s", encod)
 	}
-	return ioutil.ReadAll(enc.NewDecoder().Reader(data))
+	return io.ReadAll(enc.NewDecoder().Reader(data))
 }

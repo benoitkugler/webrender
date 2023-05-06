@@ -16,8 +16,8 @@ var (
 	ColorKeywords = map[string]Color{}
 
 	hashRegexps = []hashRegexp{
-		{multiplier: 2., regexp: regexp.MustCompile("(?i)^([\\da-f])([\\da-f])([\\da-f])$")},
-		{multiplier: 1., regexp: regexp.MustCompile("(?i)^([\\da-f]{2})([\\da-f]{2})([\\da-f]{2})$")},
+		{multiplier: 2., regexp: regexp.MustCompile(`(?i)^([\da-f])([\da-f])([\da-f])$`)},
+		{multiplier: 1., regexp: regexp.MustCompile(`(?i)^([\da-f]{2})([\da-f]{2})([\da-f]{2})$`)},
 	}
 
 	// (r, g, b) := range 0..255
@@ -306,11 +306,11 @@ func ParseColorString(color string) Color {
 
 // Parse a color value as defined in `CSS Color Level 3  <http://www.w3.org/TR/css3-color/>`.
 // Returns :
-//  - zero Color if the input is not a valid color value. (No error is returned.)
-//  - CurrentColor for the *currentColor* keyword
-//  - RGBA color for every other values (including keywords, HSL && HSLA.)
-//    The alpha channel is clipped to [0, 1] but red, green, or blue can be out of range
-//    (eg. ``rgb(-10%, 120%, 0%)`` is represented as ``(-0.1, 1.2, 0, 1)``.
+//   - zero Color if the input is not a valid color value. (No error is returned.)
+//   - CurrentColor for the *currentColor* keyword
+//   - RGBA color for every other values (including keywords, HSL && HSLA.)
+//     The alpha channel is clipped to [0, 1] but red, green, or blue can be out of range
+//     (eg. “rgb(-10%, 120%, 0%)“ is represented as “(-0.1, 1.2, 0, 1)“.
 func ParseColor(_token Token) Color {
 	switch token := _token.(type) {
 	case IdentToken:
@@ -369,7 +369,6 @@ func ParseColor(_token Token) Color {
 
 // If args is a list of a single  NUMBER token,
 // return its value clipped to the 0..1 range
-//
 func parseAlpha(args []Token) (utils.Fl, bool) {
 	if len(args) == 1 {
 		token, ok := args[0].(NumberToken)
@@ -382,7 +381,6 @@ func parseAlpha(args []Token) (utils.Fl, bool) {
 
 // If args is a list of 3 NUMBER tokens or 3 PERCENTAGE tokens,
 // return RGB values as a tuple of 3 floats := range 0..1.
-//
 func parseRgb(args []Token, alpha utils.Fl) (RGBA, bool) {
 	if len(args) != 3 {
 		return RGBA{}, false
@@ -419,7 +417,7 @@ func parseHsl(args []Token, alpha utils.Fl) (RGBA, bool) {
 	return RGBA{}, false
 }
 
-//  returns (r, g, b) as floats in the 0..1 range
+// returns (r, g, b) as floats in the 0..1 range
 func hslToRgb(_hue int, saturation, lightness utils.Fl) (utils.Fl, utils.Fl, utils.Fl) {
 	hue := float64(_hue) / 360
 	hue = hue - math.Floor(hue)
@@ -460,7 +458,6 @@ func hslToRgb(_hue int, saturation, lightness utils.Fl) (utils.Fl, utils.Fl, uti
 // with optional white space around each argument.
 // return the argument list without commas or white space;
 // or None if the function token content do not match the description above.
-//
 func parseCommaSeparated(tokens []Token) []Token {
 	var filtered []Token
 	for _, token := range tokens {

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"io/ioutil"
+	"io"
 	"net/url"
 	"reflect"
 	"testing"
@@ -13,7 +13,7 @@ func TestURLFetcher(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := ioutil.ReadAll(content.Content)
+	b, err := io.ReadAll(content.Content)
 	if err != nil {
 		t.Fatal(err)
 	}

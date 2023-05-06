@@ -1228,7 +1228,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				}
 				for _, sel := range selector {
 					if _, in := pseudoElements[sel.PseudoElement()]; !in {
-						err = fmt.Errorf("Unsupported pseudo-element : %s", sel.PseudoElement())
+						err = fmt.Errorf("unsupported pseudo-element : %s", sel.PseudoElement())
 						break
 					}
 				}

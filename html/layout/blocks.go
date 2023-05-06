@@ -124,7 +124,7 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.
 	}
 	blockLevelWidth(box_, nil, containingBlock)
 
-	newBox__, result, maxLines := blockContainerLayout(context, box_, bottomSpace, skipStack, pageIsEmpty,
+	newBox__, result, _ := blockContainerLayout(context, box_, bottomSpace, skipStack, pageIsEmpty,
 		absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
 	newBox, _ := newBox__.(bo.BlockBoxITF) // blockContainerLayout is type stable
 	if newBox != nil && newBox.Box().IsTableWrapper {
@@ -270,15 +270,6 @@ func relativePositioning(box_ Box, containingBlock bo.Point) {
 	}
 }
 
-func reversedPl(f []*AbsolutePlaceholder) []*AbsolutePlaceholder {
-	L := len(f)
-	out := make([]*AbsolutePlaceholder, L)
-	for i, v := range f {
-		out[L-1-i] = v
-	}
-	return out
-}
-
 func reversedBoxes(in []Box) []Box {
 	N := len(in)
 	out := make([]Box, N)
@@ -293,11 +284,6 @@ func reverseB(a []Box) {
 	for left, right := 0, len(a)-1; left < right; left, right = left+1, right-1 {
 		a[left], a[right] = a[right], a[left]
 	}
-}
-
-type childrenBlockLevel interface {
-	Box
-	Children() []bo.BlockLevelBoxITF
 }
 
 // Set the “box“ height.
@@ -909,7 +895,7 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 				newChild_, tmp, maxLines = blockLevelLayout(context, child_.(bo.BlockLevelBoxITF), bottomSpace, skipStack,
 					newContainingBlock, pageIsEmptyWithNoChildren, absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
 				resumeAt, nextPage = tmp.resumeAt, tmp.nextPage
-				nextAdjoiningMargins, collapsingThrough = tmp.adjoiningMargins, tmp.collapsingThrough
+				nextAdjoiningMargins = tmp.adjoiningMargins
 				if newChild_ != nil {
 					newChild = newChild_.Box()
 					positionY = (newChild.BorderBoxY() + newChild.BorderHeight())

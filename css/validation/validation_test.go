@@ -153,8 +153,8 @@ func TestCounters(t *testing.T) {
 		"counter_reset": pr.SIntStrings{Values: pr.IntStrings{}},
 	}))
 	capt.AssertNoLogs(t)
-	assertInvalid(t, "counter-reset: foo initial", "Invalid counter name: initial.")
-	assertInvalid(t, "counter-reset: foo none", "Invalid counter name: none.")
+	assertInvalid(t, "counter-reset: foo initial", "invalid counter name: initial.")
+	assertInvalid(t, "counter-reset: foo none", "invalid counter name: none.")
 	assertInvalid(t, "counter-reset: foo 3px", "invalid")
 	assertInvalid(t, "counter-reset: 3", "invalid")
 }

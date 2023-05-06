@@ -2,7 +2,6 @@ package svg
 
 import (
 	"fmt"
-	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -13,8 +12,6 @@ import (
 // provide low-level functions to read basic SVG data
 
 type Fl = utils.Fl
-
-var root2 = math.Sqrt(2)
 
 // Unit is an enum type for units supported in SVG images.
 type Unit uint8

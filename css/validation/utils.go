@@ -262,7 +262,7 @@ func parseColorStop(tokens []Token) (pr.ColorStop, error) {
 			return pr.ColorStop{Color: pr.Color(color), Position: position}, nil
 		}
 	}
-	return pr.ColorStop{}, InvalidValue
+	return pr.ColorStop{}, ErrInvalidValue
 }
 
 func parseURLToken(value, baseURL string) (url pr.NamedString, attr pr.AttrData, err error) {
@@ -310,7 +310,6 @@ func checkStringOrElementFunction(stringOrElement string, token Token) (out pr.C
 		var ident string
 		if len(args) > 0 {
 			ident_ := args[0]
-			args = args[1:]
 			identToken, ok := ident_.(parser.IdentToken)
 			val := identToken.Value.Lower()
 			if !ok || (val != "first" && val != "start" && val != "last" && val != "first-except") {
@@ -555,7 +554,6 @@ func checkCounterFunction(token Token) (prop pr.ContentProperty) {
 
 		if len(args) > 0 {
 			counterStyle, ok := listStyleType_(args[0:1])
-			args = args[1:]
 			if !ok {
 				return
 			}
@@ -673,7 +671,6 @@ func getTarget(token Token, baseUrl string) (out pr.ContentProperty, err error) 
 		var counterStyle string
 		if len(args) > 0 {
 			counterStyle = getKeyword(args[0])
-			args = args[1:]
 		} else {
 			counterStyle = "decimal"
 		}
@@ -682,7 +679,6 @@ func getTarget(token Token, baseUrl string) (out pr.ContentProperty, err error) 
 		var content string
 		if len(args) > 0 {
 			content = getKeyword(args[0])
-			args = args[1:]
 			if content != "content" && content != "before" && content != "after" && content != "first-letter" {
 				return
 			}

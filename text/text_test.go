@@ -37,19 +37,6 @@ func init() {
 	fontmap = fcfonts.NewFontMap(fontconfig.Standard, fs)
 }
 
-type dummyStyle struct {
-	pr.Properties
-}
-
-func (ds dummyStyle) Copy() pr.ElementStyle { return ds }
-
-func (dummyStyle) Set(key string, value pr.CssProperty)       {}
-func (dummyStyle) Get(key string) pr.CssProperty              { return nil }
-func (dummyStyle) ParentStyle() pr.ElementStyle               { return nil }
-func (dummyStyle) Variables() map[string]pr.ValidatedProperty { return nil }
-func (dummyStyle) Specified() pr.SpecifiedAttributes          { return pr.SpecifiedAttributes{} }
-func (dummyStyle) Cache() pr.TextRatioCache                   { return pr.TextRatioCache{} }
-
 func assert(t *testing.T, b bool, msg string) {
 	if !b {
 		t.Fatal(msg)

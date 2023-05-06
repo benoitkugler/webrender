@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +56,7 @@ func (f *FontConfiguration) FontContent(faceID fonts.FaceID) []byte {
 		return content
 	}
 
-	b, err := ioutil.ReadFile(faceID.File)
+	b, err := os.ReadFile(faceID.File)
 	if err != nil {
 		logger.WarningLogger.Println(err)
 	}
@@ -109,7 +110,7 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 
 		// prevent RuntimeError, see issue #677
 		if matchingPattern == nil {
-			return "", fmt.Errorf("Failed to get matching local font for %s", fontName)
+			return "", fmt.Errorf("failed to get matching local font for %s", fontName)
 		}
 
 		family, _ := matchingPattern.GetString(fc.FULLNAME)
@@ -119,31 +120,31 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 			var err error
 			url.String, err = filepath.Abs(filename)
 			if err != nil {
-				return "", fmt.Errorf("Failed to load local font %s: %s", fontName, err)
+				return "", fmt.Errorf("failed to load local font %s: %s", fontName, err)
 			}
 		} else {
-			return "", fmt.Errorf("Failed to load local font %s", fontName)
+			return "", fmt.Errorf("failed to load local font %s", fontName)
 		}
 	}
 
 	result, err := urlFetcher(url.String)
 	if err != nil {
-		return "", fmt.Errorf("Failed to load font at: %s", err)
+		return "", fmt.Errorf("failed to load font at: %s", err)
 	}
 	fontFilename := escapeXML(url.String)
 
-	content, err := ioutil.ReadAll(result.Content)
+	content, err := io.ReadAll(result.Content)
 	if err != nil {
-		return "", fmt.Errorf("Failed to load font at %s", url.String)
+		return "", fmt.Errorf("failed to load font at %s", url.String)
 	}
 
 	faces, format := fc.ReadFontFile(bytes.NewReader(content))
 	if format == "" {
-		return "", fmt.Errorf("Failed to load font at %s : unsupported format", fontFilename)
+		return "", fmt.Errorf("failed to load font at %s : unsupported format", fontFilename)
 	}
 
 	if len(faces) != 1 {
-		return "", fmt.Errorf("Font collections are not supported (%s)", url.String)
+		return "", fmt.Errorf("font collections are not supported (%s)", url.String)
 	}
 
 	if url.Name == "external" {
@@ -223,12 +224,12 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 
 	err = config.LoadFromMemory(bytes.NewReader([]byte(xmlConfig)))
 	if err != nil {
-		return "", fmt.Errorf("Failed to load fontconfig config: %s", err)
+		return "", fmt.Errorf("failed to load fontconfig config: %s", err)
 	}
 
 	fs, err := config.ScanFontRessource(bytes.NewReader(content), fontFilename)
 	if err != nil {
-		return "", fmt.Errorf("Failed to load font at %s", url.String)
+		return "", fmt.Errorf("failed to load font at %s", url.String)
 	}
 
 	f.Fontmap.Database = append(f.Fontmap.Database, fs...)

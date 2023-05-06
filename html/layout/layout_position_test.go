@@ -449,7 +449,7 @@ func TestFixedPositioningRegression1(t *testing.T) {
 	tu.AssertEqual(t, marker.Box().PositionX, ul.Box().PositionX, "")
 
 	html = page2.Box().Children[0]
-	ul, img, div, body = unpack4(html)
+	ul, img, div, _ = unpack4(html)
 	marker = ul.Box().Children[0]
 	tu.AssertEqual(t, [2]pr.Float{ul.Box().PositionX, ul.Box().PositionY}, [2]pr.Float{180, 10}, "")
 	tu.AssertEqual(t, [2]pr.Float{img.Box().PositionX, img.Box().PositionY}, [2]pr.Float{160, 10}, "")
@@ -489,7 +489,7 @@ func TestFixedPositioningRegression2(t *testing.T) {
 	tu.AssertEqual(t, [2]pr.Float{header.Box().PositionX, header.Box().PositionY}, [2]pr.Float{5, 10}, "")
 
 	html = page2.Box().Children[0]
-	div, body = unpack2(html)
+	div, _ = unpack2(html)
 	tu.AssertEqual(t, [2]pr.Float{div.Box().PositionX, div.Box().PositionY}, [2]pr.Float{15, 10}, "")
 	article = div.Box().Children[0]
 	tu.AssertEqual(t, [2]pr.Float{article.Box().PositionX, article.Box().PositionY}, [2]pr.Float{15, 20}, "")

@@ -558,7 +558,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 		if hasHeader {
 			header = table.Children[0]
-			header, resumeAt, nextPage = groupLayout(header, positionY, headerFooterMaxBottomSpace, false, nil)
+			header, resumeAt, _ = groupLayout(header, positionY, headerFooterMaxBottomSpace, false, nil)
 			if header != nil && resumeAt == nil {
 				headerHeight = header.Box().Height.V() + borderSpacingY
 			} else { // Header too big for the page
@@ -568,7 +568,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 
 		if hasFooter {
 			footer = table.Children[len(table.Children)-1]
-			footer, resumeAt, nextPage = groupLayout(footer, positionY, headerFooterMaxBottomSpace, false, nil)
+			footer, resumeAt, _ = groupLayout(footer, positionY, headerFooterMaxBottomSpace, false, nil)
 			if footer != nil && resumeAt == nil {
 				footerHeight = footer.Box().Height.V() + borderSpacingY
 			} else { // Footer too big for the page
@@ -759,9 +759,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	}
 	var allColumns []Box
 	for _, columnGroup := range table.ColumnGroups {
-		for _, column := range columnGroup.Box().Children {
-			allColumns = append(allColumns, column)
-		}
+		allColumns = append(allColumns, columnGroup.Box().Children...)
 	}
 
 	var firstRowCells []Box

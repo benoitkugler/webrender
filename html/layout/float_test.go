@@ -5,13 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/benoitkugler/webrender/css/properties"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
-type fl = properties.Fl
+type fl = pr.Fl
 
 // Return the (x, y, w, h) rectangle for the outer area of a box.
 func outerArea(box Box) [4]fl {

@@ -1337,9 +1337,9 @@ func TestPageStyle(t *testing.T) {
         @top-center { content: ""; width: 300px }
         @top-right { content: %s }
      `, imagesFromW(170, 175)), []pr.Float{200, 300, 175}},
-		{fmt.Sprintf(`@top-left { content: ""; width: 200px }
+		{`@top-left { content: ""; width: 200px }
         @top-right { content: ""; width: 500px }
-     `), []pr.Float{200, 500}},
+     `, []pr.Float{200, 500}},
 		{fmt.Sprintf(`@top-left { content: ""; width: 200px }
         @top-right { content: %s }
      `, imagesFromW(150, 50, 150)), []pr.Float{200, 350}},

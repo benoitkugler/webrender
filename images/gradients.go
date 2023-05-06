@@ -173,21 +173,17 @@ func NewLinearGradient(from pr.LinearGradient) LinearGradient {
 	return self
 }
 
-func toData(c Color) [6]pr.Fl {
-	return [6]pr.Fl{pr.Fl(c.R), pr.Fl(c.G), pr.Fl(c.B), pr.Fl(c.A), 0, 0}
-}
-
-func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
+func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 	// Only one color, render the gradient as a solid color
-	if len(self.colors) == 1 {
-		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{self.colors[0]}}
+	if len(lg.colors) == 1 {
+		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{lg.colors[0]}}
 	}
 	// (dx, dy) is the unit vector giving the direction of the gradient.
 	// Positive dx: right, positive dy: down.
 	var dx, dy pr.Fl
-	if self.direction.Corner != "" {
+	if lg.direction.Corner != "" {
 		var factorX, factorY pr.Float
-		switch self.direction.Corner {
+		switch lg.direction.Corner {
 		case "top_left":
 			factorX, factorY = -1, -1
 		case "top_right":
@@ -203,7 +199,7 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 		dx = pr.Fl(factorX * height / diagonal)
 		dy = pr.Fl(factorY * width / diagonal)
 	} else {
-		angle := float64(self.direction.Angle) // 0 upwards, then clockwise
+		angle := float64(lg.direction.Angle) // 0 upwards, then clockwise
 		dx = pr.Fl(math.Sin(angle))
 		dy = pr.Fl(-math.Cos(angle))
 	}
@@ -214,11 +210,11 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 
 	// Distance between center && ending point,
 	// ie. half of between the starting point && ending point :
-	colors := self.colors
+	colors := lg.colors
 	vectorLength := pr.Fl(pr.Abs(width*pr.Float(dx)) + pr.Abs(height*pr.Float(dy)))
-	positions := processColorStops(pr.Float(vectorLength), self.stopPositions)
+	positions := processColorStops(pr.Float(vectorLength), lg.stopPositions)
 
-	if !self.repeating {
+	if !lg.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
 		// extend color stops that are not displayed
 		if positions[0] == positions[1] {
@@ -232,7 +228,7 @@ func (self LinearGradient) Layout(width, height pr.Float) backend.GradientLayout
 	}
 
 	spread := svg.NoRepeat
-	if self.repeating {
+	if lg.repeating {
 		spread = svg.Repeat
 	}
 	startX := (pr.Fl(width) - dx*vectorLength) / 2
@@ -281,11 +277,11 @@ func handleDegenerateRadial(sizeX, sizeY pr.Float) (pr.Float, pr.Float) {
 	return sizeX, sizeY
 }
 
-func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
-	if len(self.colors) == 1 {
-		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{self.colors[0]}}
+func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
+	if len(rg.colors) == 1 {
+		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{rg.colors[0]}}
 	}
-	originX, centerX_, originY, centerY_ := self.center.OriginX, self.center.Pos[0], self.center.OriginY, self.center.Pos[1]
+	originX, centerX_, originY, centerY_ := rg.center.OriginX, rg.center.Pos[0], rg.center.OriginY, rg.center.Pos[1]
 	centerX := pr.ResoudPercentage(centerX_.ToValue(), width).V()
 	centerY := pr.ResoudPercentage(centerY_.ToValue(), height).V()
 	if originX == "right" {
@@ -295,12 +291,12 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 		centerY = height - centerY
 	}
 
-	sizeX, sizeY := handleDegenerateRadial(self.resolveSize(width, height, centerX, centerY))
+	sizeX, sizeY := handleDegenerateRadial(rg.resolveSize(width, height, centerX, centerY))
 	scaleY := pr.Fl(sizeY / sizeX)
 
-	colors := self.colors
-	positions := processColorStops(sizeX, self.stopPositions)
-	if !self.repeating {
+	colors := rg.colors
+	positions := processColorStops(sizeX, rg.stopPositions)
+	if !rg.repeating {
 		// Add explicit colors at boundaries if needed, because PDF doesn’t
 		// extend color stops that are not displayed
 		if positions[0] > 0 && positions[0] == positions[1] {
@@ -316,7 +312,7 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 	if positions[0] < 0 {
 		// PDF does not like negative radiuses,
 		// shift into the positive realm.
-		if self.repeating {
+		if rg.repeating {
 			// Add vector lengths to first position until positive
 			vectorLength := positions[len(positions)-1] - positions[0]
 			offset := vectorLength * pr.Fl(1+math.Floor(float64(-positions[0]/vectorLength)))
@@ -328,7 +324,7 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 			if positions[len(positions)-1] <= 0 {
 				// All stops are negatives,
 				// everything is "padded" with the last color.
-				return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{self.colors[len(self.colors)-1]}}
+				return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{rg.colors[len(rg.colors)-1]}}
 			}
 
 			for i, position := range positions {
@@ -359,7 +355,7 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 	}
 
 	spread := svg.NoRepeat
-	if self.repeating {
+	if rg.repeating {
 		spread = svg.Repeat
 	}
 
@@ -374,9 +370,9 @@ func (self RadialGradient) Layout(width, height pr.Float) backend.GradientLayout
 	return out
 }
 
-func (self RadialGradient) resolveSize(width, height, centerX, centerY pr.Float) (pr.Float, pr.Float) {
-	if self.size.IsExplicit() {
-		sizeX, sizeY := self.size.Explicit[0], self.size.Explicit[1]
+func (rg RadialGradient) resolveSize(width, height, centerX, centerY pr.Float) (pr.Float, pr.Float) {
+	if rg.size.IsExplicit() {
+		sizeX, sizeY := rg.size.Explicit[0], rg.size.Explicit[1]
 		sizeX_ := pr.ResoudPercentage(sizeX.ToValue(), width).V()
 		sizeY_ := pr.ResoudPercentage(sizeY.ToValue(), height).V()
 		return sizeX_, sizeY_
@@ -386,11 +382,11 @@ func (self RadialGradient) resolveSize(width, height, centerX, centerY pr.Float)
 	top := pr.Abs(centerY)
 	bottom := pr.Abs(height - centerY)
 	pick := pr.Maxs
-	if strings.HasPrefix(self.size.Keyword, "closest") {
+	if strings.HasPrefix(rg.size.Keyword, "closest") {
 		pick = pr.Mins
 	}
-	if strings.HasSuffix(self.size.Keyword, "side") {
-		if self.shape == "circle" {
+	if strings.HasSuffix(rg.size.Keyword, "side") {
+		if rg.shape == "circle" {
 			sizeXy := pick(left, right, top, bottom)
 			return sizeXy, sizeXy
 		}
@@ -398,7 +394,7 @@ func (self RadialGradient) resolveSize(width, height, centerX, centerY pr.Float)
 		return pick(left, right), pick(top, bottom)
 	}
 	// else: corner
-	if self.shape == "circle" {
+	if rg.shape == "circle" {
 		sizeXy := pick(pr.Hypot(left, top), pr.Hypot(left, bottom),
 			pr.Hypot(right, top), pr.Hypot(right, bottom))
 		return sizeXy, sizeXy

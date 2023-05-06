@@ -33,7 +33,7 @@ func UrlJoin(baseUrl, urlS string, allowRelative bool, context string) string {
 func basicUrlJoin(baseUrl string, urls *url.URL) (string, error) {
 	parsedBase, err := url.Parse(baseUrl)
 	if err != nil {
-		return "", fmt.Errorf("Invalid base url : %s", baseUrl)
+		return "", fmt.Errorf("invalid base url : %s", baseUrl)
 	}
 	if urls.Host != "" { // copy the scheme from base
 		urls.Scheme = parsedBase.Scheme
@@ -57,7 +57,7 @@ func basicUrlJoin(baseUrl string, urls *url.URL) (string, error) {
 func SafeUrljoin(baseUrl, urls string, allowRelative bool) (string, error) {
 	parsed, err := url.Parse(urls)
 	if err != nil {
-		return "", fmt.Errorf("Invalid url : %s (%s)", urls, err)
+		return "", fmt.Errorf("invalid url : %s (%s)", urls, err)
 	}
 	if parsed.IsAbs() {
 		return parsed.String(), nil
@@ -70,11 +70,12 @@ func SafeUrljoin(baseUrl, urls string, allowRelative bool) (string, error) {
 	}
 }
 
-// Get the URI corresponding to the ``attrName`` attribute.
+// Get the URI corresponding to the “attrName“ attribute.
 // Return "" if:
-// * the attribute is empty or missing or,
-// * the value is a relative URI but the document has no base URI and
-//   ``allowRelative`` is ``False``.
+//   - the attribute is empty or missing or,
+//   - the value is a relative URI but the document has no base URI and
+//     “allowRelative“ is “False“.
+//
 // Otherwise return an URI, absolute if possible.
 func (element HTMLNode) GetUrlAttribute(attrName, baseUrl string, allowRelative bool) string {
 	value := strings.TrimSpace(element.Get(attrName))
@@ -156,14 +157,14 @@ func PathToURL(file string) (out string, err error) {
 	return "file://" + file, nil
 }
 
-// Get a ``scheme://path`` URL from ``string``.
+// Get a “scheme://path“ URL from “string“.
 //
-// If ``string`` looks like an URL, return it unchanged. Otherwise assume a
-// filename and convert it to a ``file://`` URL.
+// If “string“ looks like an URL, return it unchanged. Otherwise assume a
+// filename and convert it to a “file://“ URL.
 func ensureUrl(urlS string) (string, error) {
 	parsed, err := url.Parse(urlS)
 	if err != nil {
-		return "", fmt.Errorf("Invalid url : %s (%s)", urlS, err)
+		return "", fmt.Errorf("invalid url : %s (%s)", urlS, err)
 	}
 	if parsed.IsAbs() {
 		return urlS, nil
@@ -212,7 +213,7 @@ func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
 		return RemoteRessource{}, err
 	}
 	if !data.IsAbs() {
-		return RemoteRessource{}, fmt.Errorf("Not an absolute URI: %s", urlTarget)
+		return RemoteRessource{}, fmt.Errorf("not an absolute URI: %s", urlTarget)
 	}
 	urlTarget = data.String()
 

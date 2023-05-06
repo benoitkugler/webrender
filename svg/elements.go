@@ -11,11 +11,6 @@ import (
 	"github.com/benoitkugler/webrender/utils"
 )
 
-// function parsing a generic node to build a specialized element
-// context holds global data sometimes needed, as well as a cache to
-// reduce allocations
-type elementBuilder = func(node *cascadedNode, context *svgContext) (drawable, error)
-
 type drawable interface {
 	// Draws the node onto `dst` with the given dimensions.
 	// It should return the vertices of the path for path, line, polyline and polygon elements

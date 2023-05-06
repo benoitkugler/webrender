@@ -173,7 +173,7 @@ func makeBox(style pr.ElementStyle, content []Box, element *utils.HTMLNode, pseu
 		b := NewTableCaptionBox(style, (*html.Node)(element), pseudoType, content)
 		return b, nil
 	default:
-		return nil, fmt.Errorf("Ignored box %s: display property %s not supported", element.Data, tmp)
+		return nil, fmt.Errorf("ignored box %s: display property %s not supported", element.Data, tmp)
 	}
 }
 
@@ -345,7 +345,7 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 		// moment to add an empty line box, and the specification lets us do
 		// almost what we want, so…
 		if style.GetListStylePosition() == "outside" {
-			box.Box().Children = append(box.Box().Children, TextBoxAnonymousFrom(box, "​"))
+			box.Box().Children = append(box.Box().Children, TextBoxAnonymousFrom(box, "\u200b"))
 		}
 	}
 
@@ -551,6 +551,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 		contentBoxes = append(contentBoxes, TextBoxAnonymousFrom(parentBox, text))
 	}
 
+outerLoop:
 	for _, content := range contentList {
 		switch content.Type {
 		case "string":
@@ -638,7 +639,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 				counterValue := vs[len(vs)-1]
 				addText(cs.RenderValue(counterValue, counterStyle))
 			} else {
-				break
+				break outerLoop
 			}
 		case "target-counters()":
 			anchorToken, counterName, separator, counterStyle := content.AsTargetCounters()
@@ -646,7 +647,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 				anchorToken, parentBox, cssToken, parseAgain)
 			if lookupTarget.IsUpToDate() {
 				if separator.Type != "string" {
-					break
+					break outerLoop
 				}
 				separatorString := separator.AsString()
 				targetValues := lookupTarget.TargetBox.CachedCounterValues()
@@ -670,7 +671,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 				}
 				addText(strings.Join(tmps, separatorString))
 			} else {
-				break
+				break outerLoop
 			}
 		case "target-text()":
 			anchorToken, textStyle := content.AsTargetText()
@@ -683,7 +684,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 				// (normally done during the layout)
 				addText(strings.TrimSpace(text))
 			} else {
-				break
+				break outerLoop
 			}
 		case "quote":
 			if quoteDepth != nil && !quoteStyle.IsNone() {
@@ -718,20 +719,6 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 			if newBox == nil {
 				continue
 			}
-
-			// runningElements := context.RunningElements()
-			// if _, in := runningElements[value]; !in {
-			// 	// TODO: emit warning
-			// 	continue
-			// }
-			// var newBox Box
-			// for i := context.CurrentPage() - 1; i > -1; i -= 1 {
-			// 	runningBox, in := runningElements[value][i]
-			// 	if !in {
-			// 		continue
-			// 	}
-			// 	break
-			// }
 
 			newBox = Deepcopy(newBox)
 
@@ -805,9 +792,8 @@ func ContentToBoxes(style pr.ElementStyle, parentBox Box, quoteDepth []int, coun
 		return nil
 	}
 
-	for i, v := range quoteDepth {
-		origQuoteDepth[i] = v
-	}
+	copy(origQuoteDepth, quoteDepth)
+
 	cssToken := "content"
 	boxList := computeContentList(
 		style.GetContent().Contents, parentBox, counterValues, cssToken, parseAgain,
@@ -955,11 +941,9 @@ func UpdateCounters(state *tree.PageState, style pr.ElementStyle) {
 	}
 }
 
-var reHasNonWhitespace = regexp.MustCompile("\\S")
+var reHasNonWhitespace = regexp.MustCompile(`\S`)
 
-var hasNonWhitespaceDefault = func(text string) bool {
-	return reHasNonWhitespace.MatchString(text)
-}
+func hasNonWhitespaceDefault(text string) bool { return reHasNonWhitespace.MatchString(text) }
 
 // Return true if “box“ is a TextBox with only whitespace.
 func isWhitespace(box Box, hasNonWhitespace func(string) bool) bool {
@@ -1732,7 +1716,7 @@ func InlineInBlock(box Box) Box {
 	baseBox := box.Box()
 	boxChildren := baseBox.Children
 
-	if len(boxChildren) > 0 && baseBox.LeadingCollapsibleSpace == false {
+	if len(boxChildren) > 0 && !baseBox.LeadingCollapsibleSpace {
 		baseBox.LeadingCollapsibleSpace = boxChildren[0].Box().LeadingCollapsibleSpace
 	}
 
@@ -1754,7 +1738,7 @@ func InlineInBlock(box Box) Box {
 			children = append(children, InlineInBlock(child))
 		}
 	}
-	if baseBox.TrailingCollapsibleSpace == false {
+	if !baseBox.TrailingCollapsibleSpace {
 		baseBox.TrailingCollapsibleSpace = trailingCollapsibleSpace
 	}
 
@@ -1766,7 +1750,7 @@ func InlineInBlock(box Box) Box {
 	var newLineChildren, newChildren []Box
 	for _, childBox := range children {
 		if LineT.IsInstance(childBox) {
-			panic(fmt.Sprintf("childBox can't be a LineBox"))
+			panic("childBox can't be a LineBox")
 		}
 		if len(newLineChildren) > 0 && childBox.Box().IsAbsolutelyPositioned() {
 			newLineChildren = append(newLineChildren, childBox)

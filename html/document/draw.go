@@ -336,8 +336,6 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			for _, childContext := range stackingContext.positiveZContexts {
 				ctx.drawStackingContext(childContext)
 			}
-
-			return
 		})
 
 		// Point 10
@@ -1293,23 +1291,22 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 		color = textbox.Style.GetColor()
 	}
 
-	thickness := pr.Fl(textbox.Style.GetFontSize().Value / 18) // Like other browsers do
 	var offsetY pr.Float
 
 	metrics := textbox.PangoLayout.Metrics
 
 	if utils.Set(decoration).Has("overline") {
-		thickness = text.PangoUnitsToFloat((metrics.UnderlineThickness))
+		thickness := text.PangoUnitsToFloat((metrics.UnderlineThickness))
 		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.Ascent)) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 	if utils.Set(decoration).Has("underline") {
-		thickness = text.PangoUnitsToFloat((metrics.UnderlineThickness))
+		thickness := text.PangoUnitsToFloat((metrics.UnderlineThickness))
 		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.UnderlinePosition)) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 	if utils.Set(decoration).Has("line-through") {
-		thickness = text.PangoUnitsToFloat((metrics.StrikethroughThickness))
+		thickness := text.PangoUnitsToFloat((metrics.StrikethroughThickness))
 		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.StrikethroughPosition))
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}

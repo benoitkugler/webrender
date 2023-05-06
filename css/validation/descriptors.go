@@ -88,7 +88,7 @@ func fontFamilyDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 	s := _fontFamilyDesc(tokens, false)
 	out.FontFamily = pr.String(s)
 	if s == "" {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 		token := tokens[len(tokens)-1]
 		tokens = tokens[:len(tokens)-1]
 		if fn, ok := token.(parser.FunctionBlock); ok && fn.Name.Lower() == "format" {
-			tokens, token = tokens[:len(tokens)-1], tokens[len(tokens)-1]
+			token = tokens[len(tokens)-1]
 		}
 		if fn, ok := token.(parser.FunctionBlock); ok && fn.Name.Lower() == "local" {
 			return pr.NamedString{Name: "local", String: _fontFamilyDesc(*fn.Arguments, true)}, nil
@@ -127,7 +127,7 @@ func src(tokens []Token, baseUrl string, out *FontFaceDescriptors) error {
 		if result, ok := result.(pr.NamedString); ok {
 			l = append(l, result)
 		} else {
-			return InvalidValue
+			return ErrInvalidValue
 		}
 	}
 	out.Src = append(out.Src, l...)
@@ -153,7 +153,7 @@ func fontStyleDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) err
 // “font-weight“ descriptor validation.
 func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	if len(tokens) != 1 {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 	token := tokens[0]
 	keyword := getKeyword(token)
@@ -169,7 +169,7 @@ func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 			return nil
 		}
 	}
-	return InvalidValue
+	return ErrInvalidValue
 }
 
 // @descriptor()
@@ -193,7 +193,7 @@ func fontStretchDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) e
 func fontFeatureSettingsDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	s := _fontFeatureSettings(tokens)
 	if s.IsNone() {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 	out.FontFeatureSettings = s
 	return nil
@@ -216,7 +216,7 @@ func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	for _, subTokens := range expanded {
 		prop, err := validateNonShorthand("", "font-variant"+subTokens.Name, subTokens.Tokens, true)
 		if err != nil {
-			return InvalidValue
+			return ErrInvalidValue
 		}
 		values = append(values, prop)
 	}
@@ -239,7 +239,7 @@ type counterStyleDescriptorParser = func(tokens []Token, baseUrl string, out *cs
 // “system“ descriptor validation.
 func system(tokens []Token, _ string, out *csDescriptors) error {
 	if len(tokens) == 0 || len(tokens) > 2 {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 
 	switch keyword := getKeyword(tokens[0]); keyword {
@@ -266,7 +266,7 @@ func system(tokens []Token, _ string, out *csDescriptors) error {
 		}
 	}
 
-	return InvalidValue
+	return ErrInvalidValue
 }
 
 // match a StringToken, IdentToken, or a valid url
@@ -288,7 +288,7 @@ func stringIdentOrUrl(token Token, baseUrl string) (pr.NamedString, bool) {
 // “negative“ descriptor validation.
 func negative(tokens []Token, baseUrl string, out *csDescriptors) error {
 	if len(tokens) > 2 {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 
 	var values []pr.NamedString
@@ -309,7 +309,7 @@ func negative(tokens []Token, baseUrl string, out *csDescriptors) error {
 		return nil
 	}
 
-	return InvalidValue
+	return ErrInvalidValue
 }
 
 // @descriptor("counter-style", "prefix", wantsBaseUrl=true)
@@ -328,13 +328,13 @@ func suffix(tokens []Token, baseUrl string, out *csDescriptors) (err error) {
 // “prefix“ && “suffix“ descriptors validation.
 func _prefixSuffix(tokens []Token, baseUrl string) (pr.NamedString, error) {
 	if len(tokens) != 1 {
-		return pr.NamedString{}, InvalidValue
+		return pr.NamedString{}, ErrInvalidValue
 	}
 	token := tokens[0]
 	if p, ok := stringIdentOrUrl(token, baseUrl); ok {
 		return p, nil
 	}
-	return pr.NamedString{}, InvalidValue
+	return pr.NamedString{}, ErrInvalidValue
 }
 
 // @descriptor("counter-style")
@@ -375,13 +375,13 @@ func range_(tokens []Token) ([2]int, error) {
 					continue
 				}
 			}
-			return [2]int{}, InvalidValue
+			return [2]int{}, ErrInvalidValue
 		}
 		if values[0] <= values[1] {
 			return values, nil
 		}
 	}
-	return [2]int{}, InvalidValue
+	return [2]int{}, ErrInvalidValue
 }
 
 // @descriptor("counter-style", wantsBaseUrl=true)
@@ -399,7 +399,7 @@ func pad_(tokens []Token, baseUrl string) (out pr.IntNamedString, err error) {
 	var hasLength, hasSymbol bool
 
 	if len(tokens) != 2 {
-		return out, InvalidValue
+		return out, ErrInvalidValue
 	}
 
 	for _, token := range tokens {
@@ -418,7 +418,7 @@ func pad_(tokens []Token, baseUrl string) (out pr.IntNamedString, err error) {
 	}
 
 	if !(hasLength && hasSymbol) {
-		return out, InvalidValue
+		return out, ErrInvalidValue
 	}
 
 	return out, nil
@@ -429,12 +429,12 @@ func pad_(tokens []Token, baseUrl string) (out pr.IntNamedString, err error) {
 // “fallback“ descriptor validation.
 func fallback(tokens []Token, _ string, out *csDescriptors) error {
 	if len(tokens) != 1 {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 	token := tokens[0]
 	ident := getCustomIdent(token)
 	if ident == "none" {
-		return InvalidValue
+		return ErrInvalidValue
 	}
 	out.Fallback = ident
 	return nil
@@ -447,7 +447,7 @@ func symbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 		if p, ok := stringIdentOrUrl(token, baseUrl); ok {
 			out.Symbols = append(out.Symbols, p)
 		} else {
-			return InvalidValue
+			return ErrInvalidValue
 		}
 	}
 	return nil
@@ -462,7 +462,7 @@ func additiveSymbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 			return err
 		}
 		if L := len(out.AdditiveSymbols); L != 0 && out.AdditiveSymbols[L-1].Int <= result.Int {
-			return InvalidValue
+			return ErrInvalidValue
 		}
 		out.AdditiveSymbols = append(out.AdditiveSymbols, result)
 	}

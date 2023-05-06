@@ -261,10 +261,6 @@ func IsInput(box Box) bool {
 	return false
 }
 
-// func ()
-
-func (*BoxFields) isBox() {}
-
 // ----------------------- needed by target ----------------------
 
 func (box *BoxFields) CachedCounterValues() tree.CounterValues {

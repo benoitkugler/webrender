@@ -52,7 +52,7 @@ func TestExpandFourSides(t *testing.T) {
 	}))
 	capt.AssertNoLogs(t)
 
-	assertInvalid(t, "padding: 1 2 3 4 5", "Expected 1 to 4 token components got 5")
+	assertInvalid(t, "padding: 1 2 3 4 5", "expected 1 to 4 token components got 5")
 	assertInvalid(t, "margin: rgb(0, 0, 0)", "invalid")
 	assertInvalid(t, "padding: auto", "invalid")
 	assertInvalid(t, "padding: -12px", "invalid")
