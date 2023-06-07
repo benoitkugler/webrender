@@ -60,6 +60,9 @@ func (f *FontConfiguration) FontContent(faceID fonts.FaceID) []byte {
 	if err != nil {
 		logger.WarningLogger.Println(err)
 	}
+	// cache the result to avoid loading the same file over and over
+	f.fontsContent[faceID.File] = b
+
 	return b
 }
 
