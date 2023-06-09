@@ -173,7 +173,7 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 			continue
 		}
 		if cascaded := rules.Property.ToCascaded(); cascaded.Default == 0 {
-			features[strings.ReplaceAll(rules.Name, "-", "_")] = cascaded.ToCSS()
+			features[rules.Name.KnownProp] = cascaded.ToCSS()
 		}
 	}
 	if !ruleDescriptors.FontFeatureSettings.IsNone() {
@@ -273,6 +273,44 @@ var (
 	}
 )
 
+var (
+	ligatureKeys = map[string][]string{
+		"common-ligatures":        {"liga", "clig"},
+		"historical-ligatures":    {"hlig"},
+		"discretionary-ligatures": {"dlig"},
+		"contextual":              {"calt"},
+	}
+	capsKeys = map[string][]string{
+		"small-caps":      {"smcp"},
+		"all-small-caps":  {"c2sc", "smcp"},
+		"petite-caps":     {"pcap"},
+		"all-petite-caps": {"c2pc", "pcap"},
+		"unicase":         {"unic"},
+		"titling-caps":    {"titl"},
+	}
+	numericKeys = map[string]string{
+		"lining-nums":        "lnum",
+		"oldstyle-nums":      "onum",
+		"proportional-nums":  "pnum",
+		"tabular-nums":       "tnum",
+		"diagonal-fractions": "frac",
+		"stacked-fractions":  "afrc",
+		"ordinal":            "ordn",
+		"slashed-zero":       "zero",
+	}
+	eastAsianKeys = map[string]string{
+		"jis78":              "jp78",
+		"jis83":              "jp83",
+		"jis90":              "jp90",
+		"jis04":              "jp04",
+		"simplified":         "smpl",
+		"traditional":        "trad",
+		"full-width":         "fwid",
+		"proportional-width": "pwid",
+		"ruby":               "ruby",
+	}
+)
+
 // Get the font features from the different properties in style.
 // See https://www.w3.org/TR/css-fonts-3/#feature-precedence
 // default value is "normal"
@@ -284,41 +322,6 @@ func getFontFeatures(style pr.StyleAccessor) map[string]int {
 	fontVariantAlternates := defaultFontFeature(string(style.GetFontVariantAlternates()))
 
 	features := map[string]int{}
-	ligatureKeys := map[string][]string{
-		"common-ligatures":        {"liga", "clig"},
-		"historical-ligatures":    {"hlig"},
-		"discretionary-ligatures": {"dlig"},
-		"contextual":              {"calt"},
-	}
-	capsKeys := map[string][]string{
-		"small-caps":      {"smcp"},
-		"all-small-caps":  {"c2sc", "smcp"},
-		"petite-caps":     {"pcap"},
-		"all-petite-caps": {"c2pc", "pcap"},
-		"unicase":         {"unic"},
-		"titling-caps":    {"titl"},
-	}
-	numericKeys := map[string]string{
-		"lining-nums":        "lnum",
-		"oldstyle-nums":      "onum",
-		"proportional-nums":  "pnum",
-		"tabular-nums":       "tnum",
-		"diagonal-fractions": "frac",
-		"stacked-fractions":  "afrc",
-		"ordinal":            "ordn",
-		"slashed-zero":       "zero",
-	}
-	eastAsianKeys := map[string]string{
-		"jis78":              "jp78",
-		"jis83":              "jp83",
-		"jis90":              "jp90",
-		"jis04":              "jp04",
-		"simplified":         "smpl",
-		"traditional":        "trad",
-		"full-width":         "fwid",
-		"proportional-width": "pwid",
-		"ruby":               "ruby",
-	}
 
 	// Step 1: getting the default, we rely on Pango for this
 	// Step 2: @font-face font-variant, done in fonts.addFontFace

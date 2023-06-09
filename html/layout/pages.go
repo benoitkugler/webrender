@@ -362,10 +362,11 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 // manipulated by the style.
 func standardizePageBasedCounters(style pr.ElementStyle, pseudoType string) {
 	pageCounterTouched := false
-	for _, propname := range [...]string{"counter_set", "counter_reset", "counter_increment"} {
-		prop := style.Get(propname).(pr.SIntStrings)
+	for _, propname := range [...]pr.KnownProp{pr.PCounterSet, pr.PCounterReset, pr.PCounterIncrement} {
+		key := pr.PropKey{KnownProp: propname}
+		prop := style.Get(key).(pr.SIntStrings)
 		if prop.String == "auto" {
-			style.Set(propname, pr.SIntStrings{Values: pr.IntStrings{}})
+			style.Set(key, pr.SIntStrings{Values: pr.IntStrings{}})
 			continue
 		}
 		var justifiedValues pr.IntStrings
@@ -377,7 +378,7 @@ func standardizePageBasedCounters(style pr.ElementStyle, pseudoType string) {
 				justifiedValues = append(justifiedValues, v)
 			}
 		}
-		style.Set(propname, pr.SIntStrings{Values: justifiedValues})
+		style.Set(key, pr.SIntStrings{Values: justifiedValues})
 	}
 
 	if pseudoType == "" && !pageCounterTouched {
@@ -402,7 +403,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 		style := context.styleFor.Get(page.PageType, atKeyword)
 		if style == nil {
 			// doesn't affect counters
-			style = tree.ComputedFromCascaded(nil, nil, page.Style, nil, "", "", nil, context)
+			style = tree.ComputedFromCascaded(nil, nil, page.Style, context)
 		}
 		standardizePageBasedCounters(style, atKeyword)
 		box := bo.NewMarginBox(atKeyword, style)
@@ -427,7 +428,7 @@ func makeMarginBoxes(context *layoutContext, page *bo.PageBox, state tree.PageSt
 			bo.ProcessTextTransform(box)
 			box = bo.CreateAnonymousBox(box).(*bo.MarginBox) // type stable
 		}
-		resolvePercentages(box, containingBlock, "")
+		resolvePercentages(box, containingBlock, 0)
 		boxF := box.Box()
 		if !box.IsGenerated {
 			boxF.Width = pr.Float(0)
@@ -641,7 +642,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	deviceSize_ := page.Style.GetSize()
 	cbWidth, cbHeight := deviceSize_[0].Value, deviceSize_[1].Value
-	resolvePercentages(page, bo.MaybePoint{cbWidth, cbHeight}, "")
+	resolvePercentages(page, bo.MaybePoint{cbWidth, cbHeight}, 0)
 
 	page.PositionX = 0
 	page.PositionY = 0
@@ -655,7 +656,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	footnoteAreaStyle := context.styleFor.Get(pageType, "@footnote")
 	footnoteArea := bo.NewFootnoteAreaBox(page, footnoteAreaStyle)
-	resolvePercentages(footnoteArea, bo.MaybePoint{page.Width, page.Height}, "")
+	resolvePercentages(footnoteArea, bo.MaybePoint{page.Width, page.Height}, 0)
 	footnoteArea.PositionX = page.ContentBoxX()
 	footnoteArea.PositionY = context.pageBottom
 

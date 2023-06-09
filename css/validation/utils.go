@@ -337,9 +337,8 @@ func CheckVarFunction(token Token) (out pr.VarData) {
 	}
 	// TODO: we should check authorized tokens
 	// https://drafts.csswg.org/css-syntax-3/#typedef-declaration-value
-	v := strings.ReplaceAll(string(ident.Value), "-", "_")
 	return pr.VarData{
-		Name:    v,
+		Name:    string(ident.Value),
 		Default: args,
 	}
 }

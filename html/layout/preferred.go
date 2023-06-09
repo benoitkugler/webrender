@@ -146,15 +146,15 @@ func minMax(box Box, width pr.Float) pr.Float {
 // left=true, right=true
 func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
 	var percentages pr.Float
-	var cases []string
+	var cases []pr.KnownProp
 	if left {
-		cases = append(cases, "margin_left", "padding_left")
+		cases = append(cases, pr.PMarginLeft, pr.PPaddingLeft)
 	}
 	if right {
-		cases = append(cases, "margin_right", "padding_right")
+		cases = append(cases, pr.PMarginRight, pr.PPaddingRight)
 	}
 	for _, value := range cases {
-		styleValue := box.Style.Get(value).(pr.Value)
+		styleValue := box.Style.Get(value.Key()).(pr.Value)
 		if styleValue.String != "auto" {
 			switch styleValue.Unit {
 			case pr.Px:

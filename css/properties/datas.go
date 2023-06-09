@@ -1,8 +1,6 @@
 package properties
 
 import (
-	"strings"
-
 	"github.com/benoitkugler/webrender/utils"
 
 	"github.com/benoitkugler/webrender/css/parser"
@@ -113,7 +111,7 @@ var (
 
 	A4 = Point{Dimension{Value: 210, Unit: Mm}, Dimension{Value: 297, Unit: Mm}}
 
-	KnownProperties = utils.Set{}
+	KnownProperties = NewSetK()
 
 	// Do not list shorthand properties here as we handle them before inheritance.
 	//
@@ -124,55 +122,55 @@ var (
 	//
 	// link: click events normally bubble up to link ancestors
 	// See http://lists.w3.org/Archives/Public/www-style/2012Jun/0315.html
-	Inherited = utils.NewSet(
-		"border_collapse",
-		"border_spacing",
-		"caption_side",
-		"color",
-		"direction",
-		"empty_cells",
-		"font_family",
-		"font_feature_settings",
-		"font_kerning",
-		"font_language_override",
-		"font_size",
-		"font_style",
-		"font_stretch",
-		"font_variant",
-		"font_variant_alternates",
-		"font_variant_caps",
-		"font_variant_east_asian",
-		"font_variant_ligatures",
-		"font_variant_numeric",
-		"font_variant_position",
-		"font_variation_settings",
-		"font_weight",
-		"hyphens",
-		"hyphenate_character",
-		"hyphenate_limit_chars",
-		"hyphenate_limit_zone",
-		"image_rendering",
-		"image_resolution",
-		"lang",
-		"letter_spacing",
-		"line_height",
-		"link",
-		"list_style_image",
-		"list_style_position",
-		"list_style_type",
-		"orphans",
-		"overflow_wrap",
-		"quotes",
-		"tab_size",
-		"text_align_all",
-		"text_align_last",
-		"text_indent",
-		"text_transform",
-		"visibility",
-		"white_space",
-		"widows",
-		"word_spacing",
-		"word_break",
+	Inherited = NewSetK(
+		PBorderCollapse,
+		PBorderSpacing,
+		PCaptionSide,
+		PColor,
+		PDirection,
+		PEmptyCells,
+		PFontFamily,
+		PFontFeatureSettings,
+		PFontKerning,
+		PFontLanguageOverride,
+		PFontSize,
+		PFontStyle,
+		PFontStretch,
+		PFontVariant,
+		PFontVariantAlternates,
+		PFontVariantCaps,
+		PFontVariantEastAsian,
+		PFontVariantLigatures,
+		PFontVariantNumeric,
+		PFontVariantPosition,
+		PFontVariationSettings,
+		PFontWeight,
+		PHyphens,
+		PHyphenateCharacter,
+		PHyphenateLimitChars,
+		PHyphenateLimitZone,
+		PImageRendering,
+		PImageResolution,
+		PLang,
+		PLetterSpacing,
+		PLineHeight,
+		PLink,
+		PListStyleImage,
+		PListStylePosition,
+		PListStyleType,
+		POrphans,
+		POverflowWrap,
+		PQuotes,
+		PTabSize,
+		PTextAlignAll,
+		PTextAlignLast,
+		PTextIndent,
+		PTextTransform,
+		PVisibility,
+		PWhiteSpace,
+		PWidows,
+		PWordSpacing,
+		PWordBreak,
 	)
 
 	// Not applicable to the print media
@@ -220,56 +218,56 @@ var (
 	// http://www.w3.org/TR/CSS21/tables.html#model
 	// See also http://lists.w3.org/Archives/Public/www-style/2012Jun/0066.html
 	// Only non-inherited properties need to be included here.
-	TableWrapperBoxProperties = utils.NewSet(
-		"bottom",
-		"break_after",
-		"break_before",
-		"break_inside",
-		"clear",
-		"counter_increment",
-		"counter_reset",
-		"counter_set",
-		"float",
-		"left",
-		"margin_top",
-		"margin_bottom",
-		"margin_left",
-		"margin_right",
-		"opacity",
-		"overflow",
-		"position",
-		"right",
-		"top",
-		"transform",
-		"transform_origin",
-		"vertical_align",
-		"z_index",
+	TableWrapperBoxProperties = NewSetK(
+		PBottom,
+		PBreakAfter,
+		PBreakBefore,
+		PBreakInside,
+		PClear,
+		PCounterIncrement,
+		PCounterReset,
+		PCounterSet,
+		PFloat,
+		PLeft,
+		PMarginTop,
+		PMarginBottom,
+		PMarginLeft,
+		PMarginRight,
+		POpacity,
+		POverflow,
+		PPosition,
+		PRight,
+		PTop,
+		PTransform,
+		PTransformOrigin,
+		PVerticalAlign,
+		PZIndex,
 	)
 
-	InitialNotComputed = utils.NewSet(
-		"display",
-		"column_gap",
-		"bleed_top",
-		"bleed_left",
-		"bleed_bottom",
-		"bleed_right",
-		"outline_width",
-		"outline_color",
-		"column_rule_width",
-		"column_rule_color",
-		"border_top_width",
-		"border_left_width",
-		"border_bottom_width",
-		"border_right_width",
-		"border_top_color",
-		"border_left_color",
-		"border_bottom_color",
-		"border_right_color",
+	InitialNotComputed = NewSetK(
+		PDisplay,
+		PColumnGap,
+		PBleedTop,
+		PBleedLeft,
+		PBleedBottom,
+		PBleedRight,
+		POutlineWidth,
+		POutlineColor,
+		PColumnRuleWidth,
+		PColumnRuleColor,
+		PBorderTopWidth,
+		PBorderLeftWidth,
+		PBorderBottomWidth,
+		PBorderRightWidth,
+		PBorderTopColor,
+		PBorderLeftColor,
+		PBorderBottomColor,
+		PBorderRightColor,
 	)
 )
 
 func init() {
 	for name := range InitialValues {
-		KnownProperties.Add(strings.ReplaceAll(name, "_", "-"))
+		KnownProperties.Add(name)
 	}
 }

@@ -163,7 +163,7 @@ type OptionalRanges struct {
 }
 
 type NamedProperty struct {
-	Name     string
+	Name     PropKey
 	Property ValidatedProperty
 }
 
@@ -396,7 +396,7 @@ func (v Dimension) IsNone() bool {
 }
 
 func (v NamedProperty) IsNone() bool {
-	return v.Name == "" && v.Property.IsNone()
+	return v.Name.KnownProp == 0 && v.Name.Var == "" && v.Property.IsNone()
 }
 
 func (v ColorStop) IsNone() bool {

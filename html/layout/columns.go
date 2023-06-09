@@ -155,7 +155,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		columnChildrenOrBlock := pair.bl
 		if block := columnChildrenOrBlock.box; block != nil {
 			// We have a spanning block, we display it like other blocks.
-			resolvePercentagesBox(block, containingBlock, "")
+			resolvePercentagesBox(block, containingBlock, 0)
 			block.Box().PositionX = box.ContentBoxX()
 			block.Box().PositionY = currentPositionY
 			newChild, tmp, _ := blockLevelLayout(context, block, originalBottomSpace, skipStack,
@@ -497,7 +497,7 @@ func reportFootnotes(context *layoutContext, footnotesHeight pr.Float) {
 // Create a column box including given children.
 func createColumnBox(box_ Box, containingBlock containingBlock, children []Box, width, positionY pr.Float) bo.BlockBoxITF {
 	columnBox := box_.Type().AnonymousFrom(box_, children).(bo.BlockBoxITF) // AnonymousFrom preserves concrete types
-	resolvePercentagesBox(columnBox, containingBlock, "")
+	resolvePercentagesBox(columnBox, containingBlock, 0)
 	columnBox.Box().IsColumn = true
 	columnBox.Box().Width = width
 	columnBox.Box().PositionX = box_.Box().ContentBoxX()

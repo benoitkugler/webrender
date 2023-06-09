@@ -92,169 +92,169 @@ var (
 	// Also transform values: keyword and URLs are returned as strings.
 	// For properties that take a single value, that value is returned by itself
 	// instead of a list.
-	validators = map[string]validator{
-		"appearance":                 appearance,
-		"background-attachment":      backgroundAttachment,
-		"background-color":           otherColors,
-		"border-top-color":           otherColors,
-		"border-right-color":         otherColors,
-		"border-bottom-color":        otherColors,
-		"border-left-color":          otherColors,
-		"column-rule-color":          otherColors,
-		"text-decoration-color":      otherColors,
-		"outline-color":              outlineColor,
-		"border-collapse":            borderCollapse,
-		"empty-cells":                emptyCells,
-		"transform-origin":           transformOrigin,
-		"object-position":            objectPosition,
-		"background-position":        backgroundPosition,
-		"background-repeat":          backgroundRepeat,
-		"background-size":            backgroundSize,
-		"background-clip":            box,
-		"background-origin":          box,
-		"border-spacing":             borderSpacing,
-		"border-top-right-radius":    borderCornerRadius,
-		"border-bottom-right-radius": borderCornerRadius,
-		"border-bottom-left-radius":  borderCornerRadius,
-		"border-top-left-radius":     borderCornerRadius,
-		"border-top-style":           borderStyle,
-		"border-right-style":         borderStyle,
-		"border-left-style":          borderStyle,
-		"border-bottom-style":        borderStyle,
-		"column-rule-style":          borderStyle,
-		"break-before":               breakBeforeAfter,
-		"break-after":                breakBeforeAfter,
-		"break-inside":               breakInside,
-		"box-decoration-break":       boxDecorationBreak,
-		"margin-break":               marginBreak,
-		"page":                       page,
-		"bleed-left":                 bleed,
-		"bleed-right":                bleed,
-		"bleed-top":                  bleed,
-		"bleed-bottom":               bleed,
-		"marks":                      marks,
-		"outline-style":              outlineStyle,
-		"border-top-width":           borderWidth,
-		"border-right-width":         borderWidth,
-		"border-left-width":          borderWidth,
-		"border-bottom-width":        borderWidth,
-		"column-rule-width":          borderWidth,
-		"outline-width":              borderWidth,
-		"column-width":               columnWidth,
-		"column-span":                columnSpan,
-		"box-sizing":                 boxSizing,
-		"caption-side":               captionSide,
-		"clear":                      clear,
-		"clip":                       clip,
-		"top":                        lengthPercOrAuto,
-		"right":                      lengthPercOrAuto,
-		"left":                       lengthPercOrAuto,
-		"bottom":                     lengthPercOrAuto,
-		"margin-top":                 lengthPercOrAuto,
-		"margin-right":               lengthPercOrAuto,
-		"margin-bottom":              lengthPercOrAuto,
-		"margin-left":                lengthPercOrAuto,
-		"height":                     widthHeight,
-		"width":                      widthHeight,
-		"column-gap":                 columnGap,
-		"column-fill":                columnFill,
-		"direction":                  direction,
-		"display":                    display,
-		"float":                      float,
-		"font-family":                fontFamily,
-		"font-kerning":               fontKerning,
-		"font-language-override":     fontLanguageOverride,
-		"font-variant-ligatures":     fontVariantLigatures,
-		"font-variant-position":      fontVariantPosition,
-		"font-variant-caps":          fontVariantCaps,
-		"font-variant-numeric":       fontVariantNumeric,
-		"font-feature-settings":      fontFeatureSettings,
-		"font-variant-alternates":    fontVariantAlternates,
-		"font-variant-east-asian":    fontVariantEastAsian,
-		"font-variation-settings":    fontVariationSettings,
-		"font-style":                 fontStyle,
-		"font-stretch":               fontStretch,
-		"font-weight":                fontWeight,
-		"footnote-display":           footnoteDisplay,
-		"footnote-policy":            footnotePolicy,
-		"image-resolution":           imageResolution,
-		"letter-spacing":             spacing,
-		"word-spacing":               spacing,
-		"line-height":                lineHeight,
-		"list-style-position":        listStylePosition,
-		"list-style-type":            listStyleType,
-		"padding-top":                lengthOrPercentage,
-		"padding-right":              lengthOrPercentage,
-		"padding-bottom":             lengthOrPercentage,
-		"padding-left":               lengthOrPercentage,
-		"min-width":                  minWidthHeight,
-		"min-height":                 minWidthHeight,
-		"max-width":                  maxWidthHeight,
-		"max-height":                 maxWidthHeight,
-		"opacity":                    opacity,
-		"z-index":                    zIndex,
-		"orphans":                    orphansWidows,
-		"widows":                     orphansWidows,
-		"column-count":               columnCount,
-		"overflow":                   overflow,
-		"position":                   position,
-		"quotes":                     quotes,
-		"table-layout":               tableLayout,
-		"text-align-all":             textAlignAll,
-		"text-align-last":            textAlignLast,
-		"text-decoration-line":       textDecorationLine,
-		"text-decoration-style":      textDecorationStyle,
-		"text-indent":                textIndent,
-		"text-transform":             textTransform,
-		"vertical-align":             verticalAlign,
-		"visibility":                 visibility,
-		"white-space":                whiteSpace,
-		"overflow-wrap":              overflowWrap,
-		"image-rendering":            imageRendering,
-		"image-orientation":          imageOrientation,
-		"size":                       size,
-		"tab-size":                   tabSize,
-		"hyphens":                    hyphens,
-		"hyphenate-character":        hyphenateCharacter,
-		"hyphenate-limit-zone":       hyphenateLimitZone,
-		"hyphenate-limit-chars":      hyphenateLimitChars,
-		"lang":                       lang,
-		"bookmark-level":             bookmarkLevel,
-		"bookmark-state":             bookmarkState,
-		"object-fit":                 objectFit,
-		"text-overflow":              textOverflow,
-		"flex-basis":                 flexBasis,
-		"flex-direction":             flexDirection,
-		"flex-grow":                  flexGrowShrink,
-		"flex-shrink":                flexGrowShrink,
-		"order":                      order,
-		"flex-wrap":                  flexWrap,
-		"justify-content":            justifyContent,
-		"align-items":                alignItems,
-		"align-self":                 alignSelf,
-		"align-content":              alignContent,
-		"anchor":                     anchor,
-		"block-ellipsis":             blockEllipsis,
-		"continue":                   continue_,
-		"max-lines":                  maxLines,
-		"word-break":                 wordBreak,
+	validators = [...]validator{
+		pr.PAppearance:              appearance,
+		pr.PBackgroundAttachment:    backgroundAttachment,
+		pr.PBackgroundColor:         otherColors,
+		pr.PBorderTopColor:          otherColors,
+		pr.PBorderRightColor:        otherColors,
+		pr.PBorderBottomColor:       otherColors,
+		pr.PBorderLeftColor:         otherColors,
+		pr.PColumnRuleColor:         otherColors,
+		pr.PTextDecorationColor:     otherColors,
+		pr.POutlineColor:            outlineColor,
+		pr.PBorderCollapse:          borderCollapse,
+		pr.PEmptyCells:              emptyCells,
+		pr.PTransformOrigin:         transformOrigin,
+		pr.PObjectPosition:          objectPosition,
+		pr.PBackgroundPosition:      backgroundPosition,
+		pr.PBackgroundRepeat:        backgroundRepeat,
+		pr.PBackgroundSize:          backgroundSize,
+		pr.PBackgroundClip:          box,
+		pr.PBackgroundOrigin:        box,
+		pr.PBorderSpacing:           borderSpacing,
+		pr.PBorderTopRightRadius:    borderCornerRadius,
+		pr.PBorderBottomRightRadius: borderCornerRadius,
+		pr.PBorderBottomLeftRadius:  borderCornerRadius,
+		pr.PBorderTopLeftRadius:     borderCornerRadius,
+		pr.PBorderTopStyle:          borderStyle,
+		pr.PBorderRightStyle:        borderStyle,
+		pr.PBorderLeftStyle:         borderStyle,
+		pr.PBorderBottomStyle:       borderStyle,
+		pr.PColumnRuleStyle:         borderStyle,
+		pr.PBreakBefore:             breakBeforeAfter,
+		pr.PBreakAfter:              breakBeforeAfter,
+		pr.PBreakInside:             breakInside,
+		pr.PBoxDecorationBreak:      boxDecorationBreak,
+		pr.PMarginBreak:             marginBreak,
+		pr.PPage:                    page,
+		pr.PBleedLeft:               bleed,
+		pr.PBleedRight:              bleed,
+		pr.PBleedTop:                bleed,
+		pr.PBleedBottom:             bleed,
+		pr.PMarks:                   marks,
+		pr.POutlineStyle:            outlineStyle,
+		pr.PBorderTopWidth:          borderWidth,
+		pr.PBorderRightWidth:        borderWidth,
+		pr.PBorderLeftWidth:         borderWidth,
+		pr.PBorderBottomWidth:       borderWidth,
+		pr.PColumnRuleWidth:         borderWidth,
+		pr.POutlineWidth:            borderWidth,
+		pr.PColumnWidth:             columnWidth,
+		pr.PColumnSpan:              columnSpan,
+		pr.PBoxSizing:               boxSizing,
+		pr.PCaptionSide:             captionSide,
+		pr.PClear:                   clear,
+		pr.PClip:                    clip,
+		pr.PTop:                     lengthPercOrAuto,
+		pr.PRight:                   lengthPercOrAuto,
+		pr.PLeft:                    lengthPercOrAuto,
+		pr.PBottom:                  lengthPercOrAuto,
+		pr.PMarginTop:               lengthPercOrAuto,
+		pr.PMarginRight:             lengthPercOrAuto,
+		pr.PMarginBottom:            lengthPercOrAuto,
+		pr.PMarginLeft:              lengthPercOrAuto,
+		pr.PHeight:                  widthHeight,
+		pr.PWidth:                   widthHeight,
+		pr.PColumnGap:               columnGap,
+		pr.PColumnFill:              columnFill,
+		pr.PDirection:               direction,
+		pr.PDisplay:                 display,
+		pr.PFloat:                   float,
+		pr.PFontFamily:              fontFamily,
+		pr.PFontKerning:             fontKerning,
+		pr.PFontLanguageOverride:    fontLanguageOverride,
+		pr.PFontVariantLigatures:    fontVariantLigatures,
+		pr.PFontVariantPosition:     fontVariantPosition,
+		pr.PFontVariantCaps:         fontVariantCaps,
+		pr.PFontVariantNumeric:      fontVariantNumeric,
+		pr.PFontFeatureSettings:     fontFeatureSettings,
+		pr.PFontVariantAlternates:   fontVariantAlternates,
+		pr.PFontVariantEastAsian:    fontVariantEastAsian,
+		pr.PFontVariationSettings:   fontVariationSettings,
+		pr.PFontStyle:               fontStyle,
+		pr.PFontStretch:             fontStretch,
+		pr.PFontWeight:              fontWeight,
+		pr.PFootnoteDisplay:         footnoteDisplay,
+		pr.PFootnotePolicy:          footnotePolicy,
+		pr.PImageResolution:         imageResolution,
+		pr.PLetterSpacing:           spacing,
+		pr.PWordSpacing:             spacing,
+		pr.PLineHeight:              lineHeight,
+		pr.PListStylePosition:       listStylePosition,
+		pr.PListStyleType:           listStyleType,
+		pr.PPaddingTop:              lengthOrPercentage,
+		pr.PPaddingRight:            lengthOrPercentage,
+		pr.PPaddingBottom:           lengthOrPercentage,
+		pr.PPaddingLeft:             lengthOrPercentage,
+		pr.PMinWidth:                minWidthHeight,
+		pr.PMinHeight:               minWidthHeight,
+		pr.PMaxWidth:                maxWidthHeight,
+		pr.PMaxHeight:               maxWidthHeight,
+		pr.POpacity:                 opacity,
+		pr.PZIndex:                  zIndex,
+		pr.POrphans:                 orphansWidows,
+		pr.PWidows:                  orphansWidows,
+		pr.PColumnCount:             columnCount,
+		pr.POverflow:                overflow,
+		pr.PPosition:                position,
+		pr.PQuotes:                  quotes,
+		pr.PTableLayout:             tableLayout,
+		pr.PTextAlignAll:            textAlignAll,
+		pr.PTextAlignLast:           textAlignLast,
+		pr.PTextDecorationLine:      textDecorationLine,
+		pr.PTextDecorationStyle:     textDecorationStyle,
+		pr.PTextIndent:              textIndent,
+		pr.PTextTransform:           textTransform,
+		pr.PVerticalAlign:           verticalAlign,
+		pr.PVisibility:              visibility,
+		pr.PWhiteSpace:              whiteSpace,
+		pr.POverflowWrap:            overflowWrap,
+		pr.PImageRendering:          imageRendering,
+		pr.PImageOrientation:        imageOrientation,
+		pr.PSize:                    size,
+		pr.PTabSize:                 tabSize,
+		pr.PHyphens:                 hyphens,
+		pr.PHyphenateCharacter:      hyphenateCharacter,
+		pr.PHyphenateLimitZone:      hyphenateLimitZone,
+		pr.PHyphenateLimitChars:     hyphenateLimitChars,
+		pr.PLang:                    lang,
+		pr.PBookmarkLevel:           bookmarkLevel,
+		pr.PBookmarkState:           bookmarkState,
+		pr.PObjectFit:               objectFit,
+		pr.PTextOverflow:            textOverflow,
+		pr.PFlexBasis:               flexBasis,
+		pr.PFlexDirection:           flexDirection,
+		pr.PFlexGrow:                flexGrowShrink,
+		pr.PFlexShrink:              flexGrowShrink,
+		pr.POrder:                   order,
+		pr.PFlexWrap:                flexWrap,
+		pr.PJustifyContent:          justifyContent,
+		pr.PAlignItems:              alignItems,
+		pr.PAlignSelf:               alignSelf,
+		pr.PAlignContent:            alignContent,
+		pr.PAnchor:                  anchor,
+		pr.PBlockEllipsis:           blockEllipsis,
+		pr.PContinue:                continue_,
+		pr.PMaxLines:                maxLines,
+		pr.PWordBreak:               wordBreak,
 	}
-	validatorsError = map[string]validatorError{
-		"background-image":  backgroundImage,
-		"list-style-image":  listStyleImage,
-		"content":           content,
-		"counter-increment": counterIncrement,
-		"counter-reset":     counterReset,
-		"counter-set":       counterReset,
-		"font-size":         fontSize,
-		"bookmark-label":    bookmarkLabel,
-		"transform":         transform,
-		"string-set":        stringSet,
-		"link":              link,
+	validatorsError = map[pr.KnownProp]validatorError{
+		pr.PBackgroundImage:  backgroundImage,
+		pr.PListStyleImage:   listStyleImage,
+		pr.PContent:          content,
+		pr.PCounterIncrement: counterIncrement,
+		pr.PCounterReset:     counterReset,
+		pr.PCounterSet:       counterReset,
+		pr.PFontSize:         fontSize,
+		pr.PBookmarkLabel:    bookmarkLabel,
+		pr.PTransform:        transform,
+		pr.PStringSet:        stringSet,
+		pr.PLink:             link,
 	}
 
 	// regroup the two cases (with error or without error)
-	allValidators = utils.NewSet("color") // special case because of inherited
+	allValidators = pr.NewSetK(pr.PColor) // special case because of inherited
 
 	proprietary = utils.NewSet(
 		"anchor",
@@ -288,8 +288,8 @@ var (
 		"continue",
 		"max-lines",
 	)
-	multiValProperties = utils.NewSet(
-		"content",
+	multiValProperties = pr.NewSetK(
+		pr.PContent,
 	)
 )
 
@@ -309,11 +309,13 @@ func init() {
 			allEastAsianValues[cc] = utils.Has
 		}
 	}
-	for name := range validators {
-		allValidators[name] = utils.Has
+	for name, v := range validators {
+		if v != nil {
+			allValidators.Add(pr.KnownProp(name))
+		}
 	}
 	for name := range validatorsError {
-		allValidators[name] = utils.Has
+		allValidators.Add(name)
 	}
 }
 
@@ -326,14 +328,14 @@ type (
 )
 
 type ValidatedProperty struct {
-	Name      string
+	Name      pr.PropKey
 	Value     pr.ValidatedProperty
 	Important bool
 }
 
 // Validate validate one property.
-func Validate(name string, tokens []Token, baseUrl string) (out pr.CascadedProperty, err error) {
-	if name == "color" { // special case to handle inherit inherit
+func Validate(name pr.KnownProp, tokens []Token, baseUrl string) (out pr.CascadedProperty, err error) {
+	if name == pr.PColor { // special case to handle inherit inherit
 		return color(tokens, ""), nil
 	}
 
@@ -348,32 +350,35 @@ func Validate(name string, tokens []Token, baseUrl string) (out pr.CascadedPrope
 
 // Default validator for non-shorthand pr.
 // required = false
-func validateNonShorthand(baseUrl, name string, tokens []parser.Token, required bool) (out pr.NamedProperty, err error) {
-	if strings.HasPrefix(name, "--") {
+func validateNonShorthand(baseUrl string, name string, tokens []parser.Token, required bool) (out pr.NamedProperty, err error) {
+	if strings.HasPrefix(name, "--") { // variable
+		key := pr.PropKey{Var: name}
+		// can't validate variables contents before substitution
 		return pr.NamedProperty{
-			Name:     name,
+			Name:     key,
 			Property: pr.AsValidated(pr.RawTokens(tokens)),
 		}, nil
 	}
 
-	if !required && !pr.KnownProperties.Has(name) {
-		hyphensName := strings.ReplaceAll(name, "_", "-")
-		if pr.KnownProperties.Has(hyphensName) {
+	prop, ok := pr.PropsFromNames[name]
+	if !ok {
+		hyphensName := strings.ReplaceAll(string(name), "_", "-")
+		if _, ok := pr.PropsFromNames[hyphensName]; ok {
 			return out, fmt.Errorf("did you mean %s?", hyphensName)
 		} else {
 			return out, errors.New("unknown property")
 		}
 	}
 
-	if _, isIn := allValidators[name]; !required && !isIn {
+	if _, isIn := allValidators[prop]; !required && !isIn {
 		return out, fmt.Errorf("property %s not supported yet", name)
 	}
 
-	if _, isIn := multiValProperties[name]; !isIn {
+	if _, isIn := multiValProperties[prop]; !isIn {
 		for _, token := range tokens {
 			var_ := CheckVarFunction(token)
 			if !var_.IsNone() {
-				return pr.NamedProperty{Name: name, Property: pr.AsValidated(var_)}, nil
+				return pr.NamedProperty{Name: pr.PropKey{KnownProp: prop}, Property: pr.AsValidated(var_)}, nil
 			}
 		}
 	}
@@ -383,7 +388,7 @@ func validateNonShorthand(baseUrl, name string, tokens []parser.Token, required 
 	if keyword == "initial" || keyword == "inherit" {
 		value = defaultFromString(keyword).AsCascaded()
 	} else {
-		value, err = Validate(name, tokens, baseUrl)
+		value, err = Validate(prop, tokens, baseUrl)
 		if err != nil {
 			return out, err
 		}
@@ -392,7 +397,7 @@ func validateNonShorthand(baseUrl, name string, tokens []parser.Token, required 
 		}
 	}
 
-	return pr.NamedProperty{Name: name, Property: value.AsValidated()}, nil
+	return pr.NamedProperty{Name: pr.PropKey{KnownProp: prop}, Property: value.AsValidated()}, nil
 }
 
 func defaultValidateShorthand(baseUrl, name string, tokens []parser.Token) (pr.NamedProperties, error) {
@@ -465,7 +470,7 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 
 		for _, np := range result {
 			out = append(out, ValidatedProperty{
-				Name:      strings.ReplaceAll(np.Name, "-", "_"),
+				Name:      np.Name,
 				Value:     np.Property,
 				Important: important,
 			})

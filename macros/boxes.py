@@ -87,7 +87,7 @@ def get_itf_and_type_code(class_: type) -> str:
         """
 
     if not class_name in ABSTRACT_TYPES:
-        itf_code += f"""func ({class_name}) Type() BoxType {{ return {class_name}T }}
+        itf_code += f"""func ({class_name}) Type() BoxType {{ return {class_name[:-3]}T }}
         """
 
         itf_code += f"""func (b *{class_name}) Box() *BoxFields {{ return &b.BoxFields }}
@@ -102,14 +102,14 @@ def get_itf_and_type_code(class_: type) -> str:
         itf_code += f"""func ({class_name}) is{class_name}() {{ }}
         """
 
-        for ancestor in resolve_ancestors(class_):
+        for ancestor in sorted(resolve_ancestors(class_)):
             itf_code += f"""func({class_name}) is{ancestor}() {{}}
             """
 
     if should_generate_anonymous_from(class_):
         itf_code += f"""
         func {class_name}AnonymousFrom(parent Box, children []Box) *{class_name} {{
-            style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil, "", "", nil, nil)
+            style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
             out := New{class_name}(style, parent.Box().Element, parent.Box().PseudoType, children)
             return out
         }}
@@ -176,12 +176,13 @@ types, switches, checks, type_strings, type_anonymous_switches = "", "", "", "",
 for c in CLASSES:
     output += get_itf_and_type_code(c)
     class_name = c.__name__
+    type_name = class_name[:-3] + "T"
     # Generate the type value for the given class
-    types += f"""{class_name}T\n"""
-    switches += f"""case {class_name}T:
+    types += f"""{type_name}\n"""
+    switches += f"""case {type_name}:
         _, isInstance = box.({class_name}ITF)
     """
-    type_strings += f"""case {class_name}T:
+    type_strings += f"""case {type_name}:
         return "{class_name}"
     """
 
@@ -189,7 +190,7 @@ for c in CLASSES:
         checks += f"_ {class_name}ITF = (*{class_name})(nil)\n"
 
     if should_generate_anonymous_from(c):
-        type_anonymous_switches += f"""case {class_name}T:
+        type_anonymous_switches += f"""case {type_name}:
         return {class_name}AnonymousFrom(parent, children)
     """
 
