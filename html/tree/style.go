@@ -403,7 +403,7 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 		c.dict[key] = value.ToCascaded().ToCSS()
 	}
 
-	if strings.HasPrefix(key, "text_decoration_") && c.parentStyle != nil {
+	if strings.HasPrefix(key, "text_decoration_") && value.SpecialProperty == nil && c.parentStyle != nil {
 		_, isCascaded := c.cascaded[key]
 		value_ := textDecoration(key, value.ToCascaded().ToCSS(), c.parentStyle.Get(key), isCascaded)
 		value = pr.AsCascaded(value_).AsValidated()

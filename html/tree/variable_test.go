@@ -4,6 +4,7 @@ package tree
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -170,6 +171,6 @@ func TestVariableFallback(t *testing.T) {
 		  </style>
 		  <div></div>
 		`, prop))
-		_ = style.Get(prop) // just check for crashes
+		_ = style.Get(strings.ReplaceAll(prop, "-", "_")) // just check for crashes
 	}
 }
