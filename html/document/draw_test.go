@@ -148,7 +148,8 @@ func BenchmarkRenderText(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		Render(doc, nil, true, fc)
+		out := Render(doc, nil, true, fc)
+		out.Write(tracer.NewDrawerNoOp(), 1, nil)
 	}
 }
 
@@ -200,4 +201,24 @@ func TestDebug(t *testing.T) {
 	doc.UAStyleSheet = tree.TestUAStylesheet
 	finalDoc := Render(doc, nil, true, fc)
 	finalDoc.Write(tracer.NewDrawerFile("/tmp/drawer_go.txt"), 4./30, nil)
+}
+
+func BenchmarkRenderAttestation(b *testing.B) {
+	logger.ProgressLogger.SetOutput(io.Discard)
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer func() {
+		logger.WarningLogger.SetOutput(os.Stdout)
+		logger.ProgressLogger.SetOutput(os.Stdout)
+	}()
+
+	doc, err := tree.NewHTML(utils.InputFilename("../../resources_test/modele.html"), "", nil, "")
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		out := Render(doc, nil, true, fc)
+		out.Write(tracer.NewDrawerNoOp(), 1, nil)
+	}
 }
