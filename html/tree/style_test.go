@@ -147,37 +147,37 @@ func TestExpandShorthands(t *testing.T) {
 	}
 
 	m := (sheet.Matcher)[0].declarations
-	if m[0].Name != "margin_bottom" {
+	if m[0].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[0].Name)
 	}
 	if (m[0].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 3, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[0].Value)
 	}
-	if m[1].Name != "margin_top" {
+	if m[1].Name != pr.PMarginTop.Key() {
 		t.Errorf("expected margin_top got %s", m[1].Name)
 	}
 	if (m[1].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[1].Value)
 	}
-	if m[2].Name != "margin_right" {
+	if m[2].Name != pr.PMarginRight.Key() {
 		t.Errorf("expected margin_right got %s", m[2].Name)
 	}
 	if (m[2].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
 		t.Errorf("expected got %v", m[2].Value)
 	}
-	if m[3].Name != "margin_bottom" {
+	if m[3].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[3].Name)
 	}
 	if (m[3].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[3].Value)
 	}
-	if m[4].Name != "margin_left" {
+	if m[4].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[4].Name)
 	}
 	if (m[4].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
 		t.Errorf("expected got %v", m[4].Value)
 	}
-	if m[5].Name != "margin_left" {
+	if m[5].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[5].Name)
 	}
 	if (m[5].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()) {
@@ -187,8 +187,8 @@ func TestExpandShorthands(t *testing.T) {
 	// TODO: test that the values are correct too
 }
 
-func assertProp(t *testing.T, got pr.ElementStyle, name string, expected pr.CssProperty) {
-	g := got.Get(name)
+func assertProp(t *testing.T, got pr.ElementStyle, name pr.KnownProp, expected pr.CssProperty) {
+	g := got.Get(name.Key())
 	if !reflect.DeepEqual(g, expected) {
 		t.Fatalf("%s - expected %v got %v", name, expected, g)
 	}
@@ -238,17 +238,17 @@ func TestAnnotateDocument(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertProp(t, h1, "background_image", pr.Images{pr.UrlImage(u)})
+	assertProp(t, h1, pr.PBackgroundImage, pr.Images{pr.UrlImage(u)})
 
-	assertProp(t, h1, "font_weight", pr.IntString{Int: 700})
-	assertProp(t, h1, "font_size", pr.FToV(40)) // 2em
+	assertProp(t, h1, pr.PFontWeight, pr.IntString{Int: 700})
+	assertProp(t, h1, pr.PFontSize, pr.FToV(40)) // 2em
 
 	// x-large * initial = 3/2 * 16 = 24
-	assertProp(t, p, "margin_top", pr.Dimension{Value: 24, Unit: pr.Px}.ToValue())
-	assertProp(t, p, "margin_right", pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
-	assertProp(t, p, "margin_bottom", pr.Dimension{Value: 24, Unit: pr.Px}.ToValue())
-	assertProp(t, p, "margin_left", pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
-	assertProp(t, p, "background_color", pr.CurrentColor)
+	assertProp(t, p, pr.PMarginTop, pr.Dimension{Value: 24, Unit: pr.Px}.ToValue())
+	assertProp(t, p, pr.PMarginRight, pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
+	assertProp(t, p, pr.PMarginBottom, pr.Dimension{Value: 24, Unit: pr.Px}.ToValue())
+	assertProp(t, p, pr.PMarginLeft, pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
+	assertProp(t, p, pr.PBackgroundColor, pr.CurrentColor)
 
 	// 2em * 1.25ex = 2 * 20 * 1.25 * 0.8 = 40
 	// 2.5ex * 1.25ex = 2.5 * 0.8 * 20 * 1.25 * 0.8 = 40
@@ -258,43 +258,43 @@ func TestAnnotateDocument(t *testing.T) {
 	// .ToValue()assert ul["marginBottom"] , pr.Dimension {Value:40,Unit: pr.Px}
 	// .ToValue()assert ul["marginLeft"] , pr.Dimension {Value:40,Unit: pr.Px}
 
-	assertProp(t, ul, "font_weight", pr.IntString{Int: 400})
+	assertProp(t, ul, pr.PFontWeight, pr.IntString{Int: 400})
 	// thick = 5px, 0.25 inches = 96*.25 = 24px
-	assertProp(t, ul, "border_top_width", pr.FToV(0))
-	assertProp(t, ul, "border_right_width", pr.FToV(5))
-	assertProp(t, ul, "border_bottom_width", pr.FToV(0))
-	assertProp(t, ul, "border_left_width", pr.FToV(24))
+	assertProp(t, ul, pr.PBorderTopWidth, pr.FToV(0))
+	assertProp(t, ul, pr.PBorderRightWidth, pr.FToV(5))
+	assertProp(t, ul, pr.PBorderBottomWidth, pr.FToV(0))
+	assertProp(t, ul, pr.PBorderLeftWidth, pr.FToV(24))
 
-	assertProp(t, li0, "font_weight", pr.IntString{Int: 700})
-	assertProp(t, li0, "font_size", pr.FToV(8))                                      // 6pt)
-	assertProp(t, li0, "margin_top", pr.Dimension{Value: 16, Unit: pr.Px}.ToValue()) // 2em)
-	assertProp(t, li0, "margin_right", pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
-	assertProp(t, li0, "margin_bottom", pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
-	assertProp(t, li0, "margin_left", pr.Dimension{Value: 32, Unit: pr.Px}.ToValue()) // 4em)
+	assertProp(t, li0, pr.PFontWeight, pr.IntString{Int: 700})
+	assertProp(t, li0, pr.PFontSize, pr.FToV(8))                                      // 6pt)
+	assertProp(t, li0, pr.PMarginTop, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue()) // 2em)
+	assertProp(t, li0, pr.PMarginRight, pr.Dimension{Value: 0, Unit: pr.Px}.ToValue())
+	assertProp(t, li0, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
+	assertProp(t, li0, pr.PMarginLeft, pr.Dimension{Value: 32, Unit: pr.Px}.ToValue()) // 4em)
 
-	assertProp(t, a, "text_decoration_line", pr.Decorations(utils.NewSet("underline")))
-	assertProp(t, a, "font_weight", pr.IntString{Int: 900})
-	assertProp(t, a, "font_size", pr.FToV(24)) // 300% of 8px)
-	assertProp(t, a, "padding_top", pr.Dimension{Value: 1, Unit: pr.Px}.ToValue())
-	assertProp(t, a, "padding_right", pr.Dimension{Value: 2, Unit: pr.Px}.ToValue())
-	assertProp(t, a, "padding_bottom", pr.Dimension{Value: 3, Unit: pr.Px}.ToValue())
-	assertProp(t, a, "padding_left", pr.Dimension{Value: 4, Unit: pr.Px}.ToValue())
-	assertProp(t, a, "border_top_width", pr.FToV(42))
-	assertProp(t, a, "border_bottom_width", pr.FToV(42))
+	assertProp(t, a, pr.PTextDecorationLine, pr.Decorations(utils.NewSet("underline")))
+	assertProp(t, a, pr.PFontWeight, pr.IntString{Int: 900})
+	assertProp(t, a, pr.PFontSize, pr.FToV(24)) // 300% of 8px)
+	assertProp(t, a, pr.PPaddingTop, pr.Dimension{Value: 1, Unit: pr.Px}.ToValue())
+	assertProp(t, a, pr.PPaddingRight, pr.Dimension{Value: 2, Unit: pr.Px}.ToValue())
+	assertProp(t, a, pr.PPaddingBottom, pr.Dimension{Value: 3, Unit: pr.Px}.ToValue())
+	assertProp(t, a, pr.PPaddingLeft, pr.Dimension{Value: 4, Unit: pr.Px}.ToValue())
+	assertProp(t, a, pr.PBorderTopWidth, pr.FToV(42))
+	assertProp(t, a, pr.PBorderBottomWidth, pr.FToV(42))
 
-	assertProp(t, a, "color", pr.NewColor(1, 0, 0, 1))
-	assertProp(t, a, "border_top_color", pr.CurrentColor)
+	assertProp(t, a, pr.PColor, pr.NewColor(1, 0, 0, 1))
+	assertProp(t, a, pr.PBorderTopColor, pr.CurrentColor)
 
-	assertProp(t, div, "font_size", pr.FToV(40))                                    // 2 * 20px)
-	assertProp(t, span1, "width", pr.Dimension{Value: 160, Unit: pr.Px}.ToValue())  // 10 * 16px (Root default is 16px))
-	assertProp(t, span1, "height", pr.Dimension{Value: 400, Unit: pr.Px}.ToValue()) // 10 * (2 * 20px))
-	assertProp(t, span2, "font_size", pr.FToV(32))
+	assertProp(t, div, pr.PFontSize, pr.FToV(40))                                     // 2 * 20px)
+	assertProp(t, span1, pr.PWidth, pr.Dimension{Value: 160, Unit: pr.Px}.ToValue())  // 10 * 16px (Root default is 16px))
+	assertProp(t, span1, pr.PHeight, pr.Dimension{Value: 400, Unit: pr.Px}.ToValue()) // 10 * (2 * 20px))
+	assertProp(t, span2, pr.PFontSize, pr.FToV(32))
 
 	// The href attr should be as in the source, not made absolute.
-	assertProp(t, after, "background_color", pr.NewColor(1, 0, 0, 1))
-	assertProp(t, after, "border_top_width", pr.FToV(42))
-	assertProp(t, after, "border_bottom_width", pr.FToV(3))
-	assertProp(t, after, "content", pr.SContent{Contents: pr.ContentProperties{{Type: "string", Content: pr.String(" [")}, {Type: "string", Content: pr.String("home.html")}, {Type: "string", Content: pr.String("]")}}})
+	assertProp(t, after, pr.PBackgroundColor, pr.NewColor(1, 0, 0, 1))
+	assertProp(t, after, pr.PBorderTopWidth, pr.FToV(42))
+	assertProp(t, after, pr.PBorderBottomWidth, pr.FToV(3))
+	assertProp(t, after, pr.PContent, pr.SContent{Contents: pr.ContentProperties{{Type: "string", Content: pr.String(" [")}, {Type: "string", Content: pr.String("home.html")}, {Type: "string", Content: pr.String("]")}}})
 
 	// TODO: much more tests here: test that origin and selector precedence
 	// and inheritance are correct…
@@ -328,34 +328,34 @@ func TestPage(t *testing.T) {
 	pageType := utils.PageElement{Side: "left", First: true, Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style := styleFor.Get(pageType, "")
-	assertProp(t, style, "margin_top", pr.Dimension{Value: 5, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_left", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_bottom", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "color", pr.NewColor(1, 0, 0, 1)) // red, inherited from html
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 5, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PColor, pr.NewColor(1, 0, 0, 1)) // red, inherited from html
 
 	pageType = utils.PageElement{Side: "right", First: true, Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "")
-	assertProp(t, style, "margin_top", pr.Dimension{Value: 5, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_left", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_bottom", pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "color", pr.NewColor(0, 0, 1, 1)) // blue
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 5, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PColor, pr.NewColor(0, 0, 1, 1)) // blue
 
 	pageType = utils.PageElement{Side: "left", First: false, Blank: false, Index: 1, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "")
-	assertProp(t, style, "margin_top", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_left", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_bottom", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "color", pr.NewColor(1, 0, 0, 1)) // red, inherited from html
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PColor, pr.NewColor(1, 0, 0, 1)) // red, inherited from html
 
 	pageType = utils.PageElement{Side: "right", First: false, Blank: false, Index: 1, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "")
-	assertProp(t, style, "margin_top", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_left", pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "margin_bottom", pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
-	assertProp(t, style, "color", pr.NewColor(0, 0, 1, 1)) // blue
+	assertProp(t, style, pr.PMarginTop, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginLeft, pr.Dimension{Value: 10, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PMarginBottom, pr.Dimension{Value: 16, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PColor, pr.NewColor(0, 0, 1, 1)) // blue
 
 	pageType = utils.PageElement{Side: "left", First: true, Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
@@ -367,13 +367,13 @@ func TestPage(t *testing.T) {
 	pageType = utils.PageElement{Side: "right", First: true, Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "@top-left")
-	assertProp(t, style, "font_size", pr.FToV(20)) // inherited from @page
-	assertProp(t, style, "width", pr.Dimension{Value: 200, Unit: pr.Px}.ToValue())
+	assertProp(t, style, pr.PFontSize, pr.FToV(20)) // inherited from @page
+	assertProp(t, style, pr.PWidth, pr.Dimension{Value: 200, Unit: pr.Px}.ToValue())
 
 	pageType = utils.PageElement{Side: "right", First: true, Blank: false, Index: 0, Name: ""}
 	styleFor.SetPageComputedStylesT(pageType, document)
 	style = styleFor.Get(pageType, "@top-right")
-	assertProp(t, style, "font_size", pr.FToV(10))
+	assertProp(t, style, pr.PFontSize, pr.FToV(10))
 }
 
 type testPageSelector struct {

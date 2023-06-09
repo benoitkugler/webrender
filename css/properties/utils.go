@@ -243,3 +243,53 @@ func (r Rectangle) Unpack2() (x, y, w, h Float) {
 func (r Rectangle) IsNone() bool {
 	return r == Rectangle{}
 }
+
+var has = struct{}{}
+
+type SetK map[KnownProp]struct{}
+
+func (s SetK) Add(key KnownProp) {
+	s[key] = has
+}
+
+func (s SetK) Extend(keys []KnownProp) {
+	for _, key := range keys {
+		s[key] = has
+	}
+}
+
+func (s SetK) Has(key KnownProp) bool {
+	_, in := s[key]
+	return in
+}
+
+// Copy returns a deepcopy.
+func (s SetK) Copy() SetK {
+	out := make(SetK, len(s))
+	for k, v := range s {
+		out[k] = v
+	}
+	return out
+}
+
+func (s SetK) IsNone() bool { return s == nil }
+
+func (s SetK) Equal(other SetK) bool {
+	if len(s) != len(other) {
+		return false
+	}
+	for i := range s {
+		if _, in := other[i]; !in {
+			return false
+		}
+	}
+	return true
+}
+
+func NewSetK(values ...KnownProp) SetK {
+	s := make(SetK, len(values))
+	for _, v := range values {
+		s.Add(v)
+	}
+	return s
+}

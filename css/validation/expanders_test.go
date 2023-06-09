@@ -9,46 +9,46 @@ import (
 	"github.com/benoitkugler/webrender/utils/testutils"
 )
 
-var inherit = pr.CascadedProperty{Default: pr.Inherit}.AsValidated()
+var inherit = pr.Inherit.AsCascaded().AsValidated()
 
 // Test the 4-value pr.
 func TestExpandFourSides(t *testing.T) {
 	capt := testutils.CaptureLogs()
-	assertValidDict(t, "margin: inherit", map[string]pr.ValidatedProperty{
-		"margin_top":    pr.Inherit.AsCascaded().AsValidated(),
-		"margin_right":  pr.Inherit.AsCascaded().AsValidated(),
-		"margin_bottom": pr.Inherit.AsCascaded().AsValidated(),
-		"margin_left":   pr.Inherit.AsCascaded().AsValidated(),
+	assertValidDict(t, "margin: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PMarginTop:    inherit,
+		pr.PMarginRight:  inherit,
+		pr.PMarginBottom: inherit,
+		pr.PMarginLeft:   inherit,
 	})
 	assertValidDict(t, "margin: 1em", toValidated(pr.Properties{
-		"margin_top":    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"margin_right":  pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"margin_bottom": pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"margin_left":   pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PMarginTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PMarginRight:  pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PMarginBottom: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PMarginLeft:   pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
 	}))
 	assertValidDict(t, "margin: -1em auto 20%", toValidated(pr.Properties{
-		"margin_top":    pr.Dimension{Value: -1, Unit: pr.Em}.ToValue(),
-		"margin_right":  pr.SToV("auto"),
-		"margin_bottom": pr.Dimension{Value: 20, Unit: pr.Perc}.ToValue(),
-		"margin_left":   pr.SToV("auto"),
+		pr.PMarginTop:    pr.Dimension{Value: -1, Unit: pr.Em}.ToValue(),
+		pr.PMarginRight:  pr.SToV("auto"),
+		pr.PMarginBottom: pr.Dimension{Value: 20, Unit: pr.Perc}.ToValue(),
+		pr.PMarginLeft:   pr.SToV("auto"),
 	}))
 	assertValidDict(t, "padding: 1em 0", toValidated(pr.Properties{
-		"padding_top":    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"padding_right":  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
-		"padding_bottom": pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"padding_left":   pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingBottom: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PPaddingLeft:   pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
 	}))
 	assertValidDict(t, "padding: 1em 0 2%", toValidated(pr.Properties{
-		"padding_top":    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"padding_right":  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
-		"padding_bottom": pr.Dimension{Value: 2, Unit: pr.Perc}.ToValue(),
-		"padding_left":   pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingBottom: pr.Dimension{Value: 2, Unit: pr.Perc}.ToValue(),
+		pr.PPaddingLeft:   pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
 	}))
 	assertValidDict(t, "padding: 1em 0 2em 5px", toValidated(pr.Properties{
-		"padding_top":    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"padding_right":  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
-		"padding_bottom": pr.Dimension{Value: 2, Unit: pr.Em}.ToValue(),
-		"padding_left":   pr.Dimension{Value: 5, Unit: pr.Px}.ToValue(),
+		pr.PPaddingTop:    pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PPaddingRight:  pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue(),
+		pr.PPaddingBottom: pr.Dimension{Value: 2, Unit: pr.Em}.ToValue(),
+		pr.PPaddingLeft:   pr.Dimension{Value: 5, Unit: pr.Px}.ToValue(),
 	}))
 	capt.AssertNoLogs(t)
 
@@ -64,37 +64,37 @@ func TestExpandFourSides(t *testing.T) {
 func TestExpandBorders(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "border-top: 3px dotted red", toValidated(pr.Properties{
-		"border_top_width": pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
-		"border_top_style": pr.String("dotted"),
-		"border_top_color": pr.NewColor(1, 0, 0, 1), // red
+		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopStyle: pr.String("dotted"),
+		pr.PBorderTopColor: pr.NewColor(1, 0, 0, 1), // red
 	}))
 	assertValidDict(t, "border-top: 3px dotted", toValidated(pr.Properties{
-		"border_top_width": pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
-		"border_top_style": pr.String("dotted"),
+		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopStyle: pr.String("dotted"),
 	}))
 	assertValidDict(t, "border-top: 3px red", toValidated(pr.Properties{
-		"border_top_width": pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
-		"border_top_color": pr.NewColor(1, 0, 0, 1), // red
+		pr.PBorderTopWidth: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopColor: pr.NewColor(1, 0, 0, 1), // red
 	}))
 	assertValidDict(t, "border-top: solid", toValidated(pr.Properties{
-		"border_top_style": pr.String("solid"),
+		pr.PBorderTopStyle: pr.String("solid"),
 	}))
 	assertValidDict(t, "border: 6px dashed lime", toValidated(pr.Properties{
-		"border_top_width": pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
-		"border_top_style": pr.String("dashed"),
-		"border_top_color": pr.NewColor(0, 1, 0, 1), // lime
+		pr.PBorderTopWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderTopStyle: pr.String("dashed"),
+		pr.PBorderTopColor: pr.NewColor(0, 1, 0, 1), // lime
 
-		"border_left_width": pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
-		"border_left_style": pr.String("dashed"),
-		"border_left_color": pr.NewColor(0, 1, 0, 1), // lime
+		pr.PBorderLeftWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderLeftStyle: pr.String("dashed"),
+		pr.PBorderLeftColor: pr.NewColor(0, 1, 0, 1), // lime
 
-		"border_bottom_width": pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
-		"border_bottom_style": pr.String("dashed"),
-		"border_bottom_color": pr.NewColor(0, 1, 0, 1), // lime
+		pr.PBorderBottomWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderBottomStyle: pr.String("dashed"),
+		pr.PBorderBottomColor: pr.NewColor(0, 1, 0, 1), // lime
 
-		"border_right_width": pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
-		"border_right_style": pr.String("dashed"),
-		"border_right_color": pr.NewColor(0, 1, 0, 1), // lime
+		pr.PBorderRightWidth: pr.Dimension{Value: 6, Unit: pr.Px}.ToValue(),
+		pr.PBorderRightStyle: pr.String("dashed"),
+		pr.PBorderRightColor: pr.NewColor(0, 1, 0, 1), // lime
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "border: 6px dashed left", "invalid")
@@ -103,46 +103,46 @@ func TestExpandBorders(t *testing.T) {
 func TestExpandBorderRadius(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "border-radius: 1px", toValidated(pr.Properties{
-		"border_top_left_radius":     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_top_right_radius":    pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_bottom_right_radius": pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_bottom_left_radius":  pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderTopLeftRadius:     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderTopRightRadius:    pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderBottomRightRadius: pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderBottomLeftRadius:  pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
 	}))
 	assertValidDict(t, "border-radius: 1px 2em", toValidated(pr.Properties{
-		"border_top_left_radius":     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_top_right_radius":    pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
-		"border_bottom_right_radius": pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_bottom_left_radius":  pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderTopLeftRadius:     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderTopRightRadius:    pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderBottomRightRadius: pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderBottomLeftRadius:  pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
 	}))
 	assertValidDict(t, "border-radius: 1px / 2em", toValidated(pr.Properties{
-		"border_top_left_radius":     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
-		"border_top_right_radius":    pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
-		"border_bottom_right_radius": pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
-		"border_bottom_left_radius":  pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderTopLeftRadius:     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderTopRightRadius:    pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderBottomRightRadius: pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderBottomLeftRadius:  pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
 	}))
 	assertValidDict(t, "border-radius: 1px 3px / 2em 4%", toValidated(pr.Properties{
-		"border_top_left_radius":     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
-		"border_top_right_radius":    pr.Point{{Value: 3, Unit: pr.Px}, {Value: 4, Unit: pr.Perc}},
-		"border_bottom_right_radius": pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
-		"border_bottom_left_radius":  pr.Point{{Value: 3, Unit: pr.Px}, {Value: 4, Unit: pr.Perc}},
+		pr.PBorderTopLeftRadius:     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderTopRightRadius:    pr.Point{{Value: 3, Unit: pr.Px}, {Value: 4, Unit: pr.Perc}},
+		pr.PBorderBottomRightRadius: pr.Point{{Value: 1, Unit: pr.Px}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderBottomLeftRadius:  pr.Point{{Value: 3, Unit: pr.Px}, {Value: 4, Unit: pr.Perc}},
 	}))
 	assertValidDict(t, "border-radius: 1px 2em 3%", toValidated(pr.Properties{
-		"border_top_left_radius":     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_top_right_radius":    pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
-		"border_bottom_right_radius": pr.Point{{Value: 3, Unit: pr.Perc}, {Value: 3, Unit: pr.Perc}},
-		"border_bottom_left_radius":  pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderTopLeftRadius:     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderTopRightRadius:    pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderBottomRightRadius: pr.Point{{Value: 3, Unit: pr.Perc}, {Value: 3, Unit: pr.Perc}},
+		pr.PBorderBottomLeftRadius:  pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
 	}))
 	assertValidDict(t, "border-radius: 1px 2em 3% 4rem", toValidated(pr.Properties{
-		"border_top_left_radius":     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
-		"border_top_right_radius":    pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
-		"border_bottom_right_radius": pr.Point{{Value: 3, Unit: pr.Perc}, {Value: 3, Unit: pr.Perc}},
-		"border_bottom_left_radius":  pr.Point{{Value: 4, Unit: pr.Rem}, {Value: 4, Unit: pr.Rem}},
+		pr.PBorderTopLeftRadius:     pr.Point{{Value: 1, Unit: pr.Px}, {Value: 1, Unit: pr.Px}},
+		pr.PBorderTopRightRadius:    pr.Point{{Value: 2, Unit: pr.Em}, {Value: 2, Unit: pr.Em}},
+		pr.PBorderBottomRightRadius: pr.Point{{Value: 3, Unit: pr.Perc}, {Value: 3, Unit: pr.Perc}},
+		pr.PBorderBottomLeftRadius:  pr.Point{{Value: 4, Unit: pr.Rem}, {Value: 4, Unit: pr.Rem}},
 	}))
-	assertValidDict(t, "border-radius: inherit", map[string]pr.ValidatedProperty{
-		"border_top_left_radius":     inherit,
-		"border_top_right_radius":    inherit,
-		"border_bottom_right_radius": inherit,
-		"border_bottom_left_radius":  inherit,
+	assertValidDict(t, "border-radius: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PBorderTopLeftRadius:     inherit,
+		pr.PBorderTopRightRadius:    inherit,
+		pr.PBorderBottomRightRadius: inherit,
+		pr.PBorderBottomLeftRadius:  inherit,
 	})
 	capt.AssertNoLogs(t)
 
@@ -159,30 +159,30 @@ func TestExpandBorderRadius(t *testing.T) {
 // Test the “list_style“ property.
 func TestExpandList_style(t *testing.T) {
 	capt := testutils.CaptureLogs()
-	assertValidDict(t, "list-style: inherit", map[string]pr.ValidatedProperty{
-		"list_style_position": pr.Inherit.AsCascaded().AsValidated(),
-		"list_style_image":    pr.Inherit.AsCascaded().AsValidated(),
-		"list_style_type":     pr.Inherit.AsCascaded().AsValidated(),
+	assertValidDict(t, "list-style: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PListStylePosition: inherit,
+		pr.PListStyleImage:    inherit,
+		pr.PListStyleType:     inherit,
 	})
 	assertValidDict(t, "list-style: url(../bar/lipsum.png)", toValidated(pr.Properties{
-		"list_style_image": pr.UrlImage("https://weasyprint.org/bar/lipsum.png"),
+		pr.PListStyleImage: pr.UrlImage("https://weasyprint.org/bar/lipsum.png"),
 	}))
 	assertValidDict(t, "list-style: square", toValidated(pr.Properties{
-		"list_style_type": pr.CounterStyleID{Name: "square"},
+		pr.PListStyleType: pr.CounterStyleID{Name: "square"},
 	}))
 	assertValidDict(t, "list-style: circle inside", toValidated(pr.Properties{
-		"list_style_position": pr.String("inside"),
-		"list_style_type":     pr.CounterStyleID{Name: "circle"},
+		pr.PListStylePosition: pr.String("inside"),
+		pr.PListStyleType:     pr.CounterStyleID{Name: "circle"},
 	}))
 	assertValidDict(t, "list-style: none circle inside", toValidated(pr.Properties{
-		"list_style_position": pr.String("inside"),
-		"list_style_image":    pr.NoneImage{},
-		"list_style_type":     pr.CounterStyleID{Name: "circle"},
+		pr.PListStylePosition: pr.String("inside"),
+		pr.PListStyleImage:    pr.NoneImage{},
+		pr.PListStyleType:     pr.CounterStyleID{Name: "circle"},
 	}))
 	assertValidDict(t, "list-style: none inside none", toValidated(pr.Properties{
-		"list_style_position": pr.String("inside"),
-		"list_style_image":    pr.NoneImage{},
-		"list_style_type":     pr.CounterStyleID{Name: "none"},
+		pr.PListStylePosition: pr.String("inside"),
+		pr.PListStyleImage:    pr.NoneImage{},
+		pr.PListStyleType:     pr.CounterStyleID{Name: "none"},
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "list-style: none inside none none", "invalid")
@@ -195,33 +195,33 @@ func TestExpandList_style(t *testing.T) {
 func TestFont(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "font: 12px My Fancy Font, serif", toValidated(pr.Properties{
-		"font_size":   pr.Dimension{Value: 12, Unit: pr.Px}.ToValue(),
-		"font_family": pr.Strings{"My Fancy Font", "serif"},
+		pr.PFontSize:   pr.Dimension{Value: 12, Unit: pr.Px}.ToValue(),
+		pr.PFontFamily: pr.Strings{"My Fancy Font", "serif"},
 	}))
 	assertValidDict(t, `font: small/1.2 "Some Font", serif`, toValidated(pr.Properties{
-		"font_size":   pr.SToV("small"),
-		"line_height": pr.Dimension{Value: 1.2, Unit: pr.Scalar}.ToValue(),
-		"font_family": pr.Strings{"Some Font", "serif"},
+		pr.PFontSize:   pr.SToV("small"),
+		pr.PLineHeight: pr.Dimension{Value: 1.2, Unit: pr.Scalar}.ToValue(),
+		pr.PFontFamily: pr.Strings{"Some Font", "serif"},
 	}))
 	assertValidDict(t, "font: small-caps italic 700 large serif", toValidated(pr.Properties{
-		"font_style":        pr.String("italic"),
-		"font_variant_caps": pr.String("small-caps"),
-		"font_weight":       pr.IntString{Int: 700},
-		"font_size":         pr.SToV("large"),
-		"font_family":       pr.Strings{"serif"},
+		pr.PFontStyle:       pr.String("italic"),
+		pr.PFontVariantCaps: pr.String("small-caps"),
+		pr.PFontWeight:      pr.IntString{Int: 700},
+		pr.PFontSize:        pr.SToV("large"),
+		pr.PFontFamily:      pr.Strings{"serif"},
 	}))
 	assertValidDict(t, "font: small-caps condensed normal 700 large serif", toValidated(pr.Properties{
 		// "font_style": String("normal"),  XXX shouldn’t this be here?
-		"font_stretch":      pr.String("condensed"),
-		"font_variant_caps": pr.String("small-caps"),
-		"font_weight":       pr.IntString{Int: 700},
-		"font_size":         pr.SToV("large"),
-		"font_family":       pr.Strings{"serif"},
+		pr.PFontStretch:     pr.String("condensed"),
+		pr.PFontVariantCaps: pr.String("small-caps"),
+		pr.PFontWeight:      pr.IntString{Int: 700},
+		pr.PFontSize:        pr.SToV("large"),
+		pr.PFontFamily:      pr.Strings{"serif"},
 	}))
 	assertValidDict(t, "font: italic 13px sans-serif", toValidated(pr.Properties{
-		"font_style":  pr.String("italic"),
-		"font_size":   pr.FToPx(13),
-		"font_family": pr.Strings{"sans-serif"},
+		pr.PFontStyle:  pr.String("italic"),
+		pr.PFontSize:   pr.FToPx(13),
+		pr.PFontFamily: pr.Strings{"sans-serif"},
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, `font-family: "My" Font, serif`, "invalid")
@@ -242,36 +242,36 @@ func TestFont(t *testing.T) {
 func TestFontVariant(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "font-variant: normal", toValidated(pr.Properties{
-		"font_variant_alternates": pr.String("normal"),
-		"font_variant_caps":       pr.String("normal"),
-		"font_variant_east_asian": pr.SStrings{String: "normal"},
-		"font_variant_ligatures":  pr.SStrings{String: "normal"},
-		"font_variant_numeric":    pr.SStrings{String: "normal"},
-		"font_variant_position":   pr.String("normal"),
+		pr.PFontVariantAlternates: pr.String("normal"),
+		pr.PFontVariantCaps:       pr.String("normal"),
+		pr.PFontVariantEastAsian:  pr.SStrings{String: "normal"},
+		pr.PFontVariantLigatures:  pr.SStrings{String: "normal"},
+		pr.PFontVariantNumeric:    pr.SStrings{String: "normal"},
+		pr.PFontVariantPosition:   pr.String("normal"),
 	}))
 	assertValidDict(t, "font-variant: none", toValidated(pr.Properties{
-		"font_variant_alternates": pr.String("normal"),
-		"font_variant_caps":       pr.String("normal"),
-		"font_variant_east_asian": pr.SStrings{String: "normal"},
-		"font_variant_ligatures":  pr.SStrings{String: "none"},
-		"font_variant_numeric":    pr.SStrings{String: "normal"},
-		"font_variant_position":   pr.String("normal"),
+		pr.PFontVariantAlternates: pr.String("normal"),
+		pr.PFontVariantCaps:       pr.String("normal"),
+		pr.PFontVariantEastAsian:  pr.SStrings{String: "normal"},
+		pr.PFontVariantLigatures:  pr.SStrings{String: "none"},
+		pr.PFontVariantNumeric:    pr.SStrings{String: "normal"},
+		pr.PFontVariantPosition:   pr.String("normal"),
 	}))
 	assertValidDict(t, "font-variant: historical-forms petite-caps", toValidated(pr.Properties{
-		"font_variant_alternates": pr.String("historical-forms"),
-		"font_variant_caps":       pr.String("petite-caps"),
+		pr.PFontVariantAlternates: pr.String("historical-forms"),
+		pr.PFontVariantCaps:       pr.String("petite-caps"),
 	}))
 	assertValidDict(t, "font-variant: lining-nums contextual small-caps common-ligatures", toValidated(pr.Properties{
-		"font_variant_ligatures": pr.SStrings{Strings: []string{"contextual", "common-ligatures"}},
-		"font_variant_numeric":   pr.SStrings{Strings: []string{"lining-nums"}},
-		"font_variant_caps":      pr.String("small-caps"),
+		pr.PFontVariantLigatures: pr.SStrings{Strings: []string{"contextual", "common-ligatures"}},
+		pr.PFontVariantNumeric:   pr.SStrings{Strings: []string{"lining-nums"}},
+		pr.PFontVariantCaps:      pr.String("small-caps"),
 	}))
 	assertValidDict(t, "font-variant: jis78 ruby proportional-width", toValidated(pr.Properties{
-		"font_variant_east_asian": pr.SStrings{Strings: []string{"jis78", "ruby", "proportional-width"}},
+		pr.PFontVariantEastAsian: pr.SStrings{Strings: []string{"jis78", "ruby", "proportional-width"}},
 	}))
 	// CSS2-style font-variant
 	assertValidDict(t, "font-variant: small-caps", toValidated(pr.Properties{
-		"font_variant_caps": pr.String("small-caps"),
+		pr.PFontVariantCaps: pr.String("small-caps"),
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "font-variant: normal normal", "invalid")
@@ -289,13 +289,13 @@ func TestFontVariant(t *testing.T) {
 func TestExpandOverflowWrap(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "overflow-wrap: normal", toValidated(pr.Properties{
-		"overflow_wrap": pr.String("normal"),
+		pr.POverflowWrap: pr.String("normal"),
 	}))
 	assertValidDict(t, "overflow-wrap: break-word", toValidated(pr.Properties{
-		"overflow_wrap": pr.String("break-word"),
+		pr.POverflowWrap: pr.String("break-word"),
 	}))
-	assertValidDict(t, "overflow-wrap: inherit", map[string]pr.ValidatedProperty{
-		"overflow_wrap": inherit,
+	assertValidDict(t, "overflow-wrap: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.POverflowWrap: inherit,
 	})
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "overflow-wrap: none", "invalid")
@@ -305,13 +305,13 @@ func TestExpandOverflowWrap(t *testing.T) {
 func TestExpandWordWrap(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "word-wrap: normal", toValidated(pr.Properties{
-		"overflow_wrap": pr.String("normal"),
+		pr.POverflowWrap: pr.String("normal"),
 	}))
 	assertValidDict(t, "word-wrap: break-word", toValidated(pr.Properties{
-		"overflow_wrap": pr.String("break-word"),
+		pr.POverflowWrap: pr.String("break-word"),
 	}))
-	assertValidDict(t, "word-wrap: inherit", map[string]pr.ValidatedProperty{
-		"overflow_wrap": inherit,
+	assertValidDict(t, "word-wrap: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.POverflowWrap: inherit,
 	})
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "word-wrap: none", "invalid")
@@ -322,25 +322,25 @@ func TestExpandTextDecoration(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "text-decoration: none", toValidated(pr.Properties{
-		"text_decoration_line": pr.Decorations{},
+		pr.PTextDecorationLine: pr.Decorations{},
 	}))
 	assertValidDict(t, "text-decoration: overline", toValidated(pr.Properties{
-		"text_decoration_line": pr.Decorations(utils.NewSet("overline")),
+		pr.PTextDecorationLine: pr.Decorations(utils.NewSet("overline")),
 	}))
 	assertValidDict(t, "text-decoration: overline solid", toValidated(pr.Properties{
-		"text_decoration_line":  pr.Decorations(utils.NewSet("overline")),
-		"text_decoration_style": pr.String("solid"),
+		pr.PTextDecorationLine:  pr.Decorations(utils.NewSet("overline")),
+		pr.PTextDecorationStyle: pr.String("solid"),
 	}))
 	assertValidDict(t, "text-decoration: overline blink line-through", toValidated(pr.Properties{
-		"text_decoration_line": pr.Decorations(utils.NewSet("blink", "line-through", "overline")),
+		pr.PTextDecorationLine: pr.Decorations(utils.NewSet("blink", "line-through", "overline")),
 	}))
 	assertValidDict(t, "text-decoration: red", toValidated(pr.Properties{
-		"text_decoration_color": pr.NewColor(1, 0, 0, 1),
+		pr.PTextDecorationColor: pr.NewColor(1, 0, 0, 1),
 	}))
-	assertValidDict(t, "text-decoration: inherit", map[string]pr.ValidatedProperty{
-		"text_decoration_color": inherit,
-		"text_decoration_line":  inherit,
-		"text_decoration_style": inherit,
+	assertValidDict(t, "text-decoration: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PTextDecorationColor: inherit,
+		pr.PTextDecorationLine:  inherit,
+		pr.PTextDecorationStyle: inherit,
 	})
 
 	assertInvalid(t, "text-decoration: solid solid", "invalid")
@@ -356,44 +356,44 @@ func TestExpandFlex(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "flex: auto", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(1),
-		"flex_shrink": pr.Float(1),
-		"flex_basis":  pr.SToV("auto"),
+		pr.PFlexGrow:   pr.Float(1),
+		pr.PFlexShrink: pr.Float(1),
+		pr.PFlexBasis:  pr.SToV("auto"),
 	}))
 	assertValidDict(t, "flex: none", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(0),
-		"flex_shrink": pr.Float(0),
-		"flex_basis":  pr.SToV("auto"),
+		pr.PFlexGrow:   pr.Float(0),
+		pr.PFlexShrink: pr.Float(0),
+		pr.PFlexBasis:  pr.SToV("auto"),
 	}))
 	assertValidDict(t, "flex: 10", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(10),
-		"flex_shrink": pr.Float(1),
-		"flex_basis":  pr.ZeroPixels.ToValue(),
+		pr.PFlexGrow:   pr.Float(10),
+		pr.PFlexShrink: pr.Float(1),
+		pr.PFlexBasis:  pr.ZeroPixels.ToValue(),
 	}))
 	assertValidDict(t, "flex: 2 2", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(2),
-		"flex_shrink": pr.Float(2),
-		"flex_basis":  pr.ZeroPixels.ToValue(),
+		pr.PFlexGrow:   pr.Float(2),
+		pr.PFlexShrink: pr.Float(2),
+		pr.PFlexBasis:  pr.ZeroPixels.ToValue(),
 	}))
 	assertValidDict(t, "flex: 2 2 1px", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(2),
-		"flex_shrink": pr.Float(2),
-		"flex_basis":  pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
+		pr.PFlexGrow:   pr.Float(2),
+		pr.PFlexShrink: pr.Float(2),
+		pr.PFlexBasis:  pr.Dimension{Value: 1, Unit: pr.Px}.ToValue(),
 	}))
 	assertValidDict(t, "flex: 2 2 auto", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(2),
-		"flex_shrink": pr.Float(2),
-		"flex_basis":  pr.SToV("auto"),
+		pr.PFlexGrow:   pr.Float(2),
+		pr.PFlexShrink: pr.Float(2),
+		pr.PFlexBasis:  pr.SToV("auto"),
 	}))
 	assertValidDict(t, "flex: 2 auto", toValidated(pr.Properties{
-		"flex_grow":   pr.Float(2),
-		"flex_shrink": pr.Float(1),
-		"flex_basis":  pr.SToV("auto"),
+		pr.PFlexGrow:   pr.Float(2),
+		pr.PFlexShrink: pr.Float(1),
+		pr.PFlexBasis:  pr.SToV("auto"),
 	}))
-	assertValidDict(t, "flex: inherit", map[string]pr.ValidatedProperty{
-		"flex_grow":   inherit,
-		"flex_shrink": inherit,
-		"flex_basis":  inherit,
+	assertValidDict(t, "flex: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PFlexGrow:   inherit,
+		pr.PFlexShrink: inherit,
+		pr.PFlexBasis:  inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -408,22 +408,22 @@ func TestExpandFlexFlow(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "flex-flow: column", toValidated(pr.Properties{
-		"flex_direction": pr.String("column"),
+		pr.PFlexDirection: pr.String("column"),
 	}))
 	assertValidDict(t, "flex-flow: wrap", toValidated(pr.Properties{
-		"flex_wrap": pr.String("wrap"),
+		pr.PFlexWrap: pr.String("wrap"),
 	}))
 	assertValidDict(t, "flex-flow: wrap column", toValidated(pr.Properties{
-		"flex_direction": pr.String("column"),
-		"flex_wrap":      pr.String("wrap"),
+		pr.PFlexDirection: pr.String("column"),
+		pr.PFlexWrap:      pr.String("wrap"),
 	}))
 	assertValidDict(t, "flex-flow: row wrap", toValidated(pr.Properties{
-		"flex_direction": pr.String("row"),
-		"flex_wrap":      pr.String("wrap"),
+		pr.PFlexDirection: pr.String("row"),
+		pr.PFlexWrap:      pr.String("wrap"),
 	}))
-	assertValidDict(t, "flex-flow: inherit", map[string]pr.ValidatedProperty{
-		"flex_direction": inherit,
-		"flex_wrap":      inherit,
+	assertValidDict(t, "flex-flow: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PFlexDirection: inherit,
+		pr.PFlexWrap:      inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -439,16 +439,16 @@ func TestExpandPageBreak(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "page-break-after: left", toValidated(pr.Properties{
-		"break_after": pr.String("left"),
+		pr.PBreakAfter: pr.String("left"),
 	}))
 	assertValidDict(t, "page-break-before: always", toValidated(pr.Properties{
-		"break_before": pr.String("page"),
+		pr.PBreakBefore: pr.String("page"),
 	}))
-	assertValidDict(t, "page-break-after: inherit", map[string]pr.ValidatedProperty{
-		"break_after": inherit,
+	assertValidDict(t, "page-break-after: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PBreakAfter: inherit,
 	})
-	assertValidDict(t, "page-break-before: inherit", map[string]pr.ValidatedProperty{
-		"break_before": inherit,
+	assertValidDict(t, "page-break-before: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PBreakBefore: inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -461,10 +461,10 @@ func TestExpandPageBreakInside(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "page-break-inside: avoid", toValidated(pr.Properties{
-		"break_inside": pr.String("avoid"),
+		pr.PBreakInside: pr.String("avoid"),
 	}))
-	assertValidDict(t, "page-break-inside: inherit", map[string]pr.ValidatedProperty{
-		"break_inside": inherit,
+	assertValidDict(t, "page-break-inside: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PBreakInside: inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -475,16 +475,16 @@ func TestExpandPageBreakInside(t *testing.T) {
 func TestExpandColumns(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertValidDict(t, "columns: 1em", toValidated(pr.Properties{
-		"column_width": pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
-		"column_count": pr.IntString{String: "auto"},
+		pr.PColumnWidth: pr.Dimension{Value: 1, Unit: pr.Em}.ToValue(),
+		pr.PColumnCount: pr.IntString{String: "auto"},
 	}))
 	assertValidDict(t, "columns: auto", toValidated(pr.Properties{
-		"column_width": pr.SToV("auto"),
-		"column_count": pr.IntString{String: "auto"},
+		pr.PColumnWidth: pr.SToV("auto"),
+		pr.PColumnCount: pr.IntString{String: "auto"},
 	}))
 	assertValidDict(t, "columns: auto auto", toValidated(pr.Properties{
-		"column_width": pr.SToV("auto"),
-		"column_count": pr.IntString{String: "auto"},
+		pr.PColumnWidth: pr.SToV("auto"),
+		pr.PColumnCount: pr.IntString{String: "auto"},
 	}))
 
 	capt.AssertNoLogs(t)
@@ -497,24 +497,24 @@ func TestLineClamp(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "line-clamp: none", toValidated(pr.Properties{
-		"max_lines":      pr.TaggedInt{Tag: pr.None},
-		"continue":       pr.String("auto"),
-		"block_ellipsis": pr.TaggedString{Tag: pr.None},
+		pr.PMaxLines:      pr.TaggedInt{Tag: pr.None},
+		pr.PContinue:      pr.String("auto"),
+		pr.PBlockEllipsis: pr.TaggedString{Tag: pr.None},
 	}))
 	assertValidDict(t, "line-clamp: 2", toValidated(pr.Properties{
-		"max_lines":      pr.TaggedInt{I: 2},
-		"continue":       pr.String("discard"),
-		"block_ellipsis": pr.TaggedString{Tag: pr.Auto},
+		pr.PMaxLines:      pr.TaggedInt{I: 2},
+		pr.PContinue:      pr.String("discard"),
+		pr.PBlockEllipsis: pr.TaggedString{Tag: pr.Auto},
 	}))
 	assertValidDict(t, `line-clamp: 3 "…"`, toValidated(pr.Properties{
-		"max_lines":      pr.TaggedInt{I: 3},
-		"continue":       pr.String("discard"),
-		"block_ellipsis": pr.TaggedString{S: "…"},
+		pr.PMaxLines:      pr.TaggedInt{I: 3},
+		pr.PContinue:      pr.String("discard"),
+		pr.PBlockEllipsis: pr.TaggedString{S: "…"},
 	}))
-	assertValidDict(t, "line-clamp: inherit", map[string]pr.ValidatedProperty{
-		"max_lines":      inherit,
-		"continue":       inherit,
-		"block_ellipsis": inherit,
+	assertValidDict(t, "line-clamp: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PMaxLines:      inherit,
+		pr.PContinue:      inherit,
+		pr.PBlockEllipsis: inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -529,24 +529,24 @@ func TestExpandTextAlign(t *testing.T) {
 	capt := testutils.CaptureLogs()
 
 	assertValidDict(t, "text-align: start", toValidated(pr.Properties{
-		"text_align_all":  pr.String("start"),
-		"text_align_last": pr.String("start"),
+		pr.PTextAlignAll:  pr.String("start"),
+		pr.PTextAlignLast: pr.String("start"),
 	}))
 	assertValidDict(t, "text-align: right", toValidated(pr.Properties{
-		"text_align_all":  pr.String("right"),
-		"text_align_last": pr.String("right"),
+		pr.PTextAlignAll:  pr.String("right"),
+		pr.PTextAlignLast: pr.String("right"),
 	}))
 	assertValidDict(t, "text-align: justify", toValidated(pr.Properties{
-		"text_align_all":  pr.String("justify"),
-		"text_align_last": pr.String("start"),
+		pr.PTextAlignAll:  pr.String("justify"),
+		pr.PTextAlignLast: pr.String("start"),
 	}))
 	assertValidDict(t, "text-align: justify-all", toValidated(pr.Properties{
-		"text_align_all":  pr.String("justify"),
-		"text_align_last": pr.String("justify"),
+		pr.PTextAlignAll:  pr.String("justify"),
+		pr.PTextAlignLast: pr.String("justify"),
 	}))
-	assertValidDict(t, "text-align: inherit", map[string]pr.ValidatedProperty{
-		"text_align_all":  inherit,
-		"text_align_last": inherit,
+	assertValidDict(t, "text-align: inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PTextAlignAll:  inherit,
+		pr.PTextAlignLast: inherit,
 	})
 
 	capt.AssertNoLogs(t)
@@ -561,19 +561,19 @@ func TestExpandTextAlign(t *testing.T) {
 }
 
 // Helper checking the background pr.
-func assertBackground(t *testing.T, css string, expected map[string]pr.ValidatedProperty) {
+func assertBackground(t *testing.T, css string, expected map[pr.KnownProp]pr.ValidatedProperty) {
 	expanded := expandToDict(t, "background: "+css, "")
-	col, in := expected["background_color"]
+	col, in := expected[pr.PBackgroundColor]
 	if !in {
-		col = pr.AsCascaded(pr.InitialValues["background_color"]).AsValidated()
+		col = pr.AsCascaded(pr.InitialValues[pr.PBackgroundColor]).AsValidated()
 	}
-	if !reflect.DeepEqual(expanded["background_color"], col) {
-		t.Fatalf("expected %v got %v", col, expanded["background_color"])
+	if !reflect.DeepEqual(expanded[pr.PBackgroundColor], col) {
+		t.Fatalf("expected %v got %v", col, expanded[pr.PBackgroundColor])
 	}
-	delete(expanded, "background_color")
-	delete(expected, "background_color")
+	delete(expanded, pr.PBackgroundColor)
+	delete(expected, pr.PBackgroundColor)
 
-	bi := expanded["background_image"]
+	bi := expanded[pr.PBackgroundImage]
 	for name, value := range expected {
 		if !reflect.DeepEqual(expanded[name], value) {
 			t.Fatalf("for %s expected %v got %v", name, value, expanded[name])
@@ -588,7 +588,7 @@ func assertBackground(t *testing.T, css string, expected map[string]pr.Validated
 
 	nbLayers := len(bi.ToCascaded().ToCSS().(pr.Images))
 	for name, value := range expanded {
-		initv := pr.InitialValues[name].(repeatable)
+		initv := pr.InitialValues[pr.KnownProp(name)].(repeatable)
 		ref := pr.AsCascaded(initv.Repeat(nbLayers)).AsValidated()
 		if !reflect.DeepEqual(value, ref) {
 			t.Fatalf("expected %v got %v", ref, value)
@@ -601,110 +601,110 @@ func TestExpandBackground(t *testing.T) {
 	capt := testutils.CaptureLogs()
 	assertBackground(t, "none", toValidated(pr.Properties{}))
 	assertBackground(t, "red", toValidated(pr.Properties{
-		"background_color": pr.NewColor(1, 0, 0, 1),
+		pr.PBackgroundColor: pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "url(lipsum.png)", toValidated(pr.Properties{
-		"background_image": pr.Images{pr.UrlImage("https://weasyprint.org/foo/lipsum.png")},
+		pr.PBackgroundImage: pr.Images{pr.UrlImage("https://weasyprint.org/foo/lipsum.png")},
 	}))
 	assertBackground(t, "no-repeat", toValidated(pr.Properties{
-		"background_repeat": pr.Repeats{{"no-repeat", "no-repeat"}},
+		pr.PBackgroundRepeat: pr.Repeats{{"no-repeat", "no-repeat"}},
 	}))
 	assertBackground(t, "fixed", toValidated(pr.Properties{
-		"background_attachment": pr.Strings{"fixed"},
+		pr.PBackgroundAttachment: pr.Strings{"fixed"},
 	}))
 	assertBackground(t, "repeat no-repeat fixed", toValidated(pr.Properties{
-		"background_repeat":     pr.Repeats{{"repeat", "no-repeat"}},
-		"background_attachment": pr.Strings{"fixed"},
+		pr.PBackgroundRepeat:     pr.Repeats{{"repeat", "no-repeat"}},
+		pr.PBackgroundAttachment: pr.Strings{"fixed"},
 	}))
-	assertBackground(t, "inherit", map[string]pr.ValidatedProperty{
-		"background_repeat":     inherit,
-		"background_attachment": inherit,
-		"background_image":      inherit,
-		"background_position":   inherit,
-		"background_size":       inherit,
-		"background_clip":       inherit,
-		"background_origin":     inherit,
-		"background_color":      inherit,
+	assertBackground(t, "inherit", map[pr.KnownProp]pr.ValidatedProperty{
+		pr.PBackgroundRepeat:     inherit,
+		pr.PBackgroundAttachment: inherit,
+		pr.PBackgroundImage:      inherit,
+		pr.PBackgroundPosition:   inherit,
+		pr.PBackgroundSize:       inherit,
+		pr.PBackgroundClip:       inherit,
+		pr.PBackgroundOrigin:     inherit,
+		pr.PBackgroundColor:      inherit,
 	})
 	assertBackground(t, "top", toValidated(pr.Properties{
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right", toValidated(pr.Properties{
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right 20px", toValidated(pr.Properties{
-		"background_position": pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top 1% right 20px", toValidated(pr.Properties{
-		"background_position": pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top no-repeat", toValidated(pr.Properties{
-		"background_repeat":   pr.Repeats{{"no-repeat", "no-repeat"}},
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right no-repeat", toValidated(pr.Properties{
-		"background_repeat":   pr.Repeats{{"no-repeat", "no-repeat"}},
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top right 20px no-repeat", toValidated(pr.Properties{
-		"background_repeat":   pr.Repeats{{"no-repeat", "no-repeat"}},
-		"background_position": pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
+		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 0, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "top 1% right 20px no-repeat", toValidated(pr.Properties{
-		"background_repeat":   pr.Repeats{{"no-repeat", "no-repeat"}},
-		"background_position": pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
+		pr.PBackgroundRepeat:   pr.Repeats{{"no-repeat", "no-repeat"}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "right", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 20, Unit: pr.Px}, pr.Dimension{Value: 1, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "url(bar) #f00 repeat-y center left fixed", toValidated(pr.Properties{
-		"background_color":      pr.NewColor(1, 0, 0, 1),
-		"background_image":      pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar")},
-		"background_repeat":     pr.Repeats{{"no-repeat", "repeat"}},
-		"background_attachment": pr.Strings{"fixed"},
-		"background_position":   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundColor:      pr.NewColor(1, 0, 0, 1),
+		pr.PBackgroundImage:      pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar")},
+		pr.PBackgroundRepeat:     pr.Repeats{{"no-repeat", "repeat"}},
+		pr.PBackgroundAttachment: pr.Strings{"fixed"},
+		pr.PBackgroundPosition:   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "#00f 10% 200px", toValidated(pr.Properties{
-		"background_color":    pr.NewColor(0, 0, 1, 1),
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 10, Unit: pr.Perc}, pr.Dimension{Value: 200, Unit: pr.Px}}}},
+		pr.PBackgroundColor:    pr.NewColor(0, 0, 1, 1),
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 10, Unit: pr.Perc}, pr.Dimension{Value: 200, Unit: pr.Px}}}},
 	}))
 	assertBackground(t, "right 78px fixed", toValidated(pr.Properties{
-		"background_attachment": pr.Strings{"fixed"},
-		"background_position":   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 78, Unit: pr.Px}}}},
+		pr.PBackgroundAttachment: pr.Strings{"fixed"},
+		pr.PBackgroundPosition:   pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 100, Unit: pr.Perc}, pr.Dimension{Value: 78, Unit: pr.Px}}}},
 	}))
 	assertBackground(t, "center / cover red", toValidated(pr.Properties{
-		"background_size":     pr.Sizes{{String: "cover"}},
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
-		"background_color":    pr.NewColor(1, 0, 0, 1),
+		pr.PBackgroundSize:     pr.Sizes{{String: "cover"}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundColor:    pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "center / auto red", toValidated(pr.Properties{
-		"background_size":     pr.Sizes{{Width: pr.SToV("auto"), Height: pr.SToV("auto")}},
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
-		"background_color":    pr.NewColor(1, 0, 0, 1),
+		pr.PBackgroundSize:     pr.Sizes{{Width: pr.SToV("auto"), Height: pr.SToV("auto")}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundColor:    pr.NewColor(1, 0, 0, 1),
 	}))
 	assertBackground(t, "center / 42px", toValidated(pr.Properties{
-		"background_size":     pr.Sizes{{Width: pr.Dimension{Value: 42, Unit: pr.Px}.ToValue(), Height: pr.SToV("auto")}},
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 42, Unit: pr.Px}.ToValue(), Height: pr.SToV("auto")}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "center / 7% 4em", toValidated(pr.Properties{
-		"background_size":     pr.Sizes{{Width: pr.Dimension{Value: 7, Unit: pr.Perc}.ToValue(), Height: pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()}},
-		"background_position": pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
+		pr.PBackgroundSize:     pr.Sizes{{Width: pr.Dimension{Value: 7, Unit: pr.Perc}.ToValue(), Height: pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()}},
+		pr.PBackgroundPosition: pr.Centers{{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}}},
 	}))
 	assertBackground(t, "red content-box", toValidated(pr.Properties{
-		"background_color":  pr.NewColor(1, 0, 0, 1),
-		"background_origin": pr.Strings{"content-box"},
-		"background_clip":   pr.Strings{"content-box"},
+		pr.PBackgroundColor:  pr.NewColor(1, 0, 0, 1),
+		pr.PBackgroundOrigin: pr.Strings{"content-box"},
+		pr.PBackgroundClip:   pr.Strings{"content-box"},
 	}))
 	assertBackground(t, "red border-box content-box", toValidated(pr.Properties{
-		"background_color":  pr.NewColor(1, 0, 0, 1),
-		"background_origin": pr.Strings{"border-box"},
-		"background_clip":   pr.Strings{"content-box"},
+		pr.PBackgroundColor:  pr.NewColor(1, 0, 0, 1),
+		pr.PBackgroundOrigin: pr.Strings{"border-box"},
+		pr.PBackgroundClip:   pr.Strings{"content-box"},
 	}))
 	assertBackground(t, "url(bar) center, no-repeat", toValidated(pr.Properties{
-		"background_color": pr.NewColor(0, 0, 0, 0),
-		"background_image": pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar"), pr.NoneImage{}},
-		"background_position": pr.Centers{
+		pr.PBackgroundColor: pr.NewColor(0, 0, 0, 0),
+		pr.PBackgroundImage: pr.Images{pr.UrlImage("https://weasyprint.org/foo/bar"), pr.NoneImage{}},
+		pr.PBackgroundPosition: pr.Centers{
 			{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 50, Unit: pr.Perc}, pr.Dimension{Value: 50, Unit: pr.Perc}}},
 			{OriginX: "left", OriginY: "top", Pos: pr.Point{pr.Dimension{Value: 0, Unit: pr.Perc}, pr.Dimension{Value: 0, Unit: pr.Perc}}},
 		},
-		"background_repeat": pr.Repeats{{"repeat", "repeat"}, {"no-repeat", "no-repeat"}},
+		pr.PBackgroundRepeat: pr.Repeats{{"repeat", "repeat"}, {"no-repeat", "no-repeat"}},
 	}))
 	capt.AssertNoLogs(t)
 	assertInvalid(t, "background: 10px lipsum", "invalid")

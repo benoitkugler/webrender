@@ -173,7 +173,7 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 			continue
 		}
 		if cascaded := rules.Property.ToCascaded(); cascaded.Default == 0 {
-			features[strings.ReplaceAll(rules.Name, "-", "_")] = cascaded.ToCSS()
+			features[rules.Name.KnownProp] = cascaded.ToCSS()
 		}
 	}
 	if !ruleDescriptors.FontFeatureSettings.IsNone() {

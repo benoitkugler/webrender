@@ -1300,8 +1300,9 @@ func wrapTable(box TableBoxITF, children boxIterator) Box {
 	// of the wrapper and the table. The other get the initial value.
 	wbStyle, tbStyle := wrapperBox.Style, table.Box().Style
 	for name := range pr.TableWrapperBoxProperties {
-		wbStyle.Set(name, tbStyle.Get(name))
-		tbStyle.Set(name, pr.InitialValues[name])
+		key := name.Key()
+		wbStyle.Set(key, tbStyle.Get(key))
+		tbStyle.Set(key, pr.InitialValues[name])
 	}
 
 	return wrapper

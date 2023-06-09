@@ -75,7 +75,7 @@ func TestLineContent(t *testing.T) {
 		{"is a text for test", 45},
 	} {
 		text := "This is a text for test"
-		sp := makeText(text, v.width, pr.Properties{"font_family": sansFonts, "font_size": pr.FToV(19)})
+		sp := makeText(text, v.width, pr.Properties{pr.PFontFamily: sansFonts, pr.PFontSize: pr.FToV(19)})
 		textRunes := []rune(text)
 		assert(t, string(textRunes[sp.ResumeAt:]) == v.remaining, "unexpected remaining")
 		assert(t, sp.Length+1 == sp.ResumeAt, fmt.Sprintf("%v: expected %d, got %d", v.width, sp.ResumeAt, sp.Length+1)) // +1 for the removed trailing space
@@ -97,13 +97,13 @@ func TestLineBreaking(t *testing.T) {
 
 	str := "Thïs is a text for test"
 	// These two tests do not really rely on installed fonts
-	sp := makeText(str, pr.Float(90), pr.Properties{"font_size": pr.FToV(1)})
+	sp := makeText(str, pr.Float(90), pr.Properties{pr.PFontSize: pr.FToV(1)})
 	assert(t, sp.ResumeAt == -1, "")
 
-	sp = makeText(str, pr.Float(90), pr.Properties{"font_size": pr.FToV(100)})
+	sp = makeText(str, pr.Float(90), pr.Properties{pr.PFontSize: pr.FToV(100)})
 	assert(t, string([]rune(str)[sp.ResumeAt:]) == "is a text for test", "")
 
-	sp = makeText(str, pr.Float(100), pr.Properties{"font_family": sansFonts, "font_size": pr.FToV(19)})
+	sp = makeText(str, pr.Float(100), pr.Properties{pr.PFontFamily: sansFonts, pr.PFontSize: pr.FToV(19)})
 	assert(t, string([]rune(str)[sp.ResumeAt:]) == "text for test", "")
 }
 
@@ -113,10 +113,10 @@ func TestLineBreakingRTL(t *testing.T) {
 
 	str := "لوريم ايبسوم دولا"
 	// These two tests do not really rely on installed fonts
-	sp := makeText(str, pr.Float(90), pr.Properties{"font_size": pr.FToV(1)})
+	sp := makeText(str, pr.Float(90), pr.Properties{pr.PFontSize: pr.FToV(1)})
 	assert(t, sp.ResumeAt == -1, "")
 
-	sp = makeText(str, pr.Float(90), pr.Properties{"font_size": pr.FToV(100)})
+	sp = makeText(str, pr.Float(90), pr.Properties{pr.PFontSize: pr.FToV(100)})
 	assert(t, string([]rune(str)[sp.ResumeAt:]) == "ايبسوم دولا", "")
 }
 
@@ -125,15 +125,15 @@ func TestTextDimension(t *testing.T) {
 	defer cl.AssertNoLogs(t)
 
 	str := "This is a text for test. This is a test for text.py"
-	sp1 := makeText(str, pr.Float(200), pr.Properties{"font_size": pr.FToV(12)})
-	sp2 := makeText(str, pr.Float(200), pr.Properties{"font_size": pr.FToV(20)})
+	sp1 := makeText(str, pr.Float(200), pr.Properties{pr.PFontSize: pr.FToV(12)})
+	sp2 := makeText(str, pr.Float(200), pr.Properties{pr.PFontSize: pr.FToV(20)})
 	assert(t, sp1.Width*sp1.Height < sp2.Width*sp2.Height, "")
 }
 
 func BenchmarkSplitFirstLine(b *testing.B) {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(monoFonts)
-	newStyle.UpdateWith(pr.Properties{"font_family": sansFonts, "font_size": pr.FToV(19)})
+	newStyle.UpdateWith(pr.Properties{pr.PFontFamily: sansFonts, pr.PFontSize: pr.FToV(19)})
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
 	text := "This is a text for test. This is a test for text.py"

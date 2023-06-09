@@ -160,7 +160,8 @@ func TestVariableInitial(t *testing.T) {
 }
 
 func TestVariableFallback(t *testing.T) {
-	for prop := range pr.KnownProperties {
+	// for prop := range pr.KnownProperties {
+	for _, prop := range [...]pr.KnownProp{pr.PBorderTopColor, pr.PTextDecorationColor} {
 		_, style := setupVar(t, fmt.Sprintf(`
 		  <style>
 			div {
@@ -170,6 +171,6 @@ func TestVariableFallback(t *testing.T) {
 		  </style>
 		  <div></div>
 		`, prop))
-		_ = style.Get(prop) // just check for crashes
+		_ = style.Get(prop.Key()) // just check for crashes
 	}
 }

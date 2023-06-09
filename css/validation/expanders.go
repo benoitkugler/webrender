@@ -126,7 +126,7 @@ func genericExpander(expandedNames ...string) func(beforeGeneric) expander {
 						if err != nil {
 							return nil, fmt.Errorf("validating %s: %s", actualNewName, err)
 						}
-						actualNewName = np.Name
+						actualNewName = np.Name.String()
 						value = np.Property
 					}
 				}
@@ -134,7 +134,8 @@ func genericExpander(expandedNames ...string) func(beforeGeneric) expander {
 					value = pr.Initial.AsCascaded().AsValidated()
 				}
 
-				out = append(out, pr.NamedProperty{Name: actualNewName, Property: value})
+				// actualNewName is now a valid prop name
+				out = append(out, pr.NamedProperty{Name: pr.PropsFromNames[actualNewName].Key(), Property: value})
 			}
 			return out, nil
 		}
@@ -349,16 +350,11 @@ func reverseLayers(a [][]parser.Token) {
 // Expand the “background“ shorthand property.
 // See http://drafts.csswg.org/csswg/css-backgrounds-3/#the-background
 func expandBackground(baseUrl, _ string, tokens []parser.Token) (out pr.NamedProperties, err error) {
-	properties := [8]string{
-		"background_color", "background_image", "background_repeat",
-		"background_attachment", "background_position", "background_size",
-		"background_clip", "background_origin",
-	}
 	keyword := getSingleKeyword(tokens)
 	if keyword == "initial" || keyword == "inherit" {
 		val := defaultFromString(keyword)
-		for _, name := range properties {
-			out = append(out, pr.NamedProperty{Name: name, Property: val.AsCascaded().AsValidated()})
+		for name := pr.PBackgroundColor; name <= pr.PBackgroundOrigin; name++ {
+			out = append(out, pr.NamedProperty{Name: name.Key(), Property: val.AsCascaded().AsValidated()})
 		}
 		return
 	}
@@ -574,14 +570,14 @@ func expandBackground(baseUrl, _ string, tokens []parser.Token) (out pr.NamedPro
 	}
 
 	out = pr.NamedProperties{
-		{Name: "background_image", Property: pr.AsCascaded(resultsImages).AsValidated()},
-		{Name: "background_repeat", Property: pr.AsCascaded(resultsRepeats).AsValidated()},
-		{Name: "background_attachment", Property: pr.AsCascaded(resultsAttachments).AsValidated()},
-		{Name: "background_position", Property: pr.AsCascaded(resultsPositions).AsValidated()},
-		{Name: "background_size", Property: pr.AsCascaded(resultsSizes).AsValidated()},
-		{Name: "background_clip", Property: pr.AsCascaded(resultsClips).AsValidated()},
-		{Name: "background_origin", Property: pr.AsCascaded(resultsOrigins).AsValidated()},
-		{Name: "background-color", Property: pr.AsCascaded(resultColor).AsValidated()},
+		{Name: pr.PBackgroundImage.Key(), Property: pr.AsCascaded(resultsImages).AsValidated()},
+		{Name: pr.PBackgroundRepeat.Key(), Property: pr.AsCascaded(resultsRepeats).AsValidated()},
+		{Name: pr.PBackgroundAttachment.Key(), Property: pr.AsCascaded(resultsAttachments).AsValidated()},
+		{Name: pr.PBackgroundPosition.Key(), Property: pr.AsCascaded(resultsPositions).AsValidated()},
+		{Name: pr.PBackgroundSize.Key(), Property: pr.AsCascaded(resultsSizes).AsValidated()},
+		{Name: pr.PBackgroundClip.Key(), Property: pr.AsCascaded(resultsClips).AsValidated()},
+		{Name: pr.PBackgroundOrigin.Key(), Property: pr.AsCascaded(resultsOrigins).AsValidated()},
+		{Name: pr.PBackgroundColor.Key(), Property: pr.AsCascaded(resultColor).AsValidated()},
 	}
 	return out, nil
 }

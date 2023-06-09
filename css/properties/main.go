@@ -103,20 +103,19 @@ func AsValidated(spe specialProperty) ValidatedProperty {
 	return ValidatedProperty{SpecialProperty: spe}
 }
 
+// KnownProp efficiently encode a known CSS property
+type KnownProp uint8
+
+func (p KnownProp) String() string { return propsNames[p] }
+
+func (p KnownProp) Key() PropKey { return PropKey{KnownProp: p} }
+
 // Properties is the general container for validated, cascaded and computed properties.
 // In addition to the generic acces, an attempt to provide a "type safe" way is provided through the
 // GetXXX and SetXXX methods. It relies on the convention than all the keys should be present,
 // and values never be nil.
 // "None" values are then encoded by the zero value of the concrete type.
-type Properties map[string]CssProperty
-
-func (p Properties) Keys() []string {
-	keys := make([]string, 0, len(p))
-	for k := range p {
-		keys = append(keys, k)
-	}
-	return keys
-}
+type Properties map[KnownProp]CssProperty
 
 // Copy return a shallow copy.
 func (p Properties) Copy() Properties {
@@ -170,6 +169,19 @@ func (tr TextRatioCache) Set(fontKey string, isCh bool, f Float) {
 	}
 }
 
+// PropKey stores a CSS property name, supporting variables.
+type PropKey struct {
+	KnownProp
+	Var string // with leading --
+}
+
+func (pr PropKey) String() string {
+	if pr.KnownProp != 0 {
+		return pr.KnownProp.String()
+	}
+	return pr.Var
+}
+
 // ElementStyle defines a common interface to access style properties.
 // Implementations will typically compute the property on the fly and cache the result.
 type ElementStyle interface {
@@ -177,11 +189,11 @@ type ElementStyle interface {
 
 	// Set is the generic method to set an arbitrary property.
 	// Type accessors should be used when possible.
-	Set(key string, value CssProperty)
+	Set(key PropKey, value CssProperty)
 
 	// Get is the generic method to access an arbitrary property.
 	// Type accessors should be used when possible.
-	Get(key string) CssProperty
+	Get(key PropKey) CssProperty
 
 	// Copy returns a deep copy of the style.
 	Copy() ElementStyle

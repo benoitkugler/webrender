@@ -153,31 +153,33 @@ func (sf *StyleFor) setComputedStyles(element, parent Element,
 ) {
 	var (
 		parentStyle pr.ElementStyle
-		rootStyle   pr.Properties
+		rootStyle_  rootStyle
 	)
 	if element == root && pseudoType == "" {
 		if node, ok := parent.(*utils.HTMLNode); parent != nil && (ok && node != nil) {
 			panic("parent should be nil here")
 		}
-		rootStyle = pr.Properties{
+		rootStyle_ = rootStyle{
 			// When specified on the font-size property of the Root Element, the
 			// rem units refer to the property’s initial value.
-			"font_size": pr.InitialValues.GetFontSize(),
+			fontSize: pr.InitialValues.GetFontSize(),
 		}
 	} else {
 		if parent == nil {
 			panic("parent shouldn't be nil here")
 		}
 		parentStyle = sf.computedStyles[parent.ToKey("")]
-		rootStyle = sf.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}].(*ComputedStyle).dict
+		rootStyle_ = rootStyle{
+			fontSize: sf.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}].GetFontSize(),
+		}
 	}
 	key := element.ToKey(pseudoType)
 	cascaded, in := sf.cascadedStyles[key]
 	if !in {
 		cascaded = cascadedStyle{}
 	}
-	sf.computedStyles[key] = ComputedFromCascaded(element, cascaded, parentStyle,
-		rootStyle, pseudoType, baseUrl, targetCollector, sf.textContext)
+	sf.computedStyles[key] = computedFromCascaded(element, cascaded, parentStyle,
+		rootStyle_, pseudoType, baseUrl, targetCollector, sf.textContext)
 
 	// The style of marker is deleted when display is different from
 	// list-item.
@@ -186,7 +188,7 @@ func (sf *StyleFor) setComputedStyles(element, parent Element,
 		for _, pseudo := range [...]string{"", "before", "after"} {
 			key := element.ToKey(pseudo)
 			pseudoStyle := sf.cascadedStyles[key]
-			if display, has := pseudoStyle["display"]; has {
+			if display, has := pseudoStyle[pr.PDisplay.Key()]; has {
 				if v := display.value; v.SpecialProperty == nil {
 					if c := v.ToCascaded(); c.Default == 0 {
 						if c.ToCSS().(pr.Display).Has("list-item") {
@@ -268,9 +270,60 @@ var (
 	_ pr.ElementStyle = (*AnonymousStyle)(nil)
 )
 
+type propsCache struct {
+	known pr.Properties
+	vars  map[string]pr.CssProperty
+}
+
+func newPropsCache() propsCache {
+	return propsCache{
+		known: make(pr.Properties),
+		vars:  make(map[string]pr.CssProperty),
+	}
+}
+
+func (c propsCache) get(key pr.PropKey) (out pr.CssProperty, ok bool) {
+	if key.KnownProp != 0 {
+		out, ok = c.known[key.KnownProp]
+	} else {
+		out, ok = c.vars[key.Var]
+	}
+	return
+}
+
+func (c propsCache) Set(key pr.PropKey, value pr.CssProperty) {
+	if key.KnownProp != 0 {
+		c.known[key.KnownProp] = value
+	} else {
+		c.vars[key.Var] = value
+	}
+}
+
+func (c propsCache) delete(key pr.PropKey) {
+	if key.KnownProp != 0 {
+		delete(c.known, key.KnownProp)
+	} else {
+		delete(c.vars, key.Var)
+	}
+}
+
+func (c propsCache) updateWith(other propsCache) {
+	for k, v := range other.known {
+		c.known[k] = v
+	}
+	for k, v := range other.vars {
+		c.vars[k] = v
+	}
+}
+
+// subset of properties of the root element
+type rootStyle struct {
+	fontSize pr.Value
+}
+
 // ComputedStyle provides on demand access of computed properties
 type ComputedStyle struct {
-	dict pr.Properties
+	propsCache
 
 	textContext text.TextLayoutContext
 	parentStyle pr.ElementStyle
@@ -279,7 +332,7 @@ type ComputedStyle struct {
 	cache pr.TextRatioCache
 
 	variables  map[string]pr.ValidatedProperty
-	rootStyle  pr.Properties
+	rootStyle  rootStyle
 	cascaded   cascadedStyle
 	pseudoType string
 	baseUrl    string
@@ -287,10 +340,11 @@ type ComputedStyle struct {
 }
 
 func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
-	element Element, pseudoType string, rootStyle pr.Properties, baseUrl string, textContext text.TextLayoutContext,
+	element Element, pseudoType string, rootStyle rootStyle, baseUrl string, textContext text.TextLayoutContext,
 ) *ComputedStyle {
 	out := &ComputedStyle{
-		dict:        make(pr.Properties),
+		propsCache: newPropsCache(),
+
 		variables:   make(map[string]pr.ValidatedProperty),
 		textContext: textContext,
 		parentStyle: parentStyle,
@@ -308,8 +362,8 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 		}
 	}
 	for k, v := range cascaded {
-		if strings.HasPrefix(k, "__") {
-			out.variables[k] = v.value
+		if k.Var != "" {
+			out.variables[k.Var] = v.value
 		}
 	}
 	// inherit the cache
@@ -320,9 +374,9 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 	}
 
 	// Set specified value needed for computed value
-	_, position := out.cascadeValue("position")
-	_, display := out.cascadeValue("display")
-	_, float := out.cascadeValue("float")
+	_, position := out.cascadeValue(pr.PPosition.Key())
+	_, display := out.cascadeValue(pr.PDisplay.Key())
+	_, float := out.cascadeValue(pr.PFloat.Key())
 
 	if position.SpecialProperty == nil && position.ToCascaded().Default == 0 {
 		out.specified.Position = position.ToCascaded().ToCSS().(pr.BoolString)
@@ -339,11 +393,9 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 
 func (c *ComputedStyle) isRootElement() bool { return c.parentStyle == nil }
 
-func (c *ComputedStyle) Set(key string, value pr.CssProperty) { c.dict[key] = value }
-
 func (c *ComputedStyle) Copy() pr.ElementStyle {
 	out := newComputedStyle(c.parentStyle, c.cascaded, c.element, c.pseudoType, c.rootStyle, c.baseUrl, c.textContext)
-	out.dict.UpdateWith(c.dict)
+	out.propsCache.updateWith(c.propsCache)
 	return out
 }
 
@@ -352,18 +404,21 @@ func (c *ComputedStyle) Variables() map[string]pr.ValidatedProperty { return c.v
 func (c *ComputedStyle) Cache() pr.TextRatioCache                   { return c.cache }
 func (c *ComputedStyle) Specified() pr.SpecifiedAttributes          { return c.specified }
 
-func (c *ComputedStyle) cascadeValue(key string) (pr.DefaultKind, pr.ValidatedProperty) {
+func (c *ComputedStyle) cascadeValue(key pr.PropKey) (pr.DefaultKind, pr.ValidatedProperty) {
 	var (
 		value   pr.ValidatedProperty
 		keyword pr.DefaultKind
 	)
+
+	fmt.Printf("cacscing %#v %v\n", key, c.cascaded)
+
 	if casc, in := c.cascaded[key]; in {
 		value = casc.value
 		if value.SpecialProperty == nil {
 			keyword = value.ToCascaded().Default
 		}
 	} else {
-		if pr.Inherited.Has(key) {
+		if pr.Inherited.Has(key.KnownProp) {
 			keyword = pr.Inherit
 		} else {
 			keyword = pr.Initial
@@ -375,8 +430,10 @@ func (c *ComputedStyle) cascadeValue(key string) (pr.DefaultKind, pr.ValidatedPr
 		keyword = pr.Initial
 	}
 
+	fmt.Println("CASCAFING", keyword)
+
 	if keyword == pr.Initial {
-		value_ := pr.InitialValues[key]
+		value_ := pr.InitialValues[key.KnownProp]
 		value = pr.AsCascaded(value_).AsValidated()
 	} else if keyword == pr.Inherit {
 		value_ := c.parentStyle.Get(key)
@@ -387,28 +444,30 @@ func (c *ComputedStyle) cascadeValue(key string) (pr.DefaultKind, pr.ValidatedPr
 }
 
 // provide on demand computation
-func (c *ComputedStyle) Get(key string) pr.CssProperty {
+func (c *ComputedStyle) Get(key pr.PropKey) pr.CssProperty {
 	// check the cache
-	if v, has := c.dict[key]; has {
+	if v, has := c.propsCache.get(key); has {
 		return v
 	}
 
+	fmt.Println("Get", key)
+
 	keyword, value := c.cascadeValue(key)
 
-	if keyword == pr.Initial && !pr.InitialNotComputed.Has(key) {
+	if keyword == pr.Initial && !pr.InitialNotComputed.Has(key.KnownProp) {
 		// The value is the same as when computed
-		c.dict[key] = value.ToCascaded().ToCSS()
+		c.Set(key, value.ToCascaded().ToCSS())
 	} else if keyword == pr.Inherit {
 		// Values in parentStyle are already computed.
-		c.dict[key] = value.ToCascaded().ToCSS()
+		c.Set(key, value.ToCascaded().ToCSS())
 	}
 
-	if strings.HasPrefix(key, "text_decoration_") && c.parentStyle != nil {
+	if key.KnownProp.IsTextDecoration() && c.parentStyle != nil {
 		_, isCascaded := c.cascaded[key]
-		value_ := textDecoration(key, value.ToCascaded().ToCSS(), c.parentStyle.Get(key), isCascaded)
+		value_ := textDecoration(key.KnownProp, value.ToCascaded().ToCSS(), c.parentStyle.Get(key), isCascaded)
 		value = pr.AsCascaded(value_).AsValidated()
-		delete(c.dict, key)
-	} else if key == "page" && value.SpecialProperty == nil && value.ToCascaded().Default == 0 && value.ToCascaded().ToCSS().(pr.Page).String == "auto" {
+		c.delete(key)
+	} else if key.KnownProp == pr.PPage && value.SpecialProperty == nil && value.ToCascaded().Default == 0 && value.ToCascaded().ToCSS().(pr.Page).String == "auto" {
 		// The page property does not inherit. However, if the page value on
 		// an Element is auto, then its used value is the value specified on
 		// its nearest ancestor with a non-auto value. When specified on the
@@ -418,11 +477,11 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 			value_ = c.parentStyle.GetPage()
 		}
 		value = pr.AsCascaded(value_).AsValidated()
-		delete(c.dict, key)
+		c.delete(key)
 	}
 
 	// check the cache again
-	if v, has := c.dict[key]; has {
+	if v, has := c.propsCache.get(key); has {
 		return v
 	}
 
@@ -432,7 +491,7 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 	)
 
 	// special case for content property. See validation.multiValProperties
-	if key == "content" && value.SpecialProperty == nil && value.ToCascaded().Default == 0 {
+	if key.KnownProp == pr.PContent && value.SpecialProperty == nil && value.ToCascaded().Default == 0 {
 		contentValue := value.ToCascaded().ToCSS().(pr.SContent)
 		resolvedContents := make(pr.ContentProperties, 0, len(contentValue.Contents))
 		for _, v := range contentValue.Contents {
@@ -466,18 +525,18 @@ func (c *ComputedStyle) Get(key string) pr.CssProperty {
 
 	outValue := newValue.ToCSS()
 
-	fn := computerFunctions[key]
+	fn := computerFunctions[key.KnownProp]
 	if fn != nil && !alreadyComputedValue {
-		outValue = fn(c, key, outValue)
+		outValue = fn(c, key.KnownProp, outValue)
 	}
-	c.dict[key] = outValue
+	c.Set(key, outValue)
 	return outValue
 }
 
 // AnonymousStyle provides on demand access of computed properties,
 // optimized for anonymous boxes
 type AnonymousStyle struct {
-	dict pr.Properties
+	propsCache
 
 	parentStyle pr.ElementStyle
 	cache       pr.TextRatioCache
@@ -488,9 +547,9 @@ type AnonymousStyle struct {
 
 func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	out := &AnonymousStyle{
+		propsCache:  newPropsCache(),
 		parentStyle: parentStyle,
 		variables:   make(map[string]pr.ValidatedProperty),
-		dict:        make(pr.Properties),
 	}
 	// inherit the variables
 	if parentStyle != nil {
@@ -508,11 +567,11 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	// border-*-style is none, so border-width computes to zero.
 	// Other than that, properties that would need computing are
 	// border-*-color, but they do not apply.
-	out.dict.SetBorderTopWidth(pr.Value{})
-	out.dict.SetBorderBottomWidth(pr.Value{})
-	out.dict.SetBorderLeftWidth(pr.Value{})
-	out.dict.SetBorderRightWidth(pr.Value{})
-	out.dict.SetOutlineWidth(pr.Value{})
+	out.propsCache.known.SetBorderTopWidth(pr.Value{})
+	out.propsCache.known.SetBorderBottomWidth(pr.Value{})
+	out.propsCache.known.SetBorderLeftWidth(pr.Value{})
+	out.propsCache.known.SetBorderRightWidth(pr.Value{})
+	out.propsCache.known.SetOutlineWidth(pr.Value{})
 
 	out.specified.Display = out.GetDisplay()
 	out.specified.Float = out.GetFloat()
@@ -520,11 +579,9 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	return out
 }
 
-func (c *AnonymousStyle) Set(key string, value pr.CssProperty) { c.dict[key] = value }
-
 func (c *AnonymousStyle) Copy() pr.ElementStyle {
 	out := newAnonymousStyle(c.parentStyle)
-	out.dict.UpdateWith(c.dict)
+	out.propsCache.updateWith(c.propsCache)
 	return out
 }
 
@@ -533,24 +590,25 @@ func (c *AnonymousStyle) Variables() map[string]pr.ValidatedProperty { return c.
 func (c *AnonymousStyle) Cache() pr.TextRatioCache                   { return c.cache }
 func (c *AnonymousStyle) Specified() pr.SpecifiedAttributes          { return c.specified }
 
-func (a *AnonymousStyle) Get(key string) pr.CssProperty {
-	if v, has := a.dict[key]; has {
+func (a *AnonymousStyle) Get(key pr.PropKey) pr.CssProperty {
+	// check the cache
+	if v, has := a.propsCache.get(key); has {
 		return v
 	}
 
 	var value pr.CssProperty
-	if pr.Inherited.Has(key) || strings.HasPrefix(key, "__") {
+	if pr.Inherited.Has(key.KnownProp) || key.Var != "" {
 		value = a.parentStyle.Get(key)
-	} else if key == "page" {
+	} else if key.KnownProp == pr.PPage {
 		// page is not inherited but taken from the ancestor if 'auto'
 		value = a.parentStyle.Get(key)
-	} else if strings.HasPrefix(key, "text_decoration_") {
-		value = textDecoration(key, pr.InitialValues[key], a.parentStyle.Get(key), false)
+	} else if key.KnownProp.IsTextDecoration() {
+		value = textDecoration(key.KnownProp, pr.InitialValues[key.KnownProp], a.parentStyle.Get(key), false)
 	} else {
-		value = pr.InitialValues[key]
+		value = pr.InitialValues[key.KnownProp]
 	}
 
-	a.dict[key] = value // caches the value
+	a.propsCache.Set(key, value) // caches the value
 	return value
 }
 
@@ -558,8 +616,8 @@ func (a *AnonymousStyle) Get(key string) pr.CssProperty {
 // `currentColor` with p["color"]
 // It panics if the key has not concrete type `Color`
 // replace Python getColor function
-func ResolveColor(style pr.ElementStyle, key string) pr.Color {
-	value := style.Get(key).(pr.Color)
+func ResolveColor(style pr.ElementStyle, key pr.KnownProp) pr.Color {
+	value := style.Get(key.Key()).(pr.Color)
 	if value.Type == parser.ColorCurrentColor {
 		return style.GetColor()
 	}
@@ -592,17 +650,17 @@ func pageTypeMatch(selectorPageType pageSelector, pageType utils.PageElement) bo
 	return true
 }
 
-func textDecoration(key string, value, parentValue pr.CssProperty, cascaded bool) pr.CssProperty {
+func textDecoration(key pr.KnownProp, value, parentValue pr.CssProperty, cascaded bool) pr.CssProperty {
 	// The text-decoration-* properties are not inherited but propagated
 	// using specific rules.
 	// See https://drafts.csswg.org/css-text-decor-3/#line-decoration
 	// TODO: these rules don’t follow the specification.
 	switch key {
-	case "text_decoration_color", "text_decoration_style":
+	case pr.PTextDecorationColor, pr.PTextDecorationStyle:
 		if !cascaded {
 			value = parentValue
 		}
-	case "text_decoration_line":
+	case pr.PTextDecorationLine:
 		pv := parentValue.(pr.Decorations)
 		v := value.(pr.Decorations)
 		value = v.Union(pv)
@@ -1013,14 +1071,19 @@ func declarationPrecedence(origin string, importance bool) uint8 {
 }
 
 // Get a dict of computed style mixed from parent and cascaded styles.
-func ComputedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, rootStyle pr.Properties, pseudoType, baseUrl string,
+func ComputedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, textContext text.TextLayoutContext,
+) pr.ElementStyle {
+	return computedFromCascaded(element, cascaded, parentStyle, rootStyle{}, "", "", nil, textContext)
+}
+
+func computedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, rootStyle_ rootStyle, pseudoType, baseUrl string,
 	targetCollector *TargetCollector, textContext text.TextLayoutContext,
 ) pr.ElementStyle {
 	if cascaded == nil && parentStyle != nil {
 		return newAnonymousStyle(parentStyle)
 	}
 
-	style := newComputedStyle(parentStyle, cascaded, element, pseudoType, rootStyle, baseUrl, textContext)
+	style := newComputedStyle(parentStyle, cascaded, element, pseudoType, rootStyle_, baseUrl, textContext)
 	if anchor := string(style.GetAnchor()); targetCollector != nil && anchor != "" {
 		targetCollector.collectAnchor(anchor)
 	}
@@ -1051,7 +1114,7 @@ type weigthedValue struct {
 	weight weight
 }
 
-type cascadedStyle = map[string]weigthedValue
+type cascadedStyle = map[pr.PropKey]weigthedValue
 
 // Parse a page selector rule.
 //
