@@ -299,8 +299,11 @@ func (c *propsCache) Set(key pr.PropKey, value pr.CssProperty) {
 		L := len(c.known)
 		if k < L {
 			c.known[k] = value
-		} else { // grow
-			c.known = append(c.known, make([]pr.CssProperty, k+1-L)...)
+		} else { // grow to at least k+1
+			if cap(c.known) < k+1 {
+				c.known = append(c.known, make([]pr.CssProperty, k+1-L)...)
+			}
+			c.known = c.known[:k+1]
 			c.known[k] = value
 		}
 	} else {
