@@ -48,7 +48,7 @@ type TextBox struct {
 }
 
 func TextBoxAnonymousFrom(parent Box, text string) *TextBox {
-	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil, "", "", nil, nil)
+	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
 	out := NewTextBox(style, parent.Box().Element, parent.Box().PseudoType, text)
 	return &out
 }
@@ -72,7 +72,7 @@ type InlineReplacedBox struct {
 }
 
 func InlineReplacedBoxAnonymousFrom(parent Box, replacement images.Image) *InlineReplacedBox {
-	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil, "", "", nil, nil)
+	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
 	out := NewInlineReplacedBox(style, parent.Box().Element, parent.Box().PseudoType, replacement)
 	return &out
 }
@@ -160,7 +160,7 @@ func NewBlockBox(style pr.ElementStyle, element *html.Node, pseudoType string, c
 
 func LineBoxAnonymousFrom(parent Box, children []Box) Box {
 	parentBox := parent.Box()
-	style := tree.ComputedFromCascaded(nil, nil, parentBox.Style, nil, "", "", nil, nil)
+	style := tree.ComputedFromCascaded(nil, nil, parentBox.Style, nil)
 	out := NewLineBox(style, parentBox.Element, parentBox.PseudoType, children)
 	if parentBox.Style.GetOverflow() != "visible" {
 		out.TextOverflow = string(parentBox.Style.GetTextOverflow())

@@ -93,7 +93,7 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 				anyImages = true
 			}
 		}
-		color = tree.ResolveColor(style, "background_color").RGBA
+		color = tree.ResolveColor(style, pr.PBackgroundColor).RGBA
 	}
 
 	if color.A == 0 && !anyImages {

@@ -1352,10 +1352,17 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		horizontalBorders[y] = l2
 	}
 
-	setOneBorder := func(borderGrid [][]Border, boxStyle pr.ElementStyle, side string, gridX, gridY int) {
-		style := boxStyle.Get(fmt.Sprintf("border_%s_style", side)).(pr.String)
-		width := boxStyle.Get(fmt.Sprintf("border_%s_width", side)).(pr.Value)
-		color := tree.ResolveColor(boxStyle, fmt.Sprintf("border_%s_color", side))
+	// side follows the [bottom, left, right, top] convention
+	const (
+		bottom pr.KnownProp = iota
+		left
+		right
+		top
+	)
+	setOneBorder := func(borderGrid [][]Border, boxStyle pr.ElementStyle, side pr.KnownProp, gridX, gridY int) {
+		style := boxStyle.Get((pr.PBorderBottomStyle + side*5).Key()).(pr.String)
+		width := boxStyle.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.Value)
+		color := tree.ResolveColor(boxStyle, pr.PBorderBottomColor+side*5)
 
 		// https://www.w3.org/TR/CSS21/tables.html#border-conflict-resolution
 		score := Score{0, float64(width.Value), styleScores[style]}
@@ -1378,12 +1385,12 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 	setBorders := func(box Box, x, y, w, h int) {
 		style := box.Box().Style
 		for yy := y; yy < y+h; yy++ {
-			setOneBorder(verticalBorders, style, "left", x, yy)
-			setOneBorder(verticalBorders, style, "right", x+w, yy)
+			setOneBorder(verticalBorders, style, left, x, yy)
+			setOneBorder(verticalBorders, style, right, x+w, yy)
 		}
 		for xx := x; xx < x+w; xx++ {
-			setOneBorder(horizontalBorders, style, "top", xx, y)
-			setOneBorder(horizontalBorders, style, "bottom", xx, y+h)
+			setOneBorder(horizontalBorders, style, top, xx, y)
+			setOneBorder(horizontalBorders, style, bottom, xx, y+h)
 		}
 	}
 
@@ -1446,18 +1453,18 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 	// Now that all conflicts are resolved, set transparent borders of
 	// the correct widths on each box. The actual border grid will be
 	// painted separately.
-	setTransparentBorder := func(box Box, side string, twiceWidth utils.Fl) {
+	setTransparentBorder := func(box Box, side pr.KnownProp, twiceWidth utils.Fl) {
 		st := box.Box().Style
-		st.Set(fmt.Sprintf("border_%s_style", side), pr.String("solid"))
-		st.Set(fmt.Sprintf("border_%s_width", side), pr.FToV(twiceWidth/2))
-		st.Set(fmt.Sprintf("border_%s_color", side), transparent)
+		st.Set((pr.PBorderBottomStyle + side*5).Key(), pr.String("solid"))
+		st.Set((pr.PBorderBottomWidth + side*5).Key(), pr.FToV(twiceWidth/2))
+		st.Set((pr.PBorderBottomColor + side*5).Key(), transparent)
 	}
 
 	removeBorders := func(box Box) {
-		setTransparentBorder(box, "top", 0)
-		setTransparentBorder(box, "right", 0)
-		setTransparentBorder(box, "bottom", 0)
-		setTransparentBorder(box, "left", 0)
+		setTransparentBorder(box, top, 0)
+		setTransparentBorder(box, right, 0)
+		setTransparentBorder(box, bottom, 0)
+		setTransparentBorder(box, left, 0)
 	}
 
 	maxVerticalWidth := func(x, y, h int) utils.Fl {
@@ -1489,10 +1496,10 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 			removeBorders(row)
 			for _, _cell := range row.Box().Children {
 				cell := _cell.Box()
-				setTransparentBorder(_cell, "top", maxHorizontalWidth(cell.GridX, gridY, cell.Colspan))
-				setTransparentBorder(_cell, "bottom", maxHorizontalWidth(cell.GridX, gridY+cell.Rowspan, cell.Colspan))
-				setTransparentBorder(_cell, "left", maxVerticalWidth(cell.GridX, gridY, cell.Rowspan))
-				setTransparentBorder(_cell, "right", maxVerticalWidth(cell.GridX+cell.Colspan, gridY, cell.Rowspan))
+				setTransparentBorder(_cell, top, maxHorizontalWidth(cell.GridX, gridY, cell.Colspan))
+				setTransparentBorder(_cell, bottom, maxHorizontalWidth(cell.GridX, gridY+cell.Rowspan, cell.Colspan))
+				setTransparentBorder(_cell, left, maxVerticalWidth(cell.GridX, gridY, cell.Rowspan))
+				setTransparentBorder(_cell, right, maxVerticalWidth(cell.GridX+cell.Colspan, gridY, cell.Rowspan))
 			}
 			gridY += 1
 		}
@@ -1505,14 +1512,14 @@ func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGr
 		}
 	}
 
-	setTransparentBorder(table, "top", maxHorizontalWidth(0, 0, gridWidth))
-	setTransparentBorder(table, "bottom", maxHorizontalWidth(0, gridHeight, gridWidth))
+	setTransparentBorder(table, top, maxHorizontalWidth(0, 0, gridWidth))
+	setTransparentBorder(table, bottom, maxHorizontalWidth(0, gridHeight, gridWidth))
 	// "UAs must compute an initial left && right border width for the table
 	// by examining the first && last cells in the first row of the table."
 	// https://www.w3.org/TR/CSS21/tables.html#collapsing-borders
 	// ... so h=1, not gridHeight :
-	setTransparentBorder(table, "left", maxVerticalWidth(0, 0, 1))
-	setTransparentBorder(table, "right", maxVerticalWidth(gridWidth, 0, 1))
+	setTransparentBorder(table, left, maxVerticalWidth(0, 0, 1))
+	setTransparentBorder(table, right, maxVerticalWidth(gridWidth, 0, 1))
 
 	return BorderGrids{Vertical: verticalBorders, Horizontal: horizontalBorders}
 }

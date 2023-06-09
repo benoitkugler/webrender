@@ -30,7 +30,7 @@ func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSp
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
 	box := box_.Box()
 	if !bo.TableT.IsInstance(box_) {
-		resolvePercentagesBox(box_, containingBlock, "")
+		resolvePercentagesBox(box_, containingBlock, 0)
 
 		if box.MarginTop == pr.AutoF {
 			box.MarginTop = pr.Float(0)
@@ -806,7 +806,7 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 	newContainingBlock := box
 
 	if !newContainingBlock.IsTableWrapper {
-		resolvePercentagesBox(child_, newContainingBlock, "")
+		resolvePercentagesBox(child_, newContainingBlock, 0)
 		if lastInFlowChild == nil && collapsingWithChildren {
 			oldCollapsedMargin := collapseMargin(*adjoiningMargins)
 			childMarginTop := child.MarginTop

@@ -146,12 +146,15 @@ const (
 	POutlineStyle
 	POutlineWidth
 	PBoxSizing
-	PHeight
-	PMaxHeight
-	PMaxWidth
-	PMinHeight
-	PMinWidth
+
+	// min-XXX is at +2, max-XXX is a + 4
 	PWidth
+	PHeight
+	PMinWidth
+	PMinHeight
+	PMaxWidth
+	PMaxHeight
+
 	PAlignContent
 	PAlignItems
 	PAlignSelf

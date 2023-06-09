@@ -96,7 +96,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 		var resumeAt tree.ResumeStack
 		nextPage := tree.PageBreak{Break: "any"}
 		originalPageIsEmpty := pageIsEmpty
-		resolvePercentagesBox(group_, &table.BoxFields, "")
+		resolvePercentagesBox(group_, &table.BoxFields, 0)
 		group := group_.Box()
 		group.PositionX = rowsLeftX
 		group.PositionY = positionY
@@ -124,7 +124,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 			}
 
-			resolvePercentagesBox(row_, &table.BoxFields, "")
+			resolvePercentagesBox(row_, &table.BoxFields, 0)
 			row.PositionX = rowsLeftX
 			row.PositionY = positionY
 			row.Width = rowsWidth
@@ -153,7 +153,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 						len(ignoredCells), ignoredCells)
 					break
 				}
-				resolvePercentagesBox(cell_, &table.BoxFields, "")
+				resolvePercentagesBox(cell_, &table.BoxFields, 0)
 				if table.Style.GetDirection() == "ltr" {
 					cell.PositionX = table.ColumnPositions[cell.GridX]
 				} else {
@@ -705,7 +705,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 	for _, group := range table.ColumnGroups {
 		for _, column_ := range group.Children {
 			column := column_.Box()
-			resolvePercentagesBox(column_, &table.BoxFields, "")
+			resolvePercentagesBox(column_, &table.BoxFields, 0)
 			if column.GridX < len(table.ColumnPositions) {
 				column.PositionX = table.ColumnPositions[column.GridX]
 				column.PositionY = initialPositionY
@@ -718,7 +718,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				column.Width = pr.Float(0)
 				column.Height = pr.Float(0)
 			}
-			resolvePercentagesBox(group, &table.BoxFields, "")
+			resolvePercentagesBox(group, &table.BoxFields, 0)
 			column.GetCells = getColumnCells(table, column)
 		}
 		first := group.Children[0].Box()
@@ -778,7 +778,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	// `width` on column boxes
 	for i, column_ := range allColumns {
 		column := column_.Box()
-		column.Width = resolveOnePercentage(column.Style.GetWidth(), "width", table.Width.V(), "")
+		column.Width = resolveOnePercentage(column.Style.GetWidth(), pr.PWidth, table.Width.V(), 0)
 		if column.Width != pr.AutoF {
 			columnWidths[i] = column.Width
 		}
@@ -793,7 +793,7 @@ func fixedTableLayout(box *bo.BoxFields) {
 	i := 0
 	for _, cell_ := range firstRowCells {
 		cell := cell_.Box()
-		resolvePercentagesBox(cell_, &table.BoxFields, "")
+		resolvePercentagesBox(cell_, &table.BoxFields, 0)
 		if cell.Width != pr.AutoF {
 			width := cell.BorderWidth()
 			width -= borderSpacingX * pr.Float(cell.Colspan-1)
@@ -1015,7 +1015,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 func tableWrapperWidth(context *layoutContext, wrapper_ Box, containingBlock bo.MaybePoint) {
 	wrapper := wrapper_.Box()
 	table := wrapper.GetWrappedTable()
-	resolvePercentages(table, containingBlock, "")
+	resolvePercentages(table, containingBlock, 0)
 
 	if table.Box().Style.GetTableLayout() == "fixed" && table.Box().Width != pr.AutoF {
 		fixedTableLayout(wrapper)

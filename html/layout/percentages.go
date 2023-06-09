@@ -13,12 +13,13 @@ import (
 // Compute a used length value from a computed length value.
 //
 // the return value should be set on the box
-func resolveOnePercentage(value pr.Value, propertyName string, referTo pr.Float, mainFlexDirection string) pr.MaybeFloat {
+// mainFlexDirection is either 0, Width or Height
+func resolveOnePercentage(value pr.Value, propertyName pr.KnownProp, referTo pr.Float, mainFlexDirection pr.KnownProp) pr.MaybeFloat {
 	// box attributes are used values
 	percent := pr.ResoudPercentage(value, referTo)
 
-	if (propertyName == "min_width" || propertyName == "min_height") && percent == pr.AutoF {
-		if mainFlexDirection == "" || propertyName != "min_"+mainFlexDirection {
+	if (propertyName == pr.PMinWidth || propertyName == pr.PMinHeight) && percent == pr.AutoF {
+		if mainFlexDirection == 0 || propertyName != mainFlexDirection+2 {
 			percent = pr.Float(0)
 		}
 	}
@@ -34,19 +35,21 @@ func resolveOnePercentage(value pr.Value, propertyName string, referTo pr.Float,
 
 func resolvePositionPercentages(box *bo.BoxFields, containingBlock bo.Point) {
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
-	box.Left = resolveOnePercentage(box.Style.GetLeft(), "left", cbWidth, "")
-	box.Right = resolveOnePercentage(box.Style.GetRight(), "right", cbWidth, "")
-	box.Top = resolveOnePercentage(box.Style.GetTop(), "top", cbHeight, "")
-	box.Bottom = resolveOnePercentage(box.Style.GetBottom(), "bottom", cbHeight, "")
+	box.Left = resolveOnePercentage(box.Style.GetLeft(), pr.PLeft, cbWidth, 0)
+	box.Right = resolveOnePercentage(box.Style.GetRight(), pr.PRight, cbWidth, 0)
+	box.Top = resolveOnePercentage(box.Style.GetTop(), pr.PTop, cbHeight, 0)
+	box.Bottom = resolveOnePercentage(box.Style.GetBottom(), pr.PBottom, cbHeight, 0)
 }
 
-func resolvePercentagesBox(box Box, containingBlock containingBlock, mainFlexDirection string) {
+// mainFlexDirection is either 0, Width or Height
+func resolvePercentagesBox(box Box, containingBlock containingBlock, mainFlexDirection pr.KnownProp) {
 	w, h := containingBlock.ContainingBlock()
 	resolvePercentages(box, bo.MaybePoint{w, h}, mainFlexDirection)
 }
 
 // Set used values as attributes of the box object.
-func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirection string) {
+// mainFlexDirection is either 0, Width or Height
+func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirection pr.KnownProp) {
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
 
 	if traceMode {
@@ -59,17 +62,17 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		maybeHeight = cbHeight
 	}
 	box := box_.Box()
-	box.MarginLeft = resolveOnePercentage(box.Style.GetMarginLeft(), "margin_left", cbWidth.V(), "")
-	box.MarginRight = resolveOnePercentage(box.Style.GetMarginRight(), "margin_right", cbWidth.V(), "")
-	box.MarginTop = resolveOnePercentage(box.Style.GetMarginTop(), "margin_top", maybeHeight.V(), "")
-	box.MarginBottom = resolveOnePercentage(box.Style.GetMarginBottom(), "margin_bottom", maybeHeight.V(), "")
-	box.PaddingLeft = resolveOnePercentage(box.Style.GetPaddingLeft(), "padding_left", cbWidth.V(), "")
-	box.PaddingRight = resolveOnePercentage(box.Style.GetPaddingRight(), "padding_right", cbWidth.V(), "")
-	box.PaddingTop = resolveOnePercentage(box.Style.GetPaddingTop(), "padding_top", maybeHeight.V(), "")
-	box.PaddingBottom = resolveOnePercentage(box.Style.GetPaddingBottom(), "padding_bottom", maybeHeight.V(), "")
-	box.Width = resolveOnePercentage(box.Style.GetWidth(), "width", cbWidth.V(), "")
-	box.MinWidth = resolveOnePercentage(box.Style.GetMinWidth(), "min_width", cbWidth.V(), mainFlexDirection)
-	box.MaxWidth = resolveOnePercentage(box.Style.GetMaxWidth(), "max_width", cbWidth.V(), mainFlexDirection)
+	box.MarginLeft = resolveOnePercentage(box.Style.GetMarginLeft(), pr.PMarginLeft, cbWidth.V(), 0)
+	box.MarginRight = resolveOnePercentage(box.Style.GetMarginRight(), pr.PMarginRight, cbWidth.V(), 0)
+	box.MarginTop = resolveOnePercentage(box.Style.GetMarginTop(), pr.PMarginTop, maybeHeight.V(), 0)
+	box.MarginBottom = resolveOnePercentage(box.Style.GetMarginBottom(), pr.PMarginBottom, maybeHeight.V(), 0)
+	box.PaddingLeft = resolveOnePercentage(box.Style.GetPaddingLeft(), pr.PPaddingLeft, cbWidth.V(), 0)
+	box.PaddingRight = resolveOnePercentage(box.Style.GetPaddingRight(), pr.PPaddingRight, cbWidth.V(), 0)
+	box.PaddingTop = resolveOnePercentage(box.Style.GetPaddingTop(), pr.PPaddingTop, maybeHeight.V(), 0)
+	box.PaddingBottom = resolveOnePercentage(box.Style.GetPaddingBottom(), pr.PPaddingBottom, maybeHeight.V(), 0)
+	box.Width = resolveOnePercentage(box.Style.GetWidth(), pr.PWidth, cbWidth.V(), 0)
+	box.MinWidth = resolveOnePercentage(box.Style.GetMinWidth(), pr.PMinWidth, cbWidth.V(), mainFlexDirection)
+	box.MaxWidth = resolveOnePercentage(box.Style.GetMaxWidth(), pr.PMaxWidth, cbWidth.V(), mainFlexDirection)
 
 	// XXX later: top, bottom, left && right on positioned elements
 
@@ -85,12 +88,12 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 			}
 			box.Height = height.Value
 		}
-		box.MinHeight = resolveOnePercentage(box.Style.GetMinHeight(), "min_height", pr.Float(0), mainFlexDirection)
-		box.MaxHeight = resolveOnePercentage(box.Style.GetMaxHeight(), "max_height", pr.Inf, mainFlexDirection)
+		box.MinHeight = resolveOnePercentage(box.Style.GetMinHeight(), pr.PMinHeight, pr.Float(0), mainFlexDirection)
+		box.MaxHeight = resolveOnePercentage(box.Style.GetMaxHeight(), pr.PMaxHeight, pr.Inf, mainFlexDirection)
 	} else {
-		box.Height = resolveOnePercentage(box.Style.GetHeight(), "height", cbHeight.V(), "")
-		box.MinHeight = resolveOnePercentage(box.Style.GetMinHeight(), "min_height", cbHeight.V(), mainFlexDirection)
-		box.MaxHeight = resolveOnePercentage(box.Style.GetMaxHeight(), "max_height", cbHeight.V(), mainFlexDirection)
+		box.Height = resolveOnePercentage(box.Style.GetHeight(), pr.PHeight, cbHeight.V(), 0)
+		box.MinHeight = resolveOnePercentage(box.Style.GetMinHeight(), pr.PMinHeight, cbHeight.V(), mainFlexDirection)
+		box.MaxHeight = resolveOnePercentage(box.Style.GetMaxHeight(), pr.PMaxHeight, cbHeight.V(), mainFlexDirection)
 	}
 
 	// Used value == computed value

@@ -410,8 +410,6 @@ func (c *ComputedStyle) cascadeValue(key pr.PropKey) (pr.DefaultKind, pr.Validat
 		keyword pr.DefaultKind
 	)
 
-	fmt.Printf("cacscing %#v %v\n", key, c.cascaded)
-
 	if casc, in := c.cascaded[key]; in {
 		value = casc.value
 		if value.SpecialProperty == nil {
@@ -429,8 +427,6 @@ func (c *ComputedStyle) cascadeValue(key pr.PropKey) (pr.DefaultKind, pr.Validat
 		// On the Root Element, "inherit" from initial values
 		keyword = pr.Initial
 	}
-
-	fmt.Println("CASCAFING", keyword)
 
 	if keyword == pr.Initial {
 		value_ := pr.InitialValues[key.KnownProp]
@@ -450,8 +446,6 @@ func (c *ComputedStyle) Get(key pr.PropKey) pr.CssProperty {
 		return v
 	}
 
-	fmt.Println("Get", key)
-
 	keyword, value := c.cascadeValue(key)
 
 	if keyword == pr.Initial && !pr.InitialNotComputed.Has(key.KnownProp) {
@@ -462,7 +456,7 @@ func (c *ComputedStyle) Get(key pr.PropKey) pr.CssProperty {
 		c.Set(key, value.ToCascaded().ToCSS())
 	}
 
-	if key.KnownProp.IsTextDecoration() && c.parentStyle != nil {
+	if key.KnownProp.IsTextDecoration() && value.SpecialProperty == nil && c.parentStyle != nil {
 		_, isCascaded := c.cascaded[key]
 		value_ := textDecoration(key.KnownProp, value.ToCascaded().ToCSS(), c.parentStyle.Get(key), isCascaded)
 		value = pr.AsCascaded(value_).AsValidated()

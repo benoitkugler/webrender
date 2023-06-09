@@ -232,7 +232,7 @@ func computeVariable(varData pr.VarData, name pr.PropKey, computed variables, ba
 }
 
 // backgroundImage computes lenghts in gradient background-image.
-func backgroundImage(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+func backgroundImage(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Images)
 	for i, image := range value {
 		switch gradient := image.(type) {
@@ -279,23 +279,23 @@ func centers(computer *ComputedStyle, value pr.Centers) pr.Centers {
 }
 
 // backgroundPosition compute lengths in background-position.
-func backgroundPosition(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+func backgroundPosition(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Centers)
 	return centers(computer, value)
 }
 
-func objectPosition(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+func objectPosition(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Center)
 	return centers(computer, pr.Centers{value})[0]
 }
 
-func transformOrigin(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+func transformOrigin(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.Point)
 	l := _lengthOrPercentageTuple2(computer, value.ToSlice())
 	return pr.Point{l[0], l[1]}
 }
 
-func clip(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+func clip(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	return lengths_(computer, _value.(pr.Values))
 }
 

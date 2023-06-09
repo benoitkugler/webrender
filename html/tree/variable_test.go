@@ -160,8 +160,7 @@ func TestVariableInitial(t *testing.T) {
 }
 
 func TestVariableFallback(t *testing.T) {
-	// for prop := range pr.KnownProperties {
-	for _, prop := range [...]pr.KnownProp{pr.PBorderTopColor, pr.PTextDecorationColor} {
+	for prop := range pr.KnownProperties {
 		_, style := setupVar(t, fmt.Sprintf(`
 		  <style>
 			div {

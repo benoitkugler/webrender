@@ -89,10 +89,10 @@ func (l *lineBoxeIterator) Next() lineBoxe { return l.currentBox }
 func iterLineBoxes(context *layoutContext, box *bo.LineBox, positionY, bottomSpace pr.Float, skipStack tree.ResumeStack, containingBlock Box,
 	absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, firstLetterStyle pr.ElementStyle,
 ) *lineBoxeIterator {
-	resolvePercentages(box, bo.MaybePoint{containingBlock.Box().Width, containingBlock.Box().Height}, "")
+	resolvePercentages(box, bo.MaybePoint{containingBlock.Box().Width, containingBlock.Box().Height}, 0)
 	if skipStack == nil {
 		// TODO: wrong, see https://github.com/Kozea/WeasyPrint/issues/679
-		box.TextIndent = resolveOnePercentage(box.Style.GetTextIndent(), "text_indent", containingBlock.Box().Width.V(), "")
+		box.TextIndent = resolveOnePercentage(box.Style.GetTextIndent(), pr.PTextIndent, containingBlock.Box().Width.V(), 0)
 	} else {
 		box.TextIndent = pr.Float(0)
 	}
@@ -385,7 +385,7 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 	child := box.Box().Children[0]
 	var childSkipStack tree.ResumeStack
 	if textBox, ok := child.(*bo.TextBox); ok {
-		letterStyle := tree.ComputedFromCascaded(nil, nil, firstLetterStyle, nil, "", "", nil, context)
+		letterStyle := tree.ComputedFromCascaded(nil, nil, firstLetterStyle, context)
 		if strings.HasSuffix(textBox.ElementTag(), "::first-letter") {
 			letterBox := bo.NewInlineBox(letterStyle, textBox.Element, "first-letter", []Box{child})
 			box.Box().Children[0] = letterBox
@@ -491,7 +491,7 @@ func atomicBox(context *layoutContext, box Box, positionX pr.Float, skipStack tr
 func inlineBlockBoxLayout(context *layoutContext, box_ Box, positionX pr.Float, skipStack tree.ResumeStack,
 	containingBlock *bo.BoxFields, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder,
 ) Box {
-	resolvePercentagesBox(box_, containingBlock, "")
+	resolvePercentagesBox(box_, containingBlock, 0)
 	box := box_.Box()
 	// https://www.w3.org/TR/CSS21/visudet.html#inlineblock-width
 	if box.MarginLeft == pr.AutoF {
@@ -598,7 +598,7 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 	}
 
 	box := box_.Box()
-	resolvePercentagesBox(box_, containingBlock.Box(), "")
+	resolvePercentagesBox(box_, containingBlock.Box(), 0)
 	floatWidths := widths{}
 	var (
 		newBox                  Box
@@ -1485,10 +1485,10 @@ func isPhantomLinebox(linebox *bo.BoxFields) bool {
 			if !isPhantomLinebox(child) {
 				return false
 			}
-			for _, side := range [4]string{"top", "right", "bottom", "left"} {
-				m := child.Style.Get("margin_" + side).(pr.Value).Value
-				b := child.Style.Get("border_" + side + "_width").(pr.Value).Value
-				p := child.Style.Get("padding_" + side).(pr.Value).Value
+			for side := pr.KnownProp(0); side < 4; side++ {
+				m := child.Style.Get((pr.PMarginBottom + side*5).Key()).(pr.Value).Value
+				b := child.Style.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.Value).Value
+				p := child.Style.Get((pr.PPaddingBottom + side*5).Key()).(pr.Value).Value
 				if m != 0 || b != 0 || p != 0 {
 					return false
 				}

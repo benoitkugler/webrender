@@ -27,7 +27,14 @@ import (
 
 // Take an "after layout" box tree and draw it onto a cairo context.
 
-var sides = [4]string{"top", "right", "bottom", "left"}
+const (
+	bottom pr.KnownProp = iota
+	left
+	right
+	top
+)
+
+var sides = [4]pr.KnownProp{top, right, bottom, left}
 
 const (
 	pi = math.Pi
@@ -575,15 +582,15 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	})
 }
 
-func styledColor(style pr.String, color Color, side string) []Color {
+func styledColor(style pr.String, color Color, side pr.KnownProp) []Color {
 	if style == "inset" || style == "outset" {
-		doLighten := (side == "top" || side == "left") != (style == "inset")
+		doLighten := (side == top || side == left) != (style == "inset")
 		if doLighten {
 			return []Color{lighten(color)}
 		}
 		return []Color{darken(color)}
 	} else if style == "ridge" || style == "groove" {
-		if (side == "top" || side == "left") != (style == "ridge") {
+		if (side == top || side == left) != (style == "ridge") {
 			return []Color{lighten(color), darken(color)}
 		} else {
 			return []Color{darken(color), lighten(color)}
@@ -626,11 +633,11 @@ func (ctx drawContext) drawBorder(box_ Box) {
 						crw.Value, child.Box().Height.V(),
 					}
 					clipBorderSegment(ctx.dst, box.Style.GetColumnRuleStyle(),
-						fl(crw.Value), "left", borderBox, &borderWidths, nil)
+						fl(crw.Value), left, borderBox, &borderWidths, nil)
 					ctx.drawRectBorder(borderBox, borderWidths,
 						box.Style.GetColumnRuleStyle(), styledColor(
 							box.Style.GetColumnRuleStyle(),
-							tree.ResolveColor(box.Style, "column_rule_color").RGBA, "left"))
+							tree.ResolveColor(box.Style, pr.PColumnRuleColor).RGBA, left))
 				})
 			}
 		}
@@ -656,10 +663,10 @@ func (ctx drawContext) drawBorder(box_ Box) {
 		stylesSet = utils.NewSet()
 	)
 	for i, side := range sides {
-		colors[i] = tree.ResolveColor(box.Style, fmt.Sprintf("border_%s_color", side)).RGBA
+		colors[i] = tree.ResolveColor(box.Style, pr.PBorderBottomColor+side*5).RGBA
 		colorsSet[colors[i]] = true
 		if colors[i].A != 0 {
-			styles[i] = box.Style.Get(fmt.Sprintf("border_%s_style", side)).(pr.String)
+			styles[i] = box.Style.Get((pr.PBorderBottomStyle + side*5).Key()).(pr.String)
 		}
 		stylesSet.Add(string(styles[i]))
 	}
@@ -695,7 +702,7 @@ func (ctx drawContext) drawBorder(box_ Box) {
 // Clip one segment of box border (border_widths=nil, radii=nil).
 // The strategy is to remove the zones not needed because of the style or the
 // side before painting.
-func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side string,
+func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side pr.KnownProp,
 	borderBox pr.Rectangle, borderWidths *pr.Rectangle, radii *[4]bo.Point,
 ) {
 	bbx, bby, bbw, bbh := borderBox.Unpack()
@@ -738,28 +745,30 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 		px1, px2, py1, py2, way, angle, mainOffset fl
 		rounded1, rounded2                         bool
 	)
-	if side == "top" {
+
+	switch side {
+	case top:
 		px1, py1, rounded1 = transitionPoint(tlh, tlv, bl, bt)
 		px2, py2, rounded2 = transitionPoint(-trh, trv, -br, bt)
 		width = bt
 		way = 1
 		angle = 1
 		mainOffset = bby
-	} else if side == "right" {
+	case right:
 		px1, py1, rounded1 = transitionPoint(-trh, trv, -br, bt)
 		px2, py2, rounded2 = transitionPoint(-brh, -brv, -br, -bb)
 		width = br
 		way = 1
 		angle = 2
 		mainOffset = bbx + bbw
-	} else if side == "bottom" {
+	case bottom:
 		px1, py1, rounded1 = transitionPoint(blh, -blv, bl, -bb)
 		px2, py2, rounded2 = transitionPoint(-brh, -brv, -br, -bb)
 		width = bb
 		way = -1
 		angle = 3
 		mainOffset = bby + bbh
-	} else if side == "left" {
+	case left:
 		px1, py1, rounded1 = transitionPoint(tlh, tlv, bl, bt)
 		px2, py2, rounded2 = transitionPoint(blh, -blv, bl, -bb)
 		width = bl
@@ -769,7 +778,7 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 	}
 
 	var a1, b1, a2, b2, lineLength, length fl
-	if side == "top" || side == "bottom" {
+	if side == top || side == bottom {
 		a1, b1 = px1-bl/2, way*py1-width/2
 		a2, b2 = -px2-br/2, way*py2-width/2
 		lineLength = bbw - px1 + px2
@@ -778,7 +787,7 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 		context.LineTo(bbx, mainOffset)
 		context.LineTo(bbx+px1, mainOffset+py1)
 		context.LineTo(bbx+bbw+px2, mainOffset+py2)
-	} else if side == "left" || side == "right" {
+	} else if side == left || side == right {
 		a1, b1 = -way*px1-width/2, py1-bt/2
 		a2, b2 = -way*px2-width/2, -py2-bb/2
 		lineLength = bbh - py1 + py2
@@ -831,11 +840,11 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 						((2*angle-way)+(i+1)*way*dash/chl)/4*pi,
 						angle*pi/2,
 					)
-					if side == "top" || side == "bottom" {
+					if side == top || side == bottom {
 						context.MoveTo(x+px, mainOffset+py)
 						context.LineTo(x+px-way*px*1/fl(math.Tan(float64(angle2))), mainOffset)
 						context.LineTo(x+px-way*px*1/fl(math.Tan(float64(angle1))), mainOffset)
-					} else if side == "left" || side == "right" {
+					} else if side == left || side == right {
 						context.MoveTo(mainOffset+px, y+py)
 						context.LineTo(mainOffset, y+py+way*py*fl(math.Tan(float64(angle2))))
 						context.LineTo(mainOffset, y+py+way*py*fl(math.Tan(float64(angle1))))
@@ -861,7 +870,7 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 				for i_ := 0; i_ < line; i_ += 2 {
 					i := fl(i_) + offset
 					var x1, x2, y1, y2 fl
-					if side == "top" || side == "bottom" {
+					if side == top || side == bottom {
 						x1 = utils.MaxF(bbx+px1+i*dash, bbx+px1)
 						x2 = utils.MinF(bbx+px1+(i+1)*dash, bbx+bbw+px2)
 						y1 = mainOffset
@@ -869,7 +878,7 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 							y1 -= width
 						}
 						y2 = y1 + width
-					} else if side == "left" || side == "right" {
+					} else if side == left || side == right {
 						y1 = utils.MaxF(bby+py1+i*dash, bby+py1)
 						y2 = utils.MinF(bby+py1+(i+1)*dash, bby+bbh+py2)
 						x1 = mainOffset
@@ -894,13 +903,13 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side s
 			for i_ := 0; i_ < maxI; i_ += 2 {
 				i := fl(i_)
 				switch side {
-				case "top":
+				case top:
 					context.Rectangle(bbx+i*dash, bby, dash, width)
-				case "right":
+				case right:
 					context.Rectangle(bbx+bbw-width, bby+i*dash, width, dash)
-				case "bottom":
+				case bottom:
 					context.Rectangle(bbx+i*dash, bby+bbh-width, dash, width)
-				case "left":
+				case left:
 					context.Rectangle(bbx, bby+i*dash, width, dash)
 				}
 			}
@@ -959,7 +968,7 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 func (ctx drawContext) drawOutlines(box_ Box) {
 	box := box_.Box()
 	width_ := box.Style.GetOutlineWidth()
-	color := tree.ResolveColor(box.Style, "outline_color").RGBA
+	color := tree.ResolveColor(box.Style, pr.POutlineColor).RGBA
 	style := box.Style.GetOutlineStyle()
 	if box.Style.GetVisibility() == "visible" && width_.Value != 0 && color.A != 0 {
 		width := width_.Value
@@ -1027,7 +1036,7 @@ func (ctx drawContext) drawTable(table *bo.TableBox) {
 }
 
 type segment struct {
-	side string
+	side pr.KnownProp
 	bo.Border
 	borderBox pr.Rectangle
 }
@@ -1141,7 +1150,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 			posY2 += halfMaxWidth(horizontalBorders, [2][2]int{{y + 1, x - 1}, {y + 1, x}}, false)
 		}
 		segments = append(segments, segment{
-			Border: border, side: "left",
+			Border: border, side: left,
 			borderBox: pr.Rectangle{posX - pr.Float(border.Width)/2, posY1, 0, posY2 - posY1},
 		})
 	}
@@ -1171,7 +1180,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 			posX2 = columnPositions[x] + shiftBefore
 		}
 		segments = append(segments, segment{
-			Border: border, side: "top",
+			Border: border, side: top,
 			borderBox: pr.Rectangle{posX1, posY - pr.Float(border.Width)/2, posX2 - posX1, 0},
 		})
 	}
@@ -1197,7 +1206,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 
 	for _, segment := range segments {
 		widths := pr.Rectangle{0, 0, 0, pr.Float(segment.Width)}
-		if segment.side == "top" {
+		if segment.side == top {
 			widths = pr.Rectangle{pr.Float(segment.Width), 0, 0, 0}
 		}
 		ctx.dst.OnNewStack(func() {
