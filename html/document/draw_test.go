@@ -128,7 +128,8 @@ func BenchmarkRender(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		Render(doc, nil, true, fc)
+		out := Render(doc, nil, true, fc)
+		out.Write(tracer.NewDrawerNoOp(), 1, nil)
 	}
 }
 
