@@ -271,45 +271,62 @@ var (
 )
 
 type propsCache struct {
-	known pr.Properties
+	known []pr.CssProperty
 	vars  map[string]pr.CssProperty
 }
 
 func newPropsCache() propsCache {
 	return propsCache{
-		known: make(pr.Properties),
-		vars:  make(map[string]pr.CssProperty),
+		vars: make(map[string]pr.CssProperty),
 	}
 }
 
 func (c propsCache) get(key pr.PropKey) (out pr.CssProperty, ok bool) {
-	if key.KnownProp != 0 {
-		out, ok = c.known[key.KnownProp]
+	if k := int(key.KnownProp); k != 0 {
+		if k >= len(c.known) {
+			return
+		}
+		out = c.known[k]
+		ok = out != nil
 	} else {
 		out, ok = c.vars[key.Var]
 	}
 	return
 }
 
-func (c propsCache) Set(key pr.PropKey, value pr.CssProperty) {
-	if key.KnownProp != 0 {
-		c.known[key.KnownProp] = value
+func (c *propsCache) Set(key pr.PropKey, value pr.CssProperty) {
+	if k := int(key.KnownProp); k != 0 {
+		L := len(c.known)
+		if k < L {
+			c.known[k] = value
+		} else { // grow
+			c.known = append(c.known, make([]pr.CssProperty, k+1-L)...)
+			c.known[k] = value
+		}
 	} else {
 		c.vars[key.Var] = value
 	}
 }
 
 func (c propsCache) delete(key pr.PropKey) {
-	if key.KnownProp != 0 {
-		delete(c.known, key.KnownProp)
+	if k := int(key.KnownProp); k != 0 {
+		if k >= len(c.known) {
+			return
+		}
+		c.known[key.KnownProp] = nil
 	} else {
 		delete(c.vars, key.Var)
 	}
 }
 
-func (c propsCache) updateWith(other propsCache) {
+func (c *propsCache) updateWith(other propsCache) {
+	if Lo, Lc := len(other.known), len(c.known); Lo > Lc {
+		c.known = append(c.known, make([]pr.CssProperty, Lo-Lc)...)
+	}
 	for k, v := range other.known {
-		c.known[k] = v
+		if v != nil {
+			c.known[k] = v
+		}
 	}
 	for k, v := range other.vars {
 		c.vars[k] = v
@@ -561,11 +578,11 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	// border-*-style is none, so border-width computes to zero.
 	// Other than that, properties that would need computing are
 	// border-*-color, but they do not apply.
-	out.propsCache.known.SetBorderTopWidth(pr.Value{})
-	out.propsCache.known.SetBorderBottomWidth(pr.Value{})
-	out.propsCache.known.SetBorderLeftWidth(pr.Value{})
-	out.propsCache.known.SetBorderRightWidth(pr.Value{})
-	out.propsCache.known.SetOutlineWidth(pr.Value{})
+	out.propsCache.Set(pr.PBorderTopWidth.Key(), pr.Value{})
+	out.propsCache.Set(pr.PBorderBottomWidth.Key(), pr.Value{})
+	out.propsCache.Set(pr.PBorderLeftWidth.Key(), pr.Value{})
+	out.propsCache.Set(pr.PBorderRightWidth.Key(), pr.Value{})
+	out.propsCache.Set(pr.POutlineWidth.Key(), pr.Value{})
 
 	out.specified.Display = out.GetDisplay()
 	out.specified.Float = out.GetFloat()

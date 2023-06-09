@@ -7,37 +7,6 @@ import "github.com/benoitkugler/webrender/css/parser"
 
 const (
 	_ KnownProp = iota
-	PBottom
-	PCaptionSide
-	PClear
-	PClip
-	PColor
-	PDirection
-	PDisplay
-	PEmptyCells
-	PFloat
-	PLeft
-	PRight
-	PLineHeight
-
-	PPosition
-	PTableLayout
-	PTop
-	PUnicodeBidi
-	PVerticalAlign
-	PVisibility
-	PZIndex
-
-	// The following properties are all background related,
-	// in the order expected by expandBackground
-	PBackgroundColor
-	PBackgroundImage
-	PBackgroundRepeat
-	PBackgroundAttachment
-	PBackgroundPosition
-	PBackgroundSize
-	PBackgroundClip
-	PBackgroundOrigin
 
 	// the following properties are grouped by side,
 	// in the [bottom, left, right, top] order,
@@ -68,21 +37,40 @@ const (
 	PMarginTop
 	PPaddingTop
 
-	PBorderCollapse
-	PBorderSpacing
+	// min-XXX is at +2, max-XXX is a + 4
+	PWidth
+	PHeight
+	PMinWidth
+	PMinHeight
+	PMaxWidth
+	PMaxHeight
+
+	PColor
+	PDirection
+	PDisplay
+	PFloat
+	PLineHeight
+
+	PPosition
+	PTableLayout
+	PTop
+	PUnicodeBidi
+	PVerticalAlign
+	PVisibility
+	PZIndex
+
 	PBorderBottomLeftRadius
 	PBorderBottomRightRadius
 	PBorderTopLeftRadius
 	PBorderTopRightRadius
+
 	POpacity
-	PColumnWidth
-	PColumnCount
-	PColumnGap
-	PColumnRuleColor
+
 	PColumnRuleStyle
 	PColumnRuleWidth
-	PColumnFill
-	PColumnSpan
+	PColumnCount
+	PColumnWidth
+
 	PFontFamily
 	PFontFeatureSettings
 	PFontKerning
@@ -90,7 +78,6 @@ const (
 	PFontSize
 	PFontStretch
 	PFontStyle
-	PFontVariant
 	PFontVariantAlternates
 	PFontVariantCaps
 	PFontVariantEastAsian
@@ -99,39 +86,11 @@ const (
 	PFontVariantPosition
 	PFontWeight
 	PFontVariationSettings
-	PBoxDecorationBreak
-	PBreakAfter
-	PBreakBefore
-	PBreakInside
-	PMarginBreak
-	POrphans
-	PWidows
-	PBookmarkLabel
-	PBookmarkLevel
-	PBookmarkState
-	PContent
-	PFootnoteDisplay
-	PFootnotePolicy
-	PQuotes
-	PStringSet
-	PImageResolution
-	PImageRendering
-	PImageOrientation
-	PObjectFit
-	PObjectPosition
-	PSize
-	PPage
-	PBleedLeft
-	PBleedRight
-	PBleedTop
-	PBleedBottom
-	PMarks
+
 	PHyphenateCharacter
 	PHyphenateLimitChars
-	PHyphenateLimitZone
 	PHyphens
 	PLetterSpacing
-	PTabSize
 	PTextAlignAll
 	PTextAlignLast
 	PTextIndent
@@ -139,21 +98,56 @@ const (
 	PWhiteSpace
 	PWordBreak
 	PWordSpacing
-	PTransformOrigin
 	PTransform
+
+	PContinue
+	PMaxLines
+	POverflow
+	POverflowWrap
+	PCounterIncrement
+	PCounterReset
+	PCounterSet
+
+	PAnchor
+	PLink
+	PLang
+
+	PBoxDecorationBreak
+
+	PBookmarkLabel
+	PBookmarkLevel
+	PBookmarkState
+	PContent
+
+	PStringSet
+	PImageOrientation
+
+	PPage
 	PAppearance
 	POutlineColor
 	POutlineStyle
 	POutlineWidth
 	PBoxSizing
 
-	// min-XXX is at +2, max-XXX is a + 4
-	PWidth
-	PHeight
-	PMinWidth
-	PMinHeight
-	PMaxWidth
-	PMaxHeight
+	// The following properties are all background related,
+	// in the order expected by expandBackground
+	PBackgroundColor
+	PBackgroundImage
+	PBackgroundRepeat
+	PBackgroundAttachment
+	PBackgroundPosition
+	PBackgroundSize
+	PBackgroundClip
+	PBackgroundOrigin
+
+	// text-decoration-XXX
+	PTextDecorationLine
+	PTextDecorationColor
+	PTextDecorationStyle
+
+	PBreakAfter
+	PBreakBefore
+	PBreakInside
 
 	PAlignContent
 	PAlignItems
@@ -166,26 +160,58 @@ const (
 	PJustifyContent
 	POrder
 
-	// text-decoration-XXX
-	PTextDecorationLine
-	PTextDecorationColor
-	PTextDecorationStyle
+	PBottom
+	PCaptionSide
+	PClear
+	PClip
+	PEmptyCells
+	PLeft
+	PRight
 
-	PBlockEllipsis
-	PContinue
-	PMaxLines
-	POverflow
-	POverflowWrap
-	PTextOverflow
-	PCounterIncrement
-	PCounterReset
-	PCounterSet
 	PListStyleImage
 	PListStylePosition
 	PListStyleType
-	PAnchor
-	PLink
-	PLang
+
+	PTextOverflow
+	PBlockEllipsis
+	PBorderCollapse
+	PBorderSpacing
+
+	PTransformOrigin
+
+	PFontVariant
+
+	PTabSize
+
+	PMarginBreak
+	POrphans
+	PWidows
+
+	PFootnoteDisplay
+	PFootnotePolicy
+	PQuotes
+
+	PImageResolution
+	PImageRendering
+
+	PColumnGap
+	PColumnFill
+	PColumnSpan
+	PColumnRuleColor
+
+	PSize
+	PBleedLeft
+	PBleedRight
+	PBleedTop
+	PBleedBottom
+	PMarks
+
+	PObjectFit
+	PObjectPosition
+
+	PHyphenateLimitZone
+
+	NbProperties
 )
 
 // InitialValues stores the default values for the CSS properties.
