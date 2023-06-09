@@ -1,0 +1,668 @@
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+    <style type="text/css">
+      @page {
+        margin: 5px 30px 0px;
+      }
+
+      .center {
+        text-align: center;
+      }
+      .italic {
+        font-style: italic;
+      }
+      .bold {
+        font-weight: bold;
+      }
+      .emph1 {
+        font-weight: bold;
+        font-size: 18pt;
+      }
+      .cell {
+        border: 1px solid black;
+        text-align: center;
+        padding: 4px 8px;
+      }
+      .annexe-header {
+        padding-top: 2px;
+        border-top-width: 0.5pt;
+        border-bottom-color: #000001;
+        padding-bottom: 1pt;
+        line-height: 1;
+        page-break-after: avoid;
+        border-top-style: solid;
+        background-color: #ccffff;
+        border-bottom-width: 0.5pt;
+        border-top-color: #000001;
+        border-bottom-style: solid;
+        font-weight: bold;
+        font-size: 10pt;
+        margin-bottom: 2px;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+
+  <body style="font-family: Arial">
+    <div class="center">
+      <p>
+        <img
+          alt=""
+          src="image1.png"
+          style="
+            width: 115.35px;
+            height: 68.67px;
+            margin-left: -0px;
+            margin-top: -0px;
+          "
+          title=""
+        />
+      </p>
+      <p>
+        MINIST&Egrave;RE DE L&#39;ENSEIGNEMENT SUP&Eacute;RIEUR ET DE LA
+        RECHERCHE
+      </p>
+      <h3 class="italic">ATTESTATION DU PARCOURS DE FORMATION</h3>
+      <h3>EN</h3>
+      <h4>CLASSE PR&Eacute;PARATOIRE AUX GRANDES &Eacute;COLES</h4>
+      <p class="c10 c32"><span class="c80"></span></p>
+      <p class="italic">
+        Le Recteur de l&#39;acad&eacute;mie de Cr&eacute;teil, Chancelier des
+        universit&eacute;s, <br />
+        atteste que
+      </p>
+    </div>
+    <p>&nbsp;</p>
+    <p>&nbsp;</p>
+    <h4 class="italic">{{ .Prenom }} {{ .Nom }}</h4>
+    <p style="margin-left: 2em">
+      n&eacute;(e) le {{ .DateNaissance }} &agrave; {{ .CommuneNaissance }}
+    </p>
+    <p style="margin-left: 2em">n&deg;&nbsp;INE&nbsp;: {{ .INE }}</p>
+    <p class="center italic">
+      a accompli un parcours de formation dans la fili&egrave;re &nbsp;<span
+        class="emph1"
+        >{{ .Filiere }}</span
+      >
+    </p>
+    <p>&nbsp;</p>
+    <p class="center italic">
+      Valeur du parcours en cr&eacute;dits du syst&egrave;me ECTS&nbsp;:<span
+        class="emph1"
+        >&nbsp;{{ .Credits }}</span
+      >
+    </p>
+    <p class="center italic">
+      Mention globale obtenue&nbsp;:{{ .MentionGlobale }}
+    </p>
+    <p>&nbsp;</p>
+    <p style="margin-left: 2em">
+      Ann&eacute;e acad&eacute;mique {{ .AnneeScolaire }} &nbsp;: lycée Henri
+      Moissan, {{ .Total2A }} ECTS
+    </p>
+    <p>&nbsp;</p>
+    <div style="text-align: right; line-height: 1.5">
+      Fait &agrave; {{ .Lieu }}, le {{ .Date }}<br />
+      Pour le Recteur,<br />
+      le Proviseur du lycée Henri Moissan<br />
+    </div>
+    <p>&nbsp;</p>
+    <p>&nbsp;</p>
+    <p>&nbsp;</p>
+    <p>&nbsp;</p>
+    <p class="center italic" style="font-size: 9pt">
+      Attestation d&eacute;livr&eacute;e en application des dispositions de
+      l&rsquo;article 8 du d&eacute;cret n&deg; 94-1015<br />
+      du 23 novembre 1994 modifi&eacute; par le d&eacute;cret n&deg; 2007-692 du
+      3 mai 2007.<br />
+      Le descriptif de la formation figure dans l&rsquo;annexe jointe.
+    </p>
+
+    <div style="page-break-before: always"></div>
+
+    <!-- Fin de la page 1 -->
+
+    <div class="center">
+      <p>
+        <img
+          alt=""
+          src="image1.png"
+          style="
+            width: 115.35px;
+            height: 68.67px;
+            margin-left: -0px;
+            margin-top: -0px;
+          "
+          title=""
+        />
+      </p>
+      <p style="font-size: 9pt">
+        MINIST&Egrave;RE DE L&#39;ENSEIGNEMENT SUP&Eacute;RIEUR ET DE LA
+        RECHERCHE <br />
+        CLASSES PR&Eacute;PARATOIRES AUX GRANDES &Eacute;COLES
+      </p>
+      <p style="font-weight: bold; font-size: 11pt">
+        ANNEXE DESCRIPTIVE DE LA FORMATION
+      </p>
+    </div>
+
+    <div style="column-count: 2; font-size: 9pt; line-height: 1.3">
+      <p class="annexe-header">Information sur l&rsquo;&eacute;tudiant</p>
+      <div>
+        <span class="bold">Nom </span>: {{ .Nom }}<br />
+        <span class="bold">Pr&eacute;nom </span>: {{ .Prenom }}<br />
+        <span class="bold">Date de naissance </span>: {{ .DateNaissance }}<br />
+        <span class="bold">
+          Code d&rsquo;identification de l&rsquo;&eacute;tudiant</span
+        >
+        &nbsp;{{ .INE }}
+      </div>
+      <!--  -->
+      <p class="annexe-header">Information sur la formation</p>
+      <div>
+        <span class="bold">Nom de la formation</span>
+        <div>
+          Classe pr&eacute;paratoire &eacute;conomique et commerciale
+          <br />Voie &eacute;conomique &ndash; sigle {{ .Filiere }}
+        </div>
+        <span class="bold">Principaux domaines d&rsquo;&eacute;tude</span><br />
+        <div>
+          Culture g&eacute;n&eacute;rale, Langues, Math&eacute;matiques,
+        </div>
+        <div>Sciences &eacute;conomiques et sociales</div>
+        <span class="bold"
+          >Nom et statut de l&rsquo;institution g&eacute;rant la formation</span
+        ><br />
+        <div>
+          Minist&egrave;re de l&rsquo;enseignement sup&eacute;rieur et de la
+          recherche
+        </div>
+        <div>Classes pr&eacute;paratoires aux grandes &eacute;coles</div>
+        <span class="bold"
+          >Nom et statut de l&rsquo;&eacute;tablissement dispensant la
+          formation</span
+        ><br />
+        <div>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Lyc&eacute;e Henri
+          Moissan
+        </div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MEAUX (77100)</div>
+        <div>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&Eacute;tablissement
+          public
+        </div>
+        <span class="bold">Langue de formation : </span><br />
+        <div>Fran&ccedil;ais</div>
+      </div>
+
+      <!--  -->
+
+      <p class="annexe-header">Information sur le niveau de la formation</p>
+      <span class="bold">Niveau de la formation</span>
+      <div>
+        Situ&eacute;e au sein des &eacute;tudes menant au grade de licence.<br />
+        Niveau bac + 2 / 120 cr&eacute;dits ECTS
+      </div>
+      <span class="bold"
+        >Dur&eacute;e officielle du programme de formation</span
+      >
+      <div>La dur&eacute;e du programme est de 2 ans.</div>
+      <span class="bold">Conditions d&rsquo;acc&egrave;s</span>
+      <div>
+        Entr&eacute;e s&eacute;lective apr&egrave;s le baccalaur&eacute;at
+        s&rsquo;effectuant dans le cadre d&rsquo;une proc&eacute;dure nationale
+        d&rsquo;admission. <br />
+        Cf : https://www.parcoursup.fr/
+      </div>
+
+      <p class="annexe-header">
+        Information sur les contenus et les r&eacute;sultats obtenus
+      </p>
+      <span class="bold">Organisation des &eacute;tudes</span>
+      <div>Plein temps, contr&ocirc;le continu &eacute;crit et oral.</div>
+      <span class="bold">Exigences du programme</span>
+      <div>
+        La formation dispens&eacute;e a pour objet de donner aux
+        &eacute;tudiants une compr&eacute;hension approfondie des disciplines
+        enseign&eacute;es et une appr&eacute;hension de leurs
+        caract&eacute;ristiques g&eacute;n&eacute;rales. Elle prend en compte
+        leurs &eacute;volutions, leurs applications et la pr&eacute;paration
+        &agrave; des d&eacute;marches de recherche. <br />
+        Elle est d&eacute;finie par des programmes nationaux.
+      </div>
+      <span class="bold">Pr&eacute;cisions sur le programme</span>
+      <div>Voir relev&eacute; au verso et catalogue de cours.</div>
+      <span class="bold">&Eacute;chelle d&rsquo;&eacute;valuation</span>
+      <div>
+        L&rsquo;&eacute;valuation prend en compte l&rsquo;ensemble des travaux
+        des &eacute;tudiants. La qualit&eacute; du travail, des r&eacute;sultats
+        obtenus et des comp&eacute;tences acquises est exprim&eacute;e par une
+        mention conform&eacute;ment au tableau ci-dessous.
+      </div>
+      <table
+        style="
+          font-size: 9pt;
+          border-spacing: 0;
+          border-collapse: collapse;
+          margin-left: auto;
+          margin-right: auto;
+          margin-top: 2px;
+          margin-bottom: 2px;
+          border-top: 1px solid black;
+          border-bottom: 1px solid black;
+        "
+      >
+        <tr>
+          <td style="padding: 0px 6px">A</td>
+          <td style="padding-right: 6px">Tr&egrave;s bien</td>
+          <td style="padding: 0px 6px">C</td>
+          <td style="padding-right: 6px">Assez bien</td>
+          <td style="padding: 0px 6px">E</td>
+          <td style="padding-right: 6px">Passable</td>
+        </tr>
+        <tr>
+          <td style="padding: 0px 6px">B</td>
+          <td style="padding-right: 6px">Bien</td>
+          <td style="padding: 0px 6px">D</td>
+          <td style="padding-right: 6px">Convenable</td>
+          <td style="padding: 0px 6px">F</td>
+          <td style="padding-right: 6px">Insuffisant</td>
+        </tr>
+      </table>
+      <span class="bold">Classification de la formation</span>
+      <div>
+        Une mention globale, portant sur l&rsquo;ensemble du parcours et
+        s&rsquo;exprimant dans la m&ecirc;me &eacute;chelle qu&rsquo;en 4.4
+        figure &agrave; la fin du relev&eacute;.
+      </div>
+
+      <div style="break-before: column"></div>
+
+      <!--  -->
+
+      <p class="annexe-header">
+        Information sur la fonction de la qualification
+      </p>
+      <span class="bold"
+        >Acc&egrave;s &agrave; un niveau d&rsquo;&eacute;tudes
+        sup&eacute;rieur</span
+      >
+      <div>
+        Acc&egrave;s par concours aux grandes &eacute;coles.<br />
+        Acc&egrave;s, par validation de parcours, &agrave; tout type
+        d&rsquo;&eacute;tablissement d&rsquo;enseignement sup&eacute;rieur.
+      </div>
+
+      <span class="bold">Statut professionnel (si applicable) :</span>
+      <div>Sans objet</div>
+
+      <!--  -->
+
+      <p class="annexe-header">Informations compl&eacute;mentaires</p>
+      <span class="bold">Informations compl&eacute;mentaires</span>
+      <div>
+        Les catalogues des cours et les arr&ecirc;t&eacute;s minist&eacute;riels
+        d&eacute;finissant les programmes sont consultables sur&nbsp;:
+        <div class="center">http://www.education.gouv.fr</div>
+      </div>
+      <span class="bold">Autres sources d&rsquo;information&nbsp;:</span>
+      <div>
+        Pour toute information sur le dispositif CPGE consulter&nbsp;:
+        <div class="center">http://www.education.gouv.fr</div>
+      </div>
+
+      <!--  -->
+
+      <p class="annexe-header">Certification de l&rsquo;attestation</p>
+      <div class="bold">Date : {{ .Date }}</div>
+      <div class="bold">Signature :</div>
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
+      <div class="bold">Fonction : &nbsp;Proviseur</div>
+      <div class="bold">Tampon ou cachet officiel :</div>
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
+
+      <!--  -->
+
+      <p class="annexe-header">
+        Informations sur le syst&egrave;me national <br />
+        &nbsp; &nbsp; d&rsquo;enseignement sup&eacute;rieur
+      </p>
+      <table
+        style="
+          border-spacing: 0;
+          border-collapse: collapse;
+          margin: 10px auto;
+          font-size: 9pt;
+          font-weight: bold;
+        "
+      >
+        <tr>
+          <td class="cell">8</td>
+          <td class="cell">Doctorat</td>
+          <td
+            class="cell"
+            style="background-color: #ccffff"
+            colspan="2"
+            rowspan="1"
+          >
+            Universit&eacute;
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="cell">7</td>
+          <td class="cell">Doctorat</td>
+          <td
+            class="cell"
+            style="background-color: #ccffff"
+            colspan="2"
+            rowspan="1"
+          >
+            Universit&eacute;
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="cell">6</td>
+          <td class="cell">Doctorat</td>
+          <td
+            class="cell"
+            style="background-color: #ccffff"
+            colspan="2"
+            rowspan="1"
+          >
+            Universit&eacute;
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="cell">5</td>
+          <td class="cell">Master</td>
+          <td class="cell" style="background-color: #ffff00">
+            Universit&eacute;
+          </td>
+          <td class="cell" style="background-color: #00dcff">
+            Grande &eacute;cole
+          </td>
+        </tr>
+        <tr>
+          <td class="cell">4</td>
+          <td class="cell">Master</td>
+          <td class="cell" style="background-color: #ffff00">
+            Universit&eacute;
+          </td>
+          <td class="cell" style="background-color: #00dcff">
+            Grande &eacute;cole
+          </td>
+        </tr>
+        <tr>
+          <td class="cell">3</td>
+          <td class="cell">Licence</td>
+          <td class="cell" style="background-color: #ffff99">
+            Universit&eacute;
+          </td>
+          <td class="cell" style="background-color: #00dcff">
+            Grande &eacute;cole
+          </td>
+          <td class="cell" style="background-color: #ff9966">
+            Licence pro <br />
+            ATS
+          </td>
+        </tr>
+        <tr>
+          <td class="cell">2</td>
+          <td class="cell">Licence</td>
+          <td class="cell" style="background-color: #ffff99">
+            Universit&eacute;
+          </td>
+          <td class="cell" style="background-color: #ccffff">CPGE</td>
+          <td class="cell" style="background-color: #ffcc99">STS-IUT</td>
+        </tr>
+        <tr>
+          <td class="cell">1</td>
+          <td class="cell">Licence</td>
+          <td class="cell" style="background-color: #ffff99">
+            Universit&eacute;
+          </td>
+          <td class="cell" style="background-color: #ccffff">CPGE</td>
+          <td class="cell" style="background-color: #ffcc99">STS-IUT</td>
+        </tr>
+        <tr>
+          <td class="cell">0</td>
+          <td class="cell">Bac</td>
+          <td class="c67 cell" colspan="3" rowspan="1">
+            Enseignement secondaire
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="page-break-before: always"></div>
+
+    <!-- Fin de la page 2 -->
+
+    <p
+      style="
+        background-color: #ccffff;
+        border: 1px solid black;
+        padding: 4px 0px;
+        margin: auto;
+        margin-top: 40px;
+        margin-bottom: 10px;
+        max-width: 50%;
+      "
+      class="center bold"
+    >
+      RELEV&Eacute; DE R&Eacute;SULTATS <br />
+      {{ .Prenom }} {{ .Nom }}<br />
+      N&deg;INE&nbsp;: {{ .INE }}
+    </p>
+    <table
+      style="
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin: auto;
+        font-size: 10pt;
+        width: 90%;
+      "
+    >
+      <tr>
+        <td class="cell">ENSEIGNEMENTS</td>
+        <td class="cell">Cr&eacute;dits ECTS</td>
+        <td class="cell">Mention ECTS</td>
+      </tr>
+      <tr class="c27" style="background-color: #ccffff">
+        <td class="cell" colspan="3">Premier semestre</td>
+      </tr>
+      <tr>
+        <td class="cell" style="text-align: left">
+          Culture g&eacute;n&eacute;rale
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S1CGe }}</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Langue vivante 1 : {{ .Option1 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S1LV1 }}</td>
+      </tr>
+      <tr class="c27">
+        <td class="cell" style="text-align: left">
+          Langue vivante 2 : {{ .Option2 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S1LV2 }}</td>
+      </tr>
+      <!-- <tr class="c23">
+        <td class="cell" style="text-align: left">
+          &Eacute;ducation physique et sportive
+        </td>
+        <td class="cell">1</td>
+        <td class="cell">&nbsp;</td>
+      </tr> -->
+      <tr class="c27">
+        <td class="cell" style="text-align: left">Math&eacute;matiques</td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S1Mat }}</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Economie, sociologie et histoire du monde contemporain
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S1ESH }}</td>
+      </tr>
+      <!--  -->
+      <tr class="c96" style="background-color: #66ffff">
+        <td class="cell" colspan="3">Deuxi&egrave;me semestre</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Culture g&eacute;n&eacute;rale
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S2CGe }}</td>
+      </tr>
+      <tr class="c27">
+        <td class="cell" style="text-align: left">
+          Langue vivante 1 : {{ .Option1 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S2LV1 }}</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          <span class="c1">Langue vivante 2 : {{ .Option2 }}</span>
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S2LV2 }}</td>
+      </tr>
+      <!-- <tr class="c23">
+        <td class="cell" style="text-align: left">
+          &Eacute;ducation physique et sportive
+        </td>
+        <td class="cell">1</td>
+        <td class="cell">&nbsp;</td>
+      </tr> -->
+      <tr class="c27">
+        <td class="cell" style="text-align: left">Math&eacute;matiques</td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S2Mat }}</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Economie, sociologie et histoire du monde contemporain
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S2ESH }}</td>
+      </tr>
+      <!--  -->
+      <tr class="c78" style="background-color: #1adce6">
+        <td class="cell" colspan="3">Troisi&egrave;me semestre</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Culture g&eacute;n&eacute;rale
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S3CGe }}</td>
+      </tr>
+      <tr class="c27">
+        <td class="cell" style="text-align: left">
+          Langue vivante 1 : {{ .Option1 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S3LV1 }}</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Langue vivante 2 : {{ .Option2 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S3LV2 }}</td>
+      </tr>
+      <!-- <tr class="c27">
+        <td class="cell" style="text-align: left">
+          &Eacute;ducation physique et sportive
+        </td>
+        <td class="cell">1</td>
+        <td class="cell">&nbsp;</td>
+      </tr> -->
+      <tr class="c23">
+        <td class="cell" style="text-align: left">Math&eacute;matiques</td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S3Mat }}</td>
+      </tr>
+      <tr class="c27">
+        <td class="cell" style="text-align: left">
+          Economie, sociologie et histoire du monde contemporain
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S3ESH }}</td>
+      </tr>
+      <!--  -->
+      <tr class="c27" style="background-color: #12c4c4">
+        <td class="cell" colspan="3">Quatri&egrave;me semestre</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Culture g&eacute;n&eacute;rale
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S4CGe }}</td>
+      </tr>
+      <tr class="c23">
+        <td class="cell" style="text-align: left">
+          Langue vivante 1 : {{ .Option1 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S4LV1 }}</td>
+      </tr>
+      <tr class="c27">
+        <td class="cell" style="text-align: left">
+          Langue vivante 2 : {{ .Option2 }}
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S4LV2 }}</td>
+      </tr>
+      <!-- <tr class="c23">
+        <td class="cell" style="text-align: left">
+          &Eacute;ducation physique et sportive
+        </td>
+        <td class="cell">1</td>
+        <td class="cell"></td>
+      </tr> -->
+      <tr class="c23">
+        <td class="cell" style="text-align: left">Math&eacute;matiques</td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S4Mat }}</td>
+      </tr>
+      <tr class="c27">
+        <td class="cell" style="text-align: left">
+          Economie, sociologie et histoire du monde contemporain
+        </td>
+        <td class="cell">6</td>
+        <td class="cell">{{ .S4ESH }}</td>
+      </tr>
+    </table>
+    <div
+      style="
+        margin-left: 20px;
+        margin-top: 20px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+      "
+    >
+      <div style="display: inline">Mention globale : {{ .MentionGlobale }}</div>
+      <div style="display: inline; padding-right: 180px">
+        Signature et tampon :
+      </div>
+    </div>
+  </body>
+</html>
