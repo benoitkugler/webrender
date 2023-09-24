@@ -2,6 +2,8 @@ package tree
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/benoitkugler/webrender/css/counters"
 	"github.com/benoitkugler/webrender/logger"
@@ -47,6 +49,13 @@ var html5UAFormsCSS string
 var html5PHCSS string
 
 func init() {
+	logger.ProgressLogger.SetOutput(io.Discard)
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer func() {
+		logger.ProgressLogger.SetOutput(os.Stdout)
+		logger.WarningLogger.SetOutput(os.Stdout)
+	}()
+
 	var err error
 	TestUAStylesheet, err = NewCSSDefault(utils.InputString(testUACSS))
 	if err != nil {
