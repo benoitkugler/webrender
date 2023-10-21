@@ -180,8 +180,8 @@ func (f *FontConfiguration) loadOneFont(url pr.NamedString, ruleDescriptors vali
 		features.SetFontFeatureSettings(ruleDescriptors.FontFeatureSettings)
 	}
 	featuresString := ""
-	for k, v := range getFontFeatures(features) {
-		featuresString += fmt.Sprintf("<string>%s=%d</string>", k, v)
+	for _, v := range getFontFeatures(features) {
+		featuresString += fmt.Sprintf("<string>%s=%d</string>", v.Tag[:], v.Value)
 	}
 	fontconfigStyle, ok := FONTCONFIG_STYLE[ruleDescriptors.FontStyle]
 	if !ok {
@@ -272,132 +272,6 @@ var (
 		"ultra-expanded":  "ultraexpanded",
 	}
 )
-
-var (
-	ligatureKeys = map[string][]string{
-		"common-ligatures":        {"liga", "clig"},
-		"historical-ligatures":    {"hlig"},
-		"discretionary-ligatures": {"dlig"},
-		"contextual":              {"calt"},
-	}
-	capsKeys = map[string][]string{
-		"small-caps":      {"smcp"},
-		"all-small-caps":  {"c2sc", "smcp"},
-		"petite-caps":     {"pcap"},
-		"all-petite-caps": {"c2pc", "pcap"},
-		"unicase":         {"unic"},
-		"titling-caps":    {"titl"},
-	}
-	numericKeys = map[string]string{
-		"lining-nums":        "lnum",
-		"oldstyle-nums":      "onum",
-		"proportional-nums":  "pnum",
-		"tabular-nums":       "tnum",
-		"diagonal-fractions": "frac",
-		"stacked-fractions":  "afrc",
-		"ordinal":            "ordn",
-		"slashed-zero":       "zero",
-	}
-	eastAsianKeys = map[string]string{
-		"jis78":              "jp78",
-		"jis83":              "jp83",
-		"jis90":              "jp90",
-		"jis04":              "jp04",
-		"simplified":         "smpl",
-		"traditional":        "trad",
-		"full-width":         "fwid",
-		"proportional-width": "pwid",
-		"ruby":               "ruby",
-	}
-)
-
-// Get the font features from the different properties in style.
-// See https://www.w3.org/TR/css-fonts-3/#feature-precedence
-// default value is "normal"
-// pass nil for default ("normal") on fontFeatureSettings
-func getFontFeatures(style pr.StyleAccessor) map[string]int {
-	fontKerning := defaultFontFeature(string(style.GetFontKerning()))
-	fontVariantPosition := defaultFontFeature(string(style.GetFontVariantPosition()))
-	fontVariantCaps := defaultFontFeature(string(style.GetFontVariantCaps()))
-	fontVariantAlternates := defaultFontFeature(string(style.GetFontVariantAlternates()))
-
-	features := map[string]int{}
-
-	// Step 1: getting the default, we rely on Pango for this
-	// Step 2: @font-face font-variant, done in fonts.addFontFace
-	// Step 3: @font-face font-feature-settings, done in fonts.addFontFace
-
-	// Step 4: font-variant && OpenType features
-
-	if fontKerning != "auto" {
-		features["kern"] = 0
-		if fontKerning == "normal" {
-			features["kern"] = 1
-		}
-	}
-
-	fontVariantLigatures := style.GetFontVariantLigatures()
-	if fontVariantLigatures.String == "none" {
-		for _, keys := range ligatureKeys {
-			for _, key := range keys {
-				features[key] = 0
-			}
-		}
-	} else if fontVariantLigatures.String != "normal" {
-		for _, ligatureType := range fontVariantLigatures.Strings {
-			value := 1
-			if strings.HasPrefix(ligatureType, "no-") {
-				value = 0
-				ligatureType = ligatureType[3:]
-			}
-			for _, key := range ligatureKeys[ligatureType] {
-				features[key] = value
-			}
-		}
-	}
-
-	if fontVariantPosition == "sub" {
-		// https://www.w3.org/TR/css-fonts-3/#font-variant-position-prop
-		features["subs"] = 1
-	} else if fontVariantPosition == "super" {
-		features["sups"] = 1
-	}
-
-	if fontVariantCaps != "normal" {
-		// https://www.w3.org/TR/css-fonts-3/#font-variant-caps-prop
-		for _, key := range capsKeys[fontVariantCaps] {
-			features[key] = 1
-		}
-	}
-
-	if fv := style.GetFontVariantNumeric(); fv.String != "normal" {
-		for _, key := range fv.Strings {
-			features[numericKeys[key]] = 1
-		}
-	}
-
-	if fontVariantAlternates != "normal" {
-		// See https://www.w3.org/TR/css-fonts-3/#font-variant-caps-prop
-		if fontVariantAlternates == "historical-forms" {
-			features["hist"] = 1
-		}
-	}
-
-	if fv := style.GetFontVariantEastAsian(); fv.String != "normal" {
-		for _, key := range fv.Strings {
-			features[eastAsianKeys[key]] = 1
-		}
-	}
-
-	// Step 5: incompatible non-OpenType features, already handled by Pango
-
-	// Step 6: font-feature-settings
-	for _, pair := range style.GetFontFeatureSettings().Values {
-		features[pair.String] = pair.Int
-	}
-
-	return features
-}
 
 func getFontDescription(style pr.StyleAccessor) pango.FontDescription {
 	fontDesc := pango.NewFontDescription()
