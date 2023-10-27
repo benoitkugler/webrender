@@ -12,7 +12,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/properties"
@@ -39,9 +38,11 @@ type TextRun struct {
 	Glyphs []TextGlyph
 }
 
+type GID = uint32
+
 // TextGlyph stores a glyph and it's position
 type TextGlyph struct {
-	Glyph    fonts.GID
+	Glyph    GID
 	Offset   Fl  // normalized by FontSize
 	Kerning  int // normalized by FontSize
 	XAdvance Fl  // how much to move before drawing, used for emojis

@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/benoitkugler/textlayout/fonts"
 	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
@@ -189,7 +188,7 @@ func (dr Drawer) DrawText(text []backend.TextDrawing) {
 
 func (dr Drawer) AddFont(pango.Font, []byte) *backend.Font {
 	fmt.Fprintln(dr.out, "AddFont :")
-	return &backend.Font{Cmap: make(map[fonts.GID][]rune), Extents: make(map[fonts.GID]backend.GlyphExtents)}
+	return &backend.Font{Cmap: make(map[backend.GID][]rune), Extents: make(map[backend.GID]backend.GlyphExtents)}
 }
 
 func (dr Drawer) NewGroup(x, y, width, height fl) backend.Canvas {

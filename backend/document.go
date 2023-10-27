@@ -2,8 +2,6 @@ package backend
 
 import (
 	"time"
-
-	"github.com/benoitkugler/textlayout/fonts"
 )
 
 type Anchor struct {
@@ -26,8 +24,8 @@ type GlyphExtents struct {
 
 // Font stores some metadata used in the output document.
 type Font struct {
-	Cmap    map[fonts.GID][]rune
-	Extents map[fonts.GID]GlyphExtents
+	Cmap    map[GID][]rune
+	Extents map[GID]GlyphExtents
 	Bbox    [4]int
 }
 

@@ -117,12 +117,12 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 
 			if glyph == pango.GLYPH_EMPTY || glyph&pango.GLYPH_UNKNOWN_FLAG != 0 {
 				outGlyph.Offset = pr.Fl(width) / fontSize
-				outGlyph.Glyph = fonts.EmptyGlyph
+				outGlyph.Glyph = backend.GID(fonts.EmptyGlyph)
 				continue
 			}
 
 			outGlyph.Offset = pr.Fl(glyphInfo.Geometry.XOffset) / fontSize
-			outGlyph.Glyph = glyph.GID()
+			outGlyph.Glyph = backend.GID(glyph.GID())
 
 			// Ink bounding box and logical widths in font
 			if _, in := outFont.Extents[outGlyph.Glyph]; !in {
