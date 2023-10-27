@@ -1289,7 +1289,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	x, y := pr.Fl(textbox.PositionX), pr.Fl(textbox.PositionY+textbox.Baseline.V())
 	ctx.dst.State().SetColorRgba(textbox.Style.GetColor().RGBA, false)
 
-	textbox.PangoLayout.ApplyJustification()
+	textbox.TextLayout.ApplyJustification()
 	ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, x, y)
 
 	// Draw text decoration
@@ -1302,21 +1302,21 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 
 	var offsetY pr.Float
 
-	metrics := textbox.PangoLayout.Metrics
+	metrics := textbox.TextLayout.Metrics
 
 	if utils.Set(decoration).Has("overline") {
-		thickness := text.PangoUnitsToFloat((metrics.UnderlineThickness))
-		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.Ascent)) + pr.Float(thickness)/2
+		thickness := metrics.UnderlineThickness
+		offsetY = textbox.Baseline.V() - pr.Float(metrics.Ascent) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 	if utils.Set(decoration).Has("underline") {
-		thickness := text.PangoUnitsToFloat((metrics.UnderlineThickness))
-		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.UnderlinePosition)) + pr.Float(thickness)/2
+		thickness := metrics.UnderlineThickness
+		offsetY = textbox.Baseline.V() - pr.Float(metrics.UnderlinePosition) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 	if utils.Set(decoration).Has("line-through") {
-		thickness := text.PangoUnitsToFloat((metrics.StrikethroughThickness))
-		offsetY = textbox.Baseline.V() - pr.Float(text.PangoUnitsToFloat(metrics.StrikethroughPosition))
+		thickness := metrics.StrikethroughThickness
+		offsetY = textbox.Baseline.V() - pr.Float(metrics.StrikethroughPosition)
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
 }
@@ -1333,7 +1333,7 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 	}
 
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
-	text := textContext.CreateFirstLine(textbox.PangoLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
+	text := textContext.CreateFirstLine(textbox.TextLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
 	ctx.dst.DrawText([]backend.TextDrawing{text})
 }
 

@@ -1,7 +1,6 @@
 package text
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/benoitkugler/textlayout/language"
@@ -22,8 +21,8 @@ type TextLayoutContext interface {
 
 // TextLayout wraps a pango.Layout object
 type TextLayout struct {
-	Style   pr.StyleAccessor
-	Metrics *pango.FontMetrics // optional
+	style   *TextStyle
+	Metrics *LineMetrics // optional
 
 	MaxWidth pr.MaybeFloat
 
@@ -32,10 +31,10 @@ type TextLayout struct {
 	Layout pango.Layout
 
 	JustificationSpacing pr.Fl
-	FirstLineDirection   pango.Direction
+	FirstLineRTL         bool // true is the first line direction is RTL
 }
 
-func NewTextLayout(context TextLayoutContext, style pr.StyleAccessor, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayout {
+func newTextLayout(context TextLayoutContext, style *TextStyle, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayout {
 	var layout TextLayout
 
 	layout.JustificationSpacing = justificationSpacing
@@ -45,18 +44,21 @@ func NewTextLayout(context TextLayoutContext, style pr.StyleAccessor, justificat
 	return &layout
 }
 
-func (p *TextLayout) setup(context TextLayoutContext, style pr.StyleAccessor) {
+// Text returns a readonly slice of the text used in the layout.
+func (p *TextLayout) Text() []rune { return p.Layout.Text }
+
+func (p *TextLayout) setup(context TextLayoutContext, style *TextStyle) {
 	p.Context = context
-	p.Style = style
-	p.FirstLineDirection = 0
+	p.style = style
+	p.FirstLineRTL = false
 	fontmap := context.Fonts().Fontmap
 	pc := pango.NewContext(fontmap)
 	pc.SetRoundGlyphPositions(false)
 
 	var lang pango.Language
-	if flo := style.GetFontLanguageOverride(); flo != "normal" {
-		lang = lstToISO[strings.ToLower(string(flo))]
-	} else if lg := style.GetLang().String; lg != "" {
+	if flo := style.FontLanguageOverride; (flo != fontLanguageOverride{}) {
+		lang = lstToISO[flo]
+	} else if lg := style.Lang; lg != "" {
 		lang = language.NewLanguage(lg)
 	} else {
 		lang = pango.DefaultLanguage()
@@ -67,21 +69,21 @@ func (p *TextLayout) setup(context TextLayoutContext, style pr.StyleAccessor) {
 	p.Layout = *pango.NewLayout(pc)
 	p.Layout.SetFontDescription(&fontDesc)
 
-	if !style.GetTextDecorationLine().IsNone() {
+	if !style.TextDecorationLine.IsNone() {
 		metrics := pc.GetMetrics(&fontDesc, lang)
-		p.Metrics = &metrics
+		p.Metrics = &LineMetrics{
+			Ascent:                 PangoUnitsToFloat(metrics.Ascent),
+			UnderlinePosition:      PangoUnitsToFloat(metrics.UnderlinePosition),
+			UnderlineThickness:     PangoUnitsToFloat(metrics.UnderlineThickness),
+			StrikethroughPosition:  PangoUnitsToFloat(metrics.StrikethroughPosition),
+			StrikethroughThickness: PangoUnitsToFloat(metrics.StrikethroughThickness),
+		}
 	} else {
 		p.Metrics = nil
 	}
 
-	features := getFontFeatures(style)
-	if len(features) != 0 {
-		var chunks []string
-		for _, v := range features {
-			chunks = append(chunks, fmt.Sprintf("%s=%d", v.Tag[:], v.Value))
-		}
-		featuresString := strings.Join(chunks, ",")
-		attr := pango.NewAttrFontFeatures(featuresString)
+	if len(style.FontFeatures) != 0 {
+		attr := pango.NewAttrFontFeatures(pangoFontFeatures(style.FontFeatures))
 		p.Layout.SetAttributes(pango.AttrList{attr})
 	}
 }
@@ -102,19 +104,16 @@ func (p *TextLayout) setText(text string, justify bool) {
 
 	p.Layout.SetText(text)
 
-	wordSpacing := pr.Fl(p.Style.GetWordSpacing().Value)
+	wordSpacing := p.style.WordSpacing
 	if justify {
 		// Justification is needed when drawing text but is useless during
 		// layout, when it can be ignored.
 		wordSpacing += p.JustificationSpacing
 	}
 
-	var letterSpacing pr.Fl
-	if ls := p.Style.GetLetterSpacing(); ls.String != "normal" {
-		letterSpacing = pr.Fl(ls.Value)
-	}
+	letterSpacing := p.style.LetterSpacing
 
-	wordBreaking := p.Style.GetOverflowWrap() == "anywhere" || p.Style.GetOverflowWrap() == "break-word"
+	wordBreaking := p.style.OverflowWrap == OAnywhere || p.style.OverflowWrap == OBreakWord
 
 	if text != "" && (wordSpacing != 0 || letterSpacing != 0 || wordBreaking) {
 		letterSpacingInt := PangoUnitsFromFloat(letterSpacing)
@@ -167,13 +166,13 @@ func (p *TextLayout) setText(text string, justify bool) {
 }
 
 func (p *TextLayout) setTabs() {
-	tabSize := p.Style.GetTabSize()
-	width := int(tabSize.Value)
-	if tabSize.Unit == 0 { // no unit, means a multiple of the advance width of the space character
-		layout := NewTextLayout(p.Context, p.Style, p.JustificationSpacing, nil)
+	tabSize := p.style.TabSize
+	width := tabSize.Width
+	if tabSize.IsMultiple { // no unit, means a multiple of the advance width of the space character
+		layout := newTextLayout(p.Context, p.style, p.JustificationSpacing, nil)
 		layout.SetText(strings.Repeat(" ", width))
 		line, _ := layout.GetFirstLine()
-		widthTmp, _ := lineSize(line, p.Style.GetLetterSpacing())
+		widthTmp, _ := lineSize(line, p.style.LetterSpacing)
 		width = int(widthTmp + 0.5)
 	}
 	// 0 is not handled correctly by Pango
@@ -193,21 +192,19 @@ func (p *TextLayout) GetFirstLine() (*pango.LayoutLine, int) {
 		index = secondLine.StartIndex
 	}
 
-	p.FirstLineDirection = firstLine.ResolvedDir
+	p.FirstLineRTL = firstLine.ResolvedDir%2 != 0
 
 	return firstLine, index
 }
 
 // lineSize gets the logical width and height of the given `line`.
-// `style` is used to add letter spacing (if needed).
-func lineSize(line *pango.LayoutLine, letterSpacing pr.Value) (pr.Fl, pr.Fl) {
+// [letterSpacing] is added, a value of 0 has no impact
+func lineSize(line *pango.LayoutLine, letterSpacing pr.Fl) (pr.Fl, pr.Fl) {
 	var logicalExtents pango.Rectangle
 	line.GetExtents(nil, &logicalExtents)
 	width := PangoUnitsToFloat(logicalExtents.Width)
 	height := PangoUnitsToFloat(logicalExtents.Height)
-	if letterSpacing.String != "normal" {
-		width += pr.Fl(letterSpacing.Value)
-	}
+	width += letterSpacing
 	return width, height
 }
 

@@ -7,23 +7,30 @@ import (
 	pr "github.com/benoitkugler/webrender/css/properties"
 )
 
+type LineMetrics struct {
+	// Distance from the baseline to the logical top of a line of text.
+	// (The logical top may be above or below the top of the
+	// actual drawn ink. It is necessary to lay out the text to figure
+	// where the ink will be.)
+	Ascent pr.Fl
+
+	// Distance above the baseline of the top of the underline.
+	// Since most fonts have underline positions beneath the baseline, this value is typically negative.
+	UnderlinePosition pr.Fl
+
+	// Suggested thickness to draw for the underline.
+	UnderlineThickness pr.Fl
+
+	// Distance above the baseline of the top of the strikethrough.
+	StrikethroughPosition pr.Fl
+	// Suggested thickness to draw for the strikethrough.
+	StrikethroughThickness pr.Fl
+}
+
 // TextStyle exposes the subset of a [pr.Style]
 // required to layout text.
 type TextStyle struct {
-	FontFamily            []string
-	FontStyle             FontStyle
-	FontStretch           FontStretch
-	FontWeight            int
-	FontSize              pr.Fl
-	FontVariationSettings []Variation // empty for 'normal'
-
-	FontLanguageOverride FontLanguageOverride
-	Lang                 string
-
 	TextDecorationLine pr.Decorations
-
-	WhiteSpace    Whitespace
-	LetterSpacing pr.Fl // 0 for 'normal'
 
 	// FontFeatures stores the resolved value
 	// for all the CSS properties related :
@@ -36,9 +43,34 @@ type TextStyle struct {
 	// 	"font-variant-east-asian"
 	// 	"font-feature-settings"
 	FontFeatures []Feature
+
+	FontFamily            []string
+	FontStyle             FontStyle
+	FontStretch           FontStretch
+	FontWeight            int
+	FontSize              pr.Fl
+	FontVariationSettings []Variation // empty for 'normal'
+
+	FontLanguageOverride fontLanguageOverride
+	Lang                 string
+
+	WhiteSpace   Whitespace
+	OverflowWrap OverflowWrap
+	WordBreak    WordBreak
+
+	Hyphens             Hyphens
+	HyphenateCharacter  string
+	HyphenateLimitChars pr.Ints3
+	HyphenateLimitZone  HyphenateZone
+
+	WordSpacing   pr.Fl
+	LetterSpacing pr.Fl // 0 for 'normal'
+	TabSize       TabSize
 }
 
-func NewTextStyle(style pr.StyleAccessor) *TextStyle {
+// If ignoreSpacing is true, 'word-spacing' and 'letter-spacing' are
+// not queried from [style]
+func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	var out TextStyle
 
 	out.FontFamily = style.GetFontFamily()
@@ -54,13 +86,38 @@ func NewTextStyle(style pr.StyleAccessor) *TextStyle {
 	out.TextDecorationLine = style.GetTextDecorationLine()
 
 	out.WhiteSpace = newWhiteSpace(style.GetWhiteSpace())
-	if ls := style.GetLetterSpacing(); ls.String != "normal" {
-		out.LetterSpacing = pr.Fl(ls.Value)
+	out.OverflowWrap = newOverflowWrap(style.GetOverflowWrap())
+	out.WordBreak = newWordBreak(style.GetWordBreak())
+
+	out.Hyphens = newHyphens(style.GetHyphens())
+	out.HyphenateLimitChars = style.GetHyphenateLimitChars()
+	out.HyphenateCharacter = string(style.GetHyphenateCharacter())
+	out.HyphenateLimitZone = newHyphenateZone(style.GetHyphenateLimitZone())
+
+	if !ignoreSpacing {
+		out.WordSpacing = pr.Fl(style.GetWordSpacing().Value)
+		if ls := style.GetLetterSpacing(); ls.String != "normal" {
+			out.LetterSpacing = pr.Fl(ls.Value)
+		}
 	}
+
+	out.TabSize = newTabSize(style.GetTabSize())
 
 	out.FontFeatures = getFontFeatures(style)
 
 	return &out
+}
+
+type TabSize struct {
+	Width      int
+	IsMultiple bool // true to use Width * <space character width>
+}
+
+func newTabSize(ts pr.Value) TabSize {
+	return TabSize{
+		Width:      int(ts.Value),
+		IsMultiple: ts.Unit == 0,
+	}
 }
 
 type Feature struct {
@@ -206,6 +263,24 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	return out
 }
 
+type WordBreak uint8
+
+const (
+	WBNormal WordBreak = iota
+	WBBreakAll
+)
+
+func newWordBreak(w pr.String) WordBreak {
+	switch w {
+	case "", "normal":
+		return WBNormal
+	case "break-all":
+		return WBBreakAll
+	default:
+		return WBNormal
+	}
+}
+
 type Whitespace uint8
 
 const (
@@ -233,6 +308,60 @@ func newWhiteSpace(w pr.String) Whitespace {
 		return WBreakSpaces
 	default:
 		return WNormal
+	}
+}
+
+type OverflowWrap uint8
+
+const (
+	ONormal OverflowWrap = iota
+	OAnywhere
+	OBreakWord
+)
+
+func newOverflowWrap(w pr.String) OverflowWrap {
+	switch w {
+	case "", "normal":
+		return ONormal
+	case "anywhere":
+		return OAnywhere
+	case "break-word":
+		return OBreakWord
+	default:
+		return ONormal
+	}
+}
+
+type Hyphens uint8
+
+const (
+	HManual Hyphens = iota
+	HNone
+	HAuto
+)
+
+func newHyphens(h pr.String) Hyphens {
+	switch h {
+	case "", "manual":
+		return HManual
+	case "none":
+		return HNone
+	case "auto":
+		return HAuto
+	default:
+		return HManual
+	}
+}
+
+type HyphenateZone struct {
+	Limit        pr.Fl
+	IsPercentage bool
+}
+
+func newHyphenateZone(zone pr.Value) HyphenateZone {
+	return HyphenateZone{
+		Limit:        pr.Fl(zone.Value),
+		IsPercentage: zone.Unit == pr.Perc,
 	}
 }
 
@@ -313,11 +442,11 @@ func newFontVariationSettings(vs pr.SFloatStrings) []Variation {
 	return out
 }
 
-// FontLanguageOverride is either 'normal' (the zero value)
+// fontLanguageOverride is either 'normal' (coded as the zero value)
 // or a 4 byte tag, normalized to lower case
-type FontLanguageOverride [4]byte
+type fontLanguageOverride [4]byte
 
-func newFontLanguageOverrride(flo pr.String) FontLanguageOverride {
+func newFontLanguageOverrride(flo pr.String) fontLanguageOverride {
 	if flo == "normal" {
 		return [4]byte{}
 	}
@@ -329,281 +458,281 @@ func newFontLanguageOverrride(flo pr.String) FontLanguageOverride {
 
 // Language system tags
 // From https://docs.microsoft.com/typography/opentype/spec/languagetags
-var lstToISO = map[string]language.Language{
-	"aba":  "abq",
-	"afk":  "afr",
-	"afr":  "aar",
-	"agw":  "ahg",
-	"als":  "gsw",
-	"alt":  "atv",
-	"ari":  "aiw",
-	"ark":  "mhv",
-	"ath":  "apk",
-	"avr":  "ava",
-	"bad":  "bfq",
-	"bad0": "bad",
-	"bag":  "bfy",
-	"bal":  "krc",
-	"bau":  "bci",
-	"bch":  "bcq",
-	"bgr":  "bul",
-	"bil":  "byn",
-	"bkf":  "bla",
-	"bli":  "bal",
-	"bln":  "bjt",
-	"blt":  "bft",
-	"bmb":  "bam",
-	"bri":  "bra",
-	"brm":  "mya",
-	"bsh":  "bak",
-	"bti":  "btb",
-	"chg":  "sgw",
-	"chh":  "hne",
-	"chi":  "nya",
-	"chk":  "ckt",
-	"chk0": "chk",
-	"chu":  "chv",
-	"chy":  "chy",
-	"cmr":  "swb",
-	"crr":  "crx",
-	"crt":  "crh",
-	"csl":  "chu",
-	"csy":  "ces",
-	"dcr":  "cwd",
-	"dgr":  "doi",
-	"djr":  "dje",
-	"djr0": "djr",
-	"dng":  "ada",
-	"dnk":  "din",
-	"dri":  "prs",
-	"dun":  "dng",
-	"dzn":  "dzo",
-	"ebi":  "igb",
-	"ecr":  "crj",
-	"edo":  "bin",
-	"erz":  "myv",
-	"esp":  "spa",
-	"eti":  "est",
-	"euq":  "eus",
-	"evk":  "evn",
-	"evn":  "eve",
-	"fan":  "acf",
-	"fan0": "fan",
-	"far":  "fas",
-	"fji":  "fij",
-	"fle":  "vls",
-	"fne":  "enf",
-	"fos":  "fao",
-	"fri":  "fry",
-	"frl":  "fur",
-	"frp":  "frp",
-	"fta":  "fuf",
-	"gad":  "gaa",
-	"gae":  "gla",
-	"gal":  "glg",
-	"gaw":  "gbm",
-	"gil":  "niv",
-	"gil0": "gil",
-	"gmz":  "guk",
-	"grn":  "kal",
-	"gro":  "grt",
-	"gua":  "grn",
-	"hai":  "hat",
-	"hal":  "flm",
-	"har":  "hoj",
-	"hbn":  "amf",
-	"hma":  "mrj",
-	"hnd":  "hno",
-	"ho":   "hoc",
-	"hri":  "har",
-	"hye0": "hye",
-	"ijo":  "ijc",
-	"ing":  "inh",
-	"inu":  "iku",
-	"iri":  "gle",
-	"irt":  "gle",
-	"ism":  "smn",
-	"iwr":  "heb",
-	"jan":  "jpn",
-	"jii":  "yid",
-	"jud":  "lad",
-	"jul":  "dyu",
-	"kab":  "kbd",
-	"kab0": "kab",
-	"kac":  "kfr",
-	"kal":  "kln",
-	"kar":  "krc",
-	"keb":  "ktb",
-	"kge":  "kat",
-	"kha":  "kjh",
-	"khk":  "kca",
-	"khs":  "kca",
-	"khv":  "kca",
-	"kis":  "kqs",
-	"kkn":  "kex",
-	"klm":  "xal",
-	"kmb":  "kam",
-	"kmn":  "kfy",
-	"kmo":  "kmw",
-	"kms":  "kxc",
-	"knr":  "kau",
-	"kod":  "kfa",
-	"koh":  "okm",
-	"kon":  "ktu",
-	"kon0": "kon",
-	"kop":  "koi",
-	"koz":  "kpv",
-	"kpl":  "kpe",
-	"krk":  "kaa",
-	"krm":  "kdr",
-	"krn":  "kar",
-	"krt":  "kqy",
-	"ksh":  "kas",
-	"ksh0": "ksh",
-	"ksi":  "kha",
-	"ksm":  "sjd",
-	"kui":  "kxu",
-	"kul":  "kfx",
-	"kuu":  "kru",
-	"kuy":  "kdt",
-	"kyk":  "kpy",
-	"lad":  "lld",
-	"lah":  "bfu",
-	"lak":  "lbe",
-	"lam":  "lmn",
-	"laz":  "lzz",
-	"lcr":  "crm",
-	"ldk":  "lbj",
-	"lma":  "mhr",
-	"lmb":  "lif",
-	"lmw":  "ngl",
-	"lsb":  "dsb",
-	"lsm":  "smj",
-	"lth":  "lit",
-	"luh":  "luy",
-	"lvi":  "lav",
-	"maj":  "mpe",
-	"mak":  "vmw",
-	"man":  "mns",
-	"map":  "arn",
-	"maw":  "mwr",
-	"mbn":  "kmb",
-	"mch":  "mnc",
-	"mcr":  "crm",
-	"mde":  "men",
-	"men":  "mym",
-	"miz":  "lus",
-	"mkr":  "mak",
-	"mle":  "mdy",
-	"mln":  "mlq",
-	"mlr":  "mal",
-	"mly":  "msa",
-	"mnd":  "mnk",
-	"mng":  "mon",
-	"mnk":  "man",
-	"mnx":  "glv",
-	"mok":  "mdf",
-	"mon":  "mnw",
-	"mth":  "mai",
-	"mts":  "mlt",
-	"mun":  "unr",
-	"nan":  "gld",
-	"nas":  "nsk",
-	"ncr":  "csw",
-	"ndg":  "ndo",
-	"nhc":  "csw",
-	"nis":  "dap",
-	"nkl":  "nyn",
-	"nko":  "nqo",
-	"nor":  "nob",
-	"nsm":  "sme",
-	"nta":  "nod",
-	"nto":  "epo",
-	"nyn":  "nno",
-	"ocr":  "ojs",
-	"ojb":  "oji",
-	"oro":  "orm",
-	"paa":  "sam",
-	"pal":  "pli",
-	"pap":  "plp",
-	"pap0": "pap",
-	"pas":  "pus",
-	"pgr":  "ell",
-	"pil":  "fil",
-	"plg":  "pce",
-	"plk":  "pol",
-	"ptg":  "por",
-	"qin":  "bgr",
-	"rbu":  "bxr",
-	"rcr":  "atj",
-	"rms":  "roh",
-	"rom":  "ron",
-	"roy":  "rom",
-	"rsy":  "rue",
-	"rua":  "kin",
-	"sad":  "sck",
-	"say":  "chp",
-	"sek":  "xan",
-	"sel":  "sel",
-	"sgo":  "sag",
-	"sgs":  "sgs",
-	"sib":  "sjo",
-	"sig":  "xst",
-	"sks":  "sms",
-	"sky":  "slk",
-	"sla":  "scs",
-	"sml":  "som",
-	"sna":  "seh",
-	"sna0": "sna",
-	"snh":  "sin",
-	"sog":  "gru",
-	"srb":  "srp",
-	"ssl":  "xsl",
-	"ssm":  "sma",
-	"sur":  "suq",
-	"sve":  "swe",
-	"swa":  "aii",
-	"swk":  "swa",
-	"swz":  "ssw",
-	"sxt":  "ngo",
-	"taj":  "tgk",
-	"tcr":  "cwd",
-	"tgn":  "ton",
-	"tgr":  "tig",
-	"tgy":  "tir",
-	"tht":  "tah",
-	"tib":  "bod",
-	"tkm":  "tuk",
-	"tmn":  "tem",
-	"tna":  "tsn",
-	"tne":  "enh",
-	"tng":  "toi",
-	"tod":  "xal",
-	"tod0": "tod",
-	"trk":  "tur",
-	"tsg":  "tso",
-	"tua":  "tru",
-	"tul":  "tcy",
-	"tuv":  "tyv",
-	"twi":  "aka",
-	"usb":  "hsb",
-	"uyg":  "uig",
-	"vit":  "vie",
-	"vro":  "vro",
-	"wa":   "wbm",
-	"wag":  "wbr",
-	"wcr":  "crk",
-	"wel":  "cym",
-	"wlf":  "wol",
-	"xbd":  "khb",
-	"xhs":  "xho",
-	"yak":  "sah",
-	"yba":  "yor",
-	"ycr":  "cre",
-	"yim":  "iii",
-	"zhh":  "zho",
-	"zhp":  "zho",
-	"zhs":  "zho",
-	"zht":  "zho",
-	"znd":  "zne",
+var lstToISO = map[fontLanguageOverride]language.Language{
+	{'a', 'b', 'a'}:      "abq",
+	{'a', 'f', 'k'}:      "afr",
+	{'a', 'f', 'r'}:      "aar",
+	{'a', 'g', 'w'}:      "ahg",
+	{'a', 'l', 's'}:      "gsw",
+	{'a', 'l', 't'}:      "atv",
+	{'a', 'r', 'i'}:      "aiw",
+	{'a', 'r', 'k'}:      "mhv",
+	{'a', 't', 'h'}:      "apk",
+	{'a', 'v', 'r'}:      "ava",
+	{'b', 'a', 'd'}:      "bfq",
+	{'b', 'a', 'd', '0'}: "bad",
+	{'b', 'a', 'g'}:      "bfy",
+	{'b', 'a', 'l'}:      "krc",
+	{'b', 'a', 'u'}:      "bci",
+	{'b', 'c', 'h'}:      "bcq",
+	{'b', 'g', 'r'}:      "bul",
+	{'b', 'i', 'l'}:      "byn",
+	{'b', 'k', 'f'}:      "bla",
+	{'b', 'l', 'i'}:      "bal",
+	{'b', 'l', 'n'}:      "bjt",
+	{'b', 'l', 't'}:      "bft",
+	{'b', 'm', 'b'}:      "bam",
+	{'b', 'r', 'i'}:      "bra",
+	{'b', 'r', 'm'}:      "mya",
+	{'b', 's', 'h'}:      "bak",
+	{'b', 't', 'i'}:      "btb",
+	{'c', 'h', 'g'}:      "sgw",
+	{'c', 'h', 'h'}:      "hne",
+	{'c', 'h', 'i'}:      "nya",
+	{'c', 'h', 'k'}:      "ckt",
+	{'c', 'h', 'k', '0'}: "chk",
+	{'c', 'h', 'u'}:      "chv",
+	{'c', 'h', 'y'}:      "chy",
+	{'c', 'm', 'r'}:      "swb",
+	{'c', 'r', 'r'}:      "crx",
+	{'c', 'r', 't'}:      "crh",
+	{'c', 's', 'l'}:      "chu",
+	{'c', 's', 'y'}:      "ces",
+	{'d', 'c', 'r'}:      "cwd",
+	{'d', 'g', 'r'}:      "doi",
+	{'d', 'j', 'r'}:      "dje",
+	{'d', 'j', 'r', '0'}: "djr",
+	{'d', 'n', 'g'}:      "ada",
+	{'d', 'n', 'k'}:      "din",
+	{'d', 'r', 'i'}:      "prs",
+	{'d', 'u', 'n'}:      "dng",
+	{'d', 'z', 'n'}:      "dzo",
+	{'e', 'b', 'i'}:      "igb",
+	{'e', 'c', 'r'}:      "crj",
+	{'e', 'd', 'o'}:      "bin",
+	{'e', 'r', 'z'}:      "myv",
+	{'e', 's', 'p'}:      "spa",
+	{'e', 't', 'i'}:      "est",
+	{'e', 'u', 'q'}:      "eus",
+	{'e', 'v', 'k'}:      "evn",
+	{'e', 'v', 'n'}:      "eve",
+	{'f', 'a', 'n'}:      "acf",
+	{'f', 'a', 'n', '0'}: "fan",
+	{'f', 'a', 'r'}:      "fas",
+	{'f', 'j', 'i'}:      "fij",
+	{'f', 'l', 'e'}:      "vls",
+	{'f', 'n', 'e'}:      "enf",
+	{'f', 'o', 's'}:      "fao",
+	{'f', 'r', 'i'}:      "fry",
+	{'f', 'r', 'l'}:      "fur",
+	{'f', 'r', 'p'}:      "frp",
+	{'f', 't', 'a'}:      "fuf",
+	{'g', 'a', 'd'}:      "gaa",
+	{'g', 'a', 'e'}:      "gla",
+	{'g', 'a', 'l'}:      "glg",
+	{'g', 'a', 'w'}:      "gbm",
+	{'g', 'i', 'l'}:      "niv",
+	{'g', 'i', 'l', '0'}: "gil",
+	{'g', 'm', 'z'}:      "guk",
+	{'g', 'r', 'n'}:      "kal",
+	{'g', 'r', 'o'}:      "grt",
+	{'g', 'u', 'a'}:      "grn",
+	{'h', 'a', 'i'}:      "hat",
+	{'h', 'a', 'l'}:      "flm",
+	{'h', 'a', 'r'}:      "hoj",
+	{'h', 'b', 'n'}:      "amf",
+	{'h', 'm', 'a'}:      "mrj",
+	{'h', 'n', 'd'}:      "hno",
+	{'h', 'o'}:           "hoc",
+	{'h', 'r', 'i'}:      "har",
+	{'h', 'y', 'e', '0'}: "hye",
+	{'i', 'j', 'o'}:      "ijc",
+	{'i', 'n', 'g'}:      "inh",
+	{'i', 'n', 'u'}:      "iku",
+	{'i', 'r', 'i'}:      "gle",
+	{'i', 'r', 't'}:      "gle",
+	{'i', 's', 'm'}:      "smn",
+	{'i', 'w', 'r'}:      "heb",
+	{'j', 'a', 'n'}:      "jpn",
+	{'j', 'i', 'i'}:      "yid",
+	{'j', 'u', 'd'}:      "lad",
+	{'j', 'u', 'l'}:      "dyu",
+	{'k', 'a', 'b'}:      "kbd",
+	{'k', 'a', 'b', '0'}: "kab",
+	{'k', 'a', 'c'}:      "kfr",
+	{'k', 'a', 'l'}:      "kln",
+	{'k', 'a', 'r'}:      "krc",
+	{'k', 'e', 'b'}:      "ktb",
+	{'k', 'g', 'e'}:      "kat",
+	{'k', 'h', 'a'}:      "kjh",
+	{'k', 'h', 'k'}:      "kca",
+	{'k', 'h', 's'}:      "kca",
+	{'k', 'h', 'v'}:      "kca",
+	{'k', 'i', 's'}:      "kqs",
+	{'k', 'k', 'n'}:      "kex",
+	{'k', 'l', 'm'}:      "xal",
+	{'k', 'm', 'b'}:      "kam",
+	{'k', 'm', 'n'}:      "kfy",
+	{'k', 'm', 'o'}:      "kmw",
+	{'k', 'm', 's'}:      "kxc",
+	{'k', 'n', 'r'}:      "kau",
+	{'k', 'o', 'd'}:      "kfa",
+	{'k', 'o', 'h'}:      "okm",
+	{'k', 'o', 'n'}:      "ktu",
+	{'k', 'o', 'n', '0'}: "kon",
+	{'k', 'o', 'p'}:      "koi",
+	{'k', 'o', 'z'}:      "kpv",
+	{'k', 'p', 'l'}:      "kpe",
+	{'k', 'r', 'k'}:      "kaa",
+	{'k', 'r', 'm'}:      "kdr",
+	{'k', 'r', 'n'}:      "kar",
+	{'k', 'r', 't'}:      "kqy",
+	{'k', 's', 'h'}:      "kas",
+	{'k', 's', 'h', '0'}: "ksh",
+	{'k', 's', 'i'}:      "kha",
+	{'k', 's', 'm'}:      "sjd",
+	{'k', 'u', 'i'}:      "kxu",
+	{'k', 'u', 'l'}:      "kfx",
+	{'k', 'u', 'u'}:      "kru",
+	{'k', 'u', 'y'}:      "kdt",
+	{'k', 'y', 'k'}:      "kpy",
+	{'l', 'a', 'd'}:      "lld",
+	{'l', 'a', 'h'}:      "bfu",
+	{'l', 'a', 'k'}:      "lbe",
+	{'l', 'a', 'm'}:      "lmn",
+	{'l', 'a', 'z'}:      "lzz",
+	{'l', 'c', 'r'}:      "crm",
+	{'l', 'd', 'k'}:      "lbj",
+	{'l', 'm', 'a'}:      "mhr",
+	{'l', 'm', 'b'}:      "lif",
+	{'l', 'm', 'w'}:      "ngl",
+	{'l', 's', 'b'}:      "dsb",
+	{'l', 's', 'm'}:      "smj",
+	{'l', 't', 'h'}:      "lit",
+	{'l', 'u', 'h'}:      "luy",
+	{'l', 'v', 'i'}:      "lav",
+	{'m', 'a', 'j'}:      "mpe",
+	{'m', 'a', 'k'}:      "vmw",
+	{'m', 'a', 'n'}:      "mns",
+	{'m', 'a', 'p'}:      "arn",
+	{'m', 'a', 'w'}:      "mwr",
+	{'m', 'b', 'n'}:      "kmb",
+	{'m', 'c', 'h'}:      "mnc",
+	{'m', 'c', 'r'}:      "crm",
+	{'m', 'd', 'e'}:      "men",
+	{'m', 'e', 'n'}:      "mym",
+	{'m', 'i', 'z'}:      "lus",
+	{'m', 'k', 'r'}:      "mak",
+	{'m', 'l', 'e'}:      "mdy",
+	{'m', 'l', 'n'}:      "mlq",
+	{'m', 'l', 'r'}:      "mal",
+	{'m', 'l', 'y'}:      "msa",
+	{'m', 'n', 'd'}:      "mnk",
+	{'m', 'n', 'g'}:      "mon",
+	{'m', 'n', 'k'}:      "man",
+	{'m', 'n', 'x'}:      "glv",
+	{'m', 'o', 'k'}:      "mdf",
+	{'m', 'o', 'n'}:      "mnw",
+	{'m', 't', 'h'}:      "mai",
+	{'m', 't', 's'}:      "mlt",
+	{'m', 'u', 'n'}:      "unr",
+	{'n', 'a', 'n'}:      "gld",
+	{'n', 'a', 's'}:      "nsk",
+	{'n', 'c', 'r'}:      "csw",
+	{'n', 'd', 'g'}:      "ndo",
+	{'n', 'h', 'c'}:      "csw",
+	{'n', 'i', 's'}:      "dap",
+	{'n', 'k', 'l'}:      "nyn",
+	{'n', 'k', 'o'}:      "nqo",
+	{'n', 'o', 'r'}:      "nob",
+	{'n', 's', 'm'}:      "sme",
+	{'n', 't', 'a'}:      "nod",
+	{'n', 't', 'o'}:      "epo",
+	{'n', 'y', 'n'}:      "nno",
+	{'o', 'c', 'r'}:      "ojs",
+	{'o', 'j', 'b'}:      "oji",
+	{'o', 'r', 'o'}:      "orm",
+	{'p', 'a', 'a'}:      "sam",
+	{'p', 'a', 'l'}:      "pli",
+	{'p', 'a', 'p'}:      "plp",
+	{'p', 'a', 'p', '0'}: "pap",
+	{'p', 'a', 's'}:      "pus",
+	{'p', 'g', 'r'}:      "ell",
+	{'p', 'i', 'l'}:      "fil",
+	{'p', 'l', 'g'}:      "pce",
+	{'p', 'l', 'k'}:      "pol",
+	{'p', 't', 'g'}:      "por",
+	{'q', 'i', 'n'}:      "bgr",
+	{'r', 'b', 'u'}:      "bxr",
+	{'r', 'c', 'r'}:      "atj",
+	{'r', 'm', 's'}:      "roh",
+	{'r', 'o', 'm'}:      "ron",
+	{'r', 'o', 'y'}:      "rom",
+	{'r', 's', 'y'}:      "rue",
+	{'r', 'u', 'a'}:      "kin",
+	{'s', 'a', 'd'}:      "sck",
+	{'s', 'a', 'y'}:      "chp",
+	{'s', 'e', 'k'}:      "xan",
+	{'s', 'e', 'l'}:      "sel",
+	{'s', 'g', 'o'}:      "sag",
+	{'s', 'g', 's'}:      "sgs",
+	{'s', 'i', 'b'}:      "sjo",
+	{'s', 'i', 'g'}:      "xst",
+	{'s', 'k', 's'}:      "sms",
+	{'s', 'k', 'y'}:      "slk",
+	{'s', 'l', 'a'}:      "scs",
+	{'s', 'm', 'l'}:      "som",
+	{'s', 'n', 'a'}:      "seh",
+	{'s', 'n', 'a', '0'}: "sna",
+	{'s', 'n', 'h'}:      "sin",
+	{'s', 'o', 'g'}:      "gru",
+	{'s', 'r', 'b'}:      "srp",
+	{'s', 's', 'l'}:      "xsl",
+	{'s', 's', 'm'}:      "sma",
+	{'s', 'u', 'r'}:      "suq",
+	{'s', 'v', 'e'}:      "swe",
+	{'s', 'w', 'a'}:      "aii",
+	{'s', 'w', 'k'}:      "swa",
+	{'s', 'w', 'z'}:      "ssw",
+	{'s', 'x', 't'}:      "ngo",
+	{'t', 'a', 'j'}:      "tgk",
+	{'t', 'c', 'r'}:      "cwd",
+	{'t', 'g', 'n'}:      "ton",
+	{'t', 'g', 'r'}:      "tig",
+	{'t', 'g', 'y'}:      "tir",
+	{'t', 'h', 't'}:      "tah",
+	{'t', 'i', 'b'}:      "bod",
+	{'t', 'k', 'm'}:      "tuk",
+	{'t', 'm', 'n'}:      "tem",
+	{'t', 'n', 'a'}:      "tsn",
+	{'t', 'n', 'e'}:      "enh",
+	{'t', 'n', 'g'}:      "toi",
+	{'t', 'o', 'd'}:      "xal",
+	{'t', 'o', 'd', '0'}: "tod",
+	{'t', 'r', 'k'}:      "tur",
+	{'t', 's', 'g'}:      "tso",
+	{'t', 'u', 'a'}:      "tru",
+	{'t', 'u', 'l'}:      "tcy",
+	{'t', 'u', 'v'}:      "tyv",
+	{'t', 'w', 'i'}:      "aka",
+	{'u', 's', 'b'}:      "hsb",
+	{'u', 'y', 'g'}:      "uig",
+	{'v', 'i', 't'}:      "vie",
+	{'v', 'r', 'o'}:      "vro",
+	{'w', 'a'}:           "wbm",
+	{'w', 'a', 'g'}:      "wbr",
+	{'w', 'c', 'r'}:      "crk",
+	{'w', 'e', 'l'}:      "cym",
+	{'w', 'l', 'f'}:      "wol",
+	{'x', 'b', 'd'}:      "khb",
+	{'x', 'h', 's'}:      "xho",
+	{'y', 'a', 'k'}:      "sah",
+	{'y', 'b', 'a'}:      "yor",
+	{'y', 'c', 'r'}:      "cre",
+	{'y', 'i', 'm'}:      "iii",
+	{'z', 'h', 'h'}:      "zho",
+	{'z', 'h', 'p'}:      "zho",
+	{'z', 'h', 's'}:      "zho",
+	{'z', 'h', 't'}:      "zho",
+	{'z', 'n', 'd'}:      "zne",
 }

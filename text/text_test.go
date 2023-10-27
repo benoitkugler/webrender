@@ -208,7 +208,7 @@ func TestLayoutFirstLine(t *testing.T) {
 
 	ct := newContextWithWeasyFont(t)
 
-	layout := CreateLayout("a a ", newStyle, ct, pr.Float(63), 0)
+	layout := CreateLayout("a a ", NewTextStyle(newStyle, false), ct, pr.Float(63), 0)
 	_, index := layout.GetFirstLine()
 	if index != -1 {
 		t.Fatalf("unexpected first line index: %d", index)

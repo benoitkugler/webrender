@@ -11,6 +11,7 @@ import (
 	"github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 func TestAddConfig(t *testing.T) {
@@ -79,4 +80,12 @@ func TestAddFace(t *testing.T) {
 	if !bytes.Equal(expected, fc.FontContent(fonts.FaceID{File: filename})) {
 		t.Fatal()
 	}
+}
+
+func TestVariations(t *testing.T) {
+	s := pangoFontVariations([]Variation{
+		{[4]byte{'a', 'b', 'c', '0'}, 4},
+		{[4]byte{'a', 'b', 'c', 'd'}, 8},
+	})
+	tu.AssertEqual(t, s, "abc0=4.000000,abcd=8.000000", "")
 }

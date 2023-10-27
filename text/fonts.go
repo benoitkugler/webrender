@@ -273,27 +273,33 @@ var (
 	}
 )
 
-func getFontDescription(style pr.StyleAccessor) pango.FontDescription {
+func getFontDescription(style *TextStyle) pango.FontDescription {
 	fontDesc := pango.NewFontDescription()
-	fontDesc.SetFamily(strings.Join(style.GetFontFamily(), ","))
+	fontDesc.SetFamily(strings.Join(style.FontFamily, ","))
 
-	sty, _ := pango.StyleMap.FromString(string(style.GetFontStyle()))
-	fontDesc.SetStyle(pango.Style(sty))
+	fontDesc.SetStyle(pango.Style(style.FontStyle))
+	fontDesc.SetStretch(pango.Stretch(style.FontStretch))
+	fontDesc.SetWeight(pango.Weight(style.FontWeight))
 
-	str, _ := pango.StretchMap.FromString(string(style.GetFontStretch()))
-	fontDesc.SetStretch(pango.Stretch(str))
+	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(style.FontSize))
 
-	fontDesc.SetWeight(pango.Weight(style.GetFontWeight().Int))
+	fontDesc.SetVariations(pangoFontVariations(style.FontVariationSettings))
 
-	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(pr.Fl(style.GetFontSize().Value)))
-
-	if vs := style.GetFontVariationSettings(); vs.String != "normal" {
-		chunks := make([]string, len(vs.Values))
-		for i, v := range vs.Values {
-			chunks[i] = fmt.Sprintf("%s=%f", v.String, v.Float)
-		}
-		variations := strings.Join(chunks, ",")
-		fontDesc.SetVariations(variations)
-	}
 	return fontDesc
+}
+
+func pangoFontVariations(vs []Variation) string {
+	chunks := make([]string, len(vs))
+	for i, v := range vs {
+		chunks[i] = fmt.Sprintf("%s=%f", v.Tag[:], v.Value)
+	}
+	return strings.Join(chunks, ",")
+}
+
+func pangoFontFeatures(vs []Feature) string {
+	chunks := make([]string, len(vs))
+	for i, v := range vs {
+		chunks[i] = fmt.Sprintf("%s=%d", v.Tag[:], v.Value)
+	}
+	return strings.Join(chunks, ",")
 }

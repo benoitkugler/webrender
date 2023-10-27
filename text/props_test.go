@@ -8,7 +8,7 @@ import (
 )
 
 func TestDefaultValues(t *testing.T) {
-	ts := NewTextStyle(pr.InitialValues)
+	ts := NewTextStyle(pr.InitialValues, false)
 	tu.AssertEqual(t, ts.FontFamily, []string{"serif"}, "")
 	tu.AssertEqual(t, ts.FontStyle, FSyNormal, "")
 	tu.AssertEqual(t, ts.FontStretch, FSeNormal, "")
@@ -16,7 +16,7 @@ func TestDefaultValues(t *testing.T) {
 	tu.AssertEqual(t, ts.FontSize, pr.Fl(16), "")
 	tu.AssertEqual(t, ts.FontVariationSettings, []Variation(nil), "")
 
-	tu.AssertEqual(t, ts.FontLanguageOverride, FontLanguageOverride{}, "")
+	tu.AssertEqual(t, ts.FontLanguageOverride, fontLanguageOverride{}, "")
 	tu.AssertEqual(t, ts.Lang, "", "")
 	tu.AssertEqual(t, ts.TextDecorationLine, pr.Decorations{}, "")
 	tu.AssertEqual(t, ts.WhiteSpace, WNormal, "")

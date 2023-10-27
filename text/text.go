@@ -41,10 +41,10 @@ type Splitted struct {
 // `style` is a style dict of computed values.
 // `maxWidth` is the maximum available width in the same unit as style.GetFontSize(),
 // or `nil` for unlimited width.
-func CreateLayout(text string, style pr.StyleAccessor, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayout {
-	layout := NewTextLayout(context, style, pr.Fl(justificationSpacing), maxWidth)
-	ws := style.GetWhiteSpace()
-	textWrap := ws == "normal" || ws == "pre-wrap" || ws == "pre-line"
+func CreateLayout(text string, style *TextStyle, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayout {
+	layout := newTextLayout(context, style, pr.Fl(justificationSpacing), maxWidth)
+	ws := style.WhiteSpace
+	textWrap := ws == WNormal || ws == WPreWrap || ws == WPreLine
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
 		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
 		// signed integer. Treat bigger values same as None: unconstrained width.
@@ -72,17 +72,18 @@ type HyphenDictKey struct {
 
 // Fit as much as possible in the available width for one line of text.
 // minimum=False
-func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutContext,
+func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
 	maxWidth pr.MaybeFloat, justificationSpacing pr.Float, minimum, isLineStart bool,
 ) Splitted {
+	style := NewTextStyle(style_, false)
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
-		ws               = style.GetWhiteSpace()
-		textWrap         = ws == "normal" || ws == "pre-wrap" || ws == "pre-line"
-		spaceCollapse    = ws == "normal" || ws == "nowrap" || ws == "pre-line"
+		ws               = style.WhiteSpace
+		textWrap         = ws == WNormal || ws == WPreWrap || ws == WPreLine
+		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
 		layout           *TextLayout
-		fontSize         = style.GetFontSize().Value
+		fontSize         = pr.Float(style.FontSize)
 		firstLine        *pango.LayoutLine
 		resumeIndex      int
 	)
@@ -131,7 +132,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	}
 	maxWidthV := pr.Fl(maxWidth.V())
 
-	firstLineWidth, _ := lineSize(firstLine, style.GetLetterSpacing())
+	firstLineWidth, _ := lineSize(firstLine, style.LetterSpacing)
 
 	if resumeIndex == -1 && firstLineWidth <= maxWidthV {
 		// The first line fits in the available width
@@ -193,24 +194,24 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	}
 
 	// Step #4: Try to hyphenate
-	hyphens := style.GetHyphens()
-	lang := language.NewLanguage(style.GetLang().String)
+	hyphens := style.Hyphens
+	lang := language.NewLanguage(style.Lang)
 	if lang != "" {
 		lang = hyphen.LanguageFallback(lang)
 	}
-	limit := style.GetHyphenateLimitChars()
-	hyphenateCharacter := string(style.GetHyphenateCharacter())
+	limit := style.HyphenateLimitChars
+	hyphenateCharacter := style.HyphenateCharacter
 	total, left, right := limit[0], limit[1], limit[2]
 	hyphenated := false
 	softHyphen := '\u00ad'
 
 	autoHyphenation, manualHyphenation := false, false
-	if hyphens != "none" {
+	if hyphens != HNone {
 		manualHyphenation = strings.ContainsRune(firstLineText, softHyphen) || strings.ContainsRune(nextWord, softHyphen)
 	}
 
 	var startWord, stopWord int
-	if hyphens == "auto" && lang != "" {
+	if hyphens == HAuto && lang != "" {
 		nextWordBoundaries := getNextWordBoundaries(secondLineText)
 		if len(nextWordBoundaries) == 2 {
 			// We have a word to hyphenate
@@ -218,12 +219,12 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 			nextWord = string(secondLineText[startWord:stopWord])
 			if stopWord-startWord >= total {
 				// This word is long enough
-				firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
+				firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
 				space := maxWidthV - firstLineWidth
-				zone := style.GetHyphenateLimitZone()
-				limitZone := pr.Fl(zone.Value)
-				if zone.Unit == pr.Perc {
-					limitZone = (maxWidthV * pr.Fl(zone.Value) / 100.)
+				zone := style.HyphenateLimitZone
+				limitZone := zone.Limit
+				if zone.IsPercentage {
+					limitZone = (maxWidthV * zone.Limit / 100.)
 				}
 				if space > limitZone || space < 0 {
 					// Available space is worth the try, or the line is even too
@@ -272,7 +273,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
 			newLayout := CreateLayout(hyphenatedFirstLineText, style, context, maxWidth, justificationSpacing)
 			newFirstLine, newIndex := newLayout.GetFirstLine()
-			newFirstLineWidth, _ := lineSize(newFirstLine, style.GetLetterSpacing())
+			newFirstLineWidth, _ := lineSize(newFirstLine, style.LetterSpacing)
 			newSpace := maxWidthV - newFirstLineWidth
 			hyphenated = newIndex == -1 && (newSpace >= 0 || firstWordPart == dictionaryIterations[len(dictionaryIterations)-1])
 			if hyphenated {
@@ -315,12 +316,12 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 	}
 
 	// Step 5: Try to break word if it's too long for the line
-	overflowWrap, wordBreak := style.GetOverflowWrap(), style.GetWordBreak()
-	firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
+	overflowWrap, wordBreak := style.OverflowWrap, style.WordBreak
+	firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
 	space := maxWidthV - firstLineWidth
 	// If we can break words and the first line is too long
-	canBreak := wordBreak == "break-all" ||
-		(isLineStart && (overflowWrap == "anywhere" || (overflowWrap == "break-word" && !minimum)))
+	canBreak := wordBreak == WBBreakAll ||
+		(isLineStart && (overflowWrap == OAnywhere || (overflowWrap == OBreakWord && !minimum)))
 	if space < 0 && canBreak {
 		// Is it really OK to remove hyphenation for word-break ?
 		hyphenated = false
@@ -342,7 +343,7 @@ func SplitFirstLine(text_ string, style pr.StyleAccessor, context TextLayoutCont
 }
 
 func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayout, resumeAt int, spaceCollapse bool,
-	style pr.StyleAccessor, hyphenated bool, hyphenationCharacter string,
+	style *TextStyle, hyphenated bool, hyphenationCharacter string,
 ) Splitted {
 	length := firstLine.Length
 	if hyphenated {
@@ -373,7 +374,7 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 		}
 	}
 
-	width, height := lineSize(firstLine, style.GetLetterSpacing())
+	width, height := lineSize(firstLine, style.LetterSpacing)
 	baseline := PangoUnitsToFloat(layout.Layout.GetBaseline())
 	return Splitted{Layout: layout, Length: length, ResumeAt: resumeAt, Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline)}
 }
@@ -445,34 +446,37 @@ func CanBreakText(t []rune) pr.MaybeBool {
 }
 
 type StrutLayoutKey struct {
-	fontLanguageOverride pr.String
 	lang                 string
 	fontFamily           string // joined
-	fontStretch          pr.String
-	fontStyle            pr.String
-	fontWeight           pr.IntString
 	lineHeight           pr.Value
-	fontSize             pr.Float
+	fontWeight           int
+	fontSize             pr.Fl
+	fontLanguageOverride fontLanguageOverride
+	fontStretch          FontStretch
+	fontStyle            FontStyle
 }
 
 // StrutLayout returns a tuple of the used value of `line-height` and the baseline.
 // The baseline is given from the top edge of line height.
 // `context` is mandatory for the text layout.
-func StrutLayout(style pr.StyleAccessor, context TextLayoutContext) [2]pr.Float {
-	fontSize := style.GetFontSize().Value
-	lineHeight := style.GetLineHeight()
+func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) [2]pr.Float {
+	style := NewTextStyle(style_, false)
+
+	fontSize := style.FontSize
 	if fontSize == 0 {
 		return [2]pr.Float{}
 	}
 
+	lineHeight := style_.GetLineHeight()
+
 	key := StrutLayoutKey{
 		fontSize:             fontSize,
-		fontLanguageOverride: style.GetFontLanguageOverride(),
-		lang:                 style.GetLang().String,
-		fontFamily:           strings.Join(style.GetFontFamily(), ""),
-		fontStyle:            style.GetFontStyle(),
-		fontStretch:          style.GetFontStretch(),
-		fontWeight:           style.GetFontWeight(),
+		fontLanguageOverride: style.FontLanguageOverride,
+		lang:                 style.Lang,
+		fontFamily:           strings.Join(style.FontFamily, ""),
+		fontStyle:            style.FontStyle,
+		fontStretch:          style.FontStretch,
+		fontWeight:           style.FontWeight,
 		lineHeight:           lineHeight,
 	}
 
@@ -481,7 +485,7 @@ func StrutLayout(style pr.StyleAccessor, context TextLayoutContext) [2]pr.Float 
 		return v
 	}
 
-	layout := NewTextLayout(context, style, 0, nil)
+	layout := newTextLayout(context, style, 0, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
 	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
@@ -494,7 +498,7 @@ func StrutLayout(style pr.StyleAccessor, context TextLayoutContext) [2]pr.Float 
 	}
 	lineHeightV := lineHeight.Value
 	if lineHeight.Unit == pr.Scalar {
-		lineHeightV *= fontSize
+		lineHeightV *= pr.Float(fontSize)
 	}
 	result := [2]pr.Float{lineHeightV, sp.Baseline + (lineHeightV-sp.Height)/2}
 	if context != nil {
@@ -507,22 +511,22 @@ func StrutLayout(style pr.StyleAccessor, context TextLayoutContext) [2]pr.Float 
 // It should be used with a valid text context to get accurate result.
 // Otherwise, if context is `nil`, it returns 1 as a default value.
 // It does not query WordSpacing or LetterSpacing from the style.
-func CharacterRatio(style pr.ElementStyle, cache pr.TextRatioCache, isCh bool, context TextLayoutContext) pr.Float {
+func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, context TextLayoutContext) pr.Float {
 	if context == nil {
 		return 1
 	}
 
+	style := NewTextStyle(style_, true) // avoid recursion for letter-spacing and word-spacing properties
 	key := fontStyleCacheKey(style)
 	if f, ok := cache.Get(key, isCh); ok {
 		return f
 	}
 
 	// Random big value
-	style = style.Copy()
-	var fontSize pr.Fl = 1000
-	style.SetFontSize(pr.FToV(fontSize))
+	const fontSize pr.Fl = 1000
+	style.FontSize = fontSize
 
-	layout := NewTextLayout(context, style, 0, nil)
+	layout := newTextLayout(context, style, 0, nil)
 	character := "x"
 	if isCh {
 		character = "0"
@@ -550,19 +554,13 @@ func CharacterRatio(style pr.ElementStyle, cache pr.TextRatioCache, isCh bool, c
 	return out
 }
 
-func fontStyleCacheKey(style pr.StyleAccessor) string {
+func fontStyleCacheKey(style *TextStyle) string {
 	return fmt.Sprint(
-		style.GetFontFamily(),
-		style.GetFontStyle(),
-		style.GetFontStretch(),
-		style.GetFontWeight(),
-		style.GetFontVariantLigatures(),
-		style.GetFontVariantPosition(),
-		style.GetFontVariantCaps(),
-		style.GetFontVariantNumeric(),
-		style.GetFontVariantAlternates(),
-		style.GetFontVariantEastAsian(),
-		style.GetFontFeatureSettings(),
-		style.GetFontVariationSettings(),
+		style.FontFamily,
+		style.FontStyle,
+		style.FontStretch,
+		style.FontWeight,
+		style.FontFeatures,
+		style.FontVariationSettings,
 	)
 }

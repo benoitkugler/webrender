@@ -139,12 +139,12 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 	case middle:
 		xAlign = -(width/2. + xBearing)
 		if letterSpacing != 0 && t.text != "" {
-			xAlign -= Fl(len(splitted.Layout.Layout.Text)-1) * letterSpacing / 2
+			xAlign -= Fl(len(splitted.Layout.Text())-1) * letterSpacing / 2
 		}
 	case end:
 		xAlign = -(width + xBearing)
 		if letterSpacing != 0 && t.text != "" {
-			xAlign -= Fl(len(splitted.Layout.Layout.Text)-1) * letterSpacing
+			xAlign -= Fl(len(splitted.Layout.Text())-1) * letterSpacing
 		}
 
 	}

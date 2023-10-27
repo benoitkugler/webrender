@@ -42,7 +42,7 @@ type TextBox struct {
 	InlineLevelBox
 	BoxFields
 
-	PangoLayout          *text.TextLayout
+	TextLayout           *text.TextLayout
 	Text                 string
 	JustificationSpacing pr.Float
 }

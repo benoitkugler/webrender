@@ -336,7 +336,7 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 		// RTL line, the trailing space is at the left of the box. We have to
 		// translate the box to align the stripped text with the right edge of
 		// the box.
-		if newBox.PangoLayout.FirstLineDirection%2 != 0 {
+		if newBox.TextLayout.FirstLineRTL {
 			textBox.PositionX -= spaceWidth
 			for _, ancestor := range ancestors {
 				ancestor.Box().PositionX -= spaceWidth
@@ -1158,11 +1158,11 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 	if resumeIndex == 0 {
 		panic("resumeAt should not be 0 here")
 	}
-	newText := layout.Layout.Text
-	if length > 0 {
+
+	if newText := layout.Text(); length > 0 {
 		box = box.CopyWithText(string(newText))
 		box.Width = width
-		box.PangoLayout = layout
+		box.TextLayout = layout
 		// "The height of the content area should be based on the font,
 		//  but this specification does not specify how."
 		// https://www.w3.org/TR/CSS21/visudet.html#inline-non-replaced
@@ -1453,12 +1453,12 @@ func addWordSpacing(context *layoutContext, box_ Box, justificationSpacing, xAdv
 		textBox.PositionX += xAdvance
 		nbSpaces := pr.Float(countSpaces(box_))
 		if nbSpaces > 0 {
-			layout := text.CreateLayout(textBox.Text, textBox.Style, context, nil, textBox.JustificationSpacing)
+			layout := text.CreateLayout(textBox.Text, text.NewTextStyle(textBox.Style, false), context, nil, textBox.JustificationSpacing)
 			// layout.Deactivate()
 			extraSpace := justificationSpacing * nbSpaces
 			xAdvance += extraSpace
 			textBox.Width = textBox.Width.V() + extraSpace
-			textBox.PangoLayout = layout
+			textBox.TextLayout = layout
 		}
 	} else if IsLine(box_) {
 		box := box_.Box()
