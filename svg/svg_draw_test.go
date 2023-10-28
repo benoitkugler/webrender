@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 
-	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/matrix"
@@ -89,9 +88,9 @@ func (outputPage) DrawText(text []backend.TextDrawing) {
 	outputLog.Println("DrawText", text)
 }
 
-func (outputPage) AddFont(pango.Font, []byte) *backend.Font {
+func (outputPage) AddFont(backend.Font, []byte) *backend.FontChars {
 	outputLog.Println("AddFont")
-	return &backend.Font{Cmap: make(map[backend.GID][]rune), Extents: make(map[backend.GID]backend.GlyphExtents)}
+	return &backend.FontChars{Cmap: make(map[backend.GID][]rune), Extents: make(map[backend.GID]backend.GlyphExtents)}
 }
 
 func (outputPage) NewGroup(x, y, width, height Fl) backend.Canvas {

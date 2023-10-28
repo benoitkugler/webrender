@@ -12,7 +12,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/matrix"
@@ -21,32 +20,6 @@ import (
 )
 
 type Fl = utils.Fl
-
-// TextDrawing exposes the positionned text glyphs to draw
-// and the associated font, in a backend independent manner
-type TextDrawing struct {
-	Runs []TextRun
-
-	FontSize Fl
-	X, Y     Fl // origin of the text
-	Angle    Fl // optional rotation angle for the text, in radians
-}
-
-// TextRun is a serie of glyphs with constant font.
-type TextRun struct {
-	Font   pango.Font
-	Glyphs []TextGlyph
-}
-
-type GID = uint32
-
-// TextGlyph stores a glyph and it's position
-type TextGlyph struct {
-	Glyph    GID
-	Offset   Fl  // normalized by FontSize
-	Kerning  int // normalized by FontSize
-	XAdvance Fl  // how much to move before drawing, used for emojis
-}
 
 type GradientKind struct {
 	// Kind is either:
@@ -322,7 +295,7 @@ type Canvas interface {
 	// an object used to store associated metadata.
 	// This method will be called several times with the same `font` argument,
 	// so caching is advised.
-	AddFont(font pango.Font, content []byte) *Font
+	AddFont(font Font, content []byte) *FontChars
 
 	// DrawText draws the given text using the current fill color.
 	// The rendering may be altered by a preivous `SetTextPaint` call.

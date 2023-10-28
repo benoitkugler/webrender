@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/textlayout/fonts"
-	"github.com/benoitkugler/textlayout/harfbuzz"
+	"github.com/benoitkugler/textlayout/fonts/truetype"
 	"github.com/benoitkugler/textprocessing/pango"
+	"github.com/benoitkugler/textprocessing/pango/fcfonts"
 	"github.com/benoitkugler/webrender/backend"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/matrix"
@@ -70,7 +71,7 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 	var (
 		output               backend.TextDrawing
 		inkRect, logicalRect pango.Rectangle
-		lastFont             *backend.Font
+		lastFont             *backend.FontChars
 		xAdvance             pr.Fl
 	)
 
@@ -89,13 +90,13 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 		offset := glyphItem.Item.Offset
 
 		// Font content
-		pangoFont := glyphItem.Item.Analysis.Font
-		content := ctx.Fonts.FontContent(pangoFont.FaceID())
-		outFont := ctx.Output.AddFont(pangoFont, content)
+		pFont := glyphItem.Item.Analysis.Font.(*fcfonts.Font)
+		content := ctx.Fonts.FontContent(pFont.FaceID())
+		outFont := ctx.Output.AddFont((*pangoFont)(pFont), content)
 
 		if outFont != lastFont { // add a new "run"
 			var outRun backend.TextRun
-			outRun.Font = pangoFont
+			outRun.Font = (*pangoFont)(pFont)
 			output.Runs = append(output.Runs, outRun)
 		} // else use the last one
 
@@ -126,7 +127,7 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 
 			// Ink bounding box and logical widths in font
 			if _, in := outFont.Extents[outGlyph.Glyph]; !in {
-				pangoFont.GlyphExtents(glyph, &inkRect, &logicalRect)
+				pFont.GlyphExtents(glyph, &inkRect, &logicalRect)
 				x1, y1, x2, y2 := inkRect.X, -inkRect.Y-inkRect.Height,
 					inkRect.X+inkRect.Width, -inkRect.Y
 				if int(x1) < outFont.Bbox[0] {
@@ -169,34 +170,71 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 
 // DrawEmoji loads and draws `glyph` onto `dst`.
 // It may be used by backend implementations to render emojis.
-func DrawEmoji(font *harfbuzz.Font, glyph fonts.GID, extents backend.GlyphExtents,
+func DrawEmoji(font_ backend.Font, glyph backend.GID, extents backend.GlyphExtents,
 	fontSize, x, y, xAdvance utils.Fl, dst backend.Canvas,
 ) {
-	face := font.Face()
-	data := face.GlyphData(glyph, font.XPpem, font.YPpem)
+	if pFont, ok := font_.(*pangoFont); ok {
+		font := (*fcfonts.Font)(pFont).GetHarfbuzzFont()
+		face := font.Face()
+		data := face.GlyphData(fonts.GID(glyph), font.XPpem, font.YPpem)
 
-	switch data := data.(type) {
-	case fonts.GlyphBitmap:
-		if data.Format == fonts.PNG {
-			img := backend.RasterImage{
-				Content:   bytes.NewReader(data.Data),
-				MimeType:  "image/png",
-				Rendering: "",
-				ID:        utils.Hash(fmt.Sprintf("%p-%d", face, glyph)),
+		switch data := data.(type) {
+		case fonts.GlyphBitmap:
+			if data.Format == fonts.PNG {
+				img := backend.RasterImage{
+					Content:   bytes.NewReader(data.Data),
+					MimeType:  "image/png",
+					Rendering: "",
+					ID:        utils.Hash(fmt.Sprintf("%p-%d", face, glyph)),
+				}
+
+				d := utils.Fl(extents.Width) / 1000
+				a := utils.Fl(data.Width) / utils.Fl(data.Height) * d
+				f := utils.Fl(-extents.Y-extents.Height)/1000 - fontSize
+				f = y + f
+				e := xAdvance / 1000
+				e = x + e*fontSize
+
+				dst.OnNewStack(func() {
+					dst.State().Transform(matrix.New(a, 0, 0, d, e, f))
+					dst.DrawRasterImage(img, fontSize, fontSize)
+				})
 			}
-
-			d := utils.Fl(extents.Width) / 1000
-			a := utils.Fl(data.Width) / utils.Fl(data.Height) * d
-			f := utils.Fl(-extents.Y-extents.Height)/1000 - fontSize
-			f = y + f
-			e := xAdvance / 1000
-			e = x + e*fontSize
-
-			dst.OnNewStack(func() {
-				dst.State().Transform(matrix.New(a, 0, 0, d, e, f))
-				dst.DrawRasterImage(img, fontSize, fontSize)
-			})
 		}
 	}
 	// TODO: support more formats
+}
+
+var _ backend.Font = (*pangoFont)(nil)
+
+type pangoFont fcfonts.Font
+
+func (f *pangoFont) Origin() backend.FontOrigin {
+	font := (*fcfonts.Font)(f)
+	return backend.FontOrigin(font.FaceID())
+}
+
+func (f *pangoFont) Description() backend.FontDescription {
+	font := (*fcfonts.Font)(f)
+	desc := font.Describe(false)
+	fontSize := desc.Size
+	metrics := font.GetMetrics("")
+
+	out := backend.FontDescription{
+		Style:  text.FontStyle(desc.Style),
+		Family: desc.FamilyName,
+		Size:   int(fontSize),
+		Weight: int(desc.Weight),
+	}
+	if fontSize != 0 {
+		out.Ascent = backend.Fl(metrics.Ascent * 1000 / pango.Unit(fontSize))
+		out.Descent = backend.Fl(metrics.Descent * 1000 / pango.Unit(fontSize))
+	}
+
+	if face, ok := font.GetHarfbuzzFont().Face().(*truetype.Font); ok {
+		out.IsOpentype = true
+		out.IsOpentypeOpentype = face.Type == truetype.TypeOpenType
+	}
+
+	return out
 }

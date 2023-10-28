@@ -15,36 +15,6 @@ type Attachment struct {
 	Content            []byte
 }
 
-// GlyphExtents exposes glyph metrics, normalized by the font size.
-type GlyphExtents struct {
-	Width  int
-	Y      int
-	Height int
-}
-
-// Font stores some metadata used in the output document.
-type Font struct {
-	Cmap    map[GID][]rune
-	Extents map[GID]GlyphExtents
-	Bbox    [4]int
-}
-
-// IsFixedPitch returns true if only one width is used,
-// that is if the font is monospaced.
-func (f *Font) IsFixedPitch() bool {
-	seen := -1
-	for _, w := range f.Extents {
-		if seen == -1 {
-			seen = w.Width
-			continue
-		}
-		if w.Width != seen {
-			return false
-		}
-	}
-	return true
-}
-
 // BookmarkNode exposes the outline hierarchy of the document
 type BookmarkNode struct {
 	Label     string
