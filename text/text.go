@@ -502,7 +502,7 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 	}
 
 	style := NewTextStyle(style_, true) // avoid recursion for letter-spacing and word-spacing properties
-	key := fontStyleCacheKey(style)
+	key := style.cacheKey()
 	if f, ok := cache.Get(key, isCh); ok {
 		return f
 	}
@@ -539,7 +539,7 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 	return out
 }
 
-func fontStyleCacheKey(style *TextStyle) string {
+func (style *TextStyle) cacheKey() string {
 	return fmt.Sprint(
 		style.FontFamily,
 		style.FontStyle,
