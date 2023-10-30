@@ -188,15 +188,15 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 	for _, v := range getFontFeatures(features) {
 		featuresString += fmt.Sprintf("<string>%s=%d</string>", v.Tag[:], v.Value)
 	}
-	fontconfigStyle, ok := FONTCONFIG_STYLE[ruleDescriptors.FontStyle]
+	fontconfigStyle, ok := fcStyle[ruleDescriptors.FontStyle]
 	if !ok {
 		fontconfigStyle = "roman"
 	}
-	fontconfigWeight, ok := FONTCONFIG_WEIGHT[ruleDescriptors.FontWeight]
+	fontconfigWeight, ok := fcWeight[ruleDescriptors.FontWeight]
 	if !ok {
 		fontconfigWeight = "regular"
 	}
-	fontconfigStretch, ok := FONTCONFIG_STRETCH[ruleDescriptors.FontStretch]
+	fontconfigStretch, ok := fcStretch[ruleDescriptors.FontStretch]
 	if !ok {
 		fontconfigStretch = "normal"
 	}
@@ -247,7 +247,7 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 
 // Fontconfig features
 var (
-	FONTCONFIG_WEIGHT = map[pr.IntString]string{
+	fcWeight = map[pr.IntString]string{
 		{String: "normal"}: "regular",
 		{String: "bold"}:   "bold",
 		{Int: 100}:         "thin",
@@ -260,12 +260,12 @@ var (
 		{Int: 800}:         "extrabold",
 		{Int: 900}:         "black",
 	}
-	FONTCONFIG_STYLE = map[pr.String]string{
+	fcStyle = map[pr.String]string{
 		"normal":  "roman",
 		"italic":  "italic",
 		"oblique": "oblique",
 	}
-	FONTCONFIG_STRETCH = map[pr.String]string{
+	fcStretch = map[pr.String]string{
 		"normal":          "normal",
 		"ultra-condensed": "ultracondensed",
 		"extra-condensed": "extracondensed",
@@ -353,7 +353,7 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 
 // TextLayoutPango wraps a pango.Layout object
 type TextLayoutPango struct {
-	style   *TextStyle
+	Style   *TextStyle
 	metrics *LineMetrics // optional
 
 	MaxWidth pr.MaybeFloat
@@ -362,13 +362,13 @@ type TextLayoutPango struct {
 
 	Layout pango.Layout
 
-	JustificationSpacing pr.Fl
+	justificationSpacing pr.Fl
 }
 
 func newTextLayout(context TextLayoutContext, style *TextStyle, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayoutPango {
 	var layout TextLayoutPango
 
-	layout.JustificationSpacing = justificationSpacing
+	layout.justificationSpacing = justificationSpacing
 	layout.setup(context, style)
 	layout.MaxWidth = maxWidth
 
@@ -382,7 +382,7 @@ func (p *TextLayoutPango) Metrics() *LineMetrics { return p.metrics }
 
 func (p *TextLayoutPango) setup(context TextLayoutContext, style *TextStyle) {
 	p.Context = context
-	p.style = style
+	p.Style = style
 	fontmap := context.Fonts().(*FontConfigurationPango).fontmap
 	pc := pango.NewContext(fontmap)
 	pc.SetRoundGlyphPositions(false)
@@ -436,16 +436,16 @@ func (p *TextLayoutPango) setText(text string, justify bool) {
 
 	p.Layout.SetText(text)
 
-	wordSpacing := p.style.WordSpacing
+	wordSpacing := p.Style.WordSpacing
 	if justify {
 		// Justification is needed when drawing text but is useless during
 		// layout, when it can be ignored.
-		wordSpacing += p.JustificationSpacing
+		wordSpacing += p.justificationSpacing
 	}
 
-	letterSpacing := p.style.LetterSpacing
+	letterSpacing := p.Style.LetterSpacing
 
-	wordBreaking := p.style.OverflowWrap == OAnywhere || p.style.OverflowWrap == OBreakWord
+	wordBreaking := p.Style.OverflowWrap == OAnywhere || p.Style.OverflowWrap == OBreakWord
 
 	if text != "" && (wordSpacing != 0 || letterSpacing != 0 || wordBreaking) {
 		letterSpacingInt := PangoUnitsFromFloat(letterSpacing)
@@ -498,13 +498,13 @@ func (p *TextLayoutPango) setText(text string, justify bool) {
 }
 
 func (p *TextLayoutPango) setTabs() {
-	tabSize := p.style.TabSize
+	tabSize := p.Style.TabSize
 	width := tabSize.Width
 	if tabSize.IsMultiple { // no unit, means a multiple of the advance width of the space character
-		layout := newTextLayout(p.Context, p.style, p.JustificationSpacing, nil)
+		layout := newTextLayout(p.Context, p.Style, p.justificationSpacing, nil)
 		layout.SetText(strings.Repeat(" ", width))
 		line, _ := layout.GetFirstLine()
-		widthTmp, _ := lineSize(line, p.style.LetterSpacing)
+		widthTmp, _ := lineSize(line, p.Style.LetterSpacing)
 		width = int(widthTmp + 0.5)
 	}
 	// 0 is not handled correctly by Pango
