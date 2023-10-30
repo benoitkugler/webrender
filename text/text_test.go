@@ -48,7 +48,9 @@ type textContext struct {
 	dict    map[HyphenDictKey]hyphen.Hyphener
 }
 
-func (tc textContext) Fonts() *FontConfiguration                      { return &FontConfiguration{Fontmap: tc.fontmap} }
+func (tc textContext) Fonts() FontConfiguration {
+	return &FontConfigurationPango{fontmap: tc.fontmap}
+}
 func (tc textContext) HyphenCache() map[HyphenDictKey]hyphen.Hyphener { return tc.dict }
 func (tc textContext) StrutLayoutsCache() map[StrutLayoutKey][2]pr.Float {
 	return make(map[StrutLayoutKey][2]pr.Float)
@@ -159,7 +161,7 @@ func TestHeightAndBaseline(t *testing.T) {
 	newStyle.SetFontSize(pr.FToV(36))
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
-	fc := NewFontConfiguration(fontmap)
+	fc := NewFontConfigurationPango(fontmap)
 	for _, desc := range []validation.FontFaceDescriptors{
 		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Owps.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
 		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/googlesans/v36/4UabrENHsxJlGDuGo1OIlLU94YtzCwM.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
@@ -188,7 +190,7 @@ func TestHeightAndBaseline(t *testing.T) {
 
 func newContextWithWeasyFont(t *testing.T) textContext {
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
-	fc := NewFontConfiguration(fontmap)
+	fc := NewFontConfigurationPango(fontmap)
 	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)

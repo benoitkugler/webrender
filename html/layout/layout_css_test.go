@@ -29,7 +29,7 @@ type textContext struct {
 	struts map[text.StrutLayoutKey][2]pr.Float
 }
 
-func (tc textContext) Fonts() *text.FontConfiguration                         { return fontconfig }
+func (tc textContext) Fonts() text.FontConfiguration                          { return fontconfig }
 func (tc textContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener    { return nil }
 func (tc textContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float { return tc.struts }
 

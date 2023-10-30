@@ -237,7 +237,7 @@ func newPage(pageBox *bo.PageBox) Page {
 // scale is the Zoom scale in user units per CSS pixel.
 // clip : whether to clip/cut content outside the page. If false, content can overflow.
 // (leftX=0, topY=0, scale=1, clip=false)
-func (d Page) Paint(dst backend.Page, fc *text.FontConfiguration, leftX, topY, scale fl, clip bool) {
+func (d Page) Paint(dst backend.Page, fc text.FontConfiguration, leftX, topY, scale fl, clip bool) {
 	dst.OnNewStack(func() {
 		// Make (0, 0) the top-left corner and make user units CSS pixels
 		dst.State().Transform(mt.New(scale, 0, 0, scale, leftX, topY))
@@ -266,7 +266,7 @@ type Document struct {
 	// as stylesheets and images.
 	urlFetcher utils.UrlFetcher
 
-	fontconfig *text.FontConfiguration
+	fontconfig text.FontConfiguration
 
 	// A `DocumentMetadata` object.
 	// Contains information that does not belong to a specific page
@@ -279,7 +279,7 @@ type Document struct {
 //
 // fontConfig is mandatory
 // presentationalHints should default to `false`
-func Render(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, fontConfig *text.FontConfiguration) Document {
+func Render(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, fontConfig text.FontConfiguration) Document {
 	pageBoxes := layout.Layout(html, stylesheets, presentationalHints, fontConfig)
 	pages := make([]Page, len(pageBoxes))
 	for i, pageBox := range pageBoxes {

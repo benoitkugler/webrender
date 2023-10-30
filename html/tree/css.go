@@ -94,7 +94,7 @@ type CSS struct {
 // checkMimeType = false
 func NewCSS(input utils.ContentInput, baseUrl string,
 	urlFetcher utils.UrlFetcher, checkMimeType bool,
-	mediaType string, fontConfig *text.FontConfiguration, matcher *matcher,
+	mediaType string, fontConfig text.FontConfiguration, matcher *matcher,
 	pageRules *[]PageRule, counterStyle counters.CounterStyle,
 ) (CSS, error) {
 	logger.ProgressLogger.Printf("Step 2 - Fetching and parsing CSS - %s", input)

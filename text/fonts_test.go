@@ -58,7 +58,7 @@ func TestAddConfig(t *testing.T) {
 }
 
 func TestAddFace(t *testing.T) {
-	fc := NewFontConfiguration(fontmap)
+	fc := NewFontConfigurationPango(fontmap)
 	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +77,7 @@ func TestAddFace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(expected, fc.FontContent(fonts.FaceID{File: filename})) {
+	if !bytes.Equal(expected, fc.FontContent(FontOrigin{File: filename})) {
 		t.Fatal()
 	}
 }

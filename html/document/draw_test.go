@@ -17,7 +17,7 @@ import (
 
 const fontmapCache = "../../text/test/cache.fc"
 
-var fc *text.FontConfiguration
+var fc *text.FontConfigurationPango
 
 func init() {
 	// this command has to run once
@@ -31,7 +31,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	fc = text.NewFontConfiguration(fcfonts.NewFontMap(fontconfig.Standard.Copy(), fs))
+	fc = text.NewFontConfigurationPango(fcfonts.NewFontMap(fontconfig.Standard.Copy(), fs))
 }
 
 func TestStacking(t *testing.T) {

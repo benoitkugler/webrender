@@ -45,7 +45,7 @@ type Box = bo.Box
 //
 // This includes line breaks, page breaks, absolute size and position for all
 // boxes.
-func Layout(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, fontConfig *text.FontConfiguration) []*bo.PageBox {
+func Layout(html *tree.HTML, stylesheets []tree.CSS, presentationalHints bool, fontConfig text.FontConfiguration) []*bo.PageBox {
 	counterStyle := make(counters.CounterStyle)
 	context := newLayoutContext(html, stylesheets, presentationalHints, fontConfig, counterStyle)
 
@@ -286,7 +286,7 @@ type layoutContext struct {
 	tables          map[*bo.TableBox]map[bool]tableContentWidths
 
 	resolver            bo.URLResolver
-	fontConfig          *text.FontConfiguration
+	fontConfig          text.FontConfiguration
 	TargetCollector     tree.TargetCollector
 	counterStyle        counters.CounterStyle
 	dictionaries        map[text.HyphenDictKey]hyphen.Hyphener
@@ -311,7 +311,7 @@ type layoutContext struct {
 
 // presentationalHints=false,
 func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
-	presentationalHints bool, fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle,
+	presentationalHints bool, fontConfig text.FontConfiguration, counterStyle counters.CounterStyle,
 ) *layoutContext {
 	var (
 		pageRules       []tree.PageRule
@@ -344,7 +344,7 @@ func newLayoutContext(html *tree.HTML, stylesheets []tree.CSS,
 
 func (l *layoutContext) CurrentPage() int { return l.currentPage }
 
-func (l *layoutContext) Fonts() *text.FontConfiguration { return l.fontConfig }
+func (l *layoutContext) Fonts() text.FontConfiguration { return l.fontConfig }
 
 func (l *layoutContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
 	return l.dictionaries

@@ -685,7 +685,7 @@ func textDecoration(key pr.KnownProp, value, parentValue pr.CssProperty, cascade
 // Yield the stylesheets in “elementTree“.
 // The output order is the same as the source order.
 func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, urlFetcher utils.UrlFetcher, baseUrl string,
-	fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, pageRules *[]PageRule,
+	fontConfig text.FontConfiguration, counterStyle counters.CounterStyle, pageRules *[]PageRule,
 ) (out []CSS) {
 	sel := selector.MustCompile("style, link")
 	for _, _element := range selector.MatchAll((*html.Node)(wrapperElement), sel) {
@@ -1286,7 +1286,7 @@ type PageRule struct {
 // ignoreImports = false
 func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Token,
 	urlFetcher utils.UrlFetcher, matcher *matcher, pageRules *[]PageRule,
-	fontConfig *text.FontConfiguration, counterStyle counters.CounterStyle, ignoreImports bool,
+	fontConfig text.FontConfiguration, counterStyle counters.CounterStyle, ignoreImports bool,
 ) {
 	for _, rule := range stylesheetRules {
 		if atRule, isAtRule := rule.(parser.AtRule); _isContentNone(rule) && (!isAtRule || atRule.AtKeyword.Lower() != "import") {
@@ -1471,7 +1471,7 @@ type styleAttrSpec struct {
 // pseudo-Element type, and return a style dict object.
 // presentationalHints=false
 func GetAllComputedStyles(html *HTML, userStylesheets []CSS,
-	presentationalHints bool, fontConfig *text.FontConfiguration,
+	presentationalHints bool, fontConfig text.FontConfiguration,
 	counterStyle counters.CounterStyle, pageRules *[]PageRule,
 	targetCollector *TargetCollector, forms bool,
 	textContext text.TextLayoutContext,

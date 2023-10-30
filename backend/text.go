@@ -78,18 +78,6 @@ type FontDescription struct {
 // Font are implemented by valid
 // map keys
 type Font interface {
-	Origin() FontOrigin
+	Origin() text.FontOrigin
 	Description() FontDescription
-}
-
-type FontOrigin struct {
-	File string // The filename or identifier of the font file.
-
-	// The index of the face in a collection. It is always 0 for
-	// single font files.
-	Index uint16
-
-	// For variable fonts, stores 1 + the instance index.
-	// (0 to ignore variations).
-	Instance uint16
 }
