@@ -141,7 +141,7 @@ func BenchmarkRenderText(b *testing.B) {
 		logger.ProgressLogger.SetOutput(os.Stdout)
 	}()
 
-	doc, err := tree.NewHTML(utils.InputUrl("https://golang.org/doc/go1.17"), "", nil, "")
+	doc, err := tree.NewHTML(utils.InputFilename("testdata/go1.17.html"), "", nil, "")
 	if err != nil {
 		b.Fatal(err)
 	}
