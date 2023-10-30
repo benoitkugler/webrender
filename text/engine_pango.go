@@ -53,6 +53,36 @@ func (f *FontConfigurationPango) LoadFace(key fonts.FaceID, format fc.FontFormat
 	return fcfonts.DefaultLoadFace(key, format)
 }
 
+func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
+	layout := newTextLayout(fc, style, 0, nil)
+	layout.SetText(" ")
+	line, _ := layout.GetFirstLine()
+	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
+	return sp.Height, sp.Baseline
+}
+
+func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
+	p := newTextLayout(fc, style, 0, nil)
+
+	p.Layout.SetText("0") // avoid recursion for letter-spacing and word-spacing properties
+	line, _ := p.GetFirstLine()
+
+	var inkExtents, logicalExtents pango.Rectangle
+	line.GetExtents(&inkExtents, &logicalExtents)
+	return PangoUnitsToFloat(logicalExtents.Width)
+}
+
+func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
+	p := newTextLayout(fc, style, 0, nil)
+
+	p.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
+	line, _ := p.GetFirstLine()
+
+	var inkExtents, logicalExtents pango.Rectangle
+	line.GetExtents(&inkExtents, &logicalExtents)
+	return -PangoUnitsToFloat(inkExtents.Y)
+}
+
 // FontContent returns the content of the given face, which may be needed
 // in the final output.
 func (f *FontConfigurationPango) FontContent(font FontOrigin) []byte {
@@ -358,18 +388,18 @@ type TextLayoutPango struct {
 
 	MaxWidth pr.MaybeFloat
 
-	Context TextLayoutContext // will be a *LayoutContext; to avoid circular dependency
+	fonts FontConfiguration // will be a *LayoutContext; to avoid circular dependency
 
 	Layout pango.Layout
 
 	justificationSpacing pr.Fl
 }
 
-func newTextLayout(context TextLayoutContext, style *TextStyle, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayoutPango {
+func newTextLayout(fonts FontConfiguration, style *TextStyle, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayoutPango {
 	var layout TextLayoutPango
 
 	layout.justificationSpacing = justificationSpacing
-	layout.setup(context, style)
+	layout.setup(fonts, style)
 	layout.MaxWidth = maxWidth
 
 	return &layout
@@ -380,10 +410,10 @@ func (p *TextLayoutPango) Text() []rune { return p.Layout.Text }
 
 func (p *TextLayoutPango) Metrics() *LineMetrics { return p.metrics }
 
-func (p *TextLayoutPango) setup(context TextLayoutContext, style *TextStyle) {
-	p.Context = context
+func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
+	p.fonts = fonts
 	p.Style = style
-	fontmap := context.Fonts().(*FontConfigurationPango).fontmap
+	fontmap := fonts.(*FontConfigurationPango).fontmap
 	pc := pango.NewContext(fontmap)
 	pc.SetRoundGlyphPositions(false)
 
@@ -501,7 +531,7 @@ func (p *TextLayoutPango) setTabs() {
 	tabSize := p.Style.TabSize
 	width := tabSize.Width
 	if tabSize.IsMultiple { // no unit, means a multiple of the advance width of the space character
-		layout := newTextLayout(p.Context, p.Style, p.justificationSpacing, nil)
+		layout := newTextLayout(p.fonts, p.Style, p.justificationSpacing, nil)
 		layout.SetText(strings.Repeat(" ", width))
 		line, _ := layout.GetFirstLine()
 		widthTmp, _ := lineSize(line, p.Style.LetterSpacing)
@@ -536,4 +566,285 @@ func lineSize(line *pango.LayoutLine, letterSpacing pr.Fl) (pr.Fl, pr.Fl) {
 	height := PangoUnitsToFloat(logicalExtents.Height)
 	width += letterSpacing
 	return width, height
+}
+
+// Language system tags
+// From https://docs.microsoft.com/typography/opentype/spec/languagetags
+var lstToISO = map[fontLanguageOverride]language.Language{
+	{'a', 'b', 'a'}:      "abq",
+	{'a', 'f', 'k'}:      "afr",
+	{'a', 'f', 'r'}:      "aar",
+	{'a', 'g', 'w'}:      "ahg",
+	{'a', 'l', 's'}:      "gsw",
+	{'a', 'l', 't'}:      "atv",
+	{'a', 'r', 'i'}:      "aiw",
+	{'a', 'r', 'k'}:      "mhv",
+	{'a', 't', 'h'}:      "apk",
+	{'a', 'v', 'r'}:      "ava",
+	{'b', 'a', 'd'}:      "bfq",
+	{'b', 'a', 'd', '0'}: "bad",
+	{'b', 'a', 'g'}:      "bfy",
+	{'b', 'a', 'l'}:      "krc",
+	{'b', 'a', 'u'}:      "bci",
+	{'b', 'c', 'h'}:      "bcq",
+	{'b', 'g', 'r'}:      "bul",
+	{'b', 'i', 'l'}:      "byn",
+	{'b', 'k', 'f'}:      "bla",
+	{'b', 'l', 'i'}:      "bal",
+	{'b', 'l', 'n'}:      "bjt",
+	{'b', 'l', 't'}:      "bft",
+	{'b', 'm', 'b'}:      "bam",
+	{'b', 'r', 'i'}:      "bra",
+	{'b', 'r', 'm'}:      "mya",
+	{'b', 's', 'h'}:      "bak",
+	{'b', 't', 'i'}:      "btb",
+	{'c', 'h', 'g'}:      "sgw",
+	{'c', 'h', 'h'}:      "hne",
+	{'c', 'h', 'i'}:      "nya",
+	{'c', 'h', 'k'}:      "ckt",
+	{'c', 'h', 'k', '0'}: "chk",
+	{'c', 'h', 'u'}:      "chv",
+	{'c', 'h', 'y'}:      "chy",
+	{'c', 'm', 'r'}:      "swb",
+	{'c', 'r', 'r'}:      "crx",
+	{'c', 'r', 't'}:      "crh",
+	{'c', 's', 'l'}:      "chu",
+	{'c', 's', 'y'}:      "ces",
+	{'d', 'c', 'r'}:      "cwd",
+	{'d', 'g', 'r'}:      "doi",
+	{'d', 'j', 'r'}:      "dje",
+	{'d', 'j', 'r', '0'}: "djr",
+	{'d', 'n', 'g'}:      "ada",
+	{'d', 'n', 'k'}:      "din",
+	{'d', 'r', 'i'}:      "prs",
+	{'d', 'u', 'n'}:      "dng",
+	{'d', 'z', 'n'}:      "dzo",
+	{'e', 'b', 'i'}:      "igb",
+	{'e', 'c', 'r'}:      "crj",
+	{'e', 'd', 'o'}:      "bin",
+	{'e', 'r', 'z'}:      "myv",
+	{'e', 's', 'p'}:      "spa",
+	{'e', 't', 'i'}:      "est",
+	{'e', 'u', 'q'}:      "eus",
+	{'e', 'v', 'k'}:      "evn",
+	{'e', 'v', 'n'}:      "eve",
+	{'f', 'a', 'n'}:      "acf",
+	{'f', 'a', 'n', '0'}: "fan",
+	{'f', 'a', 'r'}:      "fas",
+	{'f', 'j', 'i'}:      "fij",
+	{'f', 'l', 'e'}:      "vls",
+	{'f', 'n', 'e'}:      "enf",
+	{'f', 'o', 's'}:      "fao",
+	{'f', 'r', 'i'}:      "fry",
+	{'f', 'r', 'l'}:      "fur",
+	{'f', 'r', 'p'}:      "frp",
+	{'f', 't', 'a'}:      "fuf",
+	{'g', 'a', 'd'}:      "gaa",
+	{'g', 'a', 'e'}:      "gla",
+	{'g', 'a', 'l'}:      "glg",
+	{'g', 'a', 'w'}:      "gbm",
+	{'g', 'i', 'l'}:      "niv",
+	{'g', 'i', 'l', '0'}: "gil",
+	{'g', 'm', 'z'}:      "guk",
+	{'g', 'r', 'n'}:      "kal",
+	{'g', 'r', 'o'}:      "grt",
+	{'g', 'u', 'a'}:      "grn",
+	{'h', 'a', 'i'}:      "hat",
+	{'h', 'a', 'l'}:      "flm",
+	{'h', 'a', 'r'}:      "hoj",
+	{'h', 'b', 'n'}:      "amf",
+	{'h', 'm', 'a'}:      "mrj",
+	{'h', 'n', 'd'}:      "hno",
+	{'h', 'o'}:           "hoc",
+	{'h', 'r', 'i'}:      "har",
+	{'h', 'y', 'e', '0'}: "hye",
+	{'i', 'j', 'o'}:      "ijc",
+	{'i', 'n', 'g'}:      "inh",
+	{'i', 'n', 'u'}:      "iku",
+	{'i', 'r', 'i'}:      "gle",
+	{'i', 'r', 't'}:      "gle",
+	{'i', 's', 'm'}:      "smn",
+	{'i', 'w', 'r'}:      "heb",
+	{'j', 'a', 'n'}:      "jpn",
+	{'j', 'i', 'i'}:      "yid",
+	{'j', 'u', 'd'}:      "lad",
+	{'j', 'u', 'l'}:      "dyu",
+	{'k', 'a', 'b'}:      "kbd",
+	{'k', 'a', 'b', '0'}: "kab",
+	{'k', 'a', 'c'}:      "kfr",
+	{'k', 'a', 'l'}:      "kln",
+	{'k', 'a', 'r'}:      "krc",
+	{'k', 'e', 'b'}:      "ktb",
+	{'k', 'g', 'e'}:      "kat",
+	{'k', 'h', 'a'}:      "kjh",
+	{'k', 'h', 'k'}:      "kca",
+	{'k', 'h', 's'}:      "kca",
+	{'k', 'h', 'v'}:      "kca",
+	{'k', 'i', 's'}:      "kqs",
+	{'k', 'k', 'n'}:      "kex",
+	{'k', 'l', 'm'}:      "xal",
+	{'k', 'm', 'b'}:      "kam",
+	{'k', 'm', 'n'}:      "kfy",
+	{'k', 'm', 'o'}:      "kmw",
+	{'k', 'm', 's'}:      "kxc",
+	{'k', 'n', 'r'}:      "kau",
+	{'k', 'o', 'd'}:      "kfa",
+	{'k', 'o', 'h'}:      "okm",
+	{'k', 'o', 'n'}:      "ktu",
+	{'k', 'o', 'n', '0'}: "kon",
+	{'k', 'o', 'p'}:      "koi",
+	{'k', 'o', 'z'}:      "kpv",
+	{'k', 'p', 'l'}:      "kpe",
+	{'k', 'r', 'k'}:      "kaa",
+	{'k', 'r', 'm'}:      "kdr",
+	{'k', 'r', 'n'}:      "kar",
+	{'k', 'r', 't'}:      "kqy",
+	{'k', 's', 'h'}:      "kas",
+	{'k', 's', 'h', '0'}: "ksh",
+	{'k', 's', 'i'}:      "kha",
+	{'k', 's', 'm'}:      "sjd",
+	{'k', 'u', 'i'}:      "kxu",
+	{'k', 'u', 'l'}:      "kfx",
+	{'k', 'u', 'u'}:      "kru",
+	{'k', 'u', 'y'}:      "kdt",
+	{'k', 'y', 'k'}:      "kpy",
+	{'l', 'a', 'd'}:      "lld",
+	{'l', 'a', 'h'}:      "bfu",
+	{'l', 'a', 'k'}:      "lbe",
+	{'l', 'a', 'm'}:      "lmn",
+	{'l', 'a', 'z'}:      "lzz",
+	{'l', 'c', 'r'}:      "crm",
+	{'l', 'd', 'k'}:      "lbj",
+	{'l', 'm', 'a'}:      "mhr",
+	{'l', 'm', 'b'}:      "lif",
+	{'l', 'm', 'w'}:      "ngl",
+	{'l', 's', 'b'}:      "dsb",
+	{'l', 's', 'm'}:      "smj",
+	{'l', 't', 'h'}:      "lit",
+	{'l', 'u', 'h'}:      "luy",
+	{'l', 'v', 'i'}:      "lav",
+	{'m', 'a', 'j'}:      "mpe",
+	{'m', 'a', 'k'}:      "vmw",
+	{'m', 'a', 'n'}:      "mns",
+	{'m', 'a', 'p'}:      "arn",
+	{'m', 'a', 'w'}:      "mwr",
+	{'m', 'b', 'n'}:      "kmb",
+	{'m', 'c', 'h'}:      "mnc",
+	{'m', 'c', 'r'}:      "crm",
+	{'m', 'd', 'e'}:      "men",
+	{'m', 'e', 'n'}:      "mym",
+	{'m', 'i', 'z'}:      "lus",
+	{'m', 'k', 'r'}:      "mak",
+	{'m', 'l', 'e'}:      "mdy",
+	{'m', 'l', 'n'}:      "mlq",
+	{'m', 'l', 'r'}:      "mal",
+	{'m', 'l', 'y'}:      "msa",
+	{'m', 'n', 'd'}:      "mnk",
+	{'m', 'n', 'g'}:      "mon",
+	{'m', 'n', 'k'}:      "man",
+	{'m', 'n', 'x'}:      "glv",
+	{'m', 'o', 'k'}:      "mdf",
+	{'m', 'o', 'n'}:      "mnw",
+	{'m', 't', 'h'}:      "mai",
+	{'m', 't', 's'}:      "mlt",
+	{'m', 'u', 'n'}:      "unr",
+	{'n', 'a', 'n'}:      "gld",
+	{'n', 'a', 's'}:      "nsk",
+	{'n', 'c', 'r'}:      "csw",
+	{'n', 'd', 'g'}:      "ndo",
+	{'n', 'h', 'c'}:      "csw",
+	{'n', 'i', 's'}:      "dap",
+	{'n', 'k', 'l'}:      "nyn",
+	{'n', 'k', 'o'}:      "nqo",
+	{'n', 'o', 'r'}:      "nob",
+	{'n', 's', 'm'}:      "sme",
+	{'n', 't', 'a'}:      "nod",
+	{'n', 't', 'o'}:      "epo",
+	{'n', 'y', 'n'}:      "nno",
+	{'o', 'c', 'r'}:      "ojs",
+	{'o', 'j', 'b'}:      "oji",
+	{'o', 'r', 'o'}:      "orm",
+	{'p', 'a', 'a'}:      "sam",
+	{'p', 'a', 'l'}:      "pli",
+	{'p', 'a', 'p'}:      "plp",
+	{'p', 'a', 'p', '0'}: "pap",
+	{'p', 'a', 's'}:      "pus",
+	{'p', 'g', 'r'}:      "ell",
+	{'p', 'i', 'l'}:      "fil",
+	{'p', 'l', 'g'}:      "pce",
+	{'p', 'l', 'k'}:      "pol",
+	{'p', 't', 'g'}:      "por",
+	{'q', 'i', 'n'}:      "bgr",
+	{'r', 'b', 'u'}:      "bxr",
+	{'r', 'c', 'r'}:      "atj",
+	{'r', 'm', 's'}:      "roh",
+	{'r', 'o', 'm'}:      "ron",
+	{'r', 'o', 'y'}:      "rom",
+	{'r', 's', 'y'}:      "rue",
+	{'r', 'u', 'a'}:      "kin",
+	{'s', 'a', 'd'}:      "sck",
+	{'s', 'a', 'y'}:      "chp",
+	{'s', 'e', 'k'}:      "xan",
+	{'s', 'e', 'l'}:      "sel",
+	{'s', 'g', 'o'}:      "sag",
+	{'s', 'g', 's'}:      "sgs",
+	{'s', 'i', 'b'}:      "sjo",
+	{'s', 'i', 'g'}:      "xst",
+	{'s', 'k', 's'}:      "sms",
+	{'s', 'k', 'y'}:      "slk",
+	{'s', 'l', 'a'}:      "scs",
+	{'s', 'm', 'l'}:      "som",
+	{'s', 'n', 'a'}:      "seh",
+	{'s', 'n', 'a', '0'}: "sna",
+	{'s', 'n', 'h'}:      "sin",
+	{'s', 'o', 'g'}:      "gru",
+	{'s', 'r', 'b'}:      "srp",
+	{'s', 's', 'l'}:      "xsl",
+	{'s', 's', 'm'}:      "sma",
+	{'s', 'u', 'r'}:      "suq",
+	{'s', 'v', 'e'}:      "swe",
+	{'s', 'w', 'a'}:      "aii",
+	{'s', 'w', 'k'}:      "swa",
+	{'s', 'w', 'z'}:      "ssw",
+	{'s', 'x', 't'}:      "ngo",
+	{'t', 'a', 'j'}:      "tgk",
+	{'t', 'c', 'r'}:      "cwd",
+	{'t', 'g', 'n'}:      "ton",
+	{'t', 'g', 'r'}:      "tig",
+	{'t', 'g', 'y'}:      "tir",
+	{'t', 'h', 't'}:      "tah",
+	{'t', 'i', 'b'}:      "bod",
+	{'t', 'k', 'm'}:      "tuk",
+	{'t', 'm', 'n'}:      "tem",
+	{'t', 'n', 'a'}:      "tsn",
+	{'t', 'n', 'e'}:      "enh",
+	{'t', 'n', 'g'}:      "toi",
+	{'t', 'o', 'd'}:      "xal",
+	{'t', 'o', 'd', '0'}: "tod",
+	{'t', 'r', 'k'}:      "tur",
+	{'t', 's', 'g'}:      "tso",
+	{'t', 'u', 'a'}:      "tru",
+	{'t', 'u', 'l'}:      "tcy",
+	{'t', 'u', 'v'}:      "tyv",
+	{'t', 'w', 'i'}:      "aka",
+	{'u', 's', 'b'}:      "hsb",
+	{'u', 'y', 'g'}:      "uig",
+	{'v', 'i', 't'}:      "vie",
+	{'v', 'r', 'o'}:      "vro",
+	{'w', 'a'}:           "wbm",
+	{'w', 'a', 'g'}:      "wbr",
+	{'w', 'c', 'r'}:      "crk",
+	{'w', 'e', 'l'}:      "cym",
+	{'w', 'l', 'f'}:      "wol",
+	{'x', 'b', 'd'}:      "khb",
+	{'x', 'h', 's'}:      "xho",
+	{'y', 'a', 'k'}:      "sah",
+	{'y', 'b', 'a'}:      "yor",
+	{'y', 'c', 'r'}:      "cre",
+	{'y', 'i', 'm'}:      "iii",
+	{'z', 'h', 'h'}:      "zho",
+	{'z', 'h', 'p'}:      "zho",
+	{'z', 'h', 's'}:      "zho",
+	{'z', 'h', 't'}:      "zho",
+	{'z', 'n', 'd'}:      "zne",
 }

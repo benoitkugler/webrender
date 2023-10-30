@@ -63,8 +63,8 @@ type Splitted struct {
 // `style` is a style dict of computed values.
 // `maxWidth` is the maximum available width in the same unit as style.GetFontSize(),
 // or `nil` for unlimited width.
-func CreateLayout(text string, style *TextStyle, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayoutPango {
-	layout := newTextLayout(context, style, pr.Fl(justificationSpacing), maxWidth)
+func CreateLayout(text string, style *TextStyle, fonts FontConfiguration, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayoutPango {
+	layout := newTextLayout(fonts, style, pr.Fl(justificationSpacing), maxWidth)
 	ws := style.WhiteSpace
 	textWrap := ws == WNormal || ws == WPreWrap || ws == WPreLine
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
@@ -133,7 +133,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		shortText := text_[:cut]
 
 		// Try to use a small amount of text instead of the whole text
-		layout = CreateLayout(shortText, style, context, maxWidth, justificationSpacing)
+		layout = CreateLayout(shortText, style, context.Fonts(), maxWidth, justificationSpacing)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && shortText != text_ {
 			// The small amount of text fits in one line, give up and use the whole text
@@ -141,7 +141,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 			firstLine, resumeIndex = layout.GetFirstLine()
 		}
 	} else {
-		layout = CreateLayout(text_, style, context, originalMaxWidth, justificationSpacing)
+		layout = CreateLayout(text_, style, context.Fonts(), originalMaxWidth, justificationSpacing)
 		firstLine, resumeIndex = layout.GetFirstLine()
 	}
 
@@ -293,7 +293,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		for _, firstWordPart := range dictionaryIterations {
 			newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
 			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
-			newLayout := CreateLayout(hyphenatedFirstLineText, style, context, maxWidth, justificationSpacing)
+			newLayout := CreateLayout(hyphenatedFirstLineText, style, context.Fonts(), maxWidth, justificationSpacing)
 			newFirstLine, newIndex := newLayout.GetFirstLine()
 			newFirstLineWidth, _ := lineSize(newFirstLine, style.LetterSpacing)
 			newSpace := maxWidthV - newFirstLineWidth
@@ -443,8 +443,8 @@ type StrutLayoutKey struct {
 
 // StrutLayout returns a tuple of the used value of `line-height` and the baseline.
 // The baseline is given from the top edge of line height.
-// `context` is mandatory for the text layout.
-func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) [2]pr.Float {
+// [context] is mandatory for the text layout.
+func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (result [2]pr.Float) {
 	style := NewTextStyle(style_, false)
 
 	fontSize := style.FontSize
@@ -465,30 +465,24 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) [2]pr.Float
 		lineHeight:           lineHeight,
 	}
 
-	layouts := context.StrutLayoutsCache()
-	if v, ok := layouts[key]; ok {
+	cache := context.StrutLayoutsCache()
+	if v, ok := cache[key]; ok {
 		return v
 	}
 
-	layout := newTextLayout(context, style, 0, nil)
-	layout.SetText(" ")
-	line, _ := layout.GetFirstLine()
-	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
+	height, baseline := context.Fonts().spaceHeight(style)
+
 	if lineHeight.String == "normal" {
-		result := [2]pr.Float{sp.Height, sp.Baseline}
-		if context != nil {
-			context.StrutLayoutsCache()[key] = result
+		result = [2]pr.Float{height, baseline}
+	} else {
+		lineHeightV := lineHeight.Value
+		if lineHeight.Unit == pr.Scalar {
+			lineHeightV *= pr.Float(fontSize)
 		}
-		return result
+		result = [2]pr.Float{lineHeightV, baseline + (lineHeightV-height)/2}
 	}
-	lineHeightV := lineHeight.Value
-	if lineHeight.Unit == pr.Scalar {
-		lineHeightV *= pr.Float(fontSize)
-	}
-	result := [2]pr.Float{lineHeightV, sp.Baseline + (lineHeightV-sp.Height)/2}
-	if context != nil {
-		context.StrutLayoutsCache()[key] = result
-	}
+
+	cache[key] = result
 	return result
 }
 
@@ -496,8 +490,8 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) [2]pr.Float
 // It should be used with a valid text context to get accurate result.
 // Otherwise, if context is `nil`, it returns 1 as a default value.
 // It does not query WordSpacing or LetterSpacing from the style.
-func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, context TextLayoutContext) pr.Float {
-	if context == nil {
+func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, fonts FontConfiguration) pr.Float {
+	if fonts == nil {
 		return 1
 	}
 
@@ -511,32 +505,21 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 	const fontSize pr.Fl = 1000
 	style.FontSize = fontSize
 
-	layout := newTextLayout(context, style, 0, nil)
-	character := "x"
-	if isCh {
-		character = "0"
-	}
-	layout.Layout.SetText(character) // avoid recursion for letter-spacing and word-spacing properties
-	line, _ := layout.GetFirstLine()
-
-	var inkExtents, logicalExtents pango.Rectangle
-	line.GetExtents(&inkExtents, &logicalExtents)
 	var measure pr.Fl
 	if isCh {
-		measure = PangoUnitsToFloat(logicalExtents.Width)
+		measure = fonts.width0(style)
 	} else {
-		measure = -PangoUnitsToFloat(inkExtents.Y)
+		measure = fonts.heightx(style)
 	}
 
 	// Zero means some kind of failure, fallback is 0.5.
-	// We round to try keeping exact values that were altered by Pango.
-	v := math.Round(float64(measure/fontSize)*100000) / 100000
+	// We round to try keeping exact values that were altered by the engine.
+	v := pr.Float(math.Round(float64(measure/fontSize)*100000) / 100000)
 	if v == 0 {
-		return 0.5
+		v = 0.5
 	}
-	out := pr.Float(v)
-	cache.Set(key, isCh, out)
-	return out
+	cache.Set(key, isCh, v)
+	return v
 }
 
 func (style *TextStyle) cacheKey() string {

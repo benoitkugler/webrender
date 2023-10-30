@@ -18,7 +18,7 @@ var (
 	monoFonts = pr.Strings{"DejaVu Sans Mono", "monospace"}
 )
 
-const fontmapCache = "test/cache.fc"
+const fontmapCache = "testdata/cache.fc"
 
 var fontmap *fcfonts.FontMap
 
@@ -210,7 +210,7 @@ func TestLayoutFirstLine(t *testing.T) {
 
 	ct := newContextWithWeasyFont(t)
 
-	layout := CreateLayout("a a ", NewTextStyle(newStyle, false), ct, pr.Float(63), 0)
+	layout := CreateLayout("a a ", NewTextStyle(newStyle, false), ct.Fonts(), pr.Float(63), 0)
 	_, index := layout.GetFirstLine()
 	if index != -1 {
 		t.Fatalf("unexpected first line index: %d", index)

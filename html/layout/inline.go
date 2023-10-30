@@ -1307,7 +1307,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 		case "baseline":
 			childBaselineY = baselineY
 		case "middle":
-			oneEx := box.Style.GetFontSize().Value * text.CharacterRatio(box.Style, box.Style.Cache(), false, context)
+			oneEx := box.Style.GetFontSize().Value * text.CharacterRatio(box.Style, box.Style.Cache(), false, context.fontConfig)
 			top := baselineY - (oneEx+child.MarginHeight())/2.
 			childBaselineY = top + child.Baseline.V()
 		case "text-top":
@@ -1453,7 +1453,7 @@ func addWordSpacing(context *layoutContext, box_ Box, justificationSpacing, xAdv
 		textBox.PositionX += xAdvance
 		nbSpaces := pr.Float(countSpaces(box_))
 		if nbSpaces > 0 {
-			layout := text.CreateLayout(textBox.Text, text.NewTextStyle(textBox.Style, false), context, nil, textBox.JustificationSpacing)
+			layout := text.CreateLayout(textBox.Text, text.NewTextStyle(textBox.Style, false), context.fontConfig, nil, textBox.JustificationSpacing)
 			// layout.Deactivate()
 			extraSpace := justificationSpacing * nbSpaces
 			xAdvance += extraSpace

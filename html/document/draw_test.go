@@ -15,7 +15,7 @@ import (
 	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 )
 
-const fontmapCache = "../../text/test/cache.fc"
+const fontmapCache = "../../text/testdata/cache.fc"
 
 var fc *text.FontConfigurationPango
 

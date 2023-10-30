@@ -1,6 +1,7 @@
 package text
 
 import (
+	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -23,7 +24,7 @@ type FontOrigin struct {
 // available fonts on the system.
 // It is used for text layout at various steps of the rendering process.
 //
-// It is implemented by text engines, using pango or go-text.
+// It is implemented by and totaly tighted to text engines, either pango or go-text.
 type FontConfiguration interface {
 	// FontContent returns the content of the given font, which may be needed
 	// in the final output.
@@ -34,4 +35,11 @@ type FontConfiguration interface {
 	//
 	// It returns the file name of the loaded file.
 	AddFontFace(ruleDescriptors validation.FontFaceDescriptors, urlFetcher utils.UrlFetcher) string
+
+	// returns the advance of the '0' char, using the font described by the given [style]
+	width0(style *TextStyle) pr.Fl
+	// returns the height of the 'x' char, using the font described by the given [style]
+	heightx(style *TextStyle) pr.Fl
+	// returns the height and baseline of a line containing a single space (" ")
+	spaceHeight(style *TextStyle) (height, baseline pr.Float)
 }

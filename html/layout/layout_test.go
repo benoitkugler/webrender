@@ -17,7 +17,7 @@ import (
 
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
 
-const fontmapCache = "../../text/test/cache.fc"
+const fontmapCache = "../../text/testdata/cache.fc"
 
 var fontconfig *text.FontConfigurationPango
 

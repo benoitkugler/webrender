@@ -387,12 +387,16 @@ func length2(computer *ComputedStyle, value pr.Value, fontSize pr.Float, pixelsO
 		if fontSize < 0 {
 			fontSize = computer.GetFontSize().Value
 		}
+		var fonts text.FontConfiguration
+		if computer.textContext != nil {
+			fonts = computer.textContext.Fonts()
+		}
 		switch unit {
 		case pr.Ex:
-			ratio := text.CharacterRatio(computer, computer.cache, false, computer.textContext)
+			ratio := text.CharacterRatio(computer, computer.cache, false, fonts)
 			result = value.Value * fontSize * ratio
 		case pr.Ch:
-			ratio := text.CharacterRatio(computer, computer.cache, true, computer.textContext)
+			ratio := text.CharacterRatio(computer, computer.cache, true, fonts)
 			result = value.Value * fontSize * ratio
 		case pr.Em:
 			result = value.Value * fontSize

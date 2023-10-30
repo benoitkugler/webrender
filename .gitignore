@@ -1,4 +1,4 @@
 .mypy_cache/**
 .idea/**
 macros/__pycache__/**
-html/layout/text/test/cache.fc
+text/testdata/cache.fc
