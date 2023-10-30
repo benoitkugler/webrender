@@ -166,9 +166,9 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 
 	chars := []rune(t.text)
 	var (
-		bbox        Rectangle
-		texts       []backend.TextDrawing
-		textContext = drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
+		bbox   Rectangle
+		texts  []backend.TextDrawing
+		drawer = drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
 	)
 	for i, r := range chars {
 		hasX, hasY := i < len(x), i < len(y)
@@ -231,7 +231,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 		doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
 		dst.State().SetTextPaint(newPaintOp(doFill, doStroke, false))
 		texts = append(texts,
-			textContext.CreateFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, angle))
+			drawer.CreateFirstLine(layout, t.style, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, angle))
 
 		svg.cursorPosition = cursorPosition
 	}
