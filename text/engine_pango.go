@@ -24,13 +24,13 @@ func PangoUnitsFromFloat(v pr.Fl) int32 { return int32(v*pango.Scale + 0.5) }
 
 func PangoUnitsToFloat(v pango.Unit) pr.Fl { return pr.Fl(v) / pango.Scale }
 
-// FontConfiguration holds information about the
+// FontConfigurationPango holds information about the
 // available fonts on the system.
 // It is used for text layout at various steps of the process.
 type FontConfigurationPango struct {
 	fontmap *fcfonts.FontMap
 
-	userFonts    map[fonts.FaceID]fonts.Face
+	userFonts    map[FontOrigin]fonts.Face
 	fontsContent map[string][]byte // to be embedded in the target
 }
 
@@ -39,7 +39,7 @@ type FontConfigurationPango struct {
 func NewFontConfigurationPango(fontmap *fcfonts.FontMap) *FontConfigurationPango {
 	out := &FontConfigurationPango{
 		fontmap:      fontmap,
-		userFonts:    make(map[fonts.FaceID]fonts.Face),
+		userFonts:    make(map[FontOrigin]fonts.Face),
 		fontsContent: make(map[string][]byte),
 	}
 	out.fontmap.SetFaceLoader(out)
@@ -47,7 +47,7 @@ func NewFontConfigurationPango(fontmap *fcfonts.FontMap) *FontConfigurationPango
 }
 
 func (f *FontConfigurationPango) LoadFace(key fonts.FaceID, format fc.FontFormat) (fonts.Face, error) {
-	if face, has := f.userFonts[key]; has {
+	if face, has := f.userFonts[FontOrigin(key)]; has {
 		return face, nil
 	}
 	return fcfonts.DefaultLoadFace(key, format)
@@ -156,7 +156,7 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 	}
 
 	if url.Name == "external" {
-		key := fonts.FaceID{
+		key := FontOrigin{
 			File: fontFilename,
 		}
 		f.userFonts[key] = faces[0]
