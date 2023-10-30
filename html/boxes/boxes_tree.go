@@ -42,7 +42,7 @@ type TextBox struct {
 	InlineLevelBox
 	BoxFields
 
-	TextLayout           *text.TextLayout
+	TextLayout           text.EngineLayout
 	Text                 string
 	JustificationSpacing pr.Float
 }

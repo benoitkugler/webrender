@@ -163,6 +163,13 @@ var (
 	}
 )
 
+func defaultFontFeature(f string) string {
+	if f == "" {
+		return "normal"
+	}
+	return f
+}
+
 // Get the font features from the different properties in style.
 // See https://www.w3.org/TR/css-fonts-3/#feature-precedence
 // default value is "normal"

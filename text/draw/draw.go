@@ -25,9 +25,10 @@ type Context struct {
 
 // CreateFirstLine create the text for the first line of `layout` starting at position `(x,y)`.
 // It also register the font used.
-func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccessor,
+func (ctx Context) CreateFirstLine(layout_ text.EngineLayout, style pr.StyleAccessor,
 	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
 ) backend.TextDrawing {
+	layout := layout_.(*text.TextLayoutPango)
 	pl := &layout.Layout
 	pl.SetSingleParagraphMode(true)
 

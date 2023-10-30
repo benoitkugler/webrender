@@ -1302,7 +1302,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 
 	var offsetY pr.Float
 
-	metrics := textbox.TextLayout.Metrics
+	metrics := textbox.TextLayout.Metrics()
 
 	if utils.Set(decoration).Has("overline") {
 		thickness := metrics.UnderlineThickness

@@ -12,11 +12,31 @@ import (
 	"github.com/benoitkugler/webrender/utils"
 )
 
+type TextLayoutContext interface {
+	Fonts() FontConfiguration
+	HyphenCache() map[HyphenDictKey]hyphen.Hyphener
+	StrutLayoutsCache() map[StrutLayoutKey][2]pr.Float
+}
+
+// EngineLayout stores the text engine dependant version of the laid out
+// text.
+//
+// Is is only meant to be consumed by the text/draw package.
+type EngineLayout interface {
+	// Text returns a readonly slice of the text in the layout
+	Text() []rune
+
+	// Metrics may return nil when [TextDecorationLine] is empty
+	Metrics() *LineMetrics
+
+	ApplyJustification()
+}
+
 // Splitted exposes the result of laying out
 // one line of text
 type Splitted struct {
 	// Output layout containing (at least) the first line
-	Layout *TextLayout
+	Layout EngineLayout
 
 	// Length in runes of the first line
 	Length int
@@ -43,7 +63,7 @@ type Splitted struct {
 // `style` is a style dict of computed values.
 // `maxWidth` is the maximum available width in the same unit as style.GetFontSize(),
 // or `nil` for unlimited width.
-func CreateLayout(text string, style *TextStyle, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayout {
+func CreateLayout(text string, style *TextStyle, context TextLayoutContext, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayoutPango {
 	layout := newTextLayout(context, style, pr.Fl(justificationSpacing), maxWidth)
 	ws := style.WhiteSpace
 	textWrap := ws == WNormal || ws == WPreWrap || ws == WPreLine
@@ -84,7 +104,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		textWrap         = ws == WNormal || ws == WPreWrap || ws == WPreLine
 		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
-		layout           *TextLayout
+		layout           *TextLayoutPango
 		fontSize         = pr.Float(style.FontSize)
 		firstLine        *pango.LayoutLine
 		resumeIndex      int
@@ -342,48 +362,6 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	}
 
 	return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, hyphenated, hyphenateCharacter)
-}
-
-func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayout, resumeAt int, spaceCollapse bool,
-	style *TextStyle, hyphenated bool, hyphenationCharacter string,
-) Splitted {
-	length := firstLine.Length
-	if hyphenated {
-		length -= len([]rune(hyphenationCharacter))
-	} else if resumeAt != -1 && resumeAt != 0 {
-		// Set an infinite width as we don't want to break lines when drawing,
-		// the lines have already been split and the size may differ. Rendering
-		// is also much faster when no width is set.
-		layout.Layout.SetWidth(-1)
-
-		// Create layout with final text
-		if length > len(text) {
-			length = len(text)
-		}
-		firstLineText := string(text[:length])
-
-		// Remove trailing spaces if spaces collapse
-		if spaceCollapse {
-			firstLineText = strings.TrimRight(firstLineText, " ")
-		}
-
-		layout.SetText(firstLineText)
-
-		firstLine, _ = layout.GetFirstLine()
-		length = 0
-		if firstLine != nil {
-			length = firstLine.Length
-		}
-	}
-
-	width, height := lineSize(firstLine, style.LetterSpacing)
-	baseline := PangoUnitsToFloat(layout.Layout.GetBaseline())
-	return Splitted{
-		Layout: layout,
-		Length: length, ResumeAt: resumeAt,
-		Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline),
-		FirstLineRTL: firstLine.ResolvedDir%2 != 0,
-	}
 }
 
 var rp = strings.NewReplacer(
