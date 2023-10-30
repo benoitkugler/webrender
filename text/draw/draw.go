@@ -25,10 +25,18 @@ type Context struct {
 
 // CreateFirstLine create the text for the first line of `layout` starting at position `(x,y)`.
 // It also register the font used.
-func (ctx Context) CreateFirstLine(layout_ text.EngineLayout, style pr.StyleAccessor,
+func (ctx Context) CreateFirstLine(layout_ text.EngineLayout, textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
+) backend.TextDrawing {
+	if layout, ok := layout_.(*text.TextLayoutPango); ok {
+		return ctx.createFirstLinePango(layout, textOverflow, blockEllipsis, x, y, angle)
+	}
+	return backend.TextDrawing{}
+}
+
+func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
 ) backend.TextDrawing {
-	layout := layout_.(*text.TextLayoutPango)
+	style := layout.Style
 	pl := &layout.Layout
 	pl.SetSingleParagraphMode(true)
 
@@ -46,7 +54,7 @@ func (ctx Context) CreateFirstLine(layout_ text.EngineLayout, style pr.StyleAcce
 			}
 			// Remove last word if hyphenated
 			newText := pl.Text
-			if hyph := string(style.GetHyphenateCharacter()); strings.HasSuffix(string(newText), hyph) {
+			if hyph := style.HyphenateCharacter; strings.HasSuffix(string(newText), hyph) {
 				lastWordEnd := text.GetLastWordEnd(newText[:len(newText)-len([]rune(hyph))])
 				if lastWordEnd != -1 && lastWordEnd != 0 {
 					newText = newText[:lastWordEnd]
@@ -76,7 +84,7 @@ func (ctx Context) CreateFirstLine(layout_ text.EngineLayout, style pr.StyleAcce
 		xAdvance             pr.Fl
 	)
 
-	fontSize := pr.Fl(style.GetFontSize().Value)
+	fontSize := style.FontSize
 
 	output.FontSize = fontSize
 	output.X, output.Y = x, y

@@ -1333,7 +1333,7 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 	}
 
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
-	text := textContext.CreateFirstLine(textbox.TextLayout, textbox.Style, textOverflow, blockEllipsis, x, y, 0)
+	text := textContext.CreateFirstLine(textbox.TextLayout, textOverflow, blockEllipsis, x, y, 0)
 	ctx.dst.DrawText([]backend.TextDrawing{text})
 }
 
