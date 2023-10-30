@@ -42,9 +42,8 @@ type TextBox struct {
 	InlineLevelBox
 	BoxFields
 
-	TextLayout           text.EngineLayout
-	Text                 string
-	JustificationSpacing pr.Float
+	TextLayout text.EngineLayout
+	Text       string
 }
 
 func TextBoxAnonymousFrom(parent Box, text string) *TextBox {

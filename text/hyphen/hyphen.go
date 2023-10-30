@@ -98,11 +98,8 @@ type hyphDic struct {
 //
 // E.g. for the dutch word 'lettergrepen' this method returns `[3, 6, 9]`.
 //
-// Each position is a `DataInt` with a data attribute.
-//
-// If the data attribute is not `None`, it contains a tuple with
-// information about nonstandard hyphenation at that point: `(change,
-// index, cut)`.
+// Each position is a [dataOrInt] : if the data attribute is not nil,
+// it contains information about nonstandard hyphenation at that point
 func (dic hyphDic) positions(word_ []rune) []dataOrInt {
 	word := strings.ToLower(string(word_))
 	if points, ok := dic.cache[word]; ok {
@@ -113,9 +110,9 @@ func (dic hyphDic) positions(word_ []rune) []dataOrInt {
 
 	for i := 0; i < len(pointedWord)-1; i++ {
 		for j := i + 1; j <= i+dic.data.MaxLength && j <= len(pointedWord); j++ {
-			pattern, ok := dic.data.Patterns[string(pointedWord[i:j])]
+			pat, ok := dic.data.Patterns[string(pointedWord[i:j])]
 			if ok {
-				offset, values := pattern.Start, pattern.Values
+				offset, values := pat.Start, pat.Values
 				slice := references[i+offset : i+offset+len(values)]
 				for k := range slice {
 					max := slice[k]

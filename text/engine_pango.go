@@ -54,7 +54,7 @@ func (f *FontConfigurationPango) LoadFace(key fonts.FaceID, format fc.FontFormat
 }
 
 func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
-	layout := newTextLayout(fc, style, 0, nil)
+	layout := newTextLayout(fc, style, nil)
 	layout.SetText(" ")
 	line, _ := layout.GetFirstLine()
 	sp := firstLineMetrics(line, nil, layout, -1, false, style, false, "")
@@ -62,7 +62,7 @@ func (fc *FontConfigurationPango) spaceHeight(style *TextStyle) (height, baselin
 }
 
 func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
-	p := newTextLayout(fc, style, 0, nil)
+	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("0") // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := p.GetFirstLine()
@@ -73,7 +73,7 @@ func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
 }
 
 func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
-	p := newTextLayout(fc, style, 0, nil)
+	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := p.GetFirstLine()
@@ -395,20 +395,40 @@ type TextLayoutPango struct {
 	justificationSpacing pr.Fl
 }
 
-func newTextLayout(fonts FontConfiguration, style *TextStyle, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayoutPango {
+func newTextLayout(fonts FontConfiguration, style *TextStyle, maxWidth pr.MaybeFloat) *TextLayoutPango {
 	var layout TextLayoutPango
 
-	layout.justificationSpacing = justificationSpacing
 	layout.setup(fonts, style)
 	layout.MaxWidth = maxWidth
 
 	return &layout
 }
 
+// createLayout returns a pango.Layout with default Pango line-breaks.
+// `style` is a style dict of computed values.
+// `maxWidth` is the maximum available width in the same unit as style.FontSize,
+// or `nil` for unlimited width.
+func createLayout(text string, style *TextStyle, fonts FontConfiguration, maxWidth pr.MaybeFloat) *TextLayoutPango {
+	layout := newTextLayout(fonts, style, maxWidth)
+	ws := style.WhiteSpace
+	textWrap := ws == WNormal || ws == WPreWrap || ws == WPreLine
+	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
+		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
+		// signed integer. Treat bigger values same as None: unconstrained width.
+		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(utils.Maxs(0, pr.Fl(maxWidth)))))
+	}
+
+	layout.SetText(text)
+	return layout
+}
+
 // Text returns a readonly slice of the text used in the layout.
 func (p *TextLayoutPango) Text() []rune { return p.Layout.Text }
 
 func (p *TextLayoutPango) Metrics() *LineMetrics { return p.metrics }
+
+func (p *TextLayoutPango) Justification() pr.Float           { return pr.Float(p.justificationSpacing) }
+func (p *TextLayoutPango) SetJustification(spacing pr.Float) { p.justificationSpacing = pr.Fl(spacing) }
 
 func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 	p.fonts = fonts
@@ -531,7 +551,7 @@ func (p *TextLayoutPango) setTabs() {
 	tabSize := p.Style.TabSize
 	width := tabSize.Width
 	if tabSize.IsMultiple { // no unit, means a multiple of the advance width of the space character
-		layout := newTextLayout(p.fonts, p.Style, p.justificationSpacing, nil)
+		layout := newTextLayout(p.fonts, p.Style, nil)
 		layout.SetText(strings.Repeat(" ", width))
 		line, _ := layout.GetFirstLine()
 		widthTmp, _ := lineSize(line, p.Style.LetterSpacing)
@@ -847,4 +867,17 @@ var lstToISO = map[fontLanguageOverride]language.Language{
 	{'z', 'h', 's'}:      "zho",
 	{'z', 'h', 't'}:      "zho",
 	{'z', 'n', 'd'}:      "zne",
+}
+
+func canBreakTextPango(t []rune) pr.MaybeBool {
+	if len(t) < 2 {
+		return nil
+	}
+	logs := getLogAttrs(t)
+	for _, l := range logs[1 : len(logs)-1] {
+		if l.IsLineBreak() {
+			return pr.True
+		}
+	}
+	return pr.False
 }

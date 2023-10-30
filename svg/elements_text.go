@@ -90,7 +90,7 @@ func newText(node *cascadedNode, tree *svgContext) (drawable, error) {
 func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
 	t.style.SetFontSize(pr.FToV(dims.fontSize))
 
-	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, 0, false, true)
+	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, false, true)
 
 	var x, y, dx, dy []Fl
 	for _, v := range t.x {
@@ -193,7 +193,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 			svg.cursorDPosition.y += dy[i]
 		}
 
-		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, 0, false, true)
+		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, false, true)
 		layout := splitted.Layout
 		width, height = Fl(splitted.Width), Fl(splitted.Height)
 

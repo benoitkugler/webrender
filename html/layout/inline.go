@@ -1153,7 +1153,7 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 	if fontSize == pr.FToV(0) || len(text_) == 0 {
 		return nil, -1, false, false
 	}
-	v := text.SplitFirstLine(string(text_), box.Style, context, availableWidth, box.JustificationSpacing, false, isLineStart)
+	v := text.SplitFirstLine(string(text_), box.Style, context, availableWidth, false, isLineStart)
 	layout, length, resumeIndex, width, height, baseline := v.Layout, v.Length, v.ResumeAt, v.Width, v.Height, v.Baseline
 	if resumeIndex == 0 {
 		panic("resumeAt should not be 0 here")
@@ -1449,16 +1449,14 @@ func countSpaces(box Box) int {
 
 func addWordSpacing(context *layoutContext, box_ Box, justificationSpacing, xAdvance pr.Float) pr.Float {
 	if textBox, isTextBox := box_.(*bo.TextBox); isTextBox {
-		textBox.JustificationSpacing = justificationSpacing
+		// textBox.JustificationSpacing = justificationSpacing
 		textBox.PositionX += xAdvance
 		nbSpaces := pr.Float(countSpaces(box_))
 		if nbSpaces > 0 {
-			layout := text.CreateLayout(textBox.Text, text.NewTextStyle(textBox.Style, false), context.fontConfig, nil, textBox.JustificationSpacing)
-			// layout.Deactivate()
+			textBox.TextLayout.SetJustification(justificationSpacing)
 			extraSpace := justificationSpacing * nbSpaces
 			xAdvance += extraSpace
 			textBox.Width = textBox.Width.V() + extraSpace
-			textBox.TextLayout = layout
 		}
 	} else if IsLine(box_) {
 		box := box_.Box()

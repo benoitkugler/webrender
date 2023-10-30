@@ -62,7 +62,7 @@ func makeText(text string, width pr.MaybeFloat, style pr.Properties) Splitted {
 	newStyle.SetFontFamily(monoFonts)
 	newStyle.UpdateWith(style)
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
-	return SplitFirstLine(text, newStyle, ct, width, 0, false, true)
+	return SplitFirstLine(text, newStyle, ct, width, false, true)
 }
 
 func TestLineContent(t *testing.T) {
@@ -140,7 +140,7 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 
 	text := "This is a text for test. This is a test for text.py"
 	for i := 0; i < b.N; i++ {
-		SplitFirstLine(text, newStyle, ct, pr.Float(200), 0, false, true)
+		SplitFirstLine(text, newStyle, ct, pr.Float(200), false, true)
 	}
 }
 
@@ -177,7 +177,7 @@ func TestHeightAndBaseline(t *testing.T) {
 		fc.AddFontFace(desc, utils.DefaultUrlFetcher)
 	}
 
-	spi := SplitFirstLine("Go 1.17 Release Notes", newStyle, ct, pr.Float(595), 0, false, true)
+	spi := SplitFirstLine("Go 1.17 Release Notes", newStyle, ct, pr.Float(595), false, true)
 	height, baseline := spi.Height, spi.Baseline
 
 	if int((height-43)/10) != 0 {
@@ -210,7 +210,7 @@ func TestLayoutFirstLine(t *testing.T) {
 
 	ct := newContextWithWeasyFont(t)
 
-	layout := CreateLayout("a a ", NewTextStyle(newStyle, false), ct.Fonts(), pr.Float(63), 0)
+	layout := createLayout("a a ", NewTextStyle(newStyle, false), ct.Fonts(), pr.Float(63))
 	_, index := layout.GetFirstLine()
 	if index != -1 {
 		t.Fatalf("unexpected first line index: %d", index)
@@ -235,9 +235,174 @@ func TestSplitFirstLine(t *testing.T) {
 
 	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
-	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), 0, false, true)
+	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), false, true)
 
 	if out.ResumeAt != -1 {
 		t.Fatalf("unexpected resume index %d", out.ResumeAt)
+	}
+}
+
+func TestCanBreakText(t *testing.T) {
+	tests := []struct {
+		s    string
+		want pr.MaybeBool
+	}{
+		{" s", pr.True},
+		{"\u00a0L", pr.False},
+		{"\u00a0d", pr.False},
+		{"r\u00a0", pr.False},
+		{" “", pr.True},
+		{"” ", pr.False},
+		{"t\u00a0", pr.False},
+		{"\u00a0L", pr.False},
+		{"\u00a0d", pr.False},
+		{"r\u00a0", pr.False},
+		{" “", pr.True},
+		{"” ", pr.False},
+		{"t\u00a0", pr.False},
+		{"a⺀", pr.True},
+		{"⺀b", pr.True},
+		{"bc", pr.False},
+		{"a⺀", pr.True},
+		{"⺀b", pr.True},
+		{"bc", pr.False},
+		{"", nil},
+		{"c ", pr.False},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{"a ", pr.False},
+		{"a", nil},
+		{"a ", pr.False},
+		{"a", nil},
+		{"⺀ ", pr.False},
+		{"a", nil},
+		{"⺀ ", pr.False},
+		{"⺀ ", pr.False},
+		{"a", nil},
+		{"a", nil},
+		{"⺀ ", pr.False},
+		{"⺀ ", pr.False},
+		{"⺀ ", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"b\u00a0", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"c\u00a0", pr.False},
+		{"i", nil},
+		{"\u00a0\u00a0", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"ii", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"\u00a0\u00a0", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0a", pr.False},
+		{" a", pr.True},
+		{"\u00a0 ", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"b\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"b\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"c\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"c\u00a0", pr.False},
+		{"\u200f\u00a0i", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u200f\u00a0i", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"\u200f\u00a0ii", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u200f\u00a0ii", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"\u00a0\u200f", pr.False},
+		{"a\u00a0", pr.False},
+		{"a", nil},
+		{"a", nil},
+		{"\u00a0a", pr.False},
+		{"bb", pr.False},
+		{"a", nil},
+		{"a", nil},
+		{"\u00a0a", pr.False},
+		{"c", nil},
+		{"a", nil},
+		{"a", nil},
+		{"\u00a0a", pr.False},
+		{"a", nil},
+		{"abc", pr.False},
+		{"abcde", pr.False},
+		{"abcde", pr.False},
+		{"[initial]", pr.False},
+		{"[]", pr.False},
+		{"o", nil},
+		{"abcde", pr.False},
+		{"ab", pr.False},
+		{"cd", pr.False},
+		{"bc", pr.False},
+		{"b", nil},
+		{"a", nil},
+		{"e", nil},
+		{"de", pr.False},
+		{"a", nil},
+		{"b", nil},
+		{"cd", pr.False},
+		{"abcde", pr.False},
+		{"ace", pr.False},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{"⺀ ", pr.False},
+		{" ⺀", pr.True},
+		{"⺀ ", pr.False},
+		{" 4", pr.True},
+		{"4 ", pr.False},
+		{"  ", pr.False},
+		{" h", pr.True},
+		{" i", pr.True},
+		{"z ", pr.False},
+		{" a", pr.True},
+		{"a ", pr.False},
+		{"⺀ ", pr.False},
+		{"⺀ ", pr.False},
+		{"t ", pr.False},
+		{" A", pr.True},
+		{"t ", pr.False},
+		{"test", pr.False},
+	}
+	for _, tt := range tests {
+		if got := canBreakTextPango([]rune(tt.s)); got != tt.want {
+			t.Errorf("CanBreakText() = %v, want %v", got, tt.want)
+		}
 	}
 }

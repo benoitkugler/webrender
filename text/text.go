@@ -9,7 +9,6 @@ import (
 	"github.com/benoitkugler/textprocessing/pango"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/text/hyphen"
-	"github.com/benoitkugler/webrender/utils"
 )
 
 type TextLayoutContext interface {
@@ -28,6 +27,13 @@ type EngineLayout interface {
 
 	// Metrics may return nil when [TextDecorationLine] is empty
 	Metrics() *LineMetrics
+
+	// Justification returns the current justification
+	Justification() pr.Float
+	// SetJustification add an additional spacing between words
+	// to justify text. Depending on the implementation, it
+	// may be ignored until [ApplyJustification] is called.
+	SetJustification(spacing pr.Float)
 
 	ApplyJustification()
 }
@@ -59,24 +65,7 @@ type Splitted struct {
 	FirstLineRTL bool // true is the first line direction is RTL
 }
 
-// CreateLayout returns a pango.Layout with default Pango line-breaks.
-// `style` is a style dict of computed values.
-// `maxWidth` is the maximum available width in the same unit as style.GetFontSize(),
-// or `nil` for unlimited width.
-func CreateLayout(text string, style *TextStyle, fonts FontConfiguration, maxWidth pr.MaybeFloat, justificationSpacing pr.Float) *TextLayoutPango {
-	layout := newTextLayout(fonts, style, pr.Fl(justificationSpacing), maxWidth)
-	ws := style.WhiteSpace
-	textWrap := ws == WNormal || ws == WPreWrap || ws == WPreLine
-	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
-		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
-		// signed integer. Treat bigger values same as None: unconstrained width.
-		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(utils.Maxs(0, pr.Fl(maxWidth)))))
-	}
-
-	layout.SetText(text)
-	return layout
-}
-
+// split word on each hyphen occurence, starting by the end
 func hyphenDictionaryIterations(word string, hyphen rune) (out []string) {
 	wordRunes := []rune(word)
 	for i := len(wordRunes) - 1; i >= 0; i-- {
@@ -92,10 +81,10 @@ type HyphenDictKey struct {
 	left, right, total int
 }
 
-// Fit as much as possible in the available width for one line of text.
+// SplitFirstLine fit as much text from [text_] as possible in the available width given by [maxWidth]
 // minimum=False
 func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
-	maxWidth pr.MaybeFloat, justificationSpacing pr.Float, minimum, isLineStart bool,
+	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) Splitted {
 	style := NewTextStyle(style_, false)
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
@@ -133,7 +122,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		shortText := text_[:cut]
 
 		// Try to use a small amount of text instead of the whole text
-		layout = CreateLayout(shortText, style, context.Fonts(), maxWidth, justificationSpacing)
+		layout = createLayout(shortText, style, context.Fonts(), maxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && shortText != text_ {
 			// The small amount of text fits in one line, give up and use the whole text
@@ -141,7 +130,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 			firstLine, resumeIndex = layout.GetFirstLine()
 		}
 	} else {
-		layout = CreateLayout(text_, style, context.Fonts(), originalMaxWidth, justificationSpacing)
+		layout = createLayout(text_, style, context.Fonts(), originalMaxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 	}
 
@@ -293,7 +282,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		for _, firstWordPart := range dictionaryIterations {
 			newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
 			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
-			newLayout := CreateLayout(hyphenatedFirstLineText, style, context.Fonts(), maxWidth, justificationSpacing)
+			newLayout := createLayout(hyphenatedFirstLineText, style, context.Fonts(), maxWidth)
 			newFirstLine, newIndex := newLayout.GetFirstLine()
 			newFirstLineWidth, _ := lineSize(newFirstLine, style.LetterSpacing)
 			newSpace := maxWidthV - newFirstLineWidth
@@ -418,16 +407,7 @@ func GetLastWordEnd(t []rune) int {
 }
 
 func CanBreakText(t []rune) pr.MaybeBool {
-	if len(t) < 2 {
-		return nil
-	}
-	logs := getLogAttrs(t)
-	for _, l := range logs[1 : len(logs)-1] {
-		if l.IsLineBreak() {
-			return pr.True
-		}
-	}
-	return pr.False
+	return canBreakTextPango(t)
 }
 
 type StrutLayoutKey struct {
