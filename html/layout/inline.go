@@ -326,7 +326,7 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 			return
 		}
 		textBox.Text = newText
-		newBox, resume, _ := splitTextBox(context, textBox, nil, 0, true)
+		newBox, resume, _, firstLineIsRTL := splitTextBox(context, textBox, nil, 0, true)
 		if newBox == nil || resume != -1 {
 			panic(fmt.Sprintf("expected newBox and no resume, got %v, %v", newBox, resume))
 		}
@@ -336,7 +336,7 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 		// RTL line, the trailing space is at the left of the box. We have to
 		// translate the box to align the stripped text with the right edge of
 		// the box.
-		if newBox.TextLayout.FirstLineRTL {
+		if firstLineIsRTL {
 			textBox.PositionX -= spaceWidth
 			for _, ancestor := range ancestors {
 				ancestor.Box().PositionX -= spaceWidth
@@ -618,7 +618,7 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 		}
 		var newTextBox *bo.TextBox
 		isLineStart := len(lineChildren) == 0
-		newTextBox, skip, preservedLineBreak = splitTextBox(context, textBox, maxX-positionX, skip, isLineStart)
+		newTextBox, skip, preservedLineBreak, _ = splitTextBox(context, textBox, maxX-positionX, skip, isLineStart)
 		if skip != -1 {
 			resumeAt = tree.ResumeStack{skip: nil}
 		}
@@ -1138,20 +1138,20 @@ var lineBreaks = utils.NewSet("\n", "\t", "\f", "\u0085", "\u2028", "\u2029")
 
 // Keep as much text as possible from a TextBox in a limited width.
 //
-// Try not to overflow but always have some text in “new_box“
+// Try not to overflow but always have some text in the returned [TextBox]
 //
-// Return “(new_box, skip, preserved_line_break)“. “skip“ is the number of
-// UTF-8 bytes to skip form the start of the TextBox for the next line, or
+// Also returns 'skip', the number of
+// runes to skip form the start of the TextBox for the next line, or
 // -1 if all of the text fits.
 //
 // Also break on preserved line breaks.
 func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.MaybeFloat,
 	skip int, isLineStart bool,
-) (*bo.TextBox, int, bool) {
+) (_ *bo.TextBox, _ int, _ bool, firstLineIsRTL bool) {
 	fontSize := box.Style.GetFontSize()
 	text_ := []rune(box.Text)[skip:]
 	if fontSize == pr.FToV(0) || len(text_) == 0 {
-		return nil, -1, false
+		return nil, -1, false, false
 	}
 	v := text.SplitFirstLine(string(text_), box.Style, context, availableWidth, box.JustificationSpacing, false, isLineStart)
 	layout, length, resumeIndex, width, height, baseline := v.Layout, v.Length, v.ResumeAt, v.Width, v.Height, v.Baseline
@@ -1196,7 +1196,7 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 		resumeIndex += skip
 	}
 
-	return box, resumeIndex, preservedLineBreak
+	return box, resumeIndex, preservedLineBreak, v.FirstLineRTL
 }
 
 type boxMinMax struct {

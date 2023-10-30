@@ -15,15 +15,15 @@ import (
 // Splitted exposes the result of laying out
 // one line of text
 type Splitted struct {
-	// pango Layout with the first line
+	// Output layout containing (at least) the first line
 	Layout *TextLayout
 
-	// length in runes of the first line
+	// Length in runes of the first line
 	Length int
 
-	// the number of runes to skip for the next line.
+	// ResumeAt is the number of runes to skip for the next line.
 	// May be -1 if the whole text fits in one line.
-	// This may be greater than `Length` in case of preserved
+	// This may be greater than [Length] in case of preserved
 	// newline characters.
 	ResumeAt int
 
@@ -33,8 +33,10 @@ type Splitted struct {
 	// Height is the height in pixels of the first line
 	Height pr.Float
 
-	// Baselineis the baseline in pixels of the first line
+	// Baseline is the baseline in pixels of the first line
 	Baseline pr.Float
+
+	FirstLineRTL bool // true is the first line direction is RTL
 }
 
 // CreateLayout returns a pango.Layout with default Pango line-breaks.
@@ -376,7 +378,12 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 
 	width, height := lineSize(firstLine, style.LetterSpacing)
 	baseline := PangoUnitsToFloat(layout.Layout.GetBaseline())
-	return Splitted{Layout: layout, Length: length, ResumeAt: resumeAt, Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline)}
+	return Splitted{
+		Layout: layout,
+		Length: length, ResumeAt: resumeAt,
+		Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline),
+		FirstLineRTL: firstLine.ResolvedDir%2 != 0,
+	}
 }
 
 var rp = strings.NewReplacer(

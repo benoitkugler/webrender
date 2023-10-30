@@ -31,7 +31,6 @@ type TextLayout struct {
 	Layout pango.Layout
 
 	JustificationSpacing pr.Fl
-	FirstLineRTL         bool // true is the first line direction is RTL
 }
 
 func newTextLayout(context TextLayoutContext, style *TextStyle, justificationSpacing pr.Fl, maxWidth pr.MaybeFloat) *TextLayout {
@@ -50,7 +49,6 @@ func (p *TextLayout) Text() []rune { return p.Layout.Text }
 func (p *TextLayout) setup(context TextLayoutContext, style *TextStyle) {
 	p.Context = context
 	p.style = style
-	p.FirstLineRTL = false
 	fontmap := context.Fonts().(*FontConfigurationPango).fontmap
 	pc := pango.NewContext(fontmap)
 	pc.SetRoundGlyphPositions(false)
@@ -191,8 +189,6 @@ func (p *TextLayout) GetFirstLine() (*pango.LayoutLine, int) {
 	if secondLine != nil {
 		index = secondLine.StartIndex
 	}
-
-	p.FirstLineRTL = firstLine.ResolvedDir%2 != 0
 
 	return firstLine, index
 }

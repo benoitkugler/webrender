@@ -885,13 +885,13 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 		var oldBox *bo.TextBox
 		for resume != -1 {
 			oldResume = resume
-			oldBox, resume, _ = splitTextBox(context, textBox, nil, resume, true)
+			oldBox, resume, _, _ = splitTextBox(context, textBox, nil, resume, true)
 		}
 		if oldBox == nil {
 			panic("oldBox can't be nil")
 		}
 		strippedBox := textBox.CopyWithText(strippedText)
-		strippedBox, resume, _ = splitTextBox(context, strippedBox, nil, oldResume, true)
+		strippedBox, resume, _, _ = splitTextBox(context, strippedBox, nil, oldResume, true)
 		if strippedBox == nil {
 			// oldBox split just before the trailing spaces
 			return oldBox.Box().Width.V()
