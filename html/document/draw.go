@@ -184,13 +184,13 @@ var _ text.TextLayoutContext = drawContext{}
 
 type drawContext struct {
 	dst   backend.Canvas
-	fonts *text.FontConfiguration
+	fonts text.FontConfiguration
 
 	hyphenCache       map[text.HyphenDictKey]hyphen.Hyphener
 	strutLayoutsCache map[text.StrutLayoutKey][2]pr.Float
 }
 
-func (ctx drawContext) Fonts() *text.FontConfiguration { return ctx.fonts }
+func (ctx drawContext) Fonts() text.FontConfiguration { return ctx.fonts }
 
 func (ctx drawContext) HyphenCache() map[text.HyphenDictKey]hyphen.Hyphener {
 	return ctx.hyphenCache

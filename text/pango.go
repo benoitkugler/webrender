@@ -14,7 +14,7 @@ func PangoUnitsFromFloat(v pr.Fl) int32 { return int32(v*pango.Scale + 0.5) }
 func PangoUnitsToFloat(v pango.Unit) pr.Fl { return pr.Fl(v) / pango.Scale }
 
 type TextLayoutContext interface {
-	Fonts() *FontConfiguration
+	Fonts() FontConfiguration
 	HyphenCache() map[HyphenDictKey]hyphen.Hyphener
 	StrutLayoutsCache() map[StrutLayoutKey][2]pr.Float
 }
@@ -51,7 +51,7 @@ func (p *TextLayout) setup(context TextLayoutContext, style *TextStyle) {
 	p.Context = context
 	p.style = style
 	p.FirstLineRTL = false
-	fontmap := context.Fonts().Fontmap
+	fontmap := context.Fonts().(*FontConfigurationPango).fontmap
 	pc := pango.NewContext(fontmap)
 	pc.SetRoundGlyphPositions(false)
 

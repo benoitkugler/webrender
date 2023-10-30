@@ -19,8 +19,8 @@ import (
 )
 
 type Context struct {
-	Output backend.Canvas          // where to draw the text
-	Fonts  *text.FontConfiguration // used to find fonts
+	Output backend.Canvas         // where to draw the text
+	Fonts  text.FontConfiguration // used to find fonts
 }
 
 // CreateFirstLine create the text for the first line of `layout` starting at position `(x,y)`.
@@ -91,7 +91,7 @@ func (ctx Context) CreateFirstLine(layout *text.TextLayout, style pr.StyleAccess
 
 		// Font content
 		pFont := glyphItem.Item.Analysis.Font.(*fcfonts.Font)
-		content := ctx.Fonts.FontContent(pFont.FaceID())
+		content := ctx.Fonts.FontContent(text.FontOrigin(pFont.FaceID()))
 		outFont := ctx.Output.AddFont((*pangoFont)(pFont), content)
 
 		if outFont != lastFont { // add a new "run"
@@ -209,9 +209,9 @@ var _ backend.Font = (*pangoFont)(nil)
 
 type pangoFont fcfonts.Font
 
-func (f *pangoFont) Origin() backend.FontOrigin {
+func (f *pangoFont) Origin() text.FontOrigin {
 	font := (*fcfonts.Font)(f)
-	return backend.FontOrigin(font.FaceID())
+	return text.FontOrigin(font.FaceID())
 }
 
 func (f *pangoFont) Description() backend.FontDescription {
