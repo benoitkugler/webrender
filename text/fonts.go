@@ -42,4 +42,10 @@ type FontConfiguration interface {
 	heightx(style *TextStyle) pr.Fl
 	// returns the height and baseline of a line containing a single space (" ")
 	spaceHeight(style *TextStyle) (height, baseline pr.Float)
+
+	// compute the unicode propery of the given runes,
+	// returning a slice of length L + 1
+	// the returned slice is readonly, and valid only until the
+	// next call to runeProps
+	runeProps([]rune) []runeProp
 }

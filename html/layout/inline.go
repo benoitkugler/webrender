@@ -710,7 +710,7 @@ func breakWaitingChildren(context *layoutContext, box Box, bottomSpace pr.Float,
 			var tmp indexedBoxC
 			tmp, waitingChildrenCopy = waitingChildrenCopy[len(waitingChildrenCopy)-1], waitingChildrenCopy[:len(waitingChildrenCopy)-1]
 			childIndex, child, originalChild := tmp.index, tmp.box, tmp.child
-			if !child.Box().IsInNormalFlow() || canBreakInside(child) != pr.True {
+			if !child.Box().IsInNormalFlow() || canBreakInside(context, child) != pr.True {
 				continue
 			}
 
@@ -886,7 +886,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			} else if first == letterFalse {
 				canBreak = pr.False
 			} else {
-				canBreak = text.CanBreakText([]rune{lastLetter, first})
+				canBreak = text.CanBreakText(context.Fonts(), []rune{lastLetter, first})
 			}
 		}
 
@@ -1498,7 +1498,7 @@ func isPhantomLinebox(linebox *bo.BoxFields) bool {
 	return true
 }
 
-func canBreakInside(box Box) pr.MaybeBool {
+func canBreakInside(ctx *layoutContext, box Box) pr.MaybeBool {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	ws := box.Box().Style.GetWhiteSpace()
 	textWrap := ws == "normal" || ws == "pre-wrap" || ws == "pre-line"
@@ -1506,10 +1506,10 @@ func canBreakInside(box Box) pr.MaybeBool {
 	if bo.AtomicInlineLevelT.IsInstance(box) {
 		return pr.False
 	} else if textWrap && isTextBox {
-		return text.CanBreakText([]rune(textBox.Text))
+		return text.CanBreakText(ctx.Fonts(), []rune(textBox.Text))
 	} else if textWrap && bo.ParentT.IsInstance(box) {
 		for _, child := range box.Box().Children {
-			if canBreakInside(child) == pr.True {
+			if canBreakInside(ctx, child) == pr.True {
 				return pr.True
 			}
 		}

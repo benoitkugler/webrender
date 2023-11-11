@@ -97,6 +97,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		fontSize         = pr.Float(style.FontSize)
 		firstLine        *pango.LayoutLine
 		resumeIndex      int
+		fc               = context.Fonts()
 	)
 	if !textWrap {
 		maxWidth = nil
@@ -122,7 +123,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		shortText := text_[:cut]
 
 		// Try to use a small amount of text instead of the whole text
-		layout = createLayout(shortText, style, context.Fonts(), maxWidth)
+		layout = createLayout(shortText, style, fc, maxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && shortText != text_ {
 			// The small amount of text fits in one line, give up and use the whole text
@@ -130,7 +131,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 			firstLine, resumeIndex = layout.GetFirstLine()
 		}
 	} else {
-		layout = createLayout(text_, style, context.Fonts(), originalMaxWidth)
+		layout = createLayout(text_, style, fc, originalMaxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 	}
 
@@ -160,7 +161,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	}
 	firstLineFits := (firstLineWidth <= maxWidthV ||
 		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
-		CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
+		CanBreakText(fc, []rune(strings.TrimSpace(firstLineText))) == pr.True)
 	var secondLineText []rune
 	if firstLineFits {
 		// The first line fits but may have been cut too early by Pango
@@ -223,7 +224,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 
 	var startWord, stopWord int
 	if hyphens == HAuto && lang != "" {
-		nextWordBoundaries := getNextWordBoundaries(secondLineText)
+		nextWordBoundaries := getNextWordBoundaries(fc, secondLineText)
 		if len(nextWordBoundaries) == 2 {
 			// We have a word to hyphenate
 			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
@@ -282,7 +283,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		for _, firstWordPart := range dictionaryIterations {
 			newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
 			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
-			newLayout := createLayout(hyphenatedFirstLineText, style, context.Fonts(), maxWidth)
+			newLayout := createLayout(hyphenatedFirstLineText, style, fc, maxWidth)
 			newFirstLine, newIndex := newLayout.GetFirstLine()
 			newFirstLineWidth, _ := lineSize(newFirstLine, style.LetterSpacing)
 			newSpace := maxWidthV - newFirstLineWidth
@@ -353,7 +354,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, hyphenated, hyphenateCharacter)
 }
 
-var rp = strings.NewReplacer(
+var bidiMarkReplacer = strings.NewReplacer(
 	"\u202a", "\u200b",
 	"\u202b", "\u200b",
 	"\u202c", "\u200b",
@@ -361,26 +362,20 @@ var rp = strings.NewReplacer(
 	"\u202e", "\u200b",
 )
 
-func getLogAttrs(text []rune) []pango.CharAttr {
-	text = []rune(rp.Replace(string(text)))
-	logAttrs := pango.ComputeCharacterAttributes(text, -1)
-	return logAttrs
-}
-
 // returns nil or [wordStart, wordEnd]
-func getNextWordBoundaries(t []rune) []int {
+func getNextWordBoundaries(fc FontConfiguration, t []rune) []int {
 	if len(t) < 2 {
 		return nil
 	}
 	out := make([]int, 2)
 	hasBroken := false
-	for i, attr := range getLogAttrs(t) {
-		if attr.IsWordEnd() {
+	for i, attr := range fc.runeProps(t) {
+		if attr&isWordEnd != 0 {
 			out[1] = i // word end
 			hasBroken = true
 			break
 		}
-		if attr.IsWordBoundary() {
+		if attr&isWordBoundary != 0 {
 			out[0] = i // word start
 		}
 	}
@@ -390,25 +385,43 @@ func getNextWordBoundaries(t []rune) []int {
 	return out
 }
 
-// GetLastWordEnd returns the index in `t` if the last word,
+// GetLastWordEnd returns the index in `t` of the last word,
 // or -1
-func GetLastWordEnd(t []rune) int {
+func GetLastWordEnd(fc FontConfiguration, t []rune) int {
 	if len(t) < 2 {
 		return -1
 	}
-	attrs := getLogAttrs(t)
+	attrs := fc.runeProps(t)
 	for i := 0; i < len(attrs); i++ {
 		item := attrs[len(attrs)-1-i]
-		if i != 0 && item.IsWordEnd() {
+		if i != 0 && item&isWordEnd != 0 {
 			return len(t) - i
 		}
 	}
 	return -1
 }
 
-func CanBreakText(t []rune) pr.MaybeBool {
-	return canBreakTextPango(t)
+func CanBreakText(fc FontConfiguration, t []rune) pr.MaybeBool {
+	if len(t) < 2 {
+		return nil
+	}
+	logs := fc.runeProps(t)
+	for _, l := range logs[1 : len(logs)-1] {
+		if l&isLineBreak != 0 {
+			return pr.True
+		}
+	}
+	return pr.False
 }
+
+type runeProp uint8
+
+// bit mask
+const (
+	isWordEnd runeProp = 1 << iota
+	isWordBoundary
+	isLineBreak
+)
 
 type StrutLayoutKey struct {
 	lang                 string

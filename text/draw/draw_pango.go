@@ -72,7 +72,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 			// Remove last word if hyphenated
 			newText := pl.Text
 			if hyph := style.HyphenateCharacter; strings.HasSuffix(string(newText), hyph) {
-				lastWordEnd := text.GetLastWordEnd(newText[:len(newText)-len([]rune(hyph))])
+				lastWordEnd := text.GetLastWordEnd(ctx.Fonts, newText[:len(newText)-len([]rune(hyph))])
 				if lastWordEnd != -1 && lastWordEnd != 0 {
 					newText = newText[:lastWordEnd]
 				}
@@ -84,7 +84,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 	firstLine, index := layout.GetFirstLine()
 	if blockEllipsis.Tag != pr.None {
 		for index != 0 && index != -1 {
-			lastWordEnd := text.GetLastWordEnd(pl.Text[:len(pl.Text)-len([]rune(ellipsis))])
+			lastWordEnd := text.GetLastWordEnd(ctx.Fonts, pl.Text[:len(pl.Text)-len([]rune(ellipsis))])
 			if lastWordEnd == -1 {
 				break
 			}

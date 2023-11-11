@@ -83,6 +83,30 @@ func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
 	return -PangoUnitsToFloat(inkExtents.Y)
 }
 
+func getLogAttrs(text []rune) []pango.CharAttr {
+	text = []rune(bidiMarkReplacer.Replace(string(text)))
+	logAttrs := pango.ComputeCharacterAttributes(text, -1)
+	return logAttrs
+}
+
+func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
+	text = []rune(bidiMarkReplacer.Replace(string(text)))
+	logAttrs := pango.ComputeCharacterAttributes(text, -1)
+	out := make([]runeProp, len(logAttrs))
+	for i, p := range logAttrs {
+		if p.IsWordBoundary() {
+			out[i] |= isWordBoundary
+		}
+		if p.IsWordEnd() {
+			out[i] |= isWordEnd
+		}
+		if p.IsLineBreak() {
+			out[i] |= isLineBreak
+		}
+	}
+	return out
+}
+
 // FontContent returns the content of the given face, which may be needed
 // in the final output.
 func (f *FontConfigurationPango) FontContent(font FontOrigin) []byte {
@@ -867,17 +891,4 @@ var lstToISO = map[fontLanguageOverride]language.Language{
 	{'z', 'h', 's'}:      "zho",
 	{'z', 'h', 't'}:      "zho",
 	{'z', 'n', 'd'}:      "zne",
-}
-
-func canBreakTextPango(t []rune) pr.MaybeBool {
-	if len(t) < 2 {
-		return nil
-	}
-	logs := getLogAttrs(t)
-	for _, l := range logs[1 : len(logs)-1] {
-		if l.IsLineBreak() {
-			return pr.True
-		}
-	}
-	return pr.False
 }

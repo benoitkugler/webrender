@@ -145,7 +145,8 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 }
 
 func TestGetLastWordEnd(t *testing.T) {
-	if i := GetLastWordEnd([]rune{99, 99, 32, 99}); i != 2 {
+	fc := &FontConfigurationPango{fontmap: fontmap}
+	if i := GetLastWordEnd(fc, []rune{99, 99, 32, 99}); i != 2 {
 		t.Fatalf("expected %d, got %d", 2, i)
 	}
 }
@@ -400,8 +401,9 @@ func TestCanBreakText(t *testing.T) {
 		{"t ", pr.False},
 		{"test", pr.False},
 	}
+	fc := &FontConfigurationPango{fontmap: fontmap}
 	for _, tt := range tests {
-		if got := canBreakTextPango([]rune(tt.s)); got != tt.want {
+		if got := CanBreakText(fc, []rune(tt.s)); got != tt.want {
 			t.Errorf("CanBreakText() = %v, want %v", got, tt.want)
 		}
 	}
