@@ -55,7 +55,7 @@ func isEqual(m map[string]int, l []string) bool {
 	return reflect.DeepEqual(m, expected)
 }
 
-func loadValidSelectors(t *testing.T) []validSelector {
+func loadValidSelectors(t testing.TB) []validSelector {
 	c, err := os.ReadFile("test_resources/valid_selectors.json")
 	if err != nil {
 		t.Fatal(err)

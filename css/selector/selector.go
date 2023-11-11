@@ -326,7 +326,7 @@ func matchInclude(val, s string, ignoreCase bool) bool {
 	return false
 }
 
-//  matches elements where the attribute named key equals val or starts with val plus a hyphen.
+// matches elements where the attribute named key equals val or starts with val plus a hyphen.
 func attributeDashMatch(key, val string, n *html.Node, ignoreCase bool) bool {
 	return matchAttribute(n, key,
 		func(s string) bool {

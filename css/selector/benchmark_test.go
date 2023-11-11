@@ -53,3 +53,57 @@ func BenchmarkMatchAll(b *testing.B) {
 	}
 	_ = matches
 }
+
+func BenchmarkMatchAllW3(b *testing.B) {
+	tests := loadValidSelectors(b)
+	doc := parseReference("test_resources/content.xhtml")
+	var allSelectors []Sel
+	for _, test := range tests {
+		if test.Xfail {
+			continue
+		}
+		sels, err := ParseGroup(test.Selector)
+		if err != nil {
+			b.Fatalf("%s -> unable to parse valid selector : %s : %s", test.Name, test.Selector, err)
+		}
+		for _, sel := range sels {
+			if sel.PseudoElement() != "" {
+				continue // pseudo element doesn't count as a match in this test since they are not part of the document
+			}
+			allSelectors = append(allSelectors, sel)
+		}
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for _, sel := range allSelectors {
+			_ = MatchAll(doc, sel)
+		}
+	}
+}
+
+func TestMatchAllW3(t *testing.T) {
+	tests := loadValidSelectors(t)
+	doc := parseReference("test_resources/content.xhtml")
+	var allSelectors []Sel
+	for _, test := range tests {
+		if test.Xfail {
+			continue
+		}
+		sels, err := ParseGroup(test.Selector)
+		if err != nil {
+			t.Fatalf("%s -> unable to parse valid selector : %s : %s", test.Name, test.Selector, err)
+		}
+		for _, sel := range sels {
+			if sel.PseudoElement() != "" {
+				continue // pseudo element doesn't count as a match in this test since they are not part of the document
+			}
+			allSelectors = append(allSelectors, sel)
+		}
+	}
+
+	for _, sel := range allSelectors {
+		_ = MatchAll(doc, sel)
+	}
+}
