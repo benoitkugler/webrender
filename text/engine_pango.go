@@ -107,6 +107,19 @@ func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
 	return out
 }
 
+func (fc FontConfigurationPango) CanBreakText(t []rune) pr.MaybeBool {
+	if len(t) < 2 {
+		return nil
+	}
+	logs := fc.runeProps(t)
+	for _, l := range logs[1 : len(logs)-1] {
+		if l&isLineBreak != 0 {
+			return pr.True
+		}
+	}
+	return pr.False
+}
+
 // FontContent returns the content of the given face, which may be needed
 // in the final output.
 func (f *FontConfigurationPango) FontContent(font FontOrigin) []byte {

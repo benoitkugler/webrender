@@ -36,6 +36,10 @@ type FontConfiguration interface {
 	// It returns the file name of the loaded file.
 	AddFontFace(ruleDescriptors validation.FontFaceDescriptors, urlFetcher utils.UrlFetcher) string
 
+	// CanBreakText returns True if there is a line break strictly inside [t], False otherwise.
+	// It should return nil if t has length < 2.
+	CanBreakText(t []rune) pr.MaybeBool
+
 	// returns the advance of the '0' char, using the font described by the given [style]
 	width0(style *TextStyle) pr.Fl
 	// returns the height of the 'x' char, using the font described by the given [style]

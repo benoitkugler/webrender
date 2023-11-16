@@ -161,7 +161,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	}
 	firstLineFits := (firstLineWidth <= maxWidthV ||
 		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
-		CanBreakText(fc, []rune(strings.TrimSpace(firstLineText))) == pr.True)
+		fc.CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
 	var secondLineText []rune
 	if firstLineFits {
 		// The first line fits but may have been cut too early by Pango
@@ -399,19 +399,6 @@ func GetLastWordEnd(fc FontConfiguration, t []rune) int {
 		}
 	}
 	return -1
-}
-
-func CanBreakText(fc FontConfiguration, t []rune) pr.MaybeBool {
-	if len(t) < 2 {
-		return nil
-	}
-	logs := fc.runeProps(t)
-	for _, l := range logs[1 : len(logs)-1] {
-		if l&isLineBreak != 0 {
-			return pr.True
-		}
-	}
-	return pr.False
 }
 
 type runeProp uint8

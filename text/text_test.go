@@ -401,10 +401,14 @@ func TestCanBreakText(t *testing.T) {
 		{"t ", pr.False},
 		{"test", pr.False},
 	}
-	fc := &FontConfigurationPango{fontmap: fontmap}
+	fcPango := &FontConfigurationPango{fontmap: fontmap}
+	fcGotext := &FontConfigurationGotext{}
 	for _, tt := range tests {
-		if got := CanBreakText(fc, []rune(tt.s)); got != tt.want {
-			t.Errorf("CanBreakText() = %v, want %v", got, tt.want)
+		if got := fcPango.CanBreakText([]rune(tt.s)); got != tt.want {
+			t.Errorf("pango.CanBreakText(%s) = %v, want %v", tt.s, got, tt.want)
+		}
+		if got := fcGotext.CanBreakText([]rune(tt.s)); got != tt.want {
+			t.Errorf("gotext.CanBreakText(%s) = %v, want %v", tt.s, got, tt.want)
 		}
 	}
 }
