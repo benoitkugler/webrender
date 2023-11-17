@@ -66,20 +66,29 @@ func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
 
 	p.Layout.SetText("0") // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := p.GetFirstLine()
-
-	var inkExtents, logicalExtents pango.Rectangle
-	line.GetExtents(&inkExtents, &logicalExtents)
+	var logicalExtents pango.Rectangle
+	line.GetExtents(nil, &logicalExtents)
 	return PangoUnitsToFloat(logicalExtents.Width)
 }
+
+// var styles []*TextStyle
+
+// func dumpStyle(s *TextStyle) {
+// 	styles = append(styles, s)
+// 	f, _ := os.Create("styles.json")
+// 	enc := json.NewEncoder(f)
+// 	enc.SetIndent(" ", " ")
+// 	enc.Encode(styles)
+// 	f.Close()
+// }
 
 func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
 	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := p.GetFirstLine()
-
-	var inkExtents, logicalExtents pango.Rectangle
-	line.GetExtents(&inkExtents, &logicalExtents)
+	var inkExtents pango.Rectangle
+	line.GetExtents(&inkExtents, nil)
 	return -PangoUnitsToFloat(inkExtents.Y)
 }
 
@@ -345,17 +354,17 @@ var (
 	}
 )
 
-func getFontDescription(style *TextStyle) pango.FontDescription {
+func getFontDescription(fd FontDescription) pango.FontDescription {
 	fontDesc := pango.NewFontDescription()
-	fontDesc.SetFamily(strings.Join(style.FontFamily, ","))
+	fontDesc.SetFamily(strings.Join(fd.Family, ","))
 
-	fontDesc.SetStyle(pango.Style(style.FontStyle))
-	fontDesc.SetStretch(pango.Stretch(style.FontStretch))
-	fontDesc.SetWeight(pango.Weight(style.FontWeight))
+	fontDesc.SetStyle(pango.Style(fd.Style))
+	fontDesc.SetStretch(pango.Stretch(fd.Stretch))
+	fontDesc.SetWeight(pango.Weight(fd.Weight))
 
-	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(style.FontSize))
+	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(fd.Size))
 
-	fontDesc.SetVariations(pangoFontVariations(style.FontVariationSettings))
+	fontDesc.SetVariations(pangoFontVariations(fd.VariationSettings))
 
 	return fontDesc
 }
@@ -484,7 +493,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 	}
 	pc.SetLanguage(lang)
 
-	fontDesc := getFontDescription(style)
+	fontDesc := getFontDescription(style.FontDescription)
 	p.Layout = *pango.NewLayout(pc)
 	p.Layout.SetFontDescription(&fontDesc)
 

@@ -2,6 +2,8 @@ package text
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"testing"
 
 	"github.com/benoitkugler/textprocessing/fontconfig"
@@ -11,6 +13,7 @@ import (
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/go-text/typesetting/fontscan"
 )
 
 var (
@@ -20,7 +23,10 @@ var (
 
 const fontmapCache = "testdata/cache.fc"
 
-var fontmap *fcfonts.FontMap
+var (
+	fontmapPango  *fcfonts.FontMap
+	fontmapGotext *fontscan.FontMap
+)
 
 func init() {
 	// this command has to run once
@@ -34,7 +40,13 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	fontmap = fcfonts.NewFontMap(fontconfig.Standard, fs)
+	fontmapPango = fcfonts.NewFontMap(fontconfig.Standard, fs)
+
+	fontmapGotext = fontscan.NewFontMap(log.New(io.Discard, "", 0))
+	err = fontmapGotext.UseSystemFonts("testdata")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func assert(t *testing.T, b bool, msg string) {
@@ -61,7 +73,7 @@ func makeText(text string, width pr.MaybeFloat, style pr.Properties) Splitted {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(monoFonts)
 	newStyle.UpdateWith(style)
-	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 	return SplitFirstLine(text, newStyle, ct, width, false, true)
 }
 
@@ -136,7 +148,7 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(monoFonts)
 	newStyle.UpdateWith(pr.Properties{pr.PFontFamily: sansFonts, pr.PFontSize: pr.FToV(19)})
-	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
 	text := "This is a text for test. This is a test for text.py"
 	for i := 0; i < b.N; i++ {
@@ -145,7 +157,7 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 }
 
 func TestGetLastWordEnd(t *testing.T) {
-	fc := &FontConfigurationPango{fontmap: fontmap}
+	fc := &FontConfigurationPango{fontmap: fontmapPango}
 	if i := GetLastWordEnd(fc, []rune{99, 99, 32, 99}); i != 2 {
 		t.Fatalf("expected %d, got %d", 2, i)
 	}
@@ -160,9 +172,9 @@ func TestHeightAndBaseline(t *testing.T) {
 	newStyle.SetFontFamily(families)
 
 	newStyle.SetFontSize(pr.FToV(36))
-	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
-	fc := NewFontConfigurationPango(fontmap)
+	fc := NewFontConfigurationPango(fontmapPango)
 	for _, desc := range []validation.FontFaceDescriptors{
 		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Owps.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 400}},
 		{Src: []pr.NamedString{{Name: "external", String: "https://fonts.gstatic.com/s/googlesans/v36/4UabrENHsxJlGDuGo1OIlLU94YtzCwM.ttf"}}, FontFamily: "Google Sans", FontStyle: "normal", FontWeight: pr.IntString{String: "", Int: 500}},
@@ -190,8 +202,8 @@ func TestHeightAndBaseline(t *testing.T) {
 }
 
 func newContextWithWeasyFont(t *testing.T) textContext {
-	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
-	fc := NewFontConfigurationPango(fontmap)
+	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	fc := NewFontConfigurationPango(fontmapPango)
 	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
@@ -234,7 +246,7 @@ func TestSplitFirstLine(t *testing.T) {
 	newStyle.SetFontFamily(pr.Strings{"arial"})
 	newStyle.SetFontSize(pr.FToV(16))
 
-	ct := textContext{fontmap: fontmap, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
 
 	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), false, true)
 
@@ -401,7 +413,7 @@ func TestCanBreakText(t *testing.T) {
 		{"t ", pr.False},
 		{"test", pr.False},
 	}
-	fcPango := &FontConfigurationPango{fontmap: fontmap}
+	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 	fcGotext := &FontConfigurationGotext{}
 	for _, tt := range tests {
 		if got := fcPango.CanBreakText([]rune(tt.s)); got != tt.want {

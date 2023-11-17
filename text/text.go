@@ -94,10 +94,10 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
 		layout           *TextLayoutPango
-		fontSize         = pr.Float(style.FontSize)
+		fontSize         = pr.Float(style.Size)
 		firstLine        *pango.LayoutLine
 		resumeIndex      int
-		fc               = context.Fonts()
+		fc               = context.Fonts().(*FontConfigurationPango)
 	)
 	if !textWrap {
 		maxWidth = nil
@@ -363,7 +363,7 @@ var bidiMarkReplacer = strings.NewReplacer(
 )
 
 // returns nil or [wordStart, wordEnd]
-func getNextWordBoundaries(fc FontConfiguration, t []rune) []int {
+func getNextWordBoundaries(fc *FontConfigurationPango, t []rune) []int {
 	if len(t) < 2 {
 		return nil
 	}
@@ -387,7 +387,7 @@ func getNextWordBoundaries(fc FontConfiguration, t []rune) []int {
 
 // GetLastWordEnd returns the index in `t` of the last word,
 // or -1
-func GetLastWordEnd(fc FontConfiguration, t []rune) int {
+func GetLastWordEnd(fc *FontConfigurationPango, t []rune) int {
 	if len(t) < 2 {
 		return -1
 	}
@@ -414,7 +414,7 @@ type StrutLayoutKey struct {
 	lang                 string
 	fontFamily           string // joined
 	lineHeight           pr.Value
-	fontWeight           int
+	fontWeight           uint16
 	fontSize             pr.Fl
 	fontLanguageOverride fontLanguageOverride
 	fontStretch          FontStretch
@@ -427,7 +427,7 @@ type StrutLayoutKey struct {
 func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (result [2]pr.Float) {
 	style := NewTextStyle(style_, false)
 
-	fontSize := style.FontSize
+	fontSize := style.Size
 	if fontSize == 0 {
 		return [2]pr.Float{}
 	}
@@ -438,10 +438,10 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (result [2]
 		fontSize:             fontSize,
 		fontLanguageOverride: style.FontLanguageOverride,
 		lang:                 style.Lang,
-		fontFamily:           strings.Join(style.FontFamily, ""),
-		fontStyle:            style.FontStyle,
-		fontStretch:          style.FontStretch,
-		fontWeight:           style.FontWeight,
+		fontFamily:           strings.Join(style.Family, ""),
+		fontStyle:            style.Style,
+		fontStretch:          style.Stretch,
+		fontWeight:           style.Weight,
 		lineHeight:           lineHeight,
 	}
 
@@ -483,7 +483,7 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 
 	// Random big value
 	const fontSize pr.Fl = 1000
-	style.FontSize = fontSize
+	style.FontDescription.Size = fontSize
 
 	var measure pr.Fl
 	if isCh {
@@ -503,12 +503,5 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 }
 
 func (style *TextStyle) cacheKey() string {
-	return fmt.Sprint(
-		style.FontFamily,
-		style.FontStyle,
-		style.FontStretch,
-		style.FontWeight,
-		style.FontFeatures,
-		style.FontVariationSettings,
-	)
+	return string(append(style.FontDescription.hash(false), fmt.Sprint(style.FontFeatures)...))
 }

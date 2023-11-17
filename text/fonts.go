@@ -51,5 +51,5 @@ type FontConfiguration interface {
 	// returning a slice of length L + 1
 	// the returned slice is readonly, and valid only until the
 	// next call to runeProps
-	runeProps([]rune) []runeProp
+	// runeProps([]rune) []runeProp
 }

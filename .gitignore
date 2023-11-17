@@ -2,3 +2,4 @@
 .idea/**
 macros/__pycache__/**
 text/testdata/cache.fc
+text/testdata/*.cache

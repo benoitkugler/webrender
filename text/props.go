@@ -1,6 +1,8 @@
 package text
 
 import (
+	"encoding/binary"
+	"math"
 	"strings"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -26,9 +28,39 @@ type LineMetrics struct {
 	StrikethroughThickness pr.Fl
 }
 
+// FontDescription stores the settings influencing
+// font resolution and metrics.
+type FontDescription struct {
+	Family            []string
+	Style             FontStyle
+	Stretch           FontStretch
+	Weight            uint16
+	Size              pr.Fl
+	VariationSettings []Variation // empty for 'normal'
+}
+
+func (fd FontDescription) hash(includeSize bool) []byte {
+	var hash []byte
+	for _, f := range fd.Family {
+		hash = append(hash, f...)
+	}
+	hash = append(hash, byte(fd.Style), byte(fd.Stretch))
+	hash = binary.BigEndian.AppendUint16(hash, fd.Weight)
+	if includeSize {
+		hash = binary.BigEndian.AppendUint32(hash, math.Float32bits(fd.Size))
+	}
+	for _, v := range fd.VariationSettings {
+		hash = append(hash, v.Tag[:]...)
+		hash = binary.BigEndian.AppendUint32(hash, math.Float32bits(v.Value))
+	}
+	return hash
+}
+
 // TextStyle exposes the subset of a [pr.Style]
 // required to layout text.
 type TextStyle struct {
+	FontDescription
+
 	TextDecorationLine pr.Decorations
 
 	// FontFeatures stores the resolved value
@@ -42,13 +74,6 @@ type TextStyle struct {
 	// 	"font-variant-east-asian"
 	// 	"font-feature-settings"
 	FontFeatures []Feature
-
-	FontFamily            []string
-	FontStyle             FontStyle
-	FontStretch           FontStretch
-	FontWeight            int
-	FontSize              pr.Fl
-	FontVariationSettings []Variation // empty for 'normal'
 
 	FontLanguageOverride fontLanguageOverride
 	Lang                 string
@@ -72,12 +97,12 @@ type TextStyle struct {
 func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	var out TextStyle
 
-	out.FontFamily = style.GetFontFamily()
-	out.FontStyle = newFontStyle(style.GetFontStyle())
-	out.FontStretch = newFontStretch(style.GetFontStretch())
-	out.FontWeight = style.GetFontWeight().Int
-	out.FontSize = pr.Fl(style.GetFontSize().Value)
-	out.FontVariationSettings = newFontVariationSettings(style.GetFontVariationSettings())
+	out.FontDescription.Family = style.GetFontFamily()
+	out.FontDescription.Style = newFontStyle(style.GetFontStyle())
+	out.FontDescription.Stretch = newFontStretch(style.GetFontStretch())
+	out.FontDescription.Weight = uint16(style.GetFontWeight().Int)
+	out.FontDescription.Size = pr.Fl(style.GetFontSize().Value)
+	out.FontDescription.VariationSettings = newFontVariationSettings(style.GetFontVariationSettings())
 
 	out.FontLanguageOverride = newFontLanguageOverrride(style.GetFontLanguageOverride())
 	out.Lang = style.GetLang().String
