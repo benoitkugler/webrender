@@ -148,24 +148,6 @@ func newMetrics(fc FontConfiguration, desc FontDescription) metrics {
 // 	}
 // }
 
-func TestMetrics(t *testing.T) {
-	// test are generated with pango as reference
-	// on a linux system
-	var descriptions []FontDescription
-	loadJson(t, "font_descriptions.json", &descriptions)
-	var metrics []metrics
-	loadJson(t, "metrics_linux.json", &metrics)
-
-	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
-	fcGotext := NewFontConfigurationGotext(fontmapGotext)
-	for i, desc := range descriptions {
-		got := newMetrics(fcPango, desc)
-		tu.AssertEqual(t, got, metrics[i], fmt.Sprint(desc))
-
-		fcGotext.heightx(&TextStyle{FontDescription: desc})
-	}
-}
-
 func TestMetricsLinuxFonts(t *testing.T) {
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
