@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/benoitkugler/textlayout/fonts"
@@ -15,6 +16,8 @@ import (
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/go-text/typesetting/fontscan"
+	"github.com/go-text/typesetting/opentype/api/metadata"
 )
 
 func TestAddConfig(t *testing.T) {
@@ -60,29 +63,71 @@ func TestAddConfig(t *testing.T) {
 	}
 }
 
-func TestAddFace(t *testing.T) {
-	fc := NewFontConfigurationPango(fontmapPango)
+func TestAddFontFace(t *testing.T) {
+	fcP := NewFontConfigurationPango(fontmapPango)
+	fcG := NewFontConfigurationGotext(fontmapGotext)
+
 	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
 	}
-	filename := fc.AddFontFace(validation.FontFaceDescriptors{
+	desc := validation.FontFaceDescriptors{
 		Src:        []properties.NamedString{{Name: "external", String: url}},
 		FontFamily: "weasyprint",
-	}, utils.DefaultUrlFetcher)
-
-	_, err = fc.LoadFace(fonts.FaceID{File: filename}, fontconfig.TrueType)
-	if err != nil {
-		t.Fatal(err)
 	}
-
 	expected, err := os.ReadFile("../resources_test/weasyprint.otf")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(expected, fc.FontContent(FontOrigin{File: filename})) {
+
+	// Pango
+	filename := fcP.AddFontFace(desc, utils.DefaultUrlFetcher)
+	_, err = fcP.LoadFace(fonts.FaceID{File: filename}, fontconfig.TrueType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(expected, fcP.FontContent(FontOrigin{File: filename})) {
 		t.Fatal()
 	}
+
+	// Gotext
+	filename2 := fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
+	tu.AssertEqual(t, filename2, filename, "")
+	if !bytes.Equal(expected, fcG.FontContent(FontOrigin{File: filename})) {
+		t.Fatal()
+	}
+	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}})
+	tu.AssertEqual(t, face != nil, true, "")
+	tu.AssertEqual(t, len(fcG.fontsFeatures[face.Font]), 1, "")
+	tu.AssertEqual(t, fcG.fontsFeatures[face.Font][0].String(), "'kern'=1", "")
+}
+
+func TestAddFontFaceAspect(t *testing.T) {
+	fcG := NewFontConfigurationGotext(fontmapGotext)
+
+	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	desc := validation.FontFaceDescriptors{
+		Src:        []properties.NamedString{{Name: "external", String: url}},
+		FontFamily: "weasyprint",
+		// provide user metadata
+		FontStyle:   "italic",
+		FontWeight:  pr.IntString{String: "bold"},
+		FontStretch: "condensed",
+	}
+
+	_ = fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
+	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}, Style: FSyItalic, Weight: 700, Stretch: FSeCondensed})
+	family, aspect := fcG.fm.FontMetadata(face.Font)
+	tu.AssertEqual(t, family, "weasyprint", "")
+	tu.AssertEqual(t, aspect, metadata.Aspect{
+		Style:   metadata.StyleItalic,
+		Weight:  metadata.WeightBold,
+		Stretch: metadata.StretchCondensed,
+	}, "")
 }
 
 func TestVariations(t *testing.T) {
@@ -147,6 +192,28 @@ func newMetrics(fc FontConfiguration, desc FontDescription) metrics {
 // 		t.Fatal(err)
 // 	}
 // }
+
+func TestResolveFont(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip()
+	}
+
+	for _, test := range []struct {
+		query    []string
+		resolved string
+	}{
+		{[]string{"Helvetica"}, "Nimbus Sans"},
+		{[]string{"BlinkMacSystemFont", "Helvetica"}, "Nimbus Sans"},
+		{[]string{"Times"}, "Nimbus Roman"},
+		{[]string{"Mononoki"}, "DejaVu Sans"},
+	} {
+		fc := NewFontConfigurationGotext(fontmapGotext)
+		fc.fm.SetQuery(fontscan.Query{Families: test.query})
+		face := fc.fm.ResolveFace('a')
+		family, _ := fc.fm.FontMetadata(face.Font)
+		tu.AssertEqual(t, family, metadata.NormalizeFamily(test.resolved), "")
+	}
+}
 
 func TestMetricsLinuxFonts(t *testing.T) {
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}

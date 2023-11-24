@@ -424,3 +424,9 @@ func TestCanBreakText(t *testing.T) {
 		}
 	}
 }
+
+func TestDebugWrap(t *testing.T) {
+	fcG := NewFontConfigurationGotext(fontmapGotext)
+	line, resume := fcG.wrap([]rune("Une superbe phrase en français !"), NewTextStyle(pr.InitialValues, false), 200)
+	fmt.Println(len(line), resume)
+}

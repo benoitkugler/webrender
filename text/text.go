@@ -81,6 +81,27 @@ type HyphenDictKey struct {
 	left, right, total int
 }
 
+// returns a prefix of text
+func shortTextHint(text string, maxWidth, fontSize pr.Float) string {
+	cut := len(text)
+	if maxWidth <= 0 {
+		// Trying to find minimum size, let's naively split on spaces and
+		// keep one word + one letter
+
+		if spaceIndex := strings.IndexByte(text, ' '); spaceIndex != -1 {
+			cut = spaceIndex + 2 // index + space + one letter
+		}
+	} else {
+		cut = int(maxWidth / fontSize * 2.5)
+	}
+
+	if cut > len(text) {
+		cut = len(text)
+	}
+
+	return text[:cut]
+}
+
 // SplitFirstLine fit as much text from [text_] as possible in the available width given by [maxWidth]
 // minimum=False
 func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
@@ -90,7 +111,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
 		ws               = style.WhiteSpace
-		textWrap         = ws == WNormal || ws == WPreWrap || ws == WPreLine
+		textWrap         = style.textWrap()
 		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
 		layout           *TextLayoutPango
@@ -104,25 +125,9 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	}
 	// Step #1: Get a draft layout with the first line
 	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
-		// shortText := text_
-		cut := len(text_)
-		if maxWidth <= 0 {
-			// Trying to find minimum size, let's naively split on spaces and
-			// keep one word + one letter
-
-			if spaceIndex := strings.IndexByte(text_, ' '); spaceIndex != -1 {
-				cut = spaceIndex + 2 // index + space + one letter
-			}
-		} else {
-			cut = int(maxWidth / fontSize * 2.5)
-		}
-
-		if cut > len(text_) {
-			cut = len(text_)
-		}
-		shortText := text_[:cut]
-
 		// Try to use a small amount of text instead of the whole text
+		shortText := shortTextHint(text_, maxWidth, fontSize)
+
 		layout = createLayout(shortText, style, fc, maxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && shortText != text_ {
