@@ -3,6 +3,7 @@ package text
 import (
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
+	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -46,6 +47,9 @@ type FontConfiguration interface {
 	heightx(style *TextStyle) pr.Fl
 	// returns the height and baseline of a line containing a single space (" ")
 	spaceHeight(style *TextStyle) (height, baseline pr.Float)
+
+	splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text_ string, style *TextStyle,
+		maxWidth pr.MaybeFloat, minimum, isLineStart bool) FirstLine
 
 	// compute the unicode propery of the given runes,
 	// returning a slice of length L + 1

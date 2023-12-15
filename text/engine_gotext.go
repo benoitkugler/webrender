@@ -155,10 +155,12 @@ func (f *FontConfigurationGotext) FontContent(font FontOrigin) []byte {
 	return b
 }
 
-type layoutGotext struct{}
+type layoutGotext struct {
+	text []rune
+}
 
 // Text returns a readonly slice of the text in the layout
-func (layoutGotext) Text() []rune { return nil }
+func (l layoutGotext) Text() []rune { return l.text }
 
 // Metrics may return nil when [TextDecorationLine] is empty
 func (layoutGotext) Metrics() *LineMetrics { return nil }
@@ -421,7 +423,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		text = trimTrailingSpaces(text[:firstLineLength])
 		firstLineLength = len(text)
 		// and the matching glyphs
-		lastRun := line[len(line)-1]
+		lastRun := &line[len(line)-1]
 		i := len(lastRun.Glyphs) - 1
 		for ; i >= 0; i-- {
 			if lastRun.Glyphs[i].Width != 0 {
@@ -448,7 +450,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	// TODO: properly handle letter spacing
 
 	return FirstLine{
-		Layout:       layoutGotext{},
+		Layout:       layoutGotext{text: text},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: firstLineRTL,
@@ -458,21 +460,17 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 }
 
-// SplitFirstLine2 fit as much text from [text_] as possible in the available width given by [maxWidth].
+// splitFirstLineGotext fit as much text from [text_] as possible in the available width given by [maxWidth].
 // minimum should defaults to false
-func SplitFirstLine2(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
+func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text_ string, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
-	style := NewTextStyle(style_, false)
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
-		ws               = style.WhiteSpace
 		textWrap         = style.textWrap()
-		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
 		fontSize         = pr.Float(style.Size)
 		firstLine        FirstLine
-		fc               = context.Fonts().(*FontConfigurationGotext)
 		text             = []rune(text_)
 	)
 	if !textWrap {
@@ -495,8 +493,6 @@ func SplitFirstLine2(text_ string, style_ pr.StyleAccessor, context TextLayoutCo
 		}
 		firstLine = fc.wrap(text, style, originalMaxW)
 	}
-
-	fmt.Println(spaceCollapse, firstLine)
 
 	// Step #2: Don't split lines when it's not needed
 	if maxWidth == nil || len(text) == 0 {
@@ -592,18 +588,19 @@ func SplitFirstLine2(text_ string, style_ pr.StyleAccessor, context TextLayoutCo
 		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
 	} else if autoHyphenation {
 		dictionaryKey := HyphenDictKey{lang, hyphenLimit}
-		dictionary, ok := context.HyphenCache()[dictionaryKey]
+		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
 			dictionary = hyphen.NewHyphener(lang, hyphenLimit.Left, hyphenLimit.Right)
-			context.HyphenCache()[dictionaryKey] = dictionary
+			hyphenCache[dictionaryKey] = dictionary
 		}
 		dictionaryIterations = dictionary.IterateRunes(nextWord)
 	}
 
+	var hyphenatedFirstLineText []rune
 	if len(dictionaryIterations) != 0 {
-		var newFirstLineText, hyphenatedFirstLineText []rune
+		var newFirstLineText []rune
 		for _, firstWordPart := range dictionaryIterations {
-			newFirstLineText = append(append(firstLineText, secondLineText[:startWord]...), []rune(firstWordPart)...)
+			newFirstLineText = append(append(append([]rune(nil), firstLineText...), secondLineText[:startWord]...), []rune(firstWordPart)...)
 			hyphenatedFirstLineText = append(newFirstLineText, hyphenateCharacter...)
 			newFirstLine := fc.wrap(hyphenatedFirstLineText, style, maxWidthV)
 			newSpace := maxWidthV - newFirstLine.Width
@@ -614,7 +611,7 @@ func SplitFirstLine2(text_ string, style_ pr.StyleAccessor, context TextLayoutCo
 				if text[firstLine.ResumeAt] == softHyphen {
 					// Recreate the layout with no maxWidth to be sure that
 					// we don't break before the soft hyphen
-					firstLine.Layout = fc.wrap(newFirstLine.Layout.Text(), style, pr.Inf).Layout
+					firstLine.Layout = fc.wrap(hyphenatedFirstLineText, style, pr.Inf).Layout
 					firstLine.ResumeAt += 1
 				}
 				break
@@ -637,7 +634,7 @@ func SplitFirstLine2(text_ string, style_ pr.StyleAccessor, context TextLayoutCo
 		// Recreate the layout with no maxWidth to be sure that
 		// we don't break inside the hyphenate-character string
 		hyphenated = true
-		hyphenatedFirstLineText := append(firstLineText, hyphenateCharacter...)
+		hyphenatedFirstLineText = append(append([]rune(nil), firstLineText...), hyphenateCharacter...)
 		firstLine = fc.wrap(hyphenatedFirstLineText, style, pr.Inf)
 		firstLine.ResumeAt = len(firstLineText)
 	}

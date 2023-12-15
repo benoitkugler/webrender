@@ -58,31 +58,7 @@ func (h Hyphener) positions(word []rune) []dataOrInt {
 // Iterates over all hyphenation possibilities, the longest first,
 // for `word`.
 // The returned slice contains the starts of each possibility.
-func (h Hyphener) Iterate(word string) []string {
-	word_ := []rune(word)
-	pos := h.positions(word_)
-	L := len(pos)
-	out := make([]string, L)
-	wordIsUpper := strings.IndexFunc(word, func(r rune) bool { return !unicode.IsUpper(r) }) == -1
-
-	for i := L - 1; i >= 0; i-- { // reverse
-		index := pos[i]
-		var subs string
-		if index.Data != nil { // get the nonstandard hyphenation data
-			data := *index.Data
-			data.Index += index.V
-			c1, _ := data.Changes[0], data.Changes[1]
-			if wordIsUpper {
-				c1 = strings.ToUpper(c1)
-			}
-			subs = string(word_[:data.Index]) + c1
-		} else {
-			subs = string(word_[:index.V])
-		}
-		out[L-1-i] = subs
-	}
-	return out
-}
+func (h Hyphener) Iterate(word string) []string { return h.IterateRunes([]rune(word)) }
 
 // Iterates over all hyphenation possibilities, the longest first,
 // for `word`.

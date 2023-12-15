@@ -542,13 +542,29 @@ func TestDebugWrap(t *testing.T) {
 	line := fcG.wrap([]rune(text), style, 10)
 	ref := wrapPango(fcPango, text, style, pr.Float(10))
 	fmt.Println()
+	fmt.Println(line.ResumeAt, ref.ResumeAt)
 	fmt.Println(line.Length, ref.Length)
 	fmt.Println(line.Width, ref.Width)
 }
 
 func TestSplit(t *testing.T) {
-	textc := tcGotext()
+	gotext := tcGotext()
+	pango := tcPango()
+	style := pr.InitialValues.Copy()
+	style.SetLang(pr.NamedString{String: "fr"})
+	style.SetHyphens("auto")
+	style.SetWordBreak("break-word")
+	style.SetOverflowWrap("break-word")
 
-	line := SplitFirstLine2("Une jolie phrase - hahaha", pr.InitialValues, textc, pr.Float(50), false, true)
-	fmt.Println(line)
+	for maxWidth := pr.Float(30); maxWidth < 100; maxWidth += 10 {
+		lineP := SplitFirstLine("Une jolie phrase - hahaha", style, pango, maxWidth, false, true)
+		lineG := SplitFirstLine("Une jolie phrase - hahaha", style, gotext, maxWidth, false, true)
+		fmt.Println(string(lineP.Layout.Text()))
+
+		tu.AssertEqual(t, lineP.ResumeAt, lineG.ResumeAt, "")
+		tu.AssertEqual(t, lineP.FirstLineRTL, lineG.FirstLineRTL, "")
+		tu.AssertEqual(t, lineP.Length, lineG.Length, "")
+
+		fmt.Println(lineP, lineG)
+	}
 }
