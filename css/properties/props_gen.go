@@ -281,8 +281,8 @@ func (s Properties) SetHeight(v Value) { s[PHeight] = v }
 func (s Properties) GetHyphenateCharacter() String  { return s[PHyphenateCharacter].(String) }
 func (s Properties) SetHyphenateCharacter(v String) { s[PHyphenateCharacter] = v }
 
-func (s Properties) GetHyphenateLimitChars() Ints3  { return s[PHyphenateLimitChars].(Ints3) }
-func (s Properties) SetHyphenateLimitChars(v Ints3) { s[PHyphenateLimitChars] = v }
+func (s Properties) GetHyphenateLimitChars() Limits  { return s[PHyphenateLimitChars].(Limits) }
+func (s Properties) SetHyphenateLimitChars(v Limits) { s[PHyphenateLimitChars] = v }
 
 func (s Properties) GetHyphenateLimitZone() Value  { return s[PHyphenateLimitZone].(Value) }
 func (s Properties) SetHyphenateLimitZone(v Value) { s[PHyphenateLimitZone] = v }
@@ -759,8 +759,8 @@ type StyleAccessor interface {
 	GetHyphenateCharacter() String
 	SetHyphenateCharacter(v String)
 
-	GetHyphenateLimitChars() Ints3
-	SetHyphenateLimitChars(v Ints3)
+	GetHyphenateLimitChars() Limits
+	SetHyphenateLimitChars(v Limits)
 
 	GetHyphenateLimitZone() Value
 	SetHyphenateLimitZone(v Value)

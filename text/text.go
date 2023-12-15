@@ -38,9 +38,9 @@ type EngineLayout interface {
 	ApplyJustification()
 }
 
-// Splitted exposes the result of laying out
+// FirstLine exposes the result of laying out
 // one line of text
-type Splitted struct {
+type FirstLine struct {
 	// Output layout containing (at least) the first line
 	Layout EngineLayout
 
@@ -66,7 +66,7 @@ type Splitted struct {
 }
 
 // split word on each hyphen occurence, starting by the end
-func hyphenDictionaryIterations(word string, hyphen rune) (out []string) {
+func hyphenDictionaryIterationsOld(word string, hyphen rune) (out []string) {
 	wordRunes := []rune(word)
 	for i := len(wordRunes) - 1; i >= 0; i-- {
 		if wordRunes[i] == hyphen {
@@ -76,9 +76,19 @@ func hyphenDictionaryIterations(word string, hyphen rune) (out []string) {
 	return out
 }
 
+// split word on each hyphen occurence, starting by the end
+func hyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
+	for i := len(word) - 1; i >= 0; i-- {
+		if word[i] == hyphen {
+			out = append(out, string(word[:i+1]))
+		}
+	}
+	return out
+}
+
 type HyphenDictKey struct {
-	lang               language.Language
-	left, right, total int
+	lang  language.Language
+	limit pr.Limits
 }
 
 // returns a prefix of text
@@ -106,7 +116,7 @@ func shortTextHint(text string, maxWidth, fontSize pr.Float) string {
 // minimum=False
 func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
-) Splitted {
+) FirstLine {
 	style := NewTextStyle(style_, false)
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
@@ -218,7 +228,6 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	}
 	limit := style.HyphenateLimitChars
 	hyphenateCharacter := style.HyphenateCharacter
-	total, left, right := limit[0], limit[1], limit[2]
 	hyphenated := false
 	softHyphen := '\u00ad'
 
@@ -234,7 +243,7 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 			// We have a word to hyphenate
 			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
 			nextWord = string(secondLineText[startWord:stopWord])
-			if stopWord-startWord >= total {
+			if stopWord-startWord >= limit.Total {
 				// This word is long enough
 				firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
 				space := maxWidthV - firstLineWidth
@@ -272,12 +281,12 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 				firstLineText, nextWord = "", firstLineText
 			}
 		}
-		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
+		dictionaryIterations = hyphenDictionaryIterationsOld(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, left, right, total}
+		dictionaryKey := HyphenDictKey{lang, limit}
 		dictionary, ok := context.HyphenCache()[dictionaryKey]
 		if !ok {
-			dictionary = hyphen.NewHyphener(lang, left, right)
+			dictionary = hyphen.NewHyphener(lang, limit.Left, limit.Right)
 			context.HyphenCache()[dictionaryKey] = dictionary
 		}
 		dictionaryIterations = dictionary.Iterate(nextWord)

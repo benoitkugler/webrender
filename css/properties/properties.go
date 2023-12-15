@@ -350,7 +350,7 @@ var InitialValues = Properties{
 
 	// Text 3/4 (WD/WD): https://www.w3.org/TR/css-text-4/
 	PHyphenateCharacter:  String("-"), // computed value chosen by the user agent
-	PHyphenateLimitChars: Ints3{5, 2, 2},
+	PHyphenateLimitChars: Limits{5, 2, 2},
 	PHyphenateLimitZone:  zeroPixelsValue,
 	PHyphens:             String("manual"),
 	PLetterSpacing:       SToV("normal"),

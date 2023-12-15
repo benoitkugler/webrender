@@ -56,24 +56,30 @@ func assert(t *testing.T, b bool, msg string) {
 }
 
 type textContext struct {
-	fontmap *fcfonts.FontMap
-	dict    map[HyphenDictKey]hyphen.Hyphener
+	fc   FontConfiguration
+	dict map[HyphenDictKey]hyphen.Hyphener
 }
 
-func (tc textContext) Fonts() FontConfiguration {
-	return &FontConfigurationPango{fontmap: tc.fontmap}
+func tcPango() textContext {
+	return textContext{&FontConfigurationPango{fontmap: fontmapPango}, make(map[HyphenDictKey]hyphen.Hyphener)}
 }
+
+func tcGotext() textContext {
+	return textContext{NewFontConfigurationGotext(fontmapGotext), make(map[HyphenDictKey]hyphen.Hyphener)}
+}
+
+func (tc textContext) Fonts() FontConfiguration                       { return tc.fc }
 func (tc textContext) HyphenCache() map[HyphenDictKey]hyphen.Hyphener { return tc.dict }
 func (tc textContext) StrutLayoutsCache() map[StrutLayoutKey][2]pr.Float {
 	return make(map[StrutLayoutKey][2]pr.Float)
 }
 
 // Wrapper for SplitFirstLine() creating a style dict.
-func makeText(text string, width pr.MaybeFloat, style pr.Properties) Splitted {
+func makeText(text string, width pr.MaybeFloat, style pr.Properties) FirstLine {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(monoFonts)
 	newStyle.UpdateWith(style)
-	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := tcPango()
 	return SplitFirstLine(text, newStyle, ct, width, false, true)
 }
 
@@ -148,7 +154,7 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 	newStyle := pr.InitialValues.Copy()
 	newStyle.SetFontFamily(monoFonts)
 	newStyle.UpdateWith(pr.Properties{pr.PFontFamily: sansFonts, pr.PFontSize: pr.FToV(19)})
-	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := tcPango()
 
 	text := "This is a text for test. This is a test for text.py"
 	for i := 0; i < b.N; i++ {
@@ -172,7 +178,7 @@ func TestHeightAndBaseline(t *testing.T) {
 	newStyle.SetFontFamily(families)
 
 	newStyle.SetFontSize(pr.FToV(36))
-	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := tcPango()
 
 	fc := NewFontConfigurationPango(fontmapPango)
 	for _, desc := range []validation.FontFaceDescriptors{
@@ -202,7 +208,7 @@ func TestHeightAndBaseline(t *testing.T) {
 }
 
 func newContextWithWeasyFont(t *testing.T) textContext {
-	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := tcPango()
 	fc := NewFontConfigurationPango(fontmapPango)
 	url, err := utils.PathToURL("../resources_test/weasyprint.otf")
 	if err != nil {
@@ -246,7 +252,7 @@ func TestSplitFirstLine(t *testing.T) {
 	newStyle.SetFontFamily(pr.Strings{"arial"})
 	newStyle.SetFontSize(pr.FToV(16))
 
-	ct := textContext{fontmap: fontmapPango, dict: make(map[HyphenDictKey]hyphen.Hyphener)}
+	ct := tcPango()
 
 	out := SplitFirstLine(" of the element's ", newStyle, ct, pr.Float(120.18628), false, true)
 
@@ -425,8 +431,124 @@ func TestCanBreakText(t *testing.T) {
 	}
 }
 
+func wrapPango(fc *FontConfigurationPango, text string, style *TextStyle, maxWidth pr.MaybeFloat) FirstLine {
+	layout := createLayout(text, style, fc, maxWidth)
+	firstLine, resumeIndex := layout.GetFirstLine()
+	// for _, g := range firstLine.Runs.Data.Glyphs.Glyphs {
+	// 	fmt.Print(g.Geometry.Width, ",")
+	// }
+	return firstLineMetrics(firstLine, []rune(text), layout, resumeIndex, style.spaceCollapse(), style, false, "")
+}
+
+func assertApprox(t *testing.T, got, exp pr.Float, context string) {
+	if !(pr.Abs(got-exp) < exp/200) { // 0.5% of tolerance
+		t.Fatalf("%s: expected %v, got %v", context, exp, got)
+	}
+}
+
+func TestWrap(t *testing.T) {
+	fcG := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
+
+	const text = "Une superbe phrase en français !"
+	for _, family := range []string{"Nimbus Sans", "Nimbus Roman", "DejaVu Sans", "Liberation Mono", "Arimo"} {
+		for _, w := range []uint16{400, 700} { // weights
+			for _, s := range []pr.Fl{12, 13, 16, 18, 32, 33} { // sizes
+				style := &TextStyle{FontDescription: FontDescription{
+					Family: []string{family},
+					Weight: w,
+					Size:   s,
+				}}
+
+				// no max width
+				line := fcG.wrap([]rune(text), style, pr.Inf)
+
+				tu.AssertEqual(t, line.Length, len([]rune(text)), "")
+				tu.AssertEqual(t, line.ResumeAt, -1, "")
+
+				ref := wrapPango(fcPango, text, style, nil)
+
+				assertApprox(t, line.Width, ref.Width, "")
+				assertApprox(t, line.Height, ref.Height, "")
+				assertApprox(t, line.Baseline, ref.Baseline, "")
+
+				for _, maxWidth := range []pr.Float{10, 50, 100, 200, 1000} {
+					line := fcG.wrap([]rune(text), style, maxWidth)
+					ref := wrapPango(fcPango, text, style, maxWidth)
+
+					tu.AssertEqual(t, line.Length, ref.Length, fmt.Sprintf("FirstLine.Length for %v", maxWidth))
+					tu.AssertEqual(t, line.ResumeAt, ref.ResumeAt, fmt.Sprintf("FirstLine.ResumeAt for %v", maxWidth))
+
+					assertApprox(t, line.Width, ref.Width, fmt.Sprintf("FirstLine.Width for %v", maxWidth))
+					assertApprox(t, line.Height, ref.Height, fmt.Sprintf("FirstLine.Height for %v", maxWidth))
+					assertApprox(t, line.Baseline, ref.Baseline, fmt.Sprintf("FirstLine.Baseline for %v", maxWidth))
+				}
+
+			}
+		}
+	}
+}
+
+func BenchmarkWrap(b *testing.B) {
+	fcG := NewFontConfigurationGotext(fontmapGotext)
+	// fcPango := &FontConfigurationPango{fontmap: fontmapPango}
+	const text = "Une superbe phrase en français ! And also some english and שלום أهلا שלום أه"
+	b.ResetTimer()
+
+	// b.Run("pango", func(b *testing.B) {
+	// 	for i := 0; i < b.N; i++ {
+	// 		for _, family := range []string{"Nimbus Sans", "Nimbus Roman", "DejaVu Sans", "Liberation Mono", "Arimo"} {
+	// 			for _, w := range []uint16{400, 700} { // weights
+	// 				for _, s := range []pr.Fl{12, 13, 16, 18, 32, 33} { // sizes
+	// 					style := &TextStyle{FontDescription: FontDescription{
+	// 						Family: []string{family},
+	// 						Weight: w,
+	// 						Size:   s * 100,
+	// 					}}
+	// 					_ = wrapPango(fcPango, text, style, nil)
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// })
+
+	b.Run("Gotext", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			for _, family := range []string{"Nimbus Sans", "Nimbus Roman", "DejaVu Sans", "Liberation Mono", "Arimo"} {
+				for _, w := range []uint16{400, 700} { // weights
+					for _, s := range []pr.Fl{12, 13, 16, 18, 32, 33} { // sizes
+						style := &TextStyle{FontDescription: FontDescription{
+							Family: []string{family},
+							Weight: w,
+							Size:   s * 100,
+						}}
+						_ = fcG.wrap([]rune(text), style, pr.Inf)
+					}
+				}
+			}
+		}
+	})
+}
+
 func TestDebugWrap(t *testing.T) {
 	fcG := NewFontConfigurationGotext(fontmapGotext)
-	line, resume := fcG.wrap([]rune("Une superbe phrase en français !"), NewTextStyle(pr.InitialValues, false), 200)
-	fmt.Println(len(line), resume)
+	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
+	style := &TextStyle{FontDescription: FontDescription{
+		Family: []string{"Nimbus Sans"},
+		Weight: 400,
+		Size:   12,
+	}}
+	const text = "Une superbe phrase en français !"
+	line := fcG.wrap([]rune(text), style, 10)
+	ref := wrapPango(fcPango, text, style, pr.Float(10))
+	fmt.Println()
+	fmt.Println(line.Length, ref.Length)
+	fmt.Println(line.Width, ref.Width)
+}
+
+func TestSplit(t *testing.T) {
+	textc := tcGotext()
+
+	line := SplitFirstLine2("Une jolie phrase - hahaha", pr.InitialValues, textc, pr.Float(50), false, true)
+	fmt.Println(line)
 }

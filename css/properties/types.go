@@ -84,7 +84,9 @@ type Float Fl
 
 type Int int
 
-type Ints3 [3]int
+type Limits struct {
+	Total, Left, Right int
+}
 
 type Page struct {
 	String string
@@ -303,9 +305,9 @@ func (v IntString) IsNone() bool {
 	return v == IntString{}
 }
 
-func (Ints3) isCssProperty() {}
-func (v Ints3) IsNone() bool {
-	return v == Ints3{}
+func (Limits) isCssProperty() {}
+func (v Limits) IsNone() bool {
+	return v == Limits{}
 }
 
 func (Marks) isCssProperty() {}

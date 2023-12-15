@@ -1278,17 +1278,17 @@ func (s *AnonymousStyle) SetHyphenateCharacter(v pr.String) {
 	s.propsCache.known[pr.PHyphenateCharacter] = v
 }
 
-func (s *ComputedStyle) GetHyphenateLimitChars() pr.Ints3 {
-	return s.Get(pr.PHyphenateLimitChars.Key()).(pr.Ints3)
+func (s *ComputedStyle) GetHyphenateLimitChars() pr.Limits {
+	return s.Get(pr.PHyphenateLimitChars.Key()).(pr.Limits)
 }
-func (s *ComputedStyle) SetHyphenateLimitChars(v pr.Ints3) {
+func (s *ComputedStyle) SetHyphenateLimitChars(v pr.Limits) {
 	s.propsCache.known[pr.PHyphenateLimitChars] = v
 }
 
-func (s *AnonymousStyle) GetHyphenateLimitChars() pr.Ints3 {
-	return s.Get(pr.PHyphenateLimitChars.Key()).(pr.Ints3)
+func (s *AnonymousStyle) GetHyphenateLimitChars() pr.Limits {
+	return s.Get(pr.PHyphenateLimitChars.Key()).(pr.Limits)
 }
-func (s *AnonymousStyle) SetHyphenateLimitChars(v pr.Ints3) {
+func (s *AnonymousStyle) SetHyphenateLimitChars(v pr.Limits) {
 	s.propsCache.known[pr.PHyphenateLimitChars] = v
 }
 

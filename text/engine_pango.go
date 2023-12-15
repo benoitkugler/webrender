@@ -366,7 +366,7 @@ func pangoFontFeatures(vs []Feature) string {
 
 func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayoutPango, resumeAt int, spaceCollapse bool,
 	style *TextStyle, hyphenated bool, hyphenationCharacter string,
-) Splitted {
+) FirstLine {
 	length := firstLine.Length
 	if hyphenated {
 		length -= len([]rune(hyphenationCharacter))
@@ -398,7 +398,7 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 
 	width, height := lineSize(firstLine, style.LetterSpacing)
 	baseline := PangoUnitsToFloat(layout.Layout.GetBaseline())
-	return Splitted{
+	return FirstLine{
 		Layout: layout,
 		Length: length, ResumeAt: resumeAt,
 		Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline),

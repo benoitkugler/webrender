@@ -66,6 +66,11 @@ func (ts *TextStyle) textWrap() bool {
 	return ws == WNormal || ws == WPreWrap || ws == WPreLine
 }
 
+func (ts *TextStyle) spaceCollapse() bool {
+	ws := ts.WhiteSpace
+	return ws == WNormal || ws == WNowrap || ws == WPreLine
+}
+
 // TextStyle exposes the subset of a [pr.Style]
 // required to layout text.
 type TextStyle struct {
@@ -94,7 +99,7 @@ type TextStyle struct {
 
 	Hyphens             Hyphens
 	HyphenateCharacter  string
-	HyphenateLimitChars pr.Ints3
+	HyphenateLimitChars pr.Limits
 	HyphenateLimitZone  HyphenateZone
 
 	WordSpacing   pr.Fl
