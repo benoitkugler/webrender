@@ -505,6 +505,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		// The first line really fits in the available width
 		return firstLine
 	}
+
 	firstLineText, secondLineText := text, []rune(nil)
 	if firstLine.ResumeAt != -1 {
 		firstLineText, secondLineText = text[:firstLine.ResumeAt], text[firstLine.ResumeAt:]
@@ -607,6 +608,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 			hyphenated = newFirstLine.ResumeAt == -1 && (newSpace >= 0 || firstWordPart == dictionaryIterations[len(dictionaryIterations)-1])
 			if hyphenated {
 				firstLine = newFirstLine
+				firstLine.Length -= len(hyphenateCharacter) // do not consider hyphen for length
 				firstLine.ResumeAt = len(newFirstLineText)
 				if text[firstLine.ResumeAt] == softHyphen {
 					// Recreate the layout with no maxWidth to be sure that

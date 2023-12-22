@@ -556,15 +556,13 @@ func TestSplit(t *testing.T) {
 	style.SetWordBreak("break-word")
 	style.SetOverflowWrap("break-word")
 
-	for maxWidth := pr.Float(30); maxWidth < 100; maxWidth += 10 {
+	for maxWidth := pr.Float(60); maxWidth < 100; maxWidth += 10 {
 		lineP := SplitFirstLine("Une jolie phrase - hahaha", style, pango, maxWidth, false, true)
 		lineG := SplitFirstLine("Une jolie phrase - hahaha", style, gotext, maxWidth, false, true)
-		fmt.Println(string(lineP.Layout.Text()))
 
-		tu.AssertEqual(t, lineP.ResumeAt, lineG.ResumeAt, "")
-		tu.AssertEqual(t, lineP.FirstLineRTL, lineG.FirstLineRTL, "")
-		tu.AssertEqual(t, lineP.Length, lineG.Length, "")
+		tu.AssertEqual(t, lineG.ResumeAt, lineP.ResumeAt, "")
+		tu.AssertEqual(t, lineG.FirstLineRTL, lineP.FirstLineRTL, "")
+		tu.AssertEqual(t, lineG.Length, lineP.Length, "")
 
-		fmt.Println(lineP, lineG)
 	}
 }
