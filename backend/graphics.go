@@ -298,7 +298,7 @@ type Canvas interface {
 	AddFont(font Font, content []byte) *FontChars
 
 	// DrawText draws the given text using the current fill color.
-	// The rendering may be altered by a preivous `SetTextPaint` call.
+	// The rendering may be altered by a previous `SetTextPaint` call.
 	// The fonts of the runs have been registred with `AddFont`.
 	DrawText(texts []TextDrawing)
 
