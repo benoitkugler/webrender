@@ -6,7 +6,7 @@ require (
 	github.com/benoitkugler/pstokenizer v1.0.1 // indirect
 	github.com/benoitkugler/textlayout v0.3.0
 	github.com/benoitkugler/textprocessing v0.0.3
-	github.com/go-text/typesetting v0.0.0-20231214135816-4b4ad9cda3a4
+	github.com/go-text/typesetting v0.1.1-0.20240423171926-d3307102d2cf
 	golang.org/x/image v0.14.0
 	golang.org/x/net v0.18.0
 	golang.org/x/text v0.14.0

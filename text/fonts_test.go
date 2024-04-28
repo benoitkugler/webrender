@@ -16,8 +16,8 @@ import (
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"github.com/go-text/typesetting/font"
 	"github.com/go-text/typesetting/fontscan"
-	"github.com/go-text/typesetting/opentype/api/metadata"
 )
 
 func TestAddConfig(t *testing.T) {
@@ -123,10 +123,10 @@ func TestAddFontFaceAspect(t *testing.T) {
 	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}, Style: FSyItalic, Weight: 700, Stretch: FSeCondensed})
 	family, aspect := fcG.fm.FontMetadata(face.Font)
 	tu.AssertEqual(t, family, "weasyprint", "")
-	tu.AssertEqual(t, aspect, metadata.Aspect{
-		Style:   metadata.StyleItalic,
-		Weight:  metadata.WeightBold,
-		Stretch: metadata.StretchCondensed,
+	tu.AssertEqual(t, aspect, font.Aspect{
+		Style:   font.StyleItalic,
+		Weight:  font.WeightBold,
+		Stretch: font.StretchCondensed,
 	}, "")
 }
 
@@ -211,7 +211,7 @@ func TestResolveFont(t *testing.T) {
 		fc.fm.SetQuery(fontscan.Query{Families: test.query})
 		face := fc.fm.ResolveFace('a')
 		family, _ := fc.fm.FontMetadata(face.Font)
-		tu.AssertEqual(t, family, metadata.NormalizeFamily(test.resolved), "")
+		tu.AssertEqual(t, family, font.NormalizeFamily(test.resolved), "")
 	}
 }
 

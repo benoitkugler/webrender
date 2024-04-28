@@ -14,11 +14,11 @@ import (
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 	"github.com/go-text/typesetting/di"
+	"github.com/go-text/typesetting/font"
+	"github.com/go-text/typesetting/font/opentype"
 	"github.com/go-text/typesetting/fontscan"
 	"github.com/go-text/typesetting/language"
-	"github.com/go-text/typesetting/opentype/api/font"
-	"github.com/go-text/typesetting/opentype/api/metadata"
-	"github.com/go-text/typesetting/opentype/loader"
+
 	"github.com/go-text/typesetting/segmenter"
 	"github.com/go-text/typesetting/shaping"
 	"golang.org/x/image/math/fixed"
@@ -103,7 +103,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.NamedString, ruleDescriptor
 		return "", fmt.Errorf("failed to load font at %s", url.String)
 	}
 
-	lds, err := loader.NewLoaders(result.Content)
+	lds, err := opentype.NewLoaders(result.Content)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse font at %s : %s", url.String, err)
 	}
@@ -120,7 +120,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.NamedString, ruleDescriptor
 		f.fontsContent[url.String] = content
 	}
 
-	desc := metadata.Description{
+	desc := font.Description{
 		Family: string(ruleDescriptors.FontFamily),
 		Aspect: newAspect(
 			newFontStyle(ruleDescriptors.FontStyle),
@@ -128,7 +128,7 @@ func (f *FontConfigurationGotext) loadOneFont(url pr.NamedString, ruleDescriptor
 			newFontStretch(ruleDescriptors.FontStretch),
 		),
 	}
-	f.fm.AddFace(&font.Face{Font: ft}, fontscan.Location{File: url.String}, desc)
+	f.fm.AddFace(font.NewFace(ft), fontscan.Location{File: url.String}, desc)
 
 	// track the font features to apply
 	f.fontsFeatures[ft] = getFontFaceFeatures(ruleDescriptors)
@@ -175,33 +175,33 @@ func (layoutGotext) SetJustification(spacing pr.Float) {}
 
 func (layoutGotext) ApplyJustification() {}
 
-func newAspect(style FontStyle, weight uint16, stretch FontStretch) metadata.Aspect {
-	aspect := metadata.Aspect{
-		Style:  metadata.StyleNormal,
-		Weight: metadata.Weight(weight),
+func newAspect(style FontStyle, weight uint16, stretch FontStretch) font.Aspect {
+	aspect := font.Aspect{
+		Style:  font.StyleNormal,
+		Weight: font.Weight(weight),
 	}
 	if style == FSyItalic || style == FSyOblique {
-		aspect.Style = metadata.StyleItalic
+		aspect.Style = font.StyleItalic
 	}
 	switch stretch {
 	case FSeUltraCondensed:
-		aspect.Stretch = metadata.StretchUltraCondensed
+		aspect.Stretch = font.StretchUltraCondensed
 	case FSeExtraCondensed:
-		aspect.Stretch = metadata.StretchExtraCondensed
+		aspect.Stretch = font.StretchExtraCondensed
 	case FSeCondensed:
-		aspect.Stretch = metadata.StretchCondensed
+		aspect.Stretch = font.StretchCondensed
 	case FSeSemiCondensed:
-		aspect.Stretch = metadata.StretchSemiCondensed
+		aspect.Stretch = font.StretchSemiCondensed
 	case FSeNormal:
-		aspect.Stretch = metadata.StretchNormal
+		aspect.Stretch = font.StretchNormal
 	case FSeSemiExpanded:
-		aspect.Stretch = metadata.StretchSemiExpanded
+		aspect.Stretch = font.StretchSemiExpanded
 	case FSeExpanded:
-		aspect.Stretch = metadata.StretchExpanded
+		aspect.Stretch = font.StretchExpanded
 	case FSeExtraExpanded:
-		aspect.Stretch = metadata.StretchExtraExpanded
+		aspect.Stretch = font.StretchExtraExpanded
 	case FSeUltraExpanded:
-		aspect.Stretch = metadata.StretchUltraExpanded
+		aspect.Stretch = font.StretchUltraExpanded
 	}
 	return aspect
 }
@@ -217,7 +217,7 @@ func newFeatures(features []Feature) []shaping.FontFeature {
 	fts := make([]shaping.FontFeature, len(features))
 	for i, f := range features {
 		fts[i] = shaping.FontFeature{
-			Tag:   loader.NewTag(f.Tag[0], f.Tag[1], f.Tag[2], f.Tag[3]),
+			Tag:   opentype.NewTag(f.Tag[0], f.Tag[1], f.Tag[2], f.Tag[3]),
 			Value: uint32(f.Value),
 		}
 	}
