@@ -752,6 +752,21 @@ func TestHyphenateManual3(t *testing.T) {
 	tu.AssertEqual(t, line4.Box().Children[0].(*bo.TextBox).Text, "in", "line4")
 }
 
+func TestHyphenateManual4(t *testing.T) {
+	cp := tu.CaptureLogs()
+	defer cp.AssertNoLogs(t)
+	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1878
+	page := renderOnePage(t,
+		`<html style="width: 0.1em" lang="en">
+        <body style="hyphens: auto">test&shy;`)
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	line1 := body.Box().Children[0]
+	// TODO: should not end with an hyphen
+	t.Skip()
+	tu.AssertEqual(t, line1.Box().Children[0].(*bo.TextBox).Text, "test\xad", "")
+}
+
 func TestHyphenateLimitZone1(t *testing.T) {
 	cp := tu.CaptureLogs()
 	defer cp.AssertNoLogs(t)

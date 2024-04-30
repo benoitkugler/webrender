@@ -2,4 +2,5 @@
 .idea/**
 macros/__pycache__/**
 text/testdata/cache.fc
-text/testdata/*.cache
+text/testdata/font_index_v3.cache
+text/testdata/font_index_v4.cache

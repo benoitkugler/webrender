@@ -1286,12 +1286,6 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 		return
 	}
 
-	x, y := pr.Fl(textbox.PositionX), pr.Fl(textbox.PositionY+textbox.Baseline.V())
-	ctx.dst.State().SetColorRgba(textbox.Style.GetColor().RGBA, false)
-
-	textbox.TextLayout.ApplyJustification()
-	ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, x, y)
-
 	// Draw text decoration
 
 	decoration := textbox.Style.GetTextDecorationLine()
@@ -1314,6 +1308,13 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 		offsetY = textbox.Baseline.V() - pr.Float(metrics.UnderlinePosition) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
+
+	x, y := pr.Fl(textbox.PositionX), pr.Fl(textbox.PositionY+textbox.Baseline.V())
+	ctx.dst.State().SetColorRgba(textbox.Style.GetColor().RGBA, false)
+
+	textbox.TextLayout.ApplyJustification()
+	ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, x, y)
+
 	if utils.Set(decoration).Has("line-through") {
 		thickness := metrics.StrikethroughThickness
 		offsetY = textbox.Baseline.V() - pr.Float(metrics.StrikethroughPosition)

@@ -182,7 +182,12 @@ func (dr Drawer) SetBlendingMode(mode string) {
 }
 
 func (dr Drawer) DrawText(text []backend.TextDrawing) {
-	fmt.Fprintln(dr.out, "DrawText :", text)
+	for _, chunk := range text {
+		fmt.Fprintln(dr.out, "DrawText :")
+		for _, run := range chunk.Runs {
+			fmt.Fprintln(dr.out, "->", run.Font.Origin(), ":", run.Glyphs)
+		}
+	}
 }
 
 func (dr Drawer) AddFont(backend.Font, []byte) *backend.FontChars {

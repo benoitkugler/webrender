@@ -516,6 +516,32 @@ func TestBreakingLineboxRegression14(t *testing.T) {
 	assertText(t, line2.Box().Children[1].Box().Children[0], "c")
 }
 
+func TestBreakingLineboxRegression15(t *testing.T) {
+	capt := tu.CaptureLogs()
+	defer capt.AssertNoLogs(t)
+
+	// Regression test for https://github.com/ietf-tools/datatracker/issues/5507
+	page := renderOnePage(t, `
+        <style>
+          @font-face {src: url(weasyprint.otf); font-family: weasyprint}
+          body {font-family: weasyprint; font-size: 4px}
+          pre {float: left}
+        </style>`+"<pre>ab©\ndéf\nghïj\nklm</pre>")
+	html := page.Box().Children[0]
+	body := html.Box().Children[0]
+	pre := body.Box().Children[0]
+	line1, line2, line3, line4 := unpack4(pre)
+	tu.AssertEqual(t, line1.Box().Children[0].(*bo.TextBox).Text, "ab©", "line1")
+	tu.AssertEqual(t, line2.Box().Children[0].(*bo.TextBox).Text, "déf", "line2")
+	tu.AssertEqual(t, line3.Box().Children[0].(*bo.TextBox).Text, "ghïj", "line3")
+	tu.AssertEqual(t, line4.Box().Children[0].(*bo.TextBox).Text, "klm", "line4")
+	tu.AssertEqual(t, line1.Box().Children[0].Box().Width, pr.Float(4*3), "")
+	tu.AssertEqual(t, line2.Box().Children[0].Box().Width, pr.Float(4*3), "")
+	tu.AssertEqual(t, line3.Box().Children[0].Box().Width, pr.Float(4*4), "")
+	tu.AssertEqual(t, line4.Box().Children[0].Box().Width, pr.Float(4*3), "")
+	tu.AssertEqual(t, pre.Box().Width, pr.Float(4*4), "")
+}
+
 func TestLineboxText(t *testing.T) {
 	capt := tu.CaptureLogs()
 	defer capt.AssertNoLogs(t)
