@@ -292,12 +292,6 @@ func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 				layout = newLayout
 				firstLine = newFirstLine
 				resumeIndex = len([]rune(newFirstLineText))
-				if text[resumeIndex] == softHyphen {
-					// Recreate the layout with no maxWidth to be sure that
-					// we don't break before the soft hyphen
-					layout.Layout.SetWidth(-1)
-					resumeIndex += 1
-				}
 				break
 			}
 		}
