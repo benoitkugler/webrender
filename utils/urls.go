@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/webrender/logger"
-	"github.com/benoitkugler/webrender/version"
 )
 
 // warn if baseUrl is required but missing.
@@ -234,7 +233,7 @@ func DefaultUrlFetcher(urlTarget string) (RemoteRessource, error) {
 	if err != nil {
 		return RemoteRessource{}, err
 	}
-	req.Header.Set("User-Agent", version.VersionString)
+	req.Header.Set("User-Agent", VersionString)
 	req.Header.Set("Accept-Encoding", "gzip, deflate")
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {

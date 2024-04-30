@@ -12,7 +12,6 @@ import (
 	mt "github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/text/hyphen"
-	"github.com/benoitkugler/webrender/version"
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
@@ -532,7 +531,7 @@ func (d *Document) Write(target backend.Document, zoom pr.Fl, attachments []back
 	target.SetCreator(d.Metadata.Generator)
 	target.SetAuthors(d.Metadata.Authors)
 	target.SetKeywords(d.Metadata.Keywords)
-	target.SetProducer(version.VersionString)
+	target.SetProducer(utils.VersionString)
 	target.SetDateCreation(d.Metadata.Created)
 	target.SetDateModification(d.Metadata.Modified)
 }
