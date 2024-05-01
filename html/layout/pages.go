@@ -45,6 +45,10 @@ func (o orientedBox) outer() pr.Float {
 	return o.sugar() + o.inner.V()
 }
 
+func (o *orientedBox) setOuter(newOuterWidth pr.Float) {
+	o.inner = pr.Min(pr.Max(o.minContentSize(), newOuterWidth-o.sugar()), o.maxContentSize())
+}
+
 func (o orientedBox) outerMinContentSize() pr.Float {
 	if o.inner == pr.AutoF {
 		return o.sugar() + o.minContentSize()
@@ -57,10 +61,6 @@ func (o orientedBox) outerMaxContentSize() pr.Float {
 		return o.sugar() + o.maxContentSize()
 	}
 	return o.sugar() + o.inner.V()
-}
-
-func (o *orientedBox) shrinkToFit(available pr.Float) {
-	o.inner = pr.Min(pr.Max(o.minContentSize(), available), o.maxContentSize())
 }
 
 type verticalBox struct {
@@ -254,9 +254,9 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 //     true to set height, margin-top and margin-bottom; false for width,
 //     margin-left and margin-right
 //
-//   - outerSum:
-//     The target total outer dimension (max box width or height)
-func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBox, vertical bool, outerSum pr.Float) {
+//   - availableSize:
+//     The distance between the page box’s left right border edges
+func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBox, vertical bool, availableSize pr.Float) {
 	var sideBoxes [3]orientedBoxITF
 	for i, box_ := range sideBoxes_ {
 		if vertical {
@@ -277,72 +277,98 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 		}
 	}
 
-	if boxB.box.(*bo.MarginBox).IsGenerated {
-		if boxB.inner == pr.AutoF {
-			acMaxContentSize := 2 * pr.Max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
-			if outerSum >= (boxB.outerMaxContentSize() + acMaxContentSize) {
-				boxB.inner = boxB.maxContentSize()
-			} else {
-				acMinContentSize := 2 * pr.Max(boxA.outerMinContentSize(), boxC.outerMinContentSize())
-				boxB.inner = boxB.minContentSize()
-				available := outerSum - boxB.outer() - acMinContentSize
-				if available > 0 {
-					weightAc := acMaxContentSize - acMinContentSize
-					weightB := boxB.maxContentSize() - boxB.minContentSize()
-					weightSum := weightAc + weightB
-					// By definition of maxContentSize and minContentSize,
-					// weights can not be negative. weightSum == 0 implies that
-					// maxContentSize == minContentSize for each box, in
-					// which case the sum can not be both <= and > outerSum
-					// Therefore, one of the last two "if" statements would not
-					// have lead us here.
-					if weightSum <= 0 {
-						panic(fmt.Sprintf("weightSum must be > 0, got %f", weightSum))
-					}
-					boxB.inner = boxB.inner.V() + available*weightB/weightSum
-				}
-			}
-		}
-		if boxA.inner == pr.AutoF {
-			boxA.shrinkToFit((outerSum-boxB.outer())/2 - boxA.sugar())
-		}
-		if boxC.inner == pr.AutoF {
-			boxC.shrinkToFit((outerSum-boxB.outer())/2 - boxC.sugar())
-		}
-	} else {
+	if !boxB.box.(*bo.MarginBox).IsGenerated {
 		// Non-generated boxes get zero for every box-model property
 		if boxB.inner.V() != 0 {
 			panic(fmt.Sprintf("expected boxB.inner == 0, got %v", boxB.inner))
 		}
 		if boxA.inner == pr.AutoF && boxC.inner == pr.AutoF {
-			if outerSum >= (boxA.outerMaxContentSize() + boxC.outerMaxContentSize()) {
-				boxA.inner = boxA.maxContentSize()
-				boxC.inner = boxC.maxContentSize()
+			// A and C both have 'width: auto'
+			if availableSize > (boxA.outerMaxContentSize() + boxC.outerMaxContentSize()) {
+				// sum of the outer max-content widths
+				// is less than the available width
+				flexSpace := availableSize - boxA.outerMaxContentSize() - boxC.outerMaxContentSize()
+				flexFactorA := boxA.outerMaxContentSize()
+				flexFactorC := boxC.outerMaxContentSize()
+				flexFactorSum := flexFactorA + flexFactorC
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxA.setOuter(boxA.maxContentSize() + (flexSpace * flexFactorA / flexFactorSum))
+				boxC.setOuter(boxC.maxContentSize() + (flexSpace * flexFactorC / flexFactorSum))
+			} else if availableSize > (boxA.outerMinContentSize() + boxC.outerMinContentSize()) {
+				// sum of the outer min-content widths
+				// is less than the available width
+				flexSpace := availableSize - boxA.outerMinContentSize() - boxC.outerMinContentSize()
+				flexFactorA := boxA.maxContentSize() - boxA.minContentSize()
+				flexFactorC := boxC.maxContentSize() - boxC.minContentSize()
+				flexFactorSum := flexFactorA + flexFactorC
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxA.setOuter(boxA.minContentSize() + (flexSpace * flexFactorA / flexFactorSum))
+				boxC.setOuter(boxC.minContentSize() + (flexSpace * flexFactorC / flexFactorSum))
 			} else {
-				boxA.inner = boxA.minContentSize()
-				boxC.inner = boxC.minContentSize()
-				available := outerSum - boxA.outer() - boxC.outer()
-				if available > 0 {
-					weightA := boxA.maxContentSize() - boxA.minContentSize()
-					weightC := boxC.maxContentSize() - boxC.minContentSize()
-					weightSum := weightA + weightC
-					// By definition of maxContentSize and minContentSize,
-					// weights can ! be negative. weightSum == 0 implies that
-					// maxContentSize == minContentSize for each box, in
-					// which case the sum can ! be both <= and > outerSum
-					// Therefore, one of the last two "if" statements would not
-					// have lead us here.
-					if weightSum <= 0 {
-						panic(fmt.Sprintf("weightSum must be > 0, got %f", weightSum))
+				// otherwise
+				flexSpace := availableSize - boxA.outerMinContentSize() - boxC.outerMinContentSize()
+				flexFactorA := boxA.minContentSize()
+				flexFactorC := boxC.minContentSize()
+				flexFactorSum := flexFactorA + flexFactorC
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxA.setOuter(boxA.minContentSize() + (flexSpace * flexFactorA / flexFactorSum))
+				boxC.setOuter(boxC.minContentSize() + (flexSpace * flexFactorC / flexFactorSum))
+			}
+		} else {
+			// only one box has 'width: auto'
+			if boxA.inner == pr.AutoF {
+				boxA.setOuter(availableSize - boxC.outer())
+			} else if boxC.inner == pr.AutoF {
+				boxC.setOuter(availableSize - boxA.outer())
+			}
+		}
+	} else {
+		if boxB.inner == pr.AutoF {
+			// resolve any auto width of the middle box (B)
+			acMaxContentSize := 2 * pr.Max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
+			if availableSize > (boxB.outerMaxContentSize() + acMaxContentSize) {
+				flexSpace := availableSize - boxB.outerMaxContentSize() - acMaxContentSize
+				flexFactorB := boxB.outerMaxContentSize()
+				flexFactorAc := acMaxContentSize
+				flexFactorSum := flexFactorB + flexFactorAc
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxB.setOuter(boxB.maxContentSize() + (flexSpace * flexFactorB / flexFactorSum))
+			} else {
+				acMinContentSize := 2 * pr.Max(boxA.outerMinContentSize(), boxC.outerMinContentSize())
+				if availableSize > (boxB.outerMinContentSize() + acMinContentSize) {
+					flexSpace := availableSize - boxB.outerMinContentSize() - acMinContentSize
+					flexFactorB := boxB.maxContentSize() - boxB.minContentSize()
+					flexFactorAc := acMaxContentSize - acMinContentSize
+					flexFactorSum := flexFactorB + flexFactorAc
+					if flexFactorSum == 0 {
+						flexFactorSum = 1
 					}
-					boxA.inner = boxA.inner.V() + available*weightA/weightSum
-					boxC.inner = boxC.inner.V() + available*weightC/weightSum
+					boxB.setOuter(boxB.minContentSize() + (flexSpace * flexFactorB / flexFactorSum))
+				} else {
+					flexSpace := availableSize - boxB.outerMinContentSize() - acMinContentSize
+					flexFactorB := boxB.minContentSize()
+					flexFactorAc := acMinContentSize
+					flexFactorSum := flexFactorB + flexFactorAc
+					if flexFactorSum == 0 {
+						flexFactorSum = 1
+					}
+					boxB.setOuter(boxB.minContentSize() + (flexSpace * flexFactorB / flexFactorSum))
 				}
 			}
-		} else if boxA.inner == pr.AutoF {
-			boxA.shrinkToFit(outerSum - boxC.outer() - boxA.sugar())
-		} else if boxC.inner == pr.AutoF {
-			boxC.shrinkToFit(outerSum - boxA.outer() - boxC.sugar())
+		}
+		if boxA.inner == pr.AutoF {
+			boxA.setOuter((availableSize - boxB.outer()) / 2)
+		}
+		if boxC.inner == pr.AutoF {
+			boxC.setOuter((availableSize - boxB.outer()) / 2)
 		}
 	}
 
