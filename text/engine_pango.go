@@ -84,12 +84,6 @@ func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
 	return -PangoUnitsToFloat(inkExtents.Y)
 }
 
-func getLogAttrs(text []rune) []pango.CharAttr {
-	text = []rune(bidiMarkReplacer.Replace(string(text)))
-	logAttrs := pango.ComputeCharacterAttributes(text, -1)
-	return logAttrs
-}
-
 func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
 	text = []rune(bidiMarkReplacer.Replace(string(text)))
 	logAttrs := pango.ComputeCharacterAttributes(text, -1)
