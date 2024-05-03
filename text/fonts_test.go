@@ -87,5 +87,5 @@ func TestVariations(t *testing.T) {
 		{[4]byte{'a', 'b', 'c', '0'}, 4},
 		{[4]byte{'a', 'b', 'c', 'd'}, 8},
 	})
-	tu.AssertEqual(t, s, "abc0=4.000000,abcd=8.000000", "")
+	tu.AssertEqual(t, s, "abc0=4.000000,abcd=8.000000")
 }

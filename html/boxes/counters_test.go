@@ -10,8 +10,7 @@ import (
 )
 
 func TestCounters1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
 		return SerBox{"p", BlockT, BC{C: []SerBox{
@@ -93,8 +92,7 @@ func TestCounters2(t *testing.T) {
 }
 
 func TestCounters3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
       <style>
@@ -124,8 +122,7 @@ func TestCounters3(t *testing.T) {
 }
 
 func TestCounters4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
       <style>
@@ -166,8 +163,7 @@ func TestCounters4(t *testing.T) {
 }
 
 func TestCounters5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
       <style>
@@ -189,8 +185,7 @@ func TestCounters5(t *testing.T) {
 }
 
 func TestCounters6(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// counter-increment may interfere with display: list-item
 	assertTree(t, parseAndBuild(t, `
@@ -203,8 +198,7 @@ func TestCounters6(t *testing.T) {
 }
 
 func TestCounters7(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
 		return SerBox{"p", BlockT, BC{C: []SerBox{
@@ -228,8 +222,7 @@ func TestCounters7(t *testing.T) {
 }
 
 func TestCounters8(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
       <style>
@@ -253,8 +246,7 @@ func TestCounters8(t *testing.T) {
 }
 
 func TestCounterStyles1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
 		return SerBox{"p", BlockT, BC{C: []SerBox{
@@ -288,8 +280,7 @@ func TestCounterStyles1(t *testing.T) {
 }
 
 func TestCounterStyles2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	exp := func(counter string) SerBox {
 		return SerBox{"p", BlockT, BC{C: []SerBox{
@@ -328,8 +319,7 @@ func TestCounterStyles2(t *testing.T) {
 }
 
 func testCounterStyle(t *testing.T, style string, inputs []int, expected string) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	render := tree.UACounterStyle.RenderValue
 	var results []string

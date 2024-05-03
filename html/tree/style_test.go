@@ -10,7 +10,7 @@ import (
 
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/utils/testutils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/selector"
@@ -26,7 +26,7 @@ func fakeHTML(html HTML) *HTML {
 
 func TestDescriptors(t *testing.T) {
 	stylesheet := parser.ParseStylesheetBytes([]byte("@font-face{}"), false, false)
-	logs := testutils.CaptureLogs()
+	logs := tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -34,7 +34,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face{src: url(test.woff)}"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -42,7 +42,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face{font-family: test}"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -50,7 +50,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face { font-family: test; src: wrong }"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -59,7 +59,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face { font-family: good, bad; src: url(test.woff) }"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -68,7 +68,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face { font-family: good, bad; src: really bad }"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -89,8 +89,7 @@ func rsplit(s, sep string) string {
 }
 
 func TestFindStylesheets(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html_, err := newHtml(utils.InputFilename(resourceFilename("doc1.html")))
 	if err != nil {
@@ -130,7 +129,7 @@ func TestFindStylesheets(t *testing.T) {
 
 // @assertNoLogs
 func TestExpandShorthands(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	sheet, err := NewCSSDefault(utils.InputFilename(resourceFilename("sheet2.css")))
 	if err != nil {
 		t.Fatal(err)
@@ -196,8 +195,7 @@ func assertProp(t *testing.T, got pr.ElementStyle, name pr.KnownProp, expected p
 
 // @assertNoLogs
 func TestAnnotateDocument(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	document_, err := newHtml(utils.InputFilename(resourceFilename("doc1.html")))
 	if err != nil {
@@ -302,8 +300,7 @@ func TestAnnotateDocument(t *testing.T) {
 
 // @assertNoLogs
 func TestPage(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	document_, err := newHtml(utils.InputFilename(resourceFilename("doc1.html")))
 	if err != nil {
@@ -436,7 +433,7 @@ var tests = []testPageSelector{
 }
 
 func TestPageSelectors(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	for _, te := range tests {
 		atRule_ := parser.ParseStylesheetBytes([]byte(te.sel), false, false)[0]
 		atRule, ok := atRule_.(parser.QualifiedRule)
@@ -488,7 +485,7 @@ var testsWarnings = [6]testWarnings{
 func TestWarnings(t *testing.T) {
 	for _, te := range testsWarnings {
 
-		capt := testutils.CaptureLogs()
+		capt := tu.CaptureLogs()
 		_, err := NewCSSDefault(utils.InputString(te.sel))
 		if err != nil {
 			t.Fatal(err)
@@ -508,7 +505,7 @@ func TestWarnings(t *testing.T) {
 // @assertNoLogs
 func TestWarningsStylesheet(t *testing.T) {
 	ml := "<link rel=stylesheet href=invalid-protocol://absolute>"
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	html, err := newHtml(utils.InputString(ml))
 	if err != nil {
 		t.Fatal(err)
@@ -556,8 +553,7 @@ func isClose(a, b pr.Float) bool {
 }
 
 func TestFontSize(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html_, err := newHtml(utils.InputString("<p>a<span>b"))
 	if err != nil {
@@ -591,7 +587,7 @@ func TestCounterStyleInvalid(t *testing.T) {
 	}
 	for _, rule := range inputs {
 		stylesheet := parser.ParseStylesheetBytes([]byte(rule), false, false)
-		cp := testutils.CaptureLogs()
+		cp := tu.CaptureLogs()
 
 		preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 			nil, make(counters.CounterStyle), false)

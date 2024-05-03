@@ -3,15 +3,13 @@ package layout
 import (
 	"testing"
 
-	pr "github.com/benoitkugler/webrender/css/properties"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 // Tests for inline blocks layout.
 
 func TestInlineBlockSizes(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -42,11 +40,11 @@ func TestInlineBlockSizes(t *testing.T) {
       <div style="min-width: 150px">foo</div>
       <div style="max-width: 10px
         ">Supercalifragilisticexpialidocious</div>`)
-	html := page.Box().Children[0]
-	tu.AssertEqual(t, html.Box().ElementTag(), "html", "html")
-	body := html.Box().Children[0]
-	tu.AssertEqual(t, body.Box().ElementTag(), "body", "body")
-	tu.AssertEqual(t, body.Box().Width, pr.Float(200), "body")
+	html := unpack1(page)
+	tu.AssertEqual(t, html.Box().ElementTag(), "html")
+	body := unpack1(html)
+	tu.AssertEqual(t, body.Box().ElementTag(), "body")
+	tu.AssertEqual(t, body.Box().Width, Fl(200))
 
 	line1, line2, line3, line4 := unpack4(body)
 
@@ -55,65 +53,64 @@ func TestInlineBlockSizes(t *testing.T) {
 	div1, _, div2, _, div3, _, div4, _ := unpack8(line1)
 
 	// First div, one ignored space collapsing with next space
-	tu.AssertEqual(t, div1.Box().ElementTag(), "div", "div1")
-	tu.AssertEqual(t, div1.Box().Width, pr.Float(0), "div1")
+	tu.AssertEqual(t, div1.Box().ElementTag(), "div")
+	tu.AssertEqual(t, div1.Box().Width, Fl(0))
 
 	// Second div, one letter
-	tu.AssertEqual(t, div2.Box().ElementTag(), "div", "div2")
-	tu.AssertEqual(t, 0 < div2.Box().Width.V(), true, "0")
-	tu.AssertEqual(t, div2.Box().Width.V() < pr.Float(20), true, "0")
+	tu.AssertEqual(t, div2.Box().ElementTag(), "div")
+	tu.AssertEqual(t, 0 < div2.Box().Width.V(), true)
+	tu.AssertEqual(t, div2.Box().Width.V() < Fl(20), true)
 
 	// Third div, empty with margin
-	tu.AssertEqual(t, div3.Box().ElementTag(), "div", "div3")
-	tu.AssertEqual(t, div3.Box().Width, pr.Float(0), "div3")
-	tu.AssertEqual(t, div3.Box().MarginWidth(), pr.Float(20), "div3")
-	tu.AssertEqual(t, div3.Box().Height, pr.Float(100), "div3")
+	tu.AssertEqual(t, div3.Box().ElementTag(), "div")
+	tu.AssertEqual(t, div3.Box().Width, Fl(0))
+	tu.AssertEqual(t, div3.Box().MarginWidth(), Fl(20))
+	tu.AssertEqual(t, div3.Box().Height, Fl(100))
 
 	// Fourth div, empty with margin && padding
-	tu.AssertEqual(t, div4.Box().ElementTag(), "div", "div4")
-	tu.AssertEqual(t, div4.Box().Width, pr.Float(0), "div4")
-	tu.AssertEqual(t, div4.Box().MarginWidth(), pr.Float(30), "div4")
+	tu.AssertEqual(t, div4.Box().ElementTag(), "div")
+	tu.AssertEqual(t, div4.Box().Width, Fl(0))
+	tu.AssertEqual(t, div4.Box().MarginWidth(), Fl(30))
 
 	// Second line :
 	div5, _ := unpack2(line2)
 
 	// Fifth div, long text, full-width div
-	tu.AssertEqual(t, div5.Box().ElementTag(), "div", "div5")
-	tu.AssertEqual(t, len(div5.Box().Children) > 1, true, "len")
-	tu.AssertEqual(t, div5.Box().Width, pr.Float(200), "div5")
+	tu.AssertEqual(t, div5.Box().ElementTag(), "div")
+	tu.AssertEqual(t, len(div5.Box().Children) > 1, true)
+	tu.AssertEqual(t, div5.Box().Width, Fl(200))
 
 	// Third line :
 	div6, _, div7, _ := unpack4(line3)
 
 	// Sixth div, empty div with fixed width && height
-	tu.AssertEqual(t, div6.Box().ElementTag(), "div", "div6")
-	tu.AssertEqual(t, div6.Box().Width, pr.Float(100), "div6")
-	tu.AssertEqual(t, div6.Box().MarginWidth(), pr.Float(120), "div6")
-	tu.AssertEqual(t, div6.Box().Height, pr.Float(100), "div6")
-	tu.AssertEqual(t, div6.Box().MarginHeight(), pr.Float(140), "div6")
+	tu.AssertEqual(t, div6.Box().ElementTag(), "div")
+	tu.AssertEqual(t, div6.Box().Width, Fl(100))
+	tu.AssertEqual(t, div6.Box().MarginWidth(), Fl(120))
+	tu.AssertEqual(t, div6.Box().Height, Fl(100))
+	tu.AssertEqual(t, div6.Box().MarginHeight(), Fl(140))
 
 	// Seventh div
-	tu.AssertEqual(t, div7.Box().ElementTag(), "div", "div7")
-	tu.AssertEqual(t, div7.Box().Width, pr.Float(20), "div7")
-	childLine := div7.Box().Children[0]
+	tu.AssertEqual(t, div7.Box().ElementTag(), "div")
+	tu.AssertEqual(t, div7.Box().Width, Fl(20))
+	childLine := unpack1(div7)
 	// Spaces have font-size: 0, they get removed
 	childDiv1, childDiv2 := unpack2(childLine)
-	tu.AssertEqual(t, childDiv1.Box().ElementTag(), "div", "childDiv1")
-	tu.AssertEqual(t, childDiv1.Box().Width, pr.Float(10), "childDiv1")
-	tu.AssertEqual(t, childDiv2.Box().ElementTag(), "div", "childDiv2")
-	tu.AssertEqual(t, childDiv2.Box().Width, pr.Float(2), "childDiv2")
-	grandchild := childDiv2.Box().Children[0]
-	tu.AssertEqual(t, grandchild.Box().ElementTag(), "div", "grandchild")
-	tu.AssertEqual(t, grandchild.Box().Width, pr.Float(10), "grandchild")
+	tu.AssertEqual(t, childDiv1.Box().ElementTag(), "div")
+	tu.AssertEqual(t, childDiv1.Box().Width, Fl(10))
+	tu.AssertEqual(t, childDiv2.Box().ElementTag(), "div")
+	tu.AssertEqual(t, childDiv2.Box().Width, Fl(2))
+	grandchild := unpack1(childDiv2)
+	tu.AssertEqual(t, grandchild.Box().ElementTag(), "div")
+	tu.AssertEqual(t, grandchild.Box().Width, Fl(10))
 
 	div8, _, div9 := unpack3(line4)
-	tu.AssertEqual(t, div8.Box().Width, pr.Float(150), "div8")
-	tu.AssertEqual(t, div9.Box().Width, pr.Float(10), "div9")
+	tu.AssertEqual(t, div8.Box().Width, Fl(150))
+	tu.AssertEqual(t, div9.Box().Width, Fl(10))
 }
 
 func TestInlineBlockWithMargin(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1235
 	page1 := renderOnePage(t, `
@@ -123,9 +120,9 @@ func TestInlineBlockWithMargin(t *testing.T) {
         span { font-family: weasyprint; display: inline-block; margin: 0 30px }
       </style>
       <span>a b c d e f g h i j k l</span>`)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	line1 := body.Box().Children[0]
-	span := line1.Box().Children[0]
-	tu.AssertEqual(t, span.Box().Width, pr.Float(40), "span") // 100 - 2 * 30
+	html := unpack1(page1)
+	body := unpack1(html)
+	line1 := unpack1(body)
+	span := unpack1(line1)
+	tu.AssertEqual(t, span.Box().Width, Fl(40)) // 100 - 2 * 30
 }

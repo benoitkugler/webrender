@@ -1327,9 +1327,9 @@ type BorderGrids struct {
 
 // Resolve border conflicts for a table in the collapsing border model.
 //
-//	Take a :class:`TableBox`; set appropriate border widths on the table,
-//	column group, column, row group, row, && cell boxes; && return
-//	a data structure for the resolved collapsed border grid.
+// Set appropriate border widths on the table,
+// column group, column, row group, row and cell boxes; and return
+// a data structure for the resolved collapsed border grid.
 func collapseTableBorders(table TableBoxITF, gridWidth, gridHeight int) BorderGrids {
 	if gridWidth == 0 || gridHeight == 0 {
 		// Don’t bother with empty tables

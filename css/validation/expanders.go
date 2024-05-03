@@ -47,6 +47,52 @@ var expanders = map[string]expander{
 
 var expandBorderSide = genericExpander("-width", "-color", "-style")(_expandBorderSide)
 
+// Abstract class representing property value with pending validation."""
+// See https://drafts.csswg.org/css-variables-2/#variables-in-shorthands.
+// Expander with validation done when defining calculated values."""
+type pendingExpander struct {
+	baseURL   string
+	name      string
+	validator expander
+}
+
+func (pe pendingExpander) validate(tokens []parser.Token, wantedKey string) (pr.ValidatedProperty, error) {
+	props, err := pe.validator(pe.baseURL, pe.name, tokens)
+	if err != nil {
+		return pr.ValidatedProperty{}, err
+	}
+	for _, prop := range props {
+		key := prop.Name.String()
+		if strings.HasPrefix(key, "-") {
+			key = pe.name + key
+		}
+		if key == wantedKey {
+			return prop.Property, nil
+		}
+	}
+	return pr.ValidatedProperty{}, errors.New("not found")
+}
+
+// Get validated value or raise error.
+func (pe pendingExpander) solve(tokens []Token, wantedKey string) (pr.ValidatedProperty, error) {
+	if len(tokens) == 0 {
+		return pr.ValidatedProperty{}, errors.New("no value")
+	}
+	return pe.validate(tokens, wantedKey)
+}
+
+// Return pending expanders when var is found in tokens.
+func findVar(baseURL, name string, tokens []Token, expander expander) (pendingExpander, bool) {
+	for _, token := range tokens {
+		if !CheckVarFunction(token).IsNone() {
+			// Found CSS variable, keep pending-substitution values.
+			pending := pendingExpander{baseURL, name, expander}
+			return pending, true
+		}
+	}
+	return pendingExpander{}, false
+}
+
 // Expanders
 
 type NamedTokens struct {

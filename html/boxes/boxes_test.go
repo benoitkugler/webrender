@@ -185,11 +185,12 @@ func sanityChecks(box Box) error {
 
 var baseUrl, _ = utils.PathToURL("../../resources_test/")
 
-func getGrid(t *testing.T, html string) ([][]Border, [][]Border) {
+func getGrid(t *testing.T, html string, gridWidth, gridHeight int) BorderGrids {
 	root := parseAndBuild(t, html)
 	body := root.Box().Children[0]
 	tableWrapper := body.Box().Children[0]
 	table := tableWrapper.Box().Children[0].(TableBoxITF)
+	borderLists := collapseTableBorders(table, gridWidth, gridHeight)
 
 	buildGrid := func(bg [][]Border) (grid [][]Border /*maybe nil*/) {
 		for _, column := range bg {
@@ -205,8 +206,7 @@ func getGrid(t *testing.T, html string) ([][]Border, [][]Border) {
 		return grid
 	}
 
-	return buildGrid(table.Table().CollapsedBorderGrid.Vertical),
-		buildGrid(table.Table().CollapsedBorderGrid.Horizontal)
+	return BorderGrids{buildGrid(borderLists.Vertical), buildGrid(borderLists.Horizontal)}
 }
 
 func TestBoxTree(t *testing.T) {
@@ -237,8 +237,7 @@ func TestBoxTree(t *testing.T) {
 }
 
 func TestHtmlEntities(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, quote := range []string{`"`, "&quot;", "&#x22;", "&#34;"} {
 		assertTree(t, parse(t, fmt.Sprintf("<p>%sabc%s", quote, quote)), []SerBox{
@@ -250,8 +249,7 @@ func TestHtmlEntities(t *testing.T) {
 }
 
 func TestInlineInBlock1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	source := "<div>Hello, <em>World</em>!\n<p>Lipsum.</p></div>"
 	expected := []SerBox{
@@ -295,8 +293,7 @@ func TestInlineInBlock1(t *testing.T) {
 }
 
 func TestInlineInBlock2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	source := "<div><p>Lipsum.</p>Hello, <em>World</em>!\n</div>"
 	expected := []SerBox{
@@ -317,8 +314,7 @@ func TestInlineInBlock2(t *testing.T) {
 }
 
 func TestInlineInBlock3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Absolutes are left := range the lines to get their static position later.
 	source := `<p>Hello <em style="position:absolute;
@@ -340,8 +336,7 @@ func TestInlineInBlock3(t *testing.T) {
 }
 
 func TestInlineInBlock4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Floats are pull to the top of their containing blocks
 	source := `<p>Hello <em style="float: left">World</em>!</p>`
@@ -362,8 +357,7 @@ func TestInlineInBlock4(t *testing.T) {
 }
 
 func TestBlockInInline(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	box := parse(t, `
       <style>
@@ -437,8 +431,7 @@ func TestBlockInInline(t *testing.T) {
 }
 
 func TestStyles(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	box := parse(t, `
 		  <style>
@@ -472,8 +465,7 @@ func TestStyles(t *testing.T) {
 }
 
 func TestWhitespaces(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// http://www.w3.org/TR/CSS21/text.html#white-space-model
 	assertTree(t, parseAndBuild(t, "<p>Lorem \t\r\n  ipsum\t"+`<strong>  dolor
@@ -509,8 +501,7 @@ type pageStyleData struct {
 }
 
 func testPageStyle(t *testing.T, data pageStyleData) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	document, err := tree.NewHTML(utils.InputString(`
       <style>
@@ -609,8 +600,7 @@ func TestImages2(t *testing.T) {
 }
 
 func TestTables1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rules in http://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
 
@@ -658,8 +648,7 @@ func TestTables1(t *testing.T) {
 }
 
 func TestTables2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rules 1.4 && 3.1
 	assertTree(t, parseAndBuild(t, `
@@ -680,8 +669,7 @@ func TestTables2(t *testing.T) {
 }
 
 func TestTables3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// http://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
 	// Rules 1.1 && 1.2
@@ -707,8 +695,7 @@ func TestTables3(t *testing.T) {
 }
 
 func TestTables4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rules 2.1 then 2.3
 	assertTree(t, parseAndBuild(t, "<x-table>foo <div></div></x-table>"), []SerBox{
@@ -728,8 +715,7 @@ func TestTables4(t *testing.T) {
 }
 
 func TestTables5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rule 2.2
 	assertTree(t, parseAndBuild(t, `<x-thead style="display: table-header-group"><div></div><x-td></x-td></x-thead>`),
@@ -748,8 +734,7 @@ func TestTables5(t *testing.T) {
 }
 
 func TestTables6(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rule 3.2
 	assertTree(t, parseAndBuild(t, "<span><x-tr></x-tr></span>"), []SerBox{
@@ -764,8 +749,7 @@ func TestTables6(t *testing.T) {
 }
 
 func TestTables7(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Rule 3.1
 	// Also, rule 1.3 does ! apply: whitespace before && after is preserved
@@ -795,8 +779,7 @@ func TestTables7(t *testing.T) {
 }
 
 func TestTables8(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Rule 3.2
 	assertTree(t, parseAndBuild(t, "<x-tr></x-tr>\t<x-tr></x-tr>"), []SerBox{
 		{"body", BlockT, BC{C: []SerBox{
@@ -811,8 +794,7 @@ func TestTables8(t *testing.T) {
 }
 
 func TestTables9(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, "<x-col></x-col>\n<x-colgroup></x-colgroup>"), []SerBox{
 		{"body", BlockT, BC{C: []SerBox{
@@ -825,8 +807,7 @@ func TestTables9(t *testing.T) {
 }
 
 func TestTableStyle(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html := parseAndBuild(t, `<table style="margin: 1px; padding: 2px"></table>`)
 	body := html.Box().Children[0]
@@ -853,8 +834,7 @@ func TestTableStyle(t *testing.T) {
 }
 
 func TestColumnStyle(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html := parseAndBuild(t, `
       <table>
@@ -889,8 +869,7 @@ func TestColumnStyle(t *testing.T) {
 }
 
 func TestNestedGridX(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html := parseAndBuild(t, `
       <table>
@@ -942,8 +921,7 @@ func extractSpans(group Box) (gridXs, colspans, rowspans [][]int) {
 }
 
 func TestColspanRowspan1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// +---+---+---+
 	// | A | B | C | X
@@ -1014,8 +992,7 @@ func TestColspanRowspan1(t *testing.T) {
 }
 
 func TestColspanRowspan2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// A cell box cannot extend beyond the last row box of a table.
 	html := parseAndBuild(t, `
@@ -1057,8 +1034,7 @@ func TestColspanRowspan2(t *testing.T) {
 }
 
 func TestBeforeAfter1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
       <style>
@@ -1077,8 +1053,7 @@ func TestBeforeAfter1(t *testing.T) {
 }
 
 func TestBeforeAfter2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
       <style>
@@ -1098,8 +1073,7 @@ func TestBeforeAfter2(t *testing.T) {
 }
 
 func TestBeforeAfter3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	assertTree(t, parseAndBuild(t, `
       <style>
         a[href]:before { content: "[" attr(href) "] " }
@@ -1118,8 +1092,7 @@ func TestBeforeAfter3(t *testing.T) {
 }
 
 func TestBeforeAfter4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
 	<style>
@@ -1200,8 +1173,7 @@ var (
 )
 
 func TestBorderCollapse1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html := parseAndBuild(t, "<table></table>")
 
@@ -1213,71 +1185,57 @@ func TestBorderCollapse1(t *testing.T) {
 		t.Fatal()
 	}
 
-	gridH, gridV := getGrid(t, `<table style="border-collapse: collapse"></table>`)
-
-	if len(gridH) != 0 || len(gridV) != 0 {
-		t.Fatal()
-	}
+	borders := getGrid(t, `<table style="border-collapse: collapse"></table>`, 0, 0)
+	tu.AssertEqual(t, len(borders.Horizontal) == 0 && len(borders.Vertical) == 0, true)
 }
 
 func TestBorderCollapse2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	verticalBorders, horizontalBorders := getGrid(t, `
+	borders := getGrid(t, `
       <style>td { border: 1px solid red }</style>
       <table style="border-collapse: collapse; border: 3px solid black">
         <tr> <td>A</td> <td>B</td> </tr>
         <tr> <td>C</td> <td>D</td> </tr>
       </table>
-    `)
-	if !reflect.DeepEqual(verticalBorders, [][]Border{
+    `, 2, 2)
+	tu.AssertEqual(t, borders.Vertical, [][]Border{
 		{black3, red1, black3},
 		{black3, red1, black3},
-	}) {
-		t.Fatalf("unexepected vertical borders %v", verticalBorders)
-	}
-	if !reflect.DeepEqual(horizontalBorders, [][]Border{
+	})
+	tu.AssertEqual(t, borders.Horizontal, [][]Border{
 		{black3, black3},
 		{red1, red1},
 		{black3, black3},
-	}) {
-		t.Fatalf("unexepected horizontal borders: %v", horizontalBorders)
-	}
+	})
 }
 
 func TestBorderCollapse3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// hidden vs. none
-	verticalBorders, horizontalBorders := getGrid(t, `
+	borders := getGrid(t, `
       <style>table, td { border: 3px solid }</style>
       <table style="border-collapse: collapse">
         <tr> <td>A</td> <td style="border-style: hidden">B</td> </tr>
         <tr> <td>C</td> <td style="border-style: none">D</td> </tr>
       </table>
-    `)
-	if !reflect.DeepEqual(verticalBorders, [][]Border{
+    `, 2, 2)
+	tu.AssertEqual(t, borders.Vertical, [][]Border{
 		{black3, Border{}, Border{}},
 		{black3, black3, black3},
-	}) {
-		t.Fatalf("unexepected vertical borders %v", verticalBorders)
-	}
-	if !reflect.DeepEqual(horizontalBorders, [][]Border{
+	})
+	tu.AssertEqual(t, borders.Horizontal, [][]Border{
 		{black3, Border{}},
 		{black3, Border{}},
 		{black3, black3},
-	}) {
-		t.Fatalf("unexepected horizontal borders: %v", horizontalBorders)
-	}
+	})
 }
 
 func TestBorderCollapse4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	verticalBorders, horizontalBorders := getGrid(t, `
+	borders := getGrid(t, `
       <style>td { border: 1px solid red }</style>
       <table style="border-collapse: collapse; border: 5px solid yellow">
         <col style="border: 3px solid black" />
@@ -1287,59 +1245,49 @@ func TestBorderCollapse4(t *testing.T) {
         <tr> <td></td> <td></td> <td></td> </tr>
         <tr> <td></td> <td></td> <td></td> </tr>
       </table>
-    `)
+    `, 3, 4)
 
-	if !reflect.DeepEqual(verticalBorders, [][]Border{
+	tu.AssertEqual(t, borders.Vertical, [][]Border{
 		{yellow5, black3, red1, yellow5},
 		{yellow5, dashedBlue5, green5, green5},
 		{yellow5, black3, red1, yellow5},
 		{yellow5, black3, red1, yellow5},
-	}) {
-		t.Fatalf("unexepected vertical borders %v", verticalBorders)
-	}
-	if !reflect.DeepEqual(horizontalBorders, [][]Border{
+	})
+	tu.AssertEqual(t, borders.Horizontal, [][]Border{
 		{yellow5, yellow5, yellow5},
 		{red1, dashedBlue5, green5},
 		{red1, dashedBlue5, green5},
 		{red1, red1, red1},
 		{yellow5, yellow5, yellow5},
-	}) {
-		t.Fatalf("unexepected horizontal borders: %v", horizontalBorders)
-	}
+	})
 }
 
 func TestBorderCollapse5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// rowspan && colspan
-	verticalBorders, horizontalBorders := getGrid(t, `
+	borders := getGrid(t, `
         <style>col, tr { border: 3px solid }</style>
         <table style="border-collapse: collapse">
             <col /><col /><col />
             <tr> <td rowspan=2></td> <td></td> <td></td> </tr>
             <tr>                     <td colspan=2></td> </tr>
         </table>
-    `)
+    `, 3, 2)
 
-	if !reflect.DeepEqual(verticalBorders, [][]Border{
+	tu.AssertEqual(t, borders.Vertical, [][]Border{
 		{black3, black3, black3, black3},
 		{black3, black3, Border{}, black3},
-	}) {
-		t.Fatalf("unexepected vertical borders %v", verticalBorders)
-	}
-	if !reflect.DeepEqual(horizontalBorders, [][]Border{
+	})
+	tu.AssertEqual(t, borders.Horizontal, [][]Border{
 		{black3, black3, black3},
 		{Border{}, black3, black3},
 		{black3, black3, black3},
-	}) {
-		t.Fatalf("unexepected horizontal borders: %v", horizontalBorders)
-	}
+	})
 }
 
 func testDisplayNoneRoot(t *testing.T, html string) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	box := parseAndBuild(t, html)
 	if d := box.Box().Style.GetDisplay(); d != (pr.Display{"block", "flow"}) {
@@ -1362,8 +1310,7 @@ func TestDisplayNoneRoot(t *testing.T) {
 }
 
 func TestBuildPages(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
 	<style>
@@ -1386,8 +1333,7 @@ func TestBuildPages(t *testing.T) {
 }
 
 func TestInlineSpace(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertTree(t, parseAndBuild(t, `
 	<p>start <i><b>bi1</b> <b>bi2</b></i> <b>b1</b> end</p>
@@ -1467,7 +1413,7 @@ func TestCapitalize(t *testing.T) {
 	} {
 		// Results are different for different browsers, we almost get the same
 		// results as Firefox, that’s good enough!
-		tu.AssertEqual(t, capitalize(test[0]), test[1], "")
+		tu.AssertEqual(t, capitalize(test[0]), test[1])
 	}
 }
 

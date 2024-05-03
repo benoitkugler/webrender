@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/benoitkugler/textlayout/fonts/truetype"
-	pr "github.com/benoitkugler/webrender/css/properties"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -29,8 +28,7 @@ func TestLoadFont(t *testing.T) {
 }
 
 func TestFontFace(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -38,15 +36,14 @@ func TestFontFace(t *testing.T) {
         body { font-family: weasyprint }
       </style>
       <span>abc</span>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line := body.Box().Children[0]
-	tu.AssertEqual(t, line.Box().Width, pr.Float(3*16), "line")
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
+	tu.AssertEqual(t, line.Box().Width, Fl(3*16))
 }
 
 func TestKerningDefault(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Kerning and ligatures are on by default
 	page := renderOnePage(t, `
@@ -55,17 +52,16 @@ func TestKerningDefault(t *testing.T) {
         body { font-family: weasyprint }
       </style>
       <span>kk</span><span>liga</span>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line := body.Box().Children[0]
-	span1, span2 := line.Box().Children[0], line.Box().Children[1]
-	tu.AssertEqual(t, span1.Box().Width, pr.Float(1.5*16), "span1")
-	tu.AssertEqual(t, span2.Box().Width, pr.Float(1.5*16), "span2")
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
+	span1, span2 := unpack1(line), line.Box().Children[1]
+	tu.AssertEqual(t, span1.Box().Width, Fl(1.5*16))
+	tu.AssertEqual(t, span2.Box().Width, Fl(1.5*16))
 }
 
 func TestKerningDeactivate(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Deactivate kerning
 	page := renderOnePage(t, `
@@ -83,17 +79,16 @@ func TestKerningDeactivate(t *testing.T) {
         span:nth-child(2) { font-family: no-kern }
       </style>
       <span>kk</span><span>kk</span>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line := body.Box().Children[0]
-	span1, span2 := line.Box().Children[0], line.Box().Children[1]
-	tu.AssertEqual(t, span1.Box().Width, pr.Float(1.5*16), "span1")
-	tu.AssertEqual(t, span2.Box().Width, pr.Float(2*16), "span2")
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
+	span1, span2 := unpack1(line), line.Box().Children[1]
+	tu.AssertEqual(t, span1.Box().Width, Fl(1.5*16))
+	tu.AssertEqual(t, span2.Box().Width, Fl(2*16))
 }
 
 func TestKerningLigatureDeactivate(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Deactivate kerning and ligatures
 	page := renderOnePage(t, `
@@ -112,17 +107,16 @@ func TestKerningLigatureDeactivate(t *testing.T) {
         span:nth-child(2) { font-family: no-kern-liga }
       </style>
       <span>kk liga</span><span>kk liga</span>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line := body.Box().Children[0]
-	span1, span2 := line.Box().Children[0], line.Box().Children[1]
-	tu.AssertEqual(t, span1.Box().Width, pr.Float((1.5+1+1.5)*16), "span1")
-	tu.AssertEqual(t, span2.Box().Width, pr.Float((2+1+4)*16), "span2")
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
+	span1, span2 := unpack1(line), line.Box().Children[1]
+	tu.AssertEqual(t, span1.Box().Width, Fl((1.5+1+1.5)*16))
+	tu.AssertEqual(t, span2.Box().Width, Fl((2+1+4)*16))
 }
 
 func TestFontFaceDescriptors(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t,
 		`
@@ -143,13 +137,13 @@ func TestFontFaceDescriptors(t *testing.T) {
 			"<span>onum</span>"+
 			"<span>zero</span>'")
 
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
 	kern, subs, dlig, onum, zero := unpack5(line)
-	tu.AssertEqual(t, kern.Box().Width, pr.Float(1.5*16), "kern")
-	tu.AssertEqual(t, subs.Box().Width, pr.Float(1.5*16), "subs")
-	tu.AssertEqual(t, dlig.Box().Width, pr.Float(1.5*16), "dlig")
-	tu.AssertEqual(t, onum.Box().Width, pr.Float(1.5*16), "onum")
-	tu.AssertEqual(t, zero.Box().Width, pr.Float(1.5*16), "zero")
+	tu.AssertEqual(t, kern.Box().Width, Fl(1.5*16))
+	tu.AssertEqual(t, subs.Box().Width, Fl(1.5*16))
+	tu.AssertEqual(t, dlig.Box().Width, Fl(1.5*16))
+	tu.AssertEqual(t, onum.Box().Width, Fl(1.5*16))
+	tu.AssertEqual(t, zero.Box().Width, Fl(1.5*16))
 }

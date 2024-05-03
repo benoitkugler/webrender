@@ -18,19 +18,18 @@ import (
 
 func getImg(t *testing.T, input string) (Box, Box) {
 	page := renderOnePage(t, input)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	var img Box
 	if len(body.Box().Children) != 0 {
-		line := body.Box().Children[0]
-		img = line.Box().Children[0]
+		line := unpack1(body)
+		img = unpack1(line)
 	}
 	return body, img
 }
 
 func TestImages1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, html := range []string{
 		fmt.Sprintf(`<img src="%s">`, "pattern.svg"),
@@ -51,20 +50,19 @@ func TestImages1(t *testing.T) {
 		"<object data=really-a-svg.png type=image/svg+xml>",
 	} {
 		_, img := getImg(t, html)
-		tu.AssertEqual(t, img.Box().Width, pr.Float(4), html+": width")
-		tu.AssertEqual(t, img.Box().Height, pr.Float(4), html+": height")
+		tu.AssertEqual(t, img.Box().Width, Fl(4))
+		tu.AssertEqual(t, img.Box().Height, Fl(4))
 	}
 }
 
 func TestImages2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// With physical units
 	data := "data:image/svg+xml," + url.PathEscape(`<svg width="2.54cm" height="0.5in"></svg>`)
 	_, img := getImg(t, fmt.Sprintf(`<img src="%s">`, data))
-	tu.AssertEqual(t, img.Box().Width, pr.Float(96), "")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(48), "")
+	tu.AssertEqual(t, img.Box().Width, Fl(96))
+	tu.AssertEqual(t, img.Box().Height, Fl(48))
 }
 
 func TestImages3(t *testing.T) {
@@ -86,16 +84,15 @@ func TestImages3(t *testing.T) {
 	} {
 		capt := tu.CaptureLogs()
 		_, img := getImg(t, fmt.Sprintf(`<img src="%s" alt="invalid image">`, urlString))
-		tu.AssertEqual(t, len(capt.Logs()), 1, urlString)
-		tu.AssertEqual(t, img.Type(), bo.InlineT, urlString) // not a replaced box
-		text := img.Box().Children[0]
-		tu.AssertEqual(t, text.(*bo.TextBox).Text, "invalid image", "")
+		tu.AssertEqual(t, len(capt.Logs()), 1)
+		tu.AssertEqual(t, img.Type(), bo.InlineT) // not a replaced box
+		text := unpack1(img)
+		tu.AssertEqual(t, text.(*bo.TextBox).Text, "invalid image")
 	}
 }
 
 func TestImages4(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, url := range []string{
 		// GIF with JPEG mimetype
@@ -126,94 +123,87 @@ func TestImages5(t *testing.T) {
 	_ = renderPages(t, "<img src=nonexistent.png><img src=nonexistent.png>")
 	// Failures are cached too: only one error
 	logs := capt.Logs()
-	tu.AssertEqual(t, len(logs), 1, fmt.Sprintf("%v", logs))
-	tu.AssertEqual(t, strings.Contains(logs[0], "failed to load image"), true, "")
+	tu.AssertEqual(t, len(logs), 1)
+	tu.AssertEqual(t, strings.Contains(logs[0], "failed to load image"), true)
 }
 
 func TestImages6(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Layout rules try to preserve the ratio, so the height should be 40px too:
 	body, img := getImg(t, `<body style="font-size: 0">
         <img src="pattern.png" style="width: 40px">`)
-	tu.AssertEqual(t, body.Box().Height, pr.Float(40), "body")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "img")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "img")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "img")
+	tu.AssertEqual(t, body.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
 }
 
 func TestImages7(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	body, img := getImg(t, `<body style="font-size: 0">
         <img src="pattern.png" style="height: 40px">`)
-	tu.AssertEqual(t, body.Box().Height, pr.Float(40), "body")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "img")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "img")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "img")
+	tu.AssertEqual(t, body.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
 }
 
 func TestImages8(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Same with percentages
 	body, img := getImg(t, `<body style="font-size: 0"><p style="width: 200px">
         <img src="pattern.png" style="width: 20%">`)
-	tu.AssertEqual(t, body.Box().Height, pr.Float(40), "body")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "img")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "img")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "img")
+	tu.AssertEqual(t, body.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
 }
 
 func TestImages9(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	body, img := getImg(t, `<body style="font-size: 0">
         <img src="pattern.png" style="min-width: 40px">`)
-	tu.AssertEqual(t, body.Box().Height, pr.Float(40), "body")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "img")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "img")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "img")
+	tu.AssertEqual(t, body.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
 }
 
 func TestImages10(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	_, img := getImg(t, `<img src="pattern.png" style="max-width: 2px">`)
-	tu.AssertEqual(t, img.Box().Width, pr.Float(2), "Width")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(2), "Height")
+	tu.AssertEqual(t, img.Box().Width, Fl(2))
+	tu.AssertEqual(t, img.Box().Height, Fl(2))
 }
 
 func TestImages11(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// display: table-cell is ignored. XXX Should it?
 	page := renderOnePage(t, `<body style="font-size: 0">
         <img src="pattern.png" style="width: 40px">
         <img src="pattern.png" style="width: 60px; display: table-cell">
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	line := unpack1(body)
 	img1, img2 := unpack2(line)
-	tu.AssertEqual(t, body.Box().Height, pr.Float(60), "body")
-	tu.AssertEqual(t, img1.Box().Width, pr.Float(40), "img1")
-	tu.AssertEqual(t, img1.Box().Height, pr.Float(40), "img1")
-	tu.AssertEqual(t, img2.Box().Width, pr.Float(60), "img2")
-	tu.AssertEqual(t, img2.Box().Height, pr.Float(60), "img2")
-	tu.AssertEqual(t, img1.Box().PositionY, pr.Float(20), "img1")
-	tu.AssertEqual(t, img2.Box().PositionY, pr.Float(0), "img2")
+	tu.AssertEqual(t, body.Box().Height, Fl(60))
+	tu.AssertEqual(t, img1.Box().Width, Fl(40))
+	tu.AssertEqual(t, img1.Box().Height, Fl(40))
+	tu.AssertEqual(t, img2.Box().Width, Fl(60))
+	tu.AssertEqual(t, img2.Box().Height, Fl(60))
+	tu.AssertEqual(t, img1.Box().PositionY, Fl(20))
+	tu.AssertEqual(t, img2.Box().PositionY, Fl(0))
 }
 
 func TestImages12(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Block-level image:
 	page := renderOnePage(t, `
@@ -224,21 +214,20 @@ func TestImages12(t *testing.T) {
         <body>
             <img src="pattern.png">
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	img := body.Box().Children[0]
-	tu.AssertEqual(t, img.Box().ElementTag(), "img", "")
-	tu.AssertEqual(t, img.Box().PositionX, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "")
-	tu.AssertEqual(t, img.Box().ContentBoxX(), pr.Float(30), "") // (100 - 40) / 2 , 30px for margin-left
-	tu.AssertEqual(t, img.Box().ContentBoxY(), pr.Float(10), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	img := unpack1(body)
+	tu.AssertEqual(t, img.Box().ElementTag(), "img")
+	tu.AssertEqual(t, img.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().ContentBoxX(), Fl(30)) // (100 - 40) / 2 , 30px for margin-left
+	tu.AssertEqual(t, img.Box().ContentBoxY(), Fl(10))
 }
 
 func TestImages13(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -248,21 +237,20 @@ func TestImages13(t *testing.T) {
         <body>
             <img src="pattern.png">
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	img := body.Box().Children[0]
-	tu.AssertEqual(t, img.Box().ElementTag(), "img", "")
-	tu.AssertEqual(t, img.Box().PositionX, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "")
-	tu.AssertEqual(t, img.Box().ContentBoxX(), pr.Float(30), "") // (100 - 40) / 2 , 30px for margin-left
-	tu.AssertEqual(t, img.Box().ContentBoxY(), pr.Float(10), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	img := unpack1(body)
+	tu.AssertEqual(t, img.Box().ElementTag(), "img")
+	tu.AssertEqual(t, img.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().ContentBoxX(), Fl(30)) // (100 - 40) / 2 , 30px for margin-left
+	tu.AssertEqual(t, img.Box().ContentBoxY(), Fl(10))
 }
 
 func TestImages14(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -272,21 +260,20 @@ func TestImages14(t *testing.T) {
         <body>
             <img src="pattern.png">
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	img := body.Box().Children[0]
-	tu.AssertEqual(t, img.Box().ElementTag(), "img", "")
-	tu.AssertEqual(t, img.Box().PositionX, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(40), "")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(40), "")
-	tu.AssertEqual(t, img.Box().ContentBoxX(), pr.Float(30), "") // (100 - 40) / 2 , 30px for margin-left
-	tu.AssertEqual(t, img.Box().ContentBoxY(), pr.Float(10), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	img := unpack1(body)
+	tu.AssertEqual(t, img.Box().ElementTag(), "img")
+	tu.AssertEqual(t, img.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(40))
+	tu.AssertEqual(t, img.Box().Height, Fl(40))
+	tu.AssertEqual(t, img.Box().ContentBoxX(), Fl(30)) // (100 - 40) / 2 , 30px for margin-left
+	tu.AssertEqual(t, img.Box().ContentBoxY(), Fl(10))
 }
 
 func TestImages15(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -297,21 +284,20 @@ func TestImages15(t *testing.T) {
         <body>
             <img src="pattern.png">
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	img := body.Box().Children[0]
-	tu.AssertEqual(t, img.Box().ElementTag(), "img", "")
-	tu.AssertEqual(t, img.Box().PositionX, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().PositionY, pr.Float(0), "")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(2), "")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(30), "")
-	tu.AssertEqual(t, img.Box().ContentBoxX(), pr.Float(49), "") // (100 - 2) / 2 , 49px for margin-left
-	tu.AssertEqual(t, img.Box().ContentBoxY(), pr.Float(10), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	img := unpack1(body)
+	tu.AssertEqual(t, img.Box().ElementTag(), "img")
+	tu.AssertEqual(t, img.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, img.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, img.Box().Width, Fl(2))
+	tu.AssertEqual(t, img.Box().Height, Fl(30))
+	tu.AssertEqual(t, img.Box().ContentBoxX(), Fl(49)) // (100 - 2) / 2 , 49px for margin-left
+	tu.AssertEqual(t, img.Box().ContentBoxY(), Fl(10))
 }
 
 func TestImages16(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <body style="float: left">
@@ -319,39 +305,37 @@ func TestImages16(t *testing.T) {
             data:image/svg+xml,`+url.PathEscape(`<svg width="150" height="100"></svg>`)+`           
         ">
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	img := body.Box().Children[0]
-	tu.AssertEqual(t, img.Box().ElementTag(), "img", "")
-	tu.AssertEqual(t, body.Box().Width, pr.Float(320), "body")
-	tu.AssertEqual(t, body.Box().Height, pr.Float(220), "body")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(300), "img")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(200), "img")
+	html := unpack1(page)
+	body := unpack1(html)
+	img := unpack1(body)
+	tu.AssertEqual(t, img.Box().ElementTag(), "img")
+	tu.AssertEqual(t, body.Box().Width, Fl(320))
+	tu.AssertEqual(t, body.Box().Height, Fl(220))
+	tu.AssertEqual(t, img.Box().Width, Fl(300))
+	tu.AssertEqual(t, img.Box().Height, Fl(200))
 }
 
 func TestImages17(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <div style="width: 300px; height: 300px">
         <img src="data:image/svg+xml,`+url.PathEscape(`<svg viewBox="0 0 20 10"></svg>`)+`
         ">`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	line := div.Box().Children[0]
-	img := line.Box().Children[0]
-	tu.AssertEqual(t, img.Box().ElementTag(), "img", "")
-	tu.AssertEqual(t, div.Box().Width, pr.Float(300), "div")
-	tu.AssertEqual(t, div.Box().Height, pr.Float(300), "div")
-	tu.AssertEqual(t, img.Box().Width, pr.Float(300), "img")
-	tu.AssertEqual(t, img.Box().Height, pr.Float(150), "img")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	line := unpack1(div)
+	img := unpack1(line)
+	tu.AssertEqual(t, img.Box().ElementTag(), "img")
+	tu.AssertEqual(t, div.Box().Width, Fl(300))
+	tu.AssertEqual(t, div.Box().Height, Fl(300))
+	tu.AssertEqual(t, img.Box().Width, Fl(300))
+	tu.AssertEqual(t, img.Box().Height, Fl(150))
 }
 
 func TestImages18(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1050
 	_ = renderOnePage(t, `
@@ -379,39 +363,38 @@ func TestImages19(t *testing.T) {
 				types = append(types, child.Type())
 			}
 		}
-		tu.AssertEqual(t, types, test.types, "")
+		tu.AssertEqual(t, types, test.types)
 	}
 }
 
-func approxEqual(t *testing.T, got, exp pr.Fl, context string) {
+func approxEqual(t *testing.T, got, exp pr.Fl) {
 	t.Helper()
 	const float32EqualityThreshold = 1e-3
 
 	if diff := math.Abs(float64(exp - got)); diff > float32EqualityThreshold {
-		t.Fatalf("%s: expected %v, got %v (diff: %v)", context, exp, got, diff)
+		t.Fatalf("expected %v, got %v (diff: %v)", exp, got, diff)
 	}
 }
 
-func approxEqualSlice(t *testing.T, got, exp []pr.Fl, context string) {
+func approxEqualSlice(t *testing.T, got, exp []pr.Fl) {
 	t.Helper()
 
-	tu.AssertEqual(t, len(got), len(exp), context)
+	tu.AssertEqual(t, len(got), len(exp))
 	for i := range got {
-		approxEqual(t, got[i], exp[i], context)
+		approxEqual(t, got[i], exp[i])
 	}
 }
 
-func approxEqualColor(t *testing.T, got, exp parser.RGBA, context string) {
+func approxEqualColor(t *testing.T, got, exp parser.RGBA) {
 	t.Helper()
 
 	s1 := []pr.Fl{got.R, got.G, got.B, got.A}
 	s2 := []pr.Fl{exp.R, exp.G, exp.B, exp.A}
-	approxEqualSlice(t, s1, s2, context)
+	approxEqualSlice(t, s1, s2)
 }
 
 func TestLinearGradient(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	red := pr.NewColor(1, 0, 0, 1).RGBA
 	lime := pr.NewColor(0, 1, 0, 1).RGBA
@@ -424,14 +407,14 @@ func TestLinearGradient(t *testing.T) {
 		page := renderOnePage(t, "<style>@page { background: "+gradientCss)
 		layer := page.Background.Layers[0]
 		result := layer.Image.(images.LinearGradient).Layout(400, 300)
-		tu.AssertEqual(t, result.ScaleY, pr.Fl(1), "result[0]")
-		tu.AssertEqual(t, result.Kind, type_, "result[1]")
-		approxEqualSlice(t, result.GradientKind.Coords[:], init[:], gradientCss+": Data")
-		tu.AssertEqual(t, result.Positions, positions, "Positions")
-		tu.AssertEqual(t, len(result.Colors) >= len(colors), true, "colors length")
+		tu.AssertEqual(t, result.ScaleY, pr.Fl(1))
+		tu.AssertEqual(t, result.Kind, type_)
+		approxEqualSlice(t, result.GradientKind.Coords[:], init[:])
+		tu.AssertEqual(t, result.Positions, positions)
+		tu.AssertEqual(t, len(result.Colors) >= len(colors), true)
 		for i := range colors {
 			color1, color2 := result.Colors[i], colors[i]
-			approxEqualColor(t, color1, color2, "color for "+gradientCss)
+			approxEqualColor(t, color1, color2)
 		}
 	}
 
@@ -467,8 +450,7 @@ func TestLinearGradient(t *testing.T) {
 }
 
 func TestRadialGradient(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	red := pr.NewColor(1, 0, 0, 1).RGBA
 	lime := pr.NewColor(0, 1, 0, 1).RGBA
@@ -481,19 +463,19 @@ func TestRadialGradient(t *testing.T) {
 		page := renderOnePage(t, "<style>@page { background: "+gradientCss)
 		layer := page.Background.Layers[0]
 		result := layer.Image.(images.RadialGradient).Layout(400, 300)
-		tu.AssertEqual(t, result.ScaleY, scaleY, "scale for "+gradientCss)
-		tu.AssertEqual(t, result.Kind, type_, "result[1]")
+		tu.AssertEqual(t, result.ScaleY, scaleY)
+		tu.AssertEqual(t, result.Kind, type_)
 
 		if type_ == "radial" {
 			centerX, centerY, radius0, radius1 := init[0], init[1], init[2], init[3]
 			init = [6]pr.Fl{centerX, centerY / scaleY, radius0, centerX, centerY / scaleY, radius1}
 		}
-		approxEqualSlice(t, result.GradientKind.Coords[:], init[:], "Data for "+gradientCss)
-		tu.AssertEqual(t, result.Positions, positions, "Positions for "+gradientCss)
-		tu.AssertEqual(t, len(result.Colors) >= len(colors), true, "colors length")
+		approxEqualSlice(t, result.GradientKind.Coords[:], init[:])
+		tu.AssertEqual(t, result.Positions, positions)
+		tu.AssertEqual(t, len(result.Colors) >= len(colors), true)
 		for i := range colors {
 			color1, color2 := result.Colors[i], colors[i]
-			approxEqualColor(t, color1, color2, "color for "+gradientCss)
+			approxEqualColor(t, color1, color2)
 		}
 	}
 
@@ -587,11 +569,11 @@ func TestImageMinMaxWidth(t *testing.T) {
 			<img src="pattern.png"><img src="pattern.svg">
 		</div>`, strings.Join(values, ";"))
 		page := renderOnePage(t, htmlInput)
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		line := body.Box().Children[0]
-		div := line.Box().Children[0]
-		tu.AssertEqual(t, div.Box().Width, data.divWidth, fmt.Sprintf("div width for %v", data.props))
+		html := unpack1(page)
+		body := unpack1(html)
+		line := unpack1(body)
+		div := unpack1(line)
+		tu.AssertEqual(t, div.Box().Width, data.divWidth)
 	}
 }
 
@@ -607,10 +589,10 @@ func TestSVGResizing(t *testing.T) {
 		<rect width="1" height="1" fill="#f00" />
 	</svg>`
 	page := renderOnePage(t, input)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	img := body.Box().Children[0]
-	if h := img.Box().Height; h != pr.Float(8) {
+	html := unpack1(page)
+	body := unpack1(html)
+	img := unpack1(body)
+	if h := img.Box().Height; h != Fl(8) {
 		t.Fatalf("invalid SVG height: %v", h)
 	}
 }

@@ -19,9 +19,9 @@ func TestErrorRecovery(t *testing.T) {
 	} {
 		capt := tu.CaptureLogs()
 		page := renderOnePage(t, style)
-		html := page.Box().Children[0]
-		tu.AssertEqual(t, html.Box().Style.GetColor(), pr.NewColor(0, 0, 1, 1), "blue") // blue
-		tu.AssertEqual(t, len(capt.Logs()), 2, "")
+		html := unpack1(page)
+		tu.AssertEqual(t, html.Box().Style.GetColor(), pr.NewColor(0, 0, 1, 1)) // blue
+		tu.AssertEqual(t, len(capt.Logs()), 2)
 	}
 }
 
@@ -38,8 +38,7 @@ func newTextContext() textContext {
 }
 
 func TestLineHeightInheritance(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
 		<style>
@@ -49,26 +48,25 @@ func TestLineHeightInheritance(t *testing.T) {
 		</style>
 		<body><div><section><p></p></section></div></body>
 	`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	section := div.Box().Children[0]
-	paragraph := section.Box().Children[0]
-	tu.AssertEqual(t, html.Box().Style.GetFontSize(), pr.FToV(10), "html")
-	tu.AssertEqual(t, div.Box().Style.GetFontSize(), pr.FToV(20), "div")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	section := unpack1(div)
+	paragraph := unpack1(section)
+	tu.AssertEqual(t, html.Box().Style.GetFontSize(), pr.FToV(10))
+	tu.AssertEqual(t, div.Box().Style.GetFontSize(), pr.FToV(20))
 	// 140% of 10px = 14px is inherited from html
-	tu.AssertEqual(t, text.StrutLayout(div.Box().Style, newTextContext())[0], pr.Float(14), "strutLayout")
-	tu.AssertEqual(t, div.Box().Style.GetVerticalAlign(), pr.FToV(7), "div") // 50 % of 14px
+	tu.AssertEqual(t, text.StrutLayout(div.Box().Style, newTextContext())[0], Fl(14))
+	tu.AssertEqual(t, div.Box().Style.GetVerticalAlign(), pr.FToV(7)) // 50 % of 14px
 
-	tu.AssertEqual(t, paragraph.Box().Style.GetFontSize(), pr.FToV(20), "paragraph")
+	tu.AssertEqual(t, paragraph.Box().Style.GetFontSize(), pr.FToV(20))
 	// 1.4 is inherited from p, 1.4 * 20px on em = 28px
-	tu.AssertEqual(t, text.StrutLayout(paragraph.Box().Style, newTextContext())[0], pr.Float(28), "strutLayout")
-	tu.AssertEqual(t, paragraph.Box().Style.GetVerticalAlign(), pr.FToV(14), "paragraph") // 50% of 28px,
+	tu.AssertEqual(t, text.StrutLayout(paragraph.Box().Style, newTextContext())[0], Fl(28))
+	tu.AssertEqual(t, paragraph.Box().Style.GetVerticalAlign(), pr.FToV(14)) // 50% of 28px,
 }
 
 func TestImportant(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	htmlContent := `
 	<style>
@@ -106,16 +104,15 @@ func TestImportant(t *testing.T) {
 	pages := renderPages(t, htmlContent, style)
 
 	page := pages[0]
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	for _, paragraph := range body.Box().Children {
-		tu.AssertEqual(t, paragraph.Box().Style.GetColor(), pr.NewColor(0, 1, 0, 1), "lime") // lime (light green)
+		tu.AssertEqual(t, paragraph.Box().Style.GetColor(), pr.NewColor(0, 1, 0, 1)) // lime (light green)
 	}
 }
 
 func TestNamedPages(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
 	<style>
@@ -125,21 +122,20 @@ func TestNamedPages(t *testing.T) {
 	</style>
 	<div><p><span>a</span></p></div>
 		`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	p := div.Box().Children[0]
-	span := p.Box().Children[0]
-	tu.AssertEqual(t, html.Box().Style.GetPage(), pr.Page{String: "", Valid: true}, "html")
-	tu.AssertEqual(t, body.Box().Style.GetPage(), pr.Page{String: "", Valid: true}, "body")
-	tu.AssertEqual(t, div.Box().Style.GetPage(), pr.Page{String: "", Valid: true}, "div")
-	tu.AssertEqual(t, p.Box().Style.GetPage(), pr.Page{String: "NARRow", Valid: true}, "p")
-	tu.AssertEqual(t, span.Box().Style.GetPage(), pr.Page{String: "NARRow", Valid: true}, "span")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	p := unpack1(div)
+	span := unpack1(p)
+	tu.AssertEqual(t, html.Box().Style.GetPage(), pr.Page{String: "", Valid: true})
+	tu.AssertEqual(t, body.Box().Style.GetPage(), pr.Page{String: "", Valid: true})
+	tu.AssertEqual(t, div.Box().Style.GetPage(), pr.Page{String: "", Valid: true})
+	tu.AssertEqual(t, p.Box().Style.GetPage(), pr.Page{String: "NARRow", Valid: true})
+	tu.AssertEqual(t, span.Box().Style.GetPage(), pr.Page{String: "NARRow", Valid: true})
 }
 
 func TestUnits(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, data := range []struct {
 		value string
@@ -160,10 +156,10 @@ func TestUnits(t *testing.T) {
 		page := renderOnePage(t, fmt.Sprintf(`
 		<style>@font-face { src: url(AHEM____.TTF); font-family: ahem }</style>
 		<body style="font: 10px ahem"><p style="margin-left: %s"></p>`, data.value))
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		p := body.Box().Children[0]
-		tu.AssertEqual(t, p.Box().MarginLeft, data.width, data.value)
+		html := unpack1(page)
+		body := unpack1(html)
+		p := unpack1(body)
+		tu.AssertEqual(t, p.Box().MarginLeft, data.width)
 	}
 }
 
@@ -186,9 +182,8 @@ func TestMediaQueries(t *testing.T) {
 
 		pages := renderPages(t, "<p>a<span>b", style)
 		page := pages[0]
-		html := page.Box().Children[0]
-		tu.AssertEqual(t, html.Box().Width, data.width, "width")
-
-		tu.AssertEqual(t, len(logs.Logs()) != 0, data.warning, fmt.Sprintf("logs for %s", data.media))
+		html := unpack1(page)
+		tu.AssertEqual(t, html.Box().Width, data.width)
+		logs.AssertNoLogs(t)
 	}
 }

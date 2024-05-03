@@ -405,6 +405,105 @@ func defaultValidateShorthand(baseUrl, name string, tokens []parser.Token) (pr.N
 	return pr.NamedProperties{np}, err
 }
 
+// Not applicable to the print media
+var notPrintMedia = utils.NewSet(
+	// Aural media
+	"azimuth",
+	"cue",
+	"cue-after",
+	"cue-before",
+	"elevation",
+	"pause",
+	"pause-after",
+	"pause-before",
+	"pitch-range",
+	"pitch",
+	"play-during",
+	"richness",
+	"speak-header",
+	"speak-numeral",
+	"speak-punctuation",
+	"speak",
+	"speech-rate",
+	"stress",
+	"voice-family",
+	"volume",
+	// Animations, transitions, timelines
+	"animation",
+	"animation-composition",
+	"animation-delay",
+	"animation-direction",
+	"animation-duration",
+	"animation-fill-mode",
+	"animation-iteration-count",
+	"animation-name",
+	"animation-play-state",
+	"animation-range",
+	"animation-range-end",
+	"animation-range-start",
+	"animation-timeline",
+	"animation-timing-function",
+	"timeline-scope",
+	"transition",
+	"transition-delay",
+	"transition-duration",
+	"transition-property",
+	"transition-timing-function",
+	"view-timeline",
+	"view-timeline-axis",
+	"view-timeline-inset",
+	"view-timeline-name",
+	"view-transition-name",
+	"will-change",
+	// Dynamic and interactive
+	"caret",
+	"caret-color",
+	"caret-shape",
+	"cursor",
+	"field-sizing",
+	"pointer-event",
+	"resize",
+	"touch-action",
+	// Browser viewport scrolling
+	"overscroll-behavior",
+	"overscroll-behavior-block",
+	"overscroll-behavior-inline",
+	"overscroll-behavior-x",
+	"overscroll-behavior-y",
+	"scroll-behavior",
+	"scroll-margin",
+	"scroll-margin-block",
+	"scroll-margin-block-end",
+	"scroll-margin-block-start",
+	"scroll-margin-bottom",
+	"scroll-margin-inline",
+	"scroll-margin-inline-end",
+	"scroll-margin-inline-start",
+	"scroll-margin-left",
+	"scroll-margin-right",
+	"scroll-margin-top",
+	"scroll-padding",
+	"scroll-padding-block",
+	"scroll-padding-block-end",
+	"scroll-padding-block-start",
+	"scroll-padding-bottom",
+	"scroll-padding-inline",
+	"scroll-padding-inline-end",
+	"scroll-padding-inline-start",
+	"scroll-padding-left",
+	"scroll-padding-right",
+	"scroll-padding-top",
+	"scroll-snap-align",
+	"scroll-snap-stop",
+	"scroll-snap-type",
+	"scroll-timeline",
+	"scroll-timeline-axis",
+	"scroll-timeline-name",
+	"scrollbar-color",
+	"scrollbar-gutter",
+	"scrollbar-width",
+)
+
 // Expand shorthand properties and filter unsupported properties and values.
 // Log a warning for every ignored declaration.
 // Return a iterable of “(name, value, important)“ tuples.
@@ -429,7 +528,7 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 			logger.WarningLogger.Printf("Ignored `%s:%s` , %s. \n", declaration.Name, parser.Serialize(declaration.Value), reason)
 		}
 
-		if _, in := pr.NotPrintMedia[name]; in {
+		if _, in := notPrintMedia[name]; in {
 			validationError("the property does not apply for the print media")
 			continue
 		}
@@ -456,11 +555,18 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 
 		tokens := RemoveWhitespace(declaration.Value)
 
-		expander_, in := expanders[name]
+		validator, in := expanders[name]
 		if !in {
-			expander_ = defaultValidateShorthand
+			validator = defaultValidateShorthand
 		}
-		result, err := expander_(baseUrl, name, tokens)
+
+		// Having no tokens is allowed by grammar but refused by all
+		// properties and expanders.
+		if len(tokens) == 0 {
+			validationError("no value")
+			continue
+		}
+		result, err := validator(baseUrl, name, tokens)
 		if err != nil {
 			validationError(err.Error())
 			continue

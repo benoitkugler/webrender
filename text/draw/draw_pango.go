@@ -202,6 +202,7 @@ func drawEmojiPango(font_ *pangoFont, glyph backend.GID, extents backend.GlyphEx
 	data := face.GlyphData(fonts.GID(glyph), font.XPpem, font.YPpem)
 
 	switch data := data.(type) {
+	// TODO: more formats
 	case fonts.GlyphBitmap:
 		if data.Format == fonts.PNG {
 			img := backend.RasterImage{

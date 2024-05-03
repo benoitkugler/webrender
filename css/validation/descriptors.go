@@ -508,6 +508,10 @@ func preprocessDescriptors(baseUrl string, descriptors []Token, out parsedDescri
 		if !ok || decl.Important {
 			continue
 		}
+		if decl.Name == "font-display" {
+			continue
+		}
+
 		tokens := RemoveWhitespace(decl.Value)
 		name := string(decl.Name)
 		err := out.validateDescriptor(baseUrl, name, tokens)

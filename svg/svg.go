@@ -213,13 +213,13 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 
 		// calculate position, scale and clipping
 		var (
-			clipBox        *Rectangle
+			clipBox        Rectangle
 			scaleX, scaleY Fl
 		)
 		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
 		translateX, translateY := dims.point(marker.refX, marker.refY)
 		if vb := marker.viewbox; vb != nil {
-			scaleX, scaleY, translateX, translateY = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
+			scaleX, scaleY, _, _ = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
 
 			clipViewbox := *vb
 			if marker.viewbox != nil {
@@ -240,15 +240,10 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 				clipViewbox.Y += clipViewbox.Height - markerHeight/scaleY
 			}
 
-			clipBox = &Rectangle{clipViewbox.X, clipViewbox.Y, markerWidth / scaleX, markerHeight / scaleY}
+			clipBox = Rectangle{clipViewbox.X, clipViewbox.Y, markerWidth / scaleX, markerHeight / scaleY}
 		} else {
-			if box, ok := boundingBoxUnion(marker.children, dims); ok {
-				scaleX = utils.MinF(markerWidth/box.Width, markerHeight/box.Height)
-				scaleY = scaleX
-			} else {
-				scaleX, scaleY = 1, 1
-			}
-			clipBox = nil
+			scaleX, scaleY = 1, 1
+			clipBox = Rectangle{0, 0, markerWidth, markerHeight}
 		}
 
 		// scale
@@ -277,10 +272,8 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 				dst.State().Transform(mat)
 
 				overflow := marker.overflow
-				if clipBox != nil && (overflow == "hidden" || overflow == "scroll") {
-					dst.OnNewStack(func() {
-						dst.Rectangle(clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height)
-					})
+				if overflow == "hidden" || overflow == "scroll" {
+					dst.Rectangle(clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height)
 					dst.State().Clip(false)
 				}
 

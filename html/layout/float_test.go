@@ -21,8 +21,7 @@ func outerArea(box Box) [4]fl {
 }
 
 func TestFloats1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// adjacent-floats-001
 	page := renderOnePage(t, `
@@ -32,16 +31,15 @@ func TestFloats1(t *testing.T) {
       </style>
       <div><img src=pattern.png /></div>
       <div><img src=pattern.png /></div>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div1, div2 := body.Box().Children[0], body.Box().Children[1]
-	tu.AssertEqual(t, outerArea(div1), [4]fl{0, 0, 100, 100}, "div1")
-	tu.AssertEqual(t, outerArea(div2), [4]fl{100, 0, 100, 100}, "div2")
+	html := unpack1(page)
+	body := unpack1(html)
+	div1, div2 := unpack1(body), body.Box().Children[1]
+	tu.AssertEqual(t, outerArea(div1), [4]fl{0, 0, 100, 100})
+	tu.AssertEqual(t, outerArea(div2), [4]fl{100, 0, 100, 100})
 }
 
 func TestFloats2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// c414-flt-fit-000
 	page := renderOnePage(t, `
@@ -55,23 +53,22 @@ func TestFloats2(t *testing.T) {
       <div><img src=pattern.png /><!-- 4 --></div>
       <img src=pattern.png /><!-- 3
       --><img src=pattern.png /><!-- 5 -->`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	div1, div2, div4, anonBlock := unpack4(body)
-	line3, line5 := anonBlock.Box().Children[0], anonBlock.Box().Children[1]
-	img3 := line3.Box().Children[0]
-	img5 := line5.Box().Children[0]
-	tu.AssertEqual(t, outerArea(div1), [4]fl{0, 0, 100, 60}, "div1")
-	tu.AssertEqual(t, outerArea(div2), [4]fl{100, 0, 100, 60}, "div2")
-	tu.AssertEqual(t, outerArea(img3), [4]fl{200, 0, 60, 60}, "img3")
+	line3, line5 := unpack1(anonBlock), anonBlock.Box().Children[1]
+	img3 := unpack1(line3)
+	img5 := unpack1(line5)
+	tu.AssertEqual(t, outerArea(div1), [4]fl{0, 0, 100, 60})
+	tu.AssertEqual(t, outerArea(div2), [4]fl{100, 0, 100, 60})
+	tu.AssertEqual(t, outerArea(img3), [4]fl{200, 0, 60, 60})
 
-	tu.AssertEqual(t, outerArea(div4), [4]fl{0, 60, 100, 60}, "div4")
-	tu.AssertEqual(t, outerArea(img5), [4]fl{100, 60, 60, 60}, "img5")
+	tu.AssertEqual(t, outerArea(div4), [4]fl{0, 60, 100, 60})
+	tu.AssertEqual(t, outerArea(img5), [4]fl{100, 60, 60, 60})
 }
 
 func TestFloats3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// c414-flt-fit-002
 	page := renderOnePage(t, `
@@ -92,8 +89,8 @@ func TestFloats3(t *testing.T) {
       <p class="left"> ⇦ A 9 </p>
       <p class="left"> ⇦ B 10 </p>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	var positions [][2]fl
 	for _, paragraph := range body.Box().Children {
 		positions = append(positions, [2]fl{fl(paragraph.Box().PositionX), fl(paragraph.Box().PositionY)})
@@ -109,12 +106,11 @@ func TestFloats3(t *testing.T) {
 		{0, 60},
 		{0, 80},
 		{70, 80},
-	}, "")
+	})
 }
 
 func TestFloats4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// c414-flt-wrap-000 ... more || less
 	page := renderOnePage(t, `
@@ -127,18 +123,17 @@ func TestFloats4(t *testing.T) {
       <p style="width: 100%"></p>
       <img src=pattern.png /><img src=pattern.png />
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	_, _, anonBlock := unpack3(body)
-	line1, line2 := anonBlock.Box().Children[0], anonBlock.Box().Children[1]
-	tu.AssertEqual(t, fl(anonBlock.Box().PositionY), fl(0), "anonBlock")
-	tu.AssertEqual(t, [2]fl{fl(line1.Box().PositionX), fl(line1.Box().PositionY)}, [2]fl{20, 0}, "line1")
-	tu.AssertEqual(t, [2]fl{fl(line2.Box().PositionX), fl(line2.Box().PositionY)}, [2]fl{0, 200}, "line2")
+	line1, line2 := unpack1(anonBlock), anonBlock.Box().Children[1]
+	tu.AssertEqual(t, fl(anonBlock.Box().PositionY), fl(0))
+	tu.AssertEqual(t, [2]fl{fl(line1.Box().PositionX), fl(line1.Box().PositionY)}, [2]fl{20, 0})
+	tu.AssertEqual(t, [2]fl{fl(line2.Box().PositionX), fl(line2.Box().PositionY)}, [2]fl{0, 200})
 }
 
 func TestFloats5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// c414-flt-wrap-000 with text ... more || less
 	page := renderOnePage(t, `
       <style>
@@ -151,18 +146,17 @@ func TestFloats5(t *testing.T) {
       <p style="width: 100%"></p>
       A B
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	_, _, anonBlock := unpack3(body)
-	line1, line2 := anonBlock.Box().Children[0], anonBlock.Box().Children[1]
-	tu.AssertEqual(t, fl(anonBlock.Box().PositionY), fl(0), "anonBlock")
-	tu.AssertEqual(t, [2]fl{fl(line1.Box().PositionX), fl(line1.Box().PositionY)}, [2]fl{20, 0}, "line1")
-	tu.AssertEqual(t, [2]fl{fl(line2.Box().PositionX), fl(line2.Box().PositionY)}, [2]fl{0, 200}, "line2")
+	line1, line2 := unpack1(anonBlock), anonBlock.Box().Children[1]
+	tu.AssertEqual(t, fl(anonBlock.Box().PositionY), fl(0))
+	tu.AssertEqual(t, [2]fl{fl(line1.Box().PositionX), fl(line1.Box().PositionY)}, [2]fl{20, 0})
+	tu.AssertEqual(t, [2]fl{fl(line2.Box().PositionX), fl(line2.Box().PositionY)}, [2]fl{0, 200})
 }
 
 func TestFloats6(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// floats-placement-vertical-001b
 	page := renderOnePage(t, `
@@ -177,21 +171,20 @@ func TestFloats6(t *testing.T) {
         <img src=pattern.png style="float: left; width: 30px" />
       </span>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line1, line2 := body.Box().Children[0], body.Box().Children[1]
-	span1 := line1.Box().Children[0]
-	span2 := line2.Box().Children[0]
-	img1 := span1.Box().Children[0]
-	img2, img3 := span2.Box().Children[0], span2.Box().Children[1]
-	tu.AssertEqual(t, outerArea(img1), [4]fl{0, 0, 50, 50}, "img1")
-	tu.AssertEqual(t, outerArea(img2), [4]fl{30, 50, 50, 50}, "img2")
-	tu.AssertEqual(t, outerArea(img3), [4]fl{0, 50, 30, 30}, "img3")
+	html := unpack1(page)
+	body := unpack1(html)
+	line1, line2 := unpack1(body), body.Box().Children[1]
+	span1 := unpack1(line1)
+	span2 := unpack1(line2)
+	img1 := unpack1(span1)
+	img2, img3 := unpack1(span2), span2.Box().Children[1]
+	tu.AssertEqual(t, outerArea(img1), [4]fl{0, 0, 50, 50})
+	tu.AssertEqual(t, outerArea(img2), [4]fl{30, 50, 50, 50})
+	tu.AssertEqual(t, outerArea(img3), [4]fl{0, 50, 30, 30})
 }
 
 func TestFloats7(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Variant of the above: no <span>
 	page := renderOnePage(t, `
@@ -204,19 +197,18 @@ func TestFloats7(t *testing.T) {
       <img src=pattern.png style="width: 50px" />
       <img src=pattern.png style="float: left; width: 30px" />
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	line1, line2 := body.Box().Children[0], body.Box().Children[1]
-	img1 := line1.Box().Children[0]
-	img2, img3 := line2.Box().Children[0], line2.Box().Children[1]
-	tu.AssertEqual(t, outerArea(img1), [4]fl{0, 0, 50, 50}, "img1")
-	tu.AssertEqual(t, outerArea(img2), [4]fl{30, 50, 50, 50}, "img2")
-	tu.AssertEqual(t, outerArea(img3), [4]fl{0, 50, 30, 30}, "img3")
+	html := unpack1(page)
+	body := unpack1(html)
+	line1, line2 := unpack1(body), body.Box().Children[1]
+	img1 := unpack1(line1)
+	img2, img3 := unpack1(line2), line2.Box().Children[1]
+	tu.AssertEqual(t, outerArea(img1), [4]fl{0, 0, 50, 50})
+	tu.AssertEqual(t, outerArea(img2), [4]fl{30, 50, 50, 50})
+	tu.AssertEqual(t, outerArea(img3), [4]fl{0, 50, 30, 30})
 }
 
 func TestFloats8(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Floats do no affect other pages
 	pages := renderPages(t, `
@@ -232,24 +224,23 @@ func TestFloats8(t *testing.T) {
     `)
 	page1, page2 := pages[0], pages[1]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	floatImg, anonBlock := body.Box().Children[0], body.Box().Children[1]
-	line := anonBlock.Box().Children[0]
-	img1 := line.Box().Children[0]
-	tu.AssertEqual(t, outerArea(floatImg), [4]fl{0, 0, 30, 30}, "floatImg")
-	tu.AssertEqual(t, outerArea(img1), [4]fl{30, 0, 50, 50}, "img1")
+	html := unpack1(page1)
+	body := unpack1(html)
+	floatImg, anonBlock := unpack1(body), body.Box().Children[1]
+	line := unpack1(anonBlock)
+	img1 := unpack1(line)
+	tu.AssertEqual(t, outerArea(floatImg), [4]fl{0, 0, 30, 30})
+	tu.AssertEqual(t, outerArea(img1), [4]fl{30, 0, 50, 50})
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	_, anonBlock = body.Box().Children[0], body.Box().Children[1]
-	line = anonBlock.Box().Children[0]
-	_ = line.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	_, anonBlock = unpack1(body), body.Box().Children[1]
+	line = unpack1(anonBlock)
+	_ = unpack1(line)
 }
 
 func TestFloats9(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test
 	// https://github.com/Kozea/WeasyPrint/issues/263
@@ -257,8 +248,7 @@ func TestFloats9(t *testing.T) {
 }
 
 func TestFloatsPageBreaks1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Tests floated images shorter than the page
 	pages := renderPages(t, `
@@ -272,7 +262,7 @@ func TestFloatsPageBreaks1(t *testing.T) {
         <img src=pattern.png>
     `)
 
-	tu.AssertEqual(t, len(pages), 2, "number of pages")
+	tu.AssertEqual(t, len(pages), 2)
 
 	var pageImagesPosY [][]pr.Float
 	for _, page := range pages {
@@ -280,17 +270,16 @@ func TestFloatsPageBreaks1(t *testing.T) {
 		for _, d := range bo.Descendants(page) {
 			if d.Box().ElementTag() == "img" {
 				images = append(images, d.Box().PositionY)
-				tu.AssertEqual(t, d.Box().PositionX, pr.Float(10), "img")
+				tu.AssertEqual(t, d.Box().PositionX, Fl(10))
 			}
 		}
 		pageImagesPosY = append(pageImagesPosY, images)
 	}
-	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10}, {10}}, "")
+	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10}, {10}})
 }
 
 func TestFloatsPageBreaks2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Tests floated images taller than the page
 	pages := renderPages(t, `
@@ -304,7 +293,7 @@ func TestFloatsPageBreaks2(t *testing.T) {
         <img src=pattern.png>
     `)
 
-	tu.AssertEqual(t, len(pages), 2, "")
+	tu.AssertEqual(t, len(pages), 2)
 
 	var pageImagesPosY [][]pr.Float
 	for _, page := range pages {
@@ -312,17 +301,16 @@ func TestFloatsPageBreaks2(t *testing.T) {
 		for _, d := range bo.Descendants(page) {
 			if d.Box().ElementTag() == "img" {
 				images = append(images, d.Box().PositionY)
-				tu.AssertEqual(t, d.Box().PositionX, pr.Float(10), "img")
+				tu.AssertEqual(t, d.Box().PositionX, Fl(10))
 			}
 		}
 		pageImagesPosY = append(pageImagesPosY, images)
 	}
-	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10}, {10}}, "")
+	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10}, {10}})
 }
 
 func TestFloatsPageBreaks3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Tests floated images shorter than the page
 	pages := renderPages(t, `
       <style>
@@ -339,7 +327,7 @@ func TestFloatsPageBreaks3(t *testing.T) {
         <img src=pattern.png>
     `)
 
-	tu.AssertEqual(t, len(pages), 3, "")
+	tu.AssertEqual(t, len(pages), 3)
 
 	var pageImagesPosY [][]pr.Float
 	for _, page := range pages {
@@ -347,17 +335,16 @@ func TestFloatsPageBreaks3(t *testing.T) {
 		for _, d := range bo.Descendants(page) {
 			if d.Box().ElementTag() == "img" {
 				images = append(images, d.Box().PositionY)
-				tu.AssertEqual(t, d.Box().PositionX, pr.Float(10), "img")
+				tu.AssertEqual(t, d.Box().PositionX, Fl(10))
 			}
 		}
 		pageImagesPosY = append(pageImagesPosY, images)
 	}
-	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10, 40}, {10, 40}, {10}}, "")
+	tu.AssertEqual(t, pageImagesPosY, [][]pr.Float{{10, 40}, {10, 40}, {10}})
 }
 
 func TestPreferredWidths1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	getFloatWidth := func(bodyWidth int) pr.Float {
 		page := renderOnePage(t, fmt.Sprintf(`
@@ -371,20 +358,19 @@ func TestPreferredWidths1(t *testing.T) {
           </p>
                    <!--  ^  No-break space here  -->
         `, bodyWidth))
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		paragraph := body.Box().Children[0]
+		html := unpack1(page)
+		body := unpack1(html)
+		paragraph := unpack1(body)
 		return paragraph.Box().Width.V()
 	}
 	// Preferred minimum width:
-	tu.AssertEqual(t, getFloatWidth(10), pr.Float(len([]rune("consectetur elit"))*16), "10")
+	tu.AssertEqual(t, getFloatWidth(10), Fl(len([]rune("consectetur elit"))*16))
 	// Preferred width:
-	tu.AssertEqual(t, getFloatWidth(1000000), pr.Float(len([]rune("Lorem ipsum dolor sit amet,"))*16), "1000000")
+	tu.AssertEqual(t, getFloatWidth(1000000), Fl(len([]rune("Lorem ipsum dolor sit amet,"))*16))
 }
 
 func TestPreferredWidths2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Non-regression test:
 	// Incorrect whitespace handling in preferred width used to cause
@@ -392,16 +378,15 @@ func TestPreferredWidths2(t *testing.T) {
 	page := renderOnePage(t, `
       <p style="float: left">Lorem <em>ipsum</em> dolor.</p>
     } `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	tu.AssertEqual(t, len(paragraph.Box().Children), 1, "")
-	tu.AssertEqual(t, bo.LineT.IsInstance(paragraph.Box().Children[0]), true, "")
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	tu.AssertEqual(t, len(paragraph.Box().Children), 1)
+	tu.AssertEqual(t, bo.LineT.IsInstance(unpack1(paragraph)), true)
 }
 
 func TestPreferredWidths3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>img { width: 20px }</style>
@@ -409,15 +394,14 @@ func TestPreferredWidths3(t *testing.T) {
         <img src=pattern.png><img src=pattern.png><br>
         <img src=pattern.png></p>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	tu.AssertEqual(t, paragraph.Box().Width, pr.Float(40), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	tu.AssertEqual(t, paragraph.Box().Width, Fl(40))
 }
 
 func TestPreferredWidths4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -425,15 +409,14 @@ func TestPreferredWidths4(t *testing.T) {
           p { font: 20px weasyprint }
         </style>
         <p style="float: left">XX<br>XX<br>X</p>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	tu.AssertEqual(t, paragraph.Box().Width, pr.Float(40), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	tu.AssertEqual(t, paragraph.Box().Width, Fl(40))
 }
 
 func TestPreferredWidths5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// The space is the start of the line is collapsed.
 	page := renderOnePage(t, `
         <style>
@@ -441,15 +424,14 @@ func TestPreferredWidths5(t *testing.T) {
           p { font: 20px weasyprint }
         </style>
         <p style="float: left">XX<br> XX<br>X</p>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	tu.AssertEqual(t, paragraph.Box().Width, pr.Float(40), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	tu.AssertEqual(t, paragraph.Box().Width, Fl(40))
 }
 
 func TestFloatInInline1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -470,33 +452,32 @@ func TestFloatInInline1(t *testing.T) {
         aa bb <a><span>cc</span> ddd</a> ee ff
       </p>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	line1, line2 := paragraph.Box().Children[0], paragraph.Box().Children[1]
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	line1, line2 := unpack1(paragraph), paragraph.Box().Children[1]
 
 	p1, a, p2 := unpack3(line1)
-	tu.AssertEqual(t, p1.Box().Width, pr.Float(6*20), "p1.width")
-	tu.AssertEqual(t, p1.(*bo.TextBox).Text, "aa bb ", "p1.text")
-	tu.AssertEqual(t, p1.Box().PositionX, pr.Float(0*20), "p1.positionX")
-	tu.AssertEqual(t, p2.Box().Width, pr.Float(3*20), "p2.width")
-	tu.AssertEqual(t, p2.(*bo.TextBox).Text, " ee", "p2.text")
-	tu.AssertEqual(t, p2.Box().PositionX, pr.Float(9*20), "p2.positionX")
-	span, aText := a.Box().Children[0], a.Box().Children[1]
-	tu.AssertEqual(t, aText.Box().Width, pr.Float(3*20), "") // leading space collapse)
-	tu.AssertEqual(t, aText.(*bo.TextBox).Text, "ddd", "")
-	tu.AssertEqual(t, aText.Box().PositionX, pr.Float(6*20), "aText")
-	tu.AssertEqual(t, span.Box().Width, pr.Float(2*20), "span")
-	tu.AssertEqual(t, span.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "cc", "span")
-	tu.AssertEqual(t, span.Box().PositionX, pr.Float(12*20), "span")
+	tu.AssertEqual(t, p1.Box().Width, Fl(6*20))
+	tu.AssertEqual(t, p1.(*bo.TextBox).Text, "aa bb ")
+	tu.AssertEqual(t, p1.Box().PositionX, Fl(0*20))
+	tu.AssertEqual(t, p2.Box().Width, Fl(3*20))
+	tu.AssertEqual(t, p2.(*bo.TextBox).Text, " ee")
+	tu.AssertEqual(t, p2.Box().PositionX, Fl(9*20))
+	span, aText := unpack1(a), a.Box().Children[1]
+	tu.AssertEqual(t, aText.Box().Width, Fl(3*20))
+	tu.AssertEqual(t, aText.(*bo.TextBox).Text, "ddd")
+	tu.AssertEqual(t, aText.Box().PositionX, Fl(6*20))
+	tu.AssertEqual(t, span.Box().Width, Fl(2*20))
+	tu.AssertEqual(t, unpack1(span.Box().Children[0]).(*bo.TextBox).Text, "cc")
+	tu.AssertEqual(t, span.Box().PositionX, Fl(12*20))
 
-	p3 := line2.Box().Children[0]
-	tu.AssertEqual(t, p3.Box().Width, pr.Float(2*20), "")
+	p3 := unpack1(line2)
+	tu.AssertEqual(t, p3.Box().Width, Fl(2*20))
 }
 
 func TestFloatInInline_2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -519,22 +500,21 @@ func TestFloatInInline_2(t *testing.T) {
           1 2 3 4 5 6
         </span>
       </article>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	line1, line2 := unpack2(article)
-	span1 := line1.Box().Children[0]
+	span1 := unpack1(line1)
 	div, text := unpack2(span1)
-	tu.AssertEqual(t, strings.TrimSpace(div.Box().Children[0].Box().Children[0].(*bo.TextBox).Text), "a b c", "")
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "1 2 3", "")
-	span2 := line2.Box().Children[0]
-	text = span2.Box().Children[0]
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "4 5 6", "")
+	tu.AssertEqual(t, strings.TrimSpace(unpack1(div).(*bo.TextBox).Text), "a b c")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "1 2 3")
+	span2 := unpack1(line2)
+	text = unpack1(span2)
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "4 5 6")
 }
 
 func TestFloatInInline_3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -556,22 +536,21 @@ func TestFloatInInline_3(t *testing.T) {
           1 2 3 <div>a b c</div> 4 5 6
         </span>
       </article>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	line1, line2 := unpack2(article)
-	span1 := line1.Box().Children[0]
+	span1 := unpack1(line1)
 	text, div := unpack2(span1)
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "1 2 3", "")
-	tu.AssertEqual(t, strings.TrimSpace(div.Box().Children[0].Box().Children[0].(*bo.TextBox).Text), "a b c", "")
-	span2 := line2.Box().Children[0]
-	text = span2.Box().Children[0]
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "4 5 6", "")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "1 2 3")
+	tu.AssertEqual(t, strings.TrimSpace(unpack1(div).(*bo.TextBox).Text), "a b c")
+	span2 := unpack1(line2)
+	text = unpack1(span2)
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "4 5 6")
 }
 
 func TestFloatInInline_4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -593,24 +572,23 @@ func TestFloatInInline_4(t *testing.T) {
           1 2 3 4 <div>a b c</div> 5 6
         </span>
       </article>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	line1, line2 := unpack2(article)
 	span1, div := unpack2(line1)
 	text1, text2 := unpack2(span1)
-	tu.AssertEqual(t, strings.TrimSpace(text1.(*bo.TextBox).Text), "1 2 3 4", "")
-	tu.AssertEqual(t, strings.TrimSpace(text2.(*bo.TextBox).Text), "5", "")
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(16), "")
-	tu.AssertEqual(t, strings.TrimSpace(div.Box().Children[0].Box().Children[0].(*bo.TextBox).Text), "a b c", "")
-	span2 := line2.Box().Children[0]
-	text := span2.Box().Children[0]
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "6", "")
+	tu.AssertEqual(t, strings.TrimSpace(text1.(*bo.TextBox).Text), "1 2 3 4")
+	tu.AssertEqual(t, strings.TrimSpace(text2.(*bo.TextBox).Text), "5")
+	tu.AssertEqual(t, div.Box().PositionY, Fl(16))
+	tu.AssertEqual(t, strings.TrimSpace(unpack1(div).(*bo.TextBox).Text), "a b c")
+	span2 := unpack1(line2)
+	text := unpack1(span2)
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "6")
 }
 
 func TestFloatNextLine(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -628,26 +606,25 @@ func TestFloatNextLine(t *testing.T) {
         }
       </style>
       <p>pp pp pp pp <a><span>ppppp</span> aa</a> pp pp pp pp pp</p>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
 	line1, line2, line3 := unpack3(paragraph)
-	tu.AssertEqual(t, len(line1.Box().Children), 1, "len")
-	tu.AssertEqual(t, len(line3.Box().Children), 1, "len")
-	a, p := line2.Box().Children[0], line2.Box().Children[1]
-	span, aText := a.Box().Children[0], a.Box().Children[1]
-	tu.AssertEqual(t, span.Box().PositionX, pr.Float(0), "span")
-	tu.AssertEqual(t, span.Box().Width, pr.Float(5*20), "span")
-	tu.AssertEqual(t, aText.Box().PositionX, pr.Float(5*20), "aText")
-	tu.AssertEqual(t, a.Box().PositionX, pr.Float(5*20), "a")
-	tu.AssertEqual(t, aText.Box().Width, pr.Float(2*20), "aText")
-	tu.AssertEqual(t, a.Box().Width, pr.Float(2*20), "a")
-	tu.AssertEqual(t, p.Box().PositionX, pr.Float(7*20), "p")
+	tu.AssertEqual(t, len(line1.Box().Children), 1)
+	tu.AssertEqual(t, len(line3.Box().Children), 1)
+	a, p := unpack1(line2), line2.Box().Children[1]
+	span, aText := unpack1(a), a.Box().Children[1]
+	tu.AssertEqual(t, span.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, span.Box().Width, Fl(5*20))
+	tu.AssertEqual(t, aText.Box().PositionX, Fl(5*20))
+	tu.AssertEqual(t, a.Box().PositionX, Fl(5*20))
+	tu.AssertEqual(t, aText.Box().Width, Fl(2*20))
+	tu.AssertEqual(t, a.Box().Width, Fl(2*20))
+	tu.AssertEqual(t, p.Box().PositionX, Fl(7*20))
 }
 
 func TestFloatTextIndent1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -666,26 +643,25 @@ func TestFloatTextIndent1(t *testing.T) {
         }
       </style>
       <p><a>aa <span>float</span> aa</a></p>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	line1 := paragraph.Box().Children[0]
-	a := line1.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	line1 := unpack1(paragraph)
+	a := unpack1(line1)
 	a1, span, a2 := unpack3(a)
-	spanText := span.Box().Children[0]
-	tu.AssertEqual(t, span.Box().PositionX, pr.Float(0), "span")
-	tu.AssertEqual(t, spanText.Box().PositionX, pr.Float(0), "spanText")
-	tu.AssertEqual(t, span.Box().Width, pr.Float((1+5)*20), "span")         // text-indent + span text
-	tu.AssertEqual(t, spanText.Box().Width, pr.Float((1+5)*20), "spanText") // text-indent + span text
-	tu.AssertEqual(t, a1.Box().Width, pr.Float(3*20), "a1")
-	tu.AssertEqual(t, a1.Box().PositionX, pr.Float((1+5+1)*20), "a1")   // span + a1 text-indent)
-	tu.AssertEqual(t, a2.Box().Width, pr.Float(2*20), "a2")             // leading space collapse)
-	tu.AssertEqual(t, a2.Box().PositionX, pr.Float((1+5+1+3)*20), "a2") // span + a1 t-i + a1)
+	spanText := unpack1(span)
+	tu.AssertEqual(t, span.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, spanText.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, span.Box().Width, Fl((1+5)*20))
+	tu.AssertEqual(t, spanText.Box().Width, Fl((1+5)*20))
+	tu.AssertEqual(t, a1.Box().Width, Fl(3*20))
+	tu.AssertEqual(t, a1.Box().PositionX, Fl((1+5+1)*20))
+	tu.AssertEqual(t, a2.Box().Width, Fl(2*20))
+	tu.AssertEqual(t, a2.Box().PositionX, Fl((1+5+1+3)*20))
 }
 
 func TestFloatTextIndent2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -706,31 +682,30 @@ func TestFloatTextIndent2(t *testing.T) {
       <p>
         oooooooooooo
         <a>aa <span>float</span> aa</a></p>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
-	line1, line2 := paragraph.Box().Children[0], paragraph.Box().Children[1]
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
+	line1, line2 := unpack1(paragraph), paragraph.Box().Children[1]
 
-	p1 := line1.Box().Children[0]
-	tu.AssertEqual(t, p1.Box().PositionX, pr.Float(1*20), "p1") // text-indent
-	tu.AssertEqual(t, p1.Box().Width, pr.Float(12*20), "p1")    // p text
+	p1 := unpack1(line1)
+	tu.AssertEqual(t, p1.Box().PositionX, Fl(1*20))
+	tu.AssertEqual(t, p1.Box().Width, Fl(12*20))
 
-	a := line2.Box().Children[0]
+	a := unpack1(line2)
 	a1, span, a2 := unpack3(a)
-	spanText := span.Box().Children[0]
-	tu.AssertEqual(t, span.Box().PositionX, pr.Float(0), "span")
-	tu.AssertEqual(t, spanText.Box().PositionX, pr.Float(0), " spanText")
-	tu.AssertEqual(t, span.Box().Width, pr.Float((1+5)*20), "span")           // text-indent + span text
-	tu.AssertEqual(t, spanText.Box().Width, pr.Float((1+5)*20), "  spanText") // text-indent + span text
-	tu.AssertEqual(t, a1.Box().Width, pr.Float(3*20), "a1")
-	tu.AssertEqual(t, a1.Box().PositionX, pr.Float((1+5)*20), "a1")   // span)
-	tu.AssertEqual(t, a2.Box().Width, pr.Float(2*20), "a2")           // leading space collapse)
-	tu.AssertEqual(t, a2.Box().PositionX, pr.Float((1+5+3)*20), "a2") // span + a1)
+	spanText := unpack1(span)
+	tu.AssertEqual(t, span.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, spanText.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, span.Box().Width, Fl((1+5)*20))
+	tu.AssertEqual(t, spanText.Box().Width, Fl((1+5)*20))
+	tu.AssertEqual(t, a1.Box().Width, Fl(3*20))
+	tu.AssertEqual(t, a1.Box().PositionX, Fl((1+5)*20))
+	tu.AssertEqual(t, a2.Box().Width, Fl(2*20))
+	tu.AssertEqual(t, a2.Box().PositionX, Fl((1+5+3)*20))
 }
 
 func TestFloatTextIndent3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -753,29 +728,29 @@ func TestFloatTextIndent3(t *testing.T) {
         <a>aa <span>float</span> aa</a>
         oooooooooooo
       </p>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	paragraph := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	paragraph := unpack1(body)
 	line1, line2, line3 := unpack3(paragraph)
 
-	p1 := line1.Box().Children[0]
-	tu.AssertEqual(t, p1.Box().PositionX, pr.Float(1*20), " p1") // text-indent)
-	tu.AssertEqual(t, p1.Box().Width, pr.Float(12*20), " p1")    // p text)
+	p1 := unpack1(line1)
+	tu.AssertEqual(t, p1.Box().PositionX, Fl(1*20))
+	tu.AssertEqual(t, p1.Box().Width, Fl(12*20))
 
-	a := line2.Box().Children[0]
+	a := unpack1(line2)
 	a1, span, a2 := unpack3(a)
-	spanText := span.Box().Children[0]
-	tu.AssertEqual(t, span.Box().PositionX, pr.Float((14-5-1)*20), " span")
-	tu.AssertEqual(t, spanText.Box().PositionX, pr.Float((14-5-1)*20), "   spanText")
-	tu.AssertEqual(t, span.Box().Width, pr.Float((1+5)*20), " span")           // text-indent + span text
-	tu.AssertEqual(t, spanText.Box().Width, pr.Float((1+5)*20), "   spanText") // text-indent + span text
-	tu.AssertEqual(t, a1.Box().PositionX, pr.Float(0), " a1")                  // span)
-	tu.AssertEqual(t, a2.Box().Width, pr.Float(2*20), " a2")                   // leading space collapse)
-	tu.AssertEqual(t, a2.Box().PositionX, pr.Float((14-5-1-2)*20), " a2")
+	spanText := unpack1(span)
+	tu.AssertEqual(t, span.Box().PositionX, Fl((14-5-1)*20))
+	tu.AssertEqual(t, spanText.Box().PositionX, Fl((14-5-1)*20))
+	tu.AssertEqual(t, span.Box().Width, Fl((1+5)*20))
+	tu.AssertEqual(t, spanText.Box().Width, Fl((1+5)*20))
+	tu.AssertEqual(t, a1.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, a2.Box().Width, Fl(2*20))
+	tu.AssertEqual(t, a2.Box().PositionX, Fl((14-5-1-2)*20))
 
-	p2 := line3.Box().Children[0]
-	tu.AssertEqual(t, p2.Box().PositionX, pr.Float(0), " p2")
-	tu.AssertEqual(t, p2.Box().Width, pr.Float(12*20), " p2") // p text)
+	p2 := unpack1(line3)
+	tu.AssertEqual(t, p2.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, p2.Box().Width, Fl(12*20))
 }
 
 // @pytest.mark.xfail
@@ -802,7 +777,7 @@ func TestFloatTextIndent3(t *testing.T) {
 //         }
 //       </style>
 //       <p>bb bb pp bb pp pb <a><span>pp pp</span> apa</a> bb bb</p>`)
-//     html := page.Box().Children[0]
-//     body := html.Box().Children[0]
-//     paragraph := body.Box().Children[0]
+//     html =  unpack1(page)
+//     body :=  unpack1(html)
+//     paragraph := unpack1(body)
 //     line1, line2, line3 = paragraph.Box().Children

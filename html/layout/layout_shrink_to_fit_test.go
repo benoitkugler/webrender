@@ -20,8 +20,7 @@ func TestShrinkToFitFloatingPointError1(t *testing.T) {
 }
 
 func testShrinkToFitFloatingPointError1(t *testing.T, marginLeft, fontSize int) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// See bugs #325 && #288, see commit fac5ee9.
 	page := renderOnePage(t, fmt.Sprintf(`
@@ -33,15 +32,14 @@ func testShrinkToFitFloatingPointError1(t *testing.T, marginLeft, fontSize int) 
       </style>
       <p>this parrot is dead</p>
     `, marginLeft, fontSize))
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	p := body.Box().Children[0]
-	tu.AssertEqual(t, len(p.Box().Children), 1, fmt.Sprintf("margin: %d font size: %d", marginLeft, fontSize))
+	html := unpack1(page)
+	body := unpack1(html)
+	p := unpack1(body)
+	tu.AssertEqual(t, len(p.Box().Children), 1)
 }
 
 func TestShrinkToFitFloatingPointError2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, fontSize := range []int{1, 5, 10, 50, 100, 1000, 10000} {
 		letters := 1
@@ -54,13 +52,13 @@ func TestShrinkToFitFloatingPointError2(t *testing.T) {
           </style>
           <p>mmm <b>%s a</b></p>
         `, fontSize, fontSize, fontSize, strings.Repeat("i", letters)))
-			html := page.Box().Children[0]
-			body := html.Box().Children[0]
-			p := body.Box().Children[0]
-			tu.AssertEqual(t, len(p.Box().Children) == 1 || len(p.Box().Children) == 2, true, "")
-			tu.AssertEqual(t, len(p.Box().Children[0].Box().Children), 2, "")
-			text := p.Box().Children[0].Box().Children[1].Box().Children[0].(*bo.TextBox).Text
-			tu.AssertEqual(t, len(text) > 0, true, "")
+			html := unpack1(page)
+			body := unpack1(html)
+			p := unpack1(body)
+			tu.AssertEqual(t, len(p.Box().Children) == 1 || len(p.Box().Children) == 2, true)
+			tu.AssertEqual(t, len(unpack1(p).Box().Children), 2)
+			text := unpack1(p.Box().Children[0].Box().Children[1]).(*bo.TextBox).Text
+			tu.AssertEqual(t, len(text) > 0, true)
 			if strings.HasSuffix(text, "i") {
 				break
 			} else {

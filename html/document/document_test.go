@@ -9,6 +9,7 @@ import (
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
 	"github.com/benoitkugler/webrender/utils/testutils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 func round(x fl) fl { return utils.RoundPrec(x, 4) }
@@ -36,8 +37,7 @@ func roundMeta(pages []Page) {
 }
 
 func TestBookmarks(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, data := range []struct {
 		html           string
@@ -296,7 +296,8 @@ func TestLinks(t *testing.T) {
 	// baseUrl=resourceFilename("<inline HTML>"),
 	// warnings=(), round=false
 	assertLinks := func(html string, expectedLinksByPage [][]Link, expectedAnchorsByPage []anchors,
-		expectedResolvedLinks [][]Link, expectedResolvedAnchors [][]backend.Anchor, baseUrl string, warnings []string, round bool) {
+		expectedResolvedLinks [][]Link, expectedResolvedAnchors [][]backend.Anchor, baseUrl string, warnings []string, round bool,
+	) {
 		t.Helper()
 
 		capt := testutils.CaptureLogs()

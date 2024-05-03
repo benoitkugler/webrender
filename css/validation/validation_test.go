@@ -70,30 +70,26 @@ func assertValidDict(t *testing.T, css string, ref map[pr.KnownProp]pr.Validated
 }
 
 func TestNotPrint(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	assertInvalid(t, "volume: 42", "the property does not apply for the print media")
 }
 
 func TestUnstablePrefix(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	d := expandToDict(t, "-weasy-max-lines: 3",
 		"prefixes on unstable attributes are deprecated")
 
-	tu.AssertEqual(t, d, toValidated(pr.Properties{pr.PMaxLines: pr.TaggedInt{I: 3}}), "unstable prefix")
+	tu.AssertEqual(t, d, toValidated(pr.Properties{pr.PMaxLines: pr.TaggedInt{I: 3}}))
 }
 
 func TestNormalPrefix(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertInvalid(t, "-weasy-display: block", "prefix on this attribute is not supported")
 }
 
 func TestUnknownPrefix(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertInvalid(t, "-unknown-display: block", "prefixed selectors are ignored")
 }
@@ -756,8 +752,7 @@ func TestRadialGradient(t *testing.T) {
 }
 
 func TestImageOrientation(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	assertValidDict(t, "image-orientation: none", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{String: "none"}}))
 	assertValidDict(t, "image-orientation: from-image", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{String: "from-image"}}))
 	assertValidDict(t, "image-orientation: 90deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 2, Bool: false}}))

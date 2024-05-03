@@ -11,8 +11,7 @@ import (
 // Tests for lists layout.
 
 func TestListsStyle(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, inside := range []string{"inside", ""} {
 		for _, sc := range [][2]string{
@@ -30,27 +29,27 @@ func TestListsStyle(t *testing.T) {
 				<li>abc</li>
 			</ul>
 			`, inside, style))
-			html := page.Box().Children[0]
-			body := html.Box().Children[0]
-			unorderedList := body.Box().Children[0]
-			listItem := unorderedList.Box().Children[0]
+			html := unpack1(page)
+			body := unpack1(html)
+			unorderedList := unpack1(body)
+			listItem := unpack1(unorderedList)
 			var content, markerText Box
 			if inside != "" {
 				var marker Box
-				line := listItem.Box().Children[0]
+				line := unpack1(listItem)
 				marker, content = unpack2(line)
-				markerText = marker.Box().Children[0]
+				markerText = unpack1(marker)
 			} else {
 				marker, lineContainer := unpack2(listItem)
-				tu.AssertEqual(t, marker.Box().PositionX, listItem.Box().PositionX, "marker")
-				tu.AssertEqual(t, marker.Box().PositionY, listItem.Box().PositionY, "marker")
-				line := lineContainer.Box().Children[0]
-				content = line.Box().Children[0]
-				markerLine := marker.Box().Children[0]
-				markerText = markerLine.Box().Children[0]
+				tu.AssertEqual(t, marker.Box().PositionX, listItem.Box().PositionX)
+				tu.AssertEqual(t, marker.Box().PositionY, listItem.Box().PositionY)
+				line := unpack1(lineContainer)
+				content = unpack1(line)
+				markerLine := unpack1(marker)
+				markerText = unpack1(markerLine)
 			}
-			tu.AssertEqual(t, markerText.(*bo.TextBox).Text, character, "markerText")
-			tu.AssertEqual(t, content.(*bo.TextBox).Text, "abc", "content")
+			tu.AssertEqual(t, markerText.(*bo.TextBox).Text, character)
+			tu.AssertEqual(t, content.(*bo.TextBox).Text, "abc")
 		}
 	}
 }
@@ -64,12 +63,12 @@ func TestListsEmptyItem(t *testing.T) {
         <li>a</li>
       </ul>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	unorderedList := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	unorderedList := unpack1(body)
 	li1, li2, li3 := unpack3(unorderedList)
-	tu.AssertEqual(t, li1.Box().PositionY != li2.Box().PositionY, true, "li1")
-	tu.AssertEqual(t, li2.Box().PositionY != li3.Box().PositionY, true, "li1")
+	tu.AssertEqual(t, li1.Box().PositionY != li2.Box().PositionY, true)
+	tu.AssertEqual(t, li2.Box().PositionY != li3.Box().PositionY, true)
 }
 
 // @pytest.mark.xfail
@@ -82,9 +81,9 @@ func TestListsEmptyItem(t *testing.T) {
 //         <li>a</li>
 //       </ul>
 //     `)
-//     html := page.Box().Children[0]
-//     body := html.Box().Children[0]
-//     unorderedList := body.Box().Children[0]
+//     html =  unpack1(page)
+//     body :=  unpack1(html)
+//     unorderedList := unpack1(body)
 //     li1, li2, li3 = unorderedList.Box().Children
 //     tu.AssertEqual(t, li1.Box().PositionY != li2.Box().PositionY != li3.Box().PositionY, "li1")
 
@@ -104,20 +103,20 @@ func TestListsPageBreak(t *testing.T) {
       </ul>
     `)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	ul := body.Box().Children[0]
-	tu.AssertEqual(t, len(ul.Box().Children), 3, "len")
+	html := unpack1(page1)
+	body := unpack1(html)
+	ul := unpack1(body)
+	tu.AssertEqual(t, len(ul.Box().Children), 3)
 	for _, li := range ul.Box().Children {
-		tu.AssertEqual(t, len(li.Box().Children), 2, "len")
+		tu.AssertEqual(t, len(li.Box().Children), 2)
 	}
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	ul = body.Box().Children[0]
-	tu.AssertEqual(t, len(ul.Box().Children), 1, "len")
+	html = unpack1(page2)
+	body = unpack1(html)
+	ul = unpack1(body)
+	tu.AssertEqual(t, len(ul.Box().Children), 1)
 	for _, li := range ul.Box().Children {
-		tu.AssertEqual(t, len(li.Box().Children), 2, "len")
+		tu.AssertEqual(t, len(li.Box().Children), 2)
 	}
 }
 
@@ -137,16 +136,16 @@ func TestListsPageBreakMargin(t *testing.T) {
         <li><p>a</p></li>
       </ul>
    `)
-	tu.AssertEqual(t, len(pages), 2, "")
+	tu.AssertEqual(t, len(pages), 2)
 	for _, page := range pages {
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		ul := body.Box().Children[0]
-		tu.AssertEqual(t, len(ul.Box().Children), 2, "")
+		html := unpack1(page)
+		body := unpack1(html)
+		ul := unpack1(body)
+		tu.AssertEqual(t, len(ul.Box().Children), 2)
 		for _, li := range ul.Box().Children {
-			tu.AssertEqual(t, len(li.Box().Children), 2, "")
-			tu.AssertEqual(t, li.Box().Children[0].Box().PositionY,
-				li.Box().Children[1].Box().Children[0].Box().PositionY, "")
+			tu.AssertEqual(t, len(li.Box().Children), 2)
+			tu.AssertEqual(t, unpack1(li).Box().PositionY,
+				unpack1(li.Box().Children[1]).Box().PositionY)
 		}
 	}
 }
