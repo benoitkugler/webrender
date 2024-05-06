@@ -18,7 +18,7 @@ func processFontFace(css string, t *testing.T) FontFaceDescriptors {
 	if !ok || atRule.AtKeyword != "font-face" {
 		t.Fatalf("expected @font-face got %v", stylesheet[0])
 	}
-	tokens := parser.ParseDeclarationList(*atRule.Content, false, false)
+	tokens := parser.ParseDeclarationList(atRule.Content, false, false)
 	return PreprocessFontFaceDescriptors("https://weasyprint.org/foo/", tokens)
 }
 

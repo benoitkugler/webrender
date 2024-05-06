@@ -3,7 +3,7 @@ package svg
 import (
 	"strings"
 
-	"github.com/benoitkugler/webrender/css/parser"
+	pa "github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/selector"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
@@ -48,17 +48,17 @@ func fetchURL(url, baseURL string) ([]byte, string, error) {
 }
 
 // Find rules among stylesheet rules and imports.
-func findStylesheetsRules(rules []parser.Token, baseUrl string) (out []parser.QualifiedRule) {
+func findStylesheetsRules(rules []pa.Compound, baseUrl string) (out []pa.QualifiedRule) {
 	for _, rule := range rules {
 		switch rule := rule.(type) {
-		case parser.AtRule:
-			if rule.AtKeyword.Lower() == "import" && rule.Content == nil {
-				urlToken := parser.ParseOneComponentValue(*rule.Prelude)
+		case pa.AtRule:
+			if utils.AsciiLower(rule.AtKeyword) == "import" && rule.Content == nil {
+				urlToken := pa.ParseOneComponentValue(rule.Prelude)
 				var url string
 				switch urlToken := urlToken.(type) {
-				case parser.StringToken:
+				case pa.String:
 					url = urlToken.Value
-				case parser.URLToken:
+				case pa.URL:
 					url = urlToken.Value
 				default:
 					continue
@@ -69,11 +69,11 @@ func findStylesheetsRules(rules []parser.Token, baseUrl string) (out []parser.Qu
 					continue
 				}
 
-				stylesheet := parser.ParseStylesheetBytes(cssContent, true, true)
+				stylesheet := pa.ParseStylesheetBytes(cssContent, true, true)
 				out = append(out, findStylesheetsRules(stylesheet, resolvedURL)...)
 			}
 			// if rule.AtKeyword.Lower() == "media":
-		case parser.QualifiedRule:
+		case pa.QualifiedRule:
 			out = append(out, rule)
 			// elif rule.type == "error":
 		}
@@ -87,16 +87,16 @@ type declaration struct {
 }
 
 // Parse declarations in a given rule content.
-func parseDeclarations(input []parser.Token) (normalDeclarations, importantDeclarations []declaration) {
-	for _, decl := range parser.ParseDeclarationList(input, false, false) {
-		if decl, ok := decl.(parser.Declaration); ok {
+func parseDeclarations(input []pa.Token) (normalDeclarations, importantDeclarations []declaration) {
+	for _, decl := range pa.ParseDeclarationList(input, false, false) {
+		if decl, ok := decl.(pa.Declaration); ok {
 			if strings.HasPrefix(string(decl.Name), "-") {
 				continue
 			}
 			if decl.Important {
-				importantDeclarations = append(importantDeclarations, declaration{decl.Name.Lower(), parser.Serialize(decl.Value)})
+				importantDeclarations = append(importantDeclarations, declaration{utils.AsciiLower(decl.Name), pa.Serialize(decl.Value)})
 			} else {
-				normalDeclarations = append(normalDeclarations, declaration{decl.Name.Lower(), parser.Serialize(decl.Value)})
+				normalDeclarations = append(normalDeclarations, declaration{utils.AsciiLower(decl.Name), pa.Serialize(decl.Value)})
 			}
 		}
 	}
@@ -115,10 +115,10 @@ func parseStylesheets(stylesheets [][]byte, url string) (matcher, matcher) {
 	var normalMatcher, importantMatcher matcher
 	// Parse rules and fill matchers
 	for _, css := range stylesheets {
-		stylesheet := parser.ParseStylesheetBytes(css, true, true)
+		stylesheet := pa.ParseStylesheetBytes(css, true, true)
 		for _, rule := range findStylesheetsRules(stylesheet, url) {
-			normalDeclarations, importantDeclarations := parseDeclarations(*rule.Content)
-			prelude := parser.Serialize(*rule.Prelude)
+			normalDeclarations, importantDeclarations := parseDeclarations(rule.Content)
+			prelude := pa.Serialize(rule.Prelude)
 			selector, err := selector.ParseGroup(prelude)
 			if err != nil {
 				logger.WarningLogger.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
@@ -153,7 +153,7 @@ func expandProperty(d declaration) []declaration {
 		return []declaration{d}
 	}
 
-	tokens := validation.RemoveWhitespace(parser.Tokenize([]byte(d.value), true))
+	tokens := validation.RemoveWhitespace(pa.Tokenize([]byte(d.value), true))
 	expanded, err := validation.ExpandFont(tokens)
 	if err != nil {
 		logger.WarningLogger.Printf("ignoring %s property: %s", d.property, err)
@@ -164,7 +164,7 @@ func expandProperty(d declaration) []declaration {
 	for i, p := range expanded {
 		out[i] = declaration{
 			property: p.Name,
-			value:    parser.Serialize(p.Tokens),
+			value:    pa.Serialize(p.Tokens),
 		}
 	}
 	return out
@@ -173,7 +173,7 @@ func expandProperty(d declaration) []declaration {
 func (attrs nodeAttributes) applyStyle(baseURL string, node *html.Node, normal, important matcher) {
 	var normalAttr, importantAttr []declaration
 	if styleAttr := attrs["style"]; styleAttr != "" {
-		normalAttr, importantAttr = parseDeclarations(parser.Tokenize([]byte(styleAttr), false))
+		normalAttr, importantAttr = parseDeclarations(pa.Tokenize([]byte(styleAttr), false))
 	}
 	delete(attrs, "style") // not useful anymore
 

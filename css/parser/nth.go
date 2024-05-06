@@ -4,44 +4,42 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/benoitkugler/webrender/utils"
 )
 
 var nDashDigitRe = regexp.MustCompile("^n(-[0-9]+)$")
 
-// Parse `<An+B> <http://drafts.csswg.org/csswg/css-syntax-3/#anb>`_,
-// as found in `:nth-child()
-// <http://drafts.csswg.org/csswg/selectors/#nth-child-pseudo>`
-// and related Selector pseudo-classes.
-// Although tinycss2 does not include a full Selector parser,
-// this bit of syntax is included as it is particularly tricky to define
-// on top of a CSS tokenizer.
+// Parse <An+B> (see <http://drafts.csswg.org/csswg/css-syntax-3/#anb>),
+// as found in `:nth-child()` and related selector pseudo-classes.
+//
 // Returns  [a, b] or nil
 func ParseNth(input []Token) *[2]int {
-	tokens := NewTokenIterator(input)
-	token_ := nextSignificant(tokens)
+	tokens := NewIter(input)
+	token_ := tokens.NextSignificant()
 	if token_ == nil {
 		return nil
 	}
 	switch token := token_.(type) {
-	case NumberToken:
-		if token.IsInteger {
-			return parseEnd(tokens, 0, token.IntValue())
+	case Number:
+		if token.IsInt() {
+			return parseEnd(tokens, 0, token.Int())
 		}
-	case DimensionToken:
-		if token.IsInteger {
-			unit := token.Unit.Lower()
+	case Dimension:
+		if token.IsInt() {
+			unit := utils.AsciiLower(token.Unit)
 			if unit == "n" {
-				return parseB(tokens, token.IntValue())
+				return parseB(tokens, token.Int())
 			} else if unit == "n-" {
-				return parseSignlessB(tokens, token.IntValue(), -1)
+				return parseSignlessB(tokens, token.Int(), -1)
 			} else {
 				if match, b := matchInt(unit); match {
-					return parseEnd(tokens, token.IntValue(), b)
+					return parseEnd(tokens, token.Int(), b)
 				}
 			}
 		}
-	case IdentToken:
-		ident := token.Value.Lower()
+	case Ident:
+		ident := utils.AsciiLower(token.Value)
 		if ident == "even" {
 			return parseEnd(tokens, 2, 0)
 		} else if ident == "odd" {
@@ -63,11 +61,11 @@ func ParseNth(input []Token) *[2]int {
 				return parseEnd(tokens, 1, b)
 			}
 		}
-	case LiteralToken:
+	case Literal:
 		if token.Value == "+" {
 			token_ = tokens.Next() // Whitespace after an initial "+" is invalid.
-			if identToken, ok := token_.(IdentToken); ok {
-				ident := identToken.Value.Lower()
+			if identToken, ok := token_.(Ident); ok {
+				ident := utils.AsciiLower(identToken.Value)
 				if ident == "n" {
 					return parseB(tokens, 1)
 				} else if ident == "n-" {
@@ -93,33 +91,33 @@ func matchInt(s string) (bool, int) {
 	return false, 0
 }
 
-func parseB(tokens *TokenIterator, a int) *[2]int {
-	token := nextSignificant(tokens)
+func parseB(tokens *TokensIter, a int) *[2]int {
+	token := tokens.NextSignificant()
 	if token == nil {
 		return &[2]int{a, 0}
 	}
-	lit, ok := token.(LiteralToken)
+	lit, ok := token.(Literal)
 	if ok && lit.Value == "+" {
 		return parseSignlessB(tokens, a, 1)
 	} else if ok && lit.Value == "-" {
 		return parseSignlessB(tokens, a, -1)
 	}
-	if number, ok := token.(NumberToken); ok && number.IsInteger && strings.Contains("-+", number.Representation[0:1]) {
-		return parseEnd(tokens, a, number.IntValue())
+	if number, ok := token.(Number); ok && number.IsInt() && strings.Contains("-+", number.Value[0:1]) {
+		return parseEnd(tokens, a, number.Int())
 	}
 	return nil
 }
 
-func parseSignlessB(tokens *TokenIterator, a, bSign int) *[2]int {
-	token := nextSignificant(tokens)
-	if number, ok := token.(NumberToken); ok && number.IsInteger && !strings.Contains("-+", number.Representation[0:1]) {
-		return parseEnd(tokens, a, bSign*number.IntValue())
+func parseSignlessB(tokens *TokensIter, a, bSign int) *[2]int {
+	token := tokens.NextSignificant()
+	if number, ok := token.(Number); ok && number.IsInt() && !strings.Contains("-+", number.Value[0:1]) {
+		return parseEnd(tokens, a, bSign*number.Int())
 	}
 	return nil
 }
 
-func parseEnd(tokens *TokenIterator, a, b int) *[2]int {
-	if nextSignificant(tokens) == nil {
+func parseEnd(tokens *TokensIter, a, b int) *[2]int {
+	if tokens.NextSignificant() == nil {
 		return &[2]int{a, b}
 	}
 	return nil

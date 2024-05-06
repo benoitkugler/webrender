@@ -171,7 +171,7 @@ func resolveVar(specified map[string]pr.ValidatedProperty, var_ pr.VarData) pr.R
 	// handle the initial case
 	if ok && len(computedValue) == 1 {
 		value := computedValue[0]
-		if ident, ok := value.(parser.IdentToken); ok && ident.Value == "initial" {
+		if ident, ok := value.(parser.Ident); ok && ident.Value == "initial" {
 			return default_
 		}
 	}

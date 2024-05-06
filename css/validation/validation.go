@@ -9,7 +9,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
-	"github.com/benoitkugler/webrender/css/parser"
+	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 )
 
@@ -319,7 +319,7 @@ func init() {
 	}
 }
 
-type Token = parser.Token
+type Token = pa.Token
 
 type (
 	validator      func(tokens []Token, baseUrl string) pr.CssProperty // dont support var(), attr()
@@ -350,7 +350,7 @@ func Validate(name pr.KnownProp, tokens []Token, baseUrl string) (out pr.Cascade
 
 // Default validator for non-shorthand pr.
 // required = false
-func validateNonShorthand(baseUrl string, name string, tokens []parser.Token, required bool) (out pr.NamedProperty, err error) {
+func validateNonShorthand(baseUrl string, name string, tokens []pa.Token, required bool) (out pr.NamedProperty, err error) {
 	if strings.HasPrefix(name, "--") { // variable
 		key := pr.PropKey{Var: name}
 		// can't validate variables contents before substitution
@@ -400,7 +400,7 @@ func validateNonShorthand(baseUrl string, name string, tokens []parser.Token, re
 	return pr.NamedProperty{Name: pr.PropKey{KnownProp: prop}, Property: value.AsValidated()}, nil
 }
 
-func defaultValidateShorthand(baseUrl, name string, tokens []parser.Token) (pr.NamedProperties, error) {
+func defaultValidateShorthand(baseUrl, name string, tokens []pa.Token) (pr.NamedProperties, error) {
 	np, err := validateNonShorthand(baseUrl, name, tokens, false)
 	return pr.NamedProperties{np}, err
 }
@@ -507,25 +507,25 @@ var notPrintMedia = utils.NewSet(
 // Expand shorthand properties and filter unsupported properties and values.
 // Log a warning for every ignored declaration.
 // Return a iterable of “(name, value, important)“ tuples.
-func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedProperty {
+func PreprocessDeclarations(baseUrl string, declarations []pa.Compound) []ValidatedProperty {
 	var out []ValidatedProperty
 	for _, _declaration := range declarations {
-		if errToken, ok := _declaration.(parser.ParseError); ok {
+		if errToken, ok := _declaration.(pa.ParseError); ok {
 			logger.WarningLogger.Printf("Error: %s \n", errToken.Message)
 		}
 
-		declaration, ok := _declaration.(parser.Declaration)
+		declaration, ok := _declaration.(pa.Declaration)
 		if !ok {
 			continue
 		}
 
 		name := string(declaration.Name)
 		if !strings.HasPrefix(name, "--") { // check for non variable, case insensitive
-			name = declaration.Name.Lower()
+			name = utils.AsciiLower(declaration.Name)
 		}
 
 		validationError := func(reason string) {
-			logger.WarningLogger.Printf("Ignored `%s:%s` , %s. \n", declaration.Name, parser.Serialize(declaration.Value), reason)
+			logger.WarningLogger.Printf("Ignored `%s:%s` , %s. \n", declaration.Name, pa.Serialize(declaration.Value), reason)
 		}
 
 		if _, in := notPrintMedia[name]; in {
@@ -539,11 +539,11 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 				name = unprefixedName
 			} else if _, in := unstable[unprefixedName]; in {
 				logger.WarningLogger.Printf("Deprecated `%s:%s`, prefixes on unstable attributes are deprecated, use `%s` instead. \n",
-					declaration.Name, parser.Serialize(declaration.Value), unprefixedName)
+					declaration.Name, pa.Serialize(declaration.Value), unprefixedName)
 				name = unprefixedName
 			} else {
 				logger.WarningLogger.Printf("Ignored `%s:%s`,prefix on this attribute is not supported, use `%s` instead. \n",
-					declaration.Name, parser.Serialize(declaration.Value), unprefixedName)
+					declaration.Name, pa.Serialize(declaration.Value), unprefixedName)
 				continue
 			}
 		}
@@ -588,8 +588,8 @@ func PreprocessDeclarations(baseUrl string, declarations []Token) []ValidatedPro
 // If `token` is a keyword, return its name.
 // Otherwise return empty string.
 func getKeyword(token Token) string {
-	if ident, ok := token.(parser.IdentToken); ok {
-		return ident.Value.Lower()
+	if ident, ok := token.(pa.Ident); ok {
+		return utils.AsciiLower(ident.Value)
 	}
 	return ""
 }
@@ -606,17 +606,17 @@ func getSingleKeyword(tokens []Token) string {
 // negative  = true, percentage = false
 func getLength(token Token, negative, percentage bool) pr.Dimension {
 	switch token := token.(type) {
-	case parser.PercentageToken:
-		if percentage && (negative || token.Value >= 0) {
-			return pr.Dimension{Value: pr.Float(token.Value), Unit: pr.Perc}
+	case pa.Percentage:
+		if percentage && (negative || token.ValueF >= 0) {
+			return pr.Dimension{Value: pr.Float(token.ValueF), Unit: pr.Perc}
 		}
-	case parser.DimensionToken:
+	case pa.Dimension:
 		unit, isKnown := LENGTHUNITS[string(token.Unit)]
-		if isKnown && (negative || token.Value >= 0) {
-			return pr.Dimension{Value: pr.Float(token.Value), Unit: unit}
+		if isKnown && (negative || token.ValueF >= 0) {
+			return pr.Dimension{Value: pr.Float(token.ValueF), Unit: unit}
 		}
-	case parser.NumberToken:
-		if token.Value == 0 {
+	case pa.Number:
+		if token.ValueF == 0 {
 			return pr.Dimension{Unit: pr.Scalar}
 		}
 	}
@@ -625,10 +625,10 @@ func getLength(token Token, negative, percentage bool) pr.Dimension {
 
 // Return the value in radians of an <angle> token, or None.
 func getAngle(token Token) (utils.Fl, bool) {
-	if dim, ok := token.(parser.DimensionToken); ok {
+	if dim, ok := token.(pa.Dimension); ok {
 		unit, in := AngleUnits[string(dim.Unit)]
 		if in {
-			return dim.Value * ANGLETORADIANS[unit], true
+			return dim.ValueF * ANGLETORADIANS[unit], true
 		}
 	}
 	return 0, false
@@ -636,10 +636,10 @@ func getAngle(token Token) (utils.Fl, bool) {
 
 // Return the value in dppx of a <resolution> token, or false.
 func getResolution(token Token) (utils.Fl, bool) {
-	if dim, ok := token.(parser.DimensionToken); ok {
+	if dim, ok := token.(pa.Dimension); ok {
 		factor, in := RESOLUTIONTODPPX[string(dim.Unit)]
 		if in {
-			return dim.Value * factor, true
+			return dim.ValueF * factor, true
 		}
 	}
 	return 0, false
@@ -681,7 +681,7 @@ func backgroundAttachment(tokens []Token, _ string) pr.CssProperty {
 // @singleToken
 func otherColors(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		c := parser.ParseColor(tokens[0])
+		c := pa.ParseColor(tokens[0])
 		if !c.IsNone() {
 			return pr.Color(c)
 		}
@@ -695,9 +695,9 @@ func outlineColor(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
 		token := tokens[0]
 		if getKeyword(token) == "invert" {
-			return pr.Color{Type: parser.ColorCurrentColor}
+			return pr.Color{Type: pa.ColorCurrentColor}
 		} else {
-			return pr.Color(parser.ParseColor(token))
+			return pr.Color(pa.ParseColor(token))
 		}
 	}
 	return nil
@@ -736,8 +736,8 @@ func color(tokens []Token, _ string) pr.CascadedProperty {
 		return pr.CascadedProperty{}
 	}
 	token := tokens[0]
-	result := parser.ParseColor(token)
-	if result.Type == parser.ColorCurrentColor {
+	result := pa.ParseColor(token)
+	if result.Type == pa.ColorCurrentColor {
 		return pr.Inherit.AsCascaded()
 	} else {
 		return pr.AsCascaded(pr.Color(result))
@@ -753,7 +753,7 @@ func _backgroundImage(tokens []Token, baseUrl string) (pr.Image, error) {
 	}
 	token := tokens[0]
 
-	if _, ok := token.(parser.FunctionBlock); !ok {
+	if _, ok := token.(pa.FunctionBlock); !ok {
 		if getKeyword(token) == "none" {
 			return pr.NoneImage{}, nil
 		}
@@ -804,7 +804,7 @@ func listStyleImage(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	}
 	token := tokens[0]
 
-	if token.Type() != "function" {
+	if token.Kind() != pa.KFunctionBlock {
 		if getKeyword(token) == "none" {
 			return pr.NoneImage{}, nil
 		}
@@ -819,7 +819,7 @@ func listStyleImage(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	return nil, nil
 }
 
-var centerKeywordFakeToken = parser.IdentToken{Value: "center"}
+var centerKeywordFakeToken = pa.NewIdent("center", pa.Pos{})
 
 // @validator(unstable=true)
 func transformOrigin(tokens []Token, _ string) pr.CssProperty {
@@ -1133,11 +1133,11 @@ func page(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if ident, ok := token.(parser.IdentToken); ok {
-		if ident.Value.Lower() == "auto" {
+	if ident, ok := token.(pa.Ident); ok {
+		if utils.AsciiLower(ident.Value) == "auto" {
 			return pr.Page{String: "auto", Valid: true}
 		}
-		return pr.Page{String: string(ident.Value), Valid: true}
+		return pr.Page{String: ident.Value, Valid: true}
 	}
 	return nil
 }
@@ -1331,7 +1331,7 @@ func content(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	var token Token
 	for len(tokens) > 0 {
 		if len(tokens) >= 2 {
-			if lit, ok := tokens[1].(parser.LiteralToken); ok && lit.Value == "," {
+			if lit, ok := tokens[1].(pa.Literal); ok && lit.Value == "," {
 				token, tokens = tokens[0], tokens[2:]
 				im, err := getImage(token, baseUrl)
 				if err != nil {
@@ -1355,8 +1355,8 @@ func content(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 		return nil, nil
 	}
 	if len(tokens) >= 3 {
-		lit, ok := tokens[len(tokens)-2].(parser.LiteralToken)
-		if tokens[len(tokens)-1].Type() == parser.StringTokenT && ok && lit.Value == "/" {
+		lit, ok := tokens[len(tokens)-2].(pa.Literal)
+		if tokens[len(tokens)-1].Kind() == pa.KString && ok && lit.Value == "/" {
 			// Ignore text for speech
 			tokens = tokens[:len(tokens)-2]
 		}
@@ -1405,10 +1405,10 @@ func counter(tokens []Token, defaultInteger int) ([]pr.IntString, error) {
 		results []pr.IntString
 		integer int
 	)
-	iter := parser.NewTokenIterator(tokens)
+	iter := pa.NewIter(tokens)
 	token := iter.Next()
 	for token != nil {
-		ident, ok := token.(parser.IdentToken)
+		ident, ok := token.(pa.Ident)
 		if !ok {
 			return nil, nil // expected a keyword here
 		}
@@ -1417,9 +1417,9 @@ func counter(tokens []Token, defaultInteger int) ([]pr.IntString, error) {
 			return nil, fmt.Errorf("invalid counter name: %s", counterName)
 		}
 		token = iter.Next()
-		if number, ok := token.(parser.NumberToken); ok && number.IsInteger { // implies token != nil
+		if number, ok := token.(pa.Number); ok && number.IsInt() { // implies token != nil
 			// Found an integer. Use it and get the next token
-			integer = number.IntValue()
+			integer = number.Int()
 			token = iter.Next()
 		} else {
 			// Not an integer. Might be the next counter name.
@@ -1537,7 +1537,7 @@ func display(tokens []Token, _ string) pr.CssProperty {
 
 	var outside, inside, listItem string
 	for _, token := range tokens {
-		ident, ok := token.(parser.IdentToken)
+		ident, ok := token.(pa.Ident)
 		if !ok {
 			return nil
 		}
@@ -1597,12 +1597,12 @@ func _fontFamily(tokens []Token) string {
 	if len(tokens) == 0 {
 		return ""
 	}
-	if tt, ok := tokens[0].(parser.StringToken); len(tokens) == 1 && ok {
+	if tt, ok := tokens[0].(pa.String); len(tokens) == 1 && ok {
 		return tt.Value
 	} else if len(tokens) > 0 {
 		var values []string
 		for _, token := range tokens {
-			if tt, ok := token.(parser.IdentToken); ok {
+			if tt, ok := token.(pa.Ident); ok {
 				values = append(values, string(tt.Value))
 			} else {
 				return ""
@@ -1651,7 +1651,7 @@ func fontLanguageOverride(tokens []Token, _ string) pr.CssProperty {
 	if keyword == "normal" {
 		return pr.String(keyword)
 	}
-	if tt, ok := token.(parser.StringToken); ok {
+	if tt, ok := token.(pa.String); ok {
 		return pr.String(tt.Value)
 	}
 	return nil
@@ -1668,7 +1668,7 @@ func parseFontVariant(tokens []Token, all utils.Set, couples [][]string) pr.SStr
 		return false
 	}
 	for _, token := range tokens {
-		ident, isIdent := token.(parser.IdentToken)
+		ident, isIdent := token.(pa.Ident)
 		if !isIdent {
 			return pr.SStrings{}
 		}
@@ -1774,15 +1774,15 @@ func _fontFeatureSettings(tokens []Token) pr.SIntStrings {
 		if len(tokens) == 2 {
 			tokens, token = tokens[0:1], tokens[1]
 			switch tt := token.(type) {
-			case parser.IdentToken:
+			case pa.Ident:
 				if tt.Value == "on" {
 					value = 1
 				} else {
 					value = 0
 				}
-			case parser.NumberToken:
-				if tt.IsInteger && tt.IntValue() >= 0 {
-					value = tt.IntValue()
+			case pa.Number:
+				if tt.IsInt() && tt.Int() >= 0 {
+					value = tt.Int()
 				}
 			}
 		} else if len(tokens) == 1 {
@@ -1791,7 +1791,7 @@ func _fontFeatureSettings(tokens []Token) pr.SIntStrings {
 
 		if len(tokens) == 1 {
 			token = tokens[0]
-			tt, ok := token.(parser.StringToken)
+			tt, ok := token.(pa.String)
 			if ok && len(tt.Value) == 4 {
 				ok := true
 				for _, letter := range tt.Value {
@@ -1861,10 +1861,10 @@ func fontVariationSettings(tokens []Token, _ string) pr.CssProperty {
 	// @comma_separated_list
 	fontVariationSettingsList := func(tokens []Token) (pr.FloatString, bool) {
 		if len(tokens) == 2 {
-			keyV, ok1 := tokens[0].(parser.StringToken)
-			valueV, ok2 := tokens[1].(parser.NumberToken)
+			keyV, ok1 := tokens[0].(pa.String)
+			valueV, ok2 := tokens[1].(pa.Number)
 			if ok1 && ok2 {
-				return pr.FloatString{String: keyV.Value, Float: valueV.Value}, true
+				return pr.FloatString{String: keyV.Value, Float: valueV.ValueF}, true
 			}
 		}
 		return pr.FloatString{}, false
@@ -1939,9 +1939,9 @@ func fontWeight(tokens []Token, _ string) pr.CssProperty {
 	if keyword == "normal" || keyword == "bold" || keyword == "bolder" || keyword == "lighter" {
 		return pr.IntString{String: keyword}
 	}
-	if number, ok := token.(parser.NumberToken); ok {
-		intValue := number.IntValue()
-		if number.IsInteger && (intValue == 100 || intValue == 200 || intValue == 300 || intValue == 400 || intValue == 500 || intValue == 600 || intValue == 700 || intValue == 800 || intValue == 900) {
+	if number, ok := token.(pa.Number); ok {
+		intValue := number.Int()
+		if number.IsInt() && (intValue == 100 || intValue == 200 || intValue == 300 || intValue == 400 || intValue == 500 || intValue == 600 || intValue == 700 || intValue == 800 || intValue == 900) {
 			return pr.IntString{Int: intValue}
 		}
 	}
@@ -2010,16 +2010,16 @@ func lineHeight(tokens []Token, _ string) pr.CssProperty {
 	}
 
 	switch tt := token.(type) {
-	case parser.NumberToken:
-		if tt.Value >= 0 {
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.Value), Unit: pr.Scalar}}
+	case pa.Number:
+		if tt.ValueF >= 0 {
+			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.ValueF), Unit: pr.Scalar}}
 		}
-	case parser.PercentageToken:
-		if tt.Value >= 0 {
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.Value), Unit: pr.Perc}}
+	case pa.Percentage:
+		if tt.ValueF >= 0 {
+			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.ValueF), Unit: pr.Perc}}
 		}
-	case parser.DimensionToken:
-		if tt.Value >= 0 {
+	case pa.Dimension:
+		if tt.ValueF >= 0 {
 			l := getLength(token, true, false)
 			if l.IsNone() {
 				return nil
@@ -2060,20 +2060,20 @@ func listStyleType_(tokens []Token) (out pr.CounterStyleID, ok bool) {
 	}
 	token := tokens[0]
 	switch token := token.(type) {
-	case parser.IdentToken:
+	case pa.Ident:
 		return pr.CounterStyleID{Name: string(token.Value)}, true
-	case parser.StringToken:
+	case pa.String:
 		return pr.CounterStyleID{Type: "string", Name: token.Value}, true
-	case parser.FunctionBlock:
+	case pa.FunctionBlock:
 		if token.Name != "symbols" {
 			return out, false
 		}
-		functionArguments := RemoveWhitespace(*token.Arguments)
+		functionArguments := RemoveWhitespace(token.Arguments)
 		if len(functionArguments) == 0 {
 			return out, false
 		}
 		arguments := []string{"symbolic"}
-		if arg0, ok := functionArguments[0].(parser.IdentToken); ok {
+		if arg0, ok := functionArguments[0].(pa.Ident); ok {
 			if arg0.Value == "cyclic" || arg0.Value == "numeric" || arg0.Value == "alphabetic" || arg0.Value == "symbolic" || arg0.Value == "fixed" {
 				arguments = []string{string(arg0.Value)}
 				functionArguments = functionArguments[1:]
@@ -2087,7 +2087,7 @@ func listStyleType_(tokens []Token) (out pr.CounterStyleID, ok bool) {
 		}
 
 		for _, arg := range functionArguments {
-			if str, ok := arg.(parser.StringToken); ok {
+			if str, ok := arg.(pa.String); ok {
 				arguments = append(arguments, str.Value)
 			} else {
 				return out, false
@@ -2168,8 +2168,8 @@ func opacity(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok {
-		return pr.Float(utils.MinF(1, utils.MaxF(0, number.Value)))
+	if number, ok := token.(pa.Number); ok {
+		return pr.Float(utils.MinF(1, utils.MaxF(0, number.ValueF)))
 	}
 	return nil
 }
@@ -2185,9 +2185,9 @@ func zIndex(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "auto" {
 		return pr.IntString{String: "auto"}
 	}
-	if number, ok := token.(parser.NumberToken); ok {
-		if number.IsInteger {
-			return pr.IntString{Int: number.IntValue()}
+	if number, ok := token.(pa.Number); ok {
+		if number.IsInt() {
+			return pr.IntString{Int: number.Int()}
 		}
 	}
 	return nil
@@ -2202,9 +2202,9 @@ func orphansWidows(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok {
-		value := number.IntValue()
-		if number.IsInteger && value >= 1 {
+	if number, ok := token.(pa.Number); ok {
+		value := number.Int()
+		if number.IsInt() && value >= 1 {
 			return pr.Int(value)
 		}
 	}
@@ -2219,9 +2219,9 @@ func columnCount(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok {
-		value := number.IntValue()
-		if number.IsInteger && value >= 1 {
+	if number, ok := token.(pa.Number); ok {
+		value := number.Int()
+		if number.IsInt() && value >= 1 {
 			return pr.IntString{Int: value}
 		}
 	}
@@ -2276,8 +2276,8 @@ func position(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if fn, ok := token.(parser.FunctionBlock); ok && fn.Name == "running" && len(*fn.Arguments) == 1 {
-		if ident, ok := (*fn.Arguments)[0].(parser.IdentToken); ok {
+	if fn, ok := token.(pa.FunctionBlock); ok && fn.Name == "running" && len(fn.Arguments) == 1 {
+		if ident, ok := (fn.Arguments)[0].(pa.Ident); ok {
 			return pr.BoolString{Bool: true, String: string(ident.Value)}
 		}
 	}
@@ -2298,8 +2298,8 @@ func quotes(tokens []Token, _ string) pr.CssProperty {
 		// Separate open && close quotes.
 		// eg.  ("«", "»", "“", "”")  -> (("«", "“"), ("»", "”"))
 		for i := 0; i < len(tokens); i += 2 {
-			open, ok1 := tokens[i].(parser.StringToken)
-			close_, ok2 := tokens[i+1].(parser.StringToken)
+			open, ok1 := tokens[i].(pa.String)
+			close_, ok2 := tokens[i+1].(pa.String)
 			if ok1 && ok2 {
 				opens = append(opens, open.Value)
 				closes = append(closes, close_.Value)
@@ -2539,8 +2539,8 @@ func _flexGrowShrink(tokens []Token) (pr.Fl, bool) {
 		return 0, false
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok {
-		return number.Value, true
+	if number, ok := token.(pa.Number); ok {
+		return number.ValueF, true
 	}
 	return 0, false
 }
@@ -2552,8 +2552,8 @@ func order(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok && number.IsInteger {
-		return pr.Int(number.IntValue())
+	if number, ok := token.(pa.Number); ok && number.IsInt() {
+		return pr.Int(number.Int())
 	}
 	return nil
 }
@@ -2739,7 +2739,7 @@ func anchor(tokens []Token, _ string) (out pr.CssProperty) {
 	name, args := parseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
-			if ident, ok := args[0].(parser.IdentToken); ok && name == "attr" {
+			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
 				return pr.AttrData{Name: string(ident.Value)}
 			}
 		}
@@ -2769,7 +2769,7 @@ func link(tokens []Token, baseUrl string) (out pr.CssProperty, err error) {
 	name, args := parseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
-			if ident, ok := args[0].(parser.IdentToken); ok && name == "attr" {
+			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
 				attr = pr.AttrData{Name: string(ident.Value)}
 			}
 		}
@@ -2789,9 +2789,9 @@ func tabSize(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok {
-		if number.IsInteger && number.Value >= 0 { // no unit means multiple of space width
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(number.Value)}}
+	if number, ok := token.(pa.Number); ok {
+		if number.IsInt() && number.ValueF >= 0 { // no unit means multiple of space width
+			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(number.ValueF)}}
 		}
 	}
 	return pr.Value{Dimension: getLength(token, false, false)}
@@ -2825,7 +2825,7 @@ func hyphenateCharacter(tokens []Token, _ string) pr.CssProperty {
 	keyword := getKeyword(token)
 	if keyword == "auto" {
 		return pr.String("‐")
-	} else if str, ok := token.(parser.StringToken); ok {
+	} else if str, ok := token.(pa.String); ok {
 		return pr.String(str.Value)
 	}
 	return nil
@@ -2855,45 +2855,45 @@ func hyphenateLimitChars(tokens []Token, _ string) pr.CssProperty {
 		keyword := getKeyword(token)
 		if keyword == "auto" {
 			return pr.Ints3{5, 2, 2}
-		} else if number, ok := token.(parser.NumberToken); ok && number.IsInteger {
-			return pr.Ints3{number.IntValue(), 2, 2}
+		} else if number, ok := token.(pa.Number); ok && number.IsInt() {
+			return pr.Ints3{number.Int(), 2, 2}
 		}
 	case 2:
 		total, left := tokens[0], tokens[1]
 		totalKeyword := getKeyword(total)
 		leftKeyword := getKeyword(left)
-		if totalNumber, ok := total.(parser.NumberToken); ok && totalNumber.IsInteger {
-			if leftNumber, ok := left.(parser.NumberToken); ok && leftNumber.IsInteger {
-				return pr.Ints3{totalNumber.IntValue(), leftNumber.IntValue(), leftNumber.IntValue()}
+		if totalNumber, ok := total.(pa.Number); ok && totalNumber.IsInt() {
+			if leftNumber, ok := left.(pa.Number); ok && leftNumber.IsInt() {
+				return pr.Ints3{totalNumber.Int(), leftNumber.Int(), leftNumber.Int()}
 			} else if leftKeyword == "auto" {
-				return pr.Ints3{totalNumber.IntValue(), 2, 2}
+				return pr.Ints3{totalNumber.Int(), 2, 2}
 			}
 		} else if totalKeyword == "auto" {
-			if leftNumber, ok := left.(parser.NumberToken); ok && leftNumber.IsInteger {
-				return pr.Ints3{5, leftNumber.IntValue(), leftNumber.IntValue()}
+			if leftNumber, ok := left.(pa.Number); ok && leftNumber.IsInt() {
+				return pr.Ints3{5, leftNumber.Int(), leftNumber.Int()}
 			} else if leftKeyword == "auto" {
 				return pr.Ints3{5, 2, 2}
 			}
 		}
 	case 3:
 		total, left, right := tokens[0], tokens[1], tokens[2]
-		totalNumber, okT := total.(parser.NumberToken)
-		leftNumber, okL := left.(parser.NumberToken)
-		rightNumber, okR := right.(parser.NumberToken)
-		if ((okT && totalNumber.IsInteger) || getKeyword(total) == "auto") &&
-			((okL && leftNumber.IsInteger) || getKeyword(left) == "auto") &&
-			((okR && rightNumber.IsInteger) || getKeyword(right) == "auto") {
+		totalNumber, okT := total.(pa.Number)
+		leftNumber, okL := left.(pa.Number)
+		rightNumber, okR := right.(pa.Number)
+		if ((okT && totalNumber.IsInt()) || getKeyword(total) == "auto") &&
+			((okL && leftNumber.IsInt()) || getKeyword(left) == "auto") &&
+			((okR && rightNumber.IsInt()) || getKeyword(right) == "auto") {
 			totalInt := 5
 			if okT {
-				totalInt = totalNumber.IntValue()
+				totalInt = totalNumber.Int()
 			}
 			leftInt := 2
 			if okL {
-				leftInt = leftNumber.IntValue()
+				leftInt = leftNumber.Int()
 			}
 			rightInt := 2
 			if okR {
-				rightInt = rightNumber.IntValue()
+				rightInt = rightNumber.Int()
 			}
 			return pr.Ints3{totalInt, leftInt, rightInt}
 		}
@@ -2915,11 +2915,11 @@ func lang(tokens []Token, _ string) pr.CssProperty {
 	name, args := parseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
-			if ident, ok := args[0].(parser.IdentToken); ok && name == "attr" {
+			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
 				return pr.NamedString{Name: "attr()", String: string(ident.Value)}
 			}
 		}
-	} else if str, ok := token.(parser.StringToken); ok {
+	} else if str, ok := token.(pa.String); ok {
 		return pr.NamedString{Name: "string", String: str.Value}
 	}
 	return nil
@@ -2949,8 +2949,8 @@ func bookmarkLevel(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if number, ok := token.(parser.NumberToken); ok && number.IsInteger && number.IntValue() >= 1 {
-		return pr.IntString{Int: number.IntValue()}
+	if number, ok := token.(pa.Number); ok && number.IsInt() && number.Int() >= 1 {
+		return pr.IntString{Int: number.Int()}
 	} else if getKeyword(token) == "none" {
 		return pr.IntString{String: "none"}
 	}
@@ -3043,7 +3043,7 @@ func blockEllipsis_(tokens []Token) (out pr.TaggedString, ok bool) {
 		return
 	}
 	token := tokens[0]
-	if str, ok := token.(parser.StringToken); ok {
+	if str, ok := token.(pa.String); ok {
 		return pr.TaggedString{S: str.Value}, true
 	}
 	switch keyword := getKeyword(token); keyword {
@@ -3066,8 +3066,8 @@ func transformFunction(token Token) (pr.SDimensions, error) {
 	for index, a := range args {
 		lengths[index] = getLength(a, true, true)
 		isAllLengths = isAllLengths && !lengths[index].IsNone()
-		if aNumber, ok := a.(parser.NumberToken); ok {
-			values[index] = pr.FToD(pr.Fl(aNumber.Value))
+		if aNumber, ok := a.(pa.Number); ok {
+			values[index] = pr.FToD(pr.Fl(aNumber.ValueF))
 		} else {
 			isAllNumber = false
 		}
@@ -3098,16 +3098,16 @@ func transformFunction(token Token) (pr.SDimensions, error) {
 				return pr.SDimensions{String: "translate", Dimensions: []pr.Dimension{pr.ZeroPixels, length}}, nil
 			}
 		case "scalex":
-			if number, ok := args[0].(parser.NumberToken); ok {
-				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(pr.Fl(number.Value)), pr.FToD(1.)}}, nil
+			if number, ok := args[0].(pa.Number); ok {
+				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(number.ValueF), pr.FToD(1.)}}, nil
 			}
 		case "scaley":
-			if number, ok := args[0].(parser.NumberToken); ok {
-				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(1.), pr.FToD(pr.Fl(number.Value))}}, nil
+			if number, ok := args[0].(pa.Number); ok {
+				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(1.), pr.FToD(number.ValueF)}}, nil
 			}
 		case "scale":
-			if number, ok := args[0].(parser.NumberToken); ok {
-				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(pr.Fl(number.Value)), pr.FToD(pr.Fl(number.Value))}}, nil
+			if number, ok := args[0].(pa.Number); ok {
+				return pr.SDimensions{String: "scale", Dimensions: []pr.Dimension{pr.FToD(number.ValueF), pr.FToD(number.ValueF)}}, nil
 			}
 		}
 	case 2:
@@ -3130,9 +3130,9 @@ func maxLines(tokens []Token, _ string) pr.CssProperty {
 		return nil
 	}
 	token := tokens[0]
-	if token, ok := token.(parser.NumberToken); ok {
-		if token.IsInteger {
-			return pr.TaggedInt{I: token.IntValue()}
+	if token, ok := token.(pa.Number); ok {
+		if token.IsInt() {
+			return pr.TaggedInt{I: token.Int()}
 		}
 	}
 	if keyword := getKeyword(token); keyword == "none" {
@@ -3168,7 +3168,7 @@ func appearance(tokens []Token, _ string) pr.CssProperty {
 func RemoveWhitespace(tokens []Token) []Token {
 	var out []Token
 	for _, token := range tokens {
-		if token.Type() != parser.WhitespaceTokenT && token.Type() != parser.CommentT {
+		if token.Kind() != pa.KWhitespace && token.Kind() != pa.KComment {
 			out = append(out, token)
 		}
 	}

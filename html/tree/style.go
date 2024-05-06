@@ -26,7 +26,7 @@ import (
 
 	"github.com/benoitkugler/webrender/css/selector"
 
-	"github.com/benoitkugler/webrender/css/parser"
+	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
@@ -36,7 +36,7 @@ import (
 // Reject anything not in here
 var pseudoElements = utils.NewSet("", "before", "after", "marker", "first-line", "first-letter", "footnote-call", "footnote-marker")
 
-type Token = parser.Token
+type Token = pa.Token
 
 // StyleFor provides a convenience function `Get` to get the computed styles for an Element.
 type StyleFor struct {
@@ -632,7 +632,7 @@ func (a *AnonymousStyle) Get(key pr.PropKey) pr.CssProperty {
 // replace Python getColor function
 func ResolveColor(style pr.ElementStyle, key pr.KnownProp) pr.Color {
 	value := style.Get(key.Key()).(pr.Color)
-	if value.Type == parser.ColorCurrentColor {
+	if value.Type == pa.ColorCurrentColor {
 		return style.GetColor()
 	}
 	return value
@@ -766,7 +766,7 @@ func isDigit(s string) bool {
 // presentationalHints=false
 func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl string) (out []styleAttrSpec) {
 	checkStyleAttribute := func(element *utils.HTMLNode, styleAttribute string) styleAttr {
-		declarations := parser.ParseDeclarationListString(styleAttribute, false, false)
+		declarations := pa.ParseDeclarationListString(styleAttribute, false, false)
 		return styleAttr{element: element, declaration: declarations, baseUrl: baseUrl}
 	}
 
@@ -1140,10 +1140,10 @@ type cascadedStyle = map[pr.PropKey]weigthedValue
 //	- "name" (page name string or ""), and
 //	- "specificity" (list of numbers).
 //	Return ``None` if something went wrong while parsing the rule.
-func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
+func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 	// See https://drafts.csswg.org/css-page-3/#syntax-page-selector
 
-	tokens := validation.RemoveWhitespace(*rule.Prelude)
+	tokens := validation.RemoveWhitespace(rule.Prelude)
 
 	// TODO: Specificity is probably wrong, should clean and test that.
 	if len(tokens) == 0 {
@@ -1154,7 +1154,7 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 	for len(tokens) > 0 {
 		var types_ pageSelector
 
-		if ident, ok := tokens[0].(parser.IdentToken); ok {
+		if ident, ok := tokens[0].(pa.Ident); ok {
 			tokens = tokens[1:]
 			types_.Name = string(ident.Value)
 			types_.Specificity[0] = 1
@@ -1170,7 +1170,7 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 		for len(tokens) > 0 {
 			token_ := tokens[0]
 			tokens = tokens[1:]
-			literal, ok := token_.(parser.LiteralToken)
+			literal, ok := token_.(pa.Literal)
 			if !ok {
 				return nil
 			}
@@ -1180,9 +1180,9 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 					return nil
 				}
 				switch firstToken := tokens[0].(type) {
-				case parser.IdentToken:
+				case pa.Ident:
 					tokens = tokens[1:]
-					pseudoClass := firstToken.Value.Lower()
+					pseudoClass := utils.AsciiLower(firstToken.Value)
 					switch pseudoClass {
 					case "left", "right":
 						if types_.Side != "" && types_.Side != pseudoClass {
@@ -1200,34 +1200,34 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 						types_.Specificity[1] += 1
 						continue
 					}
-				case parser.FunctionBlock:
+				case pa.FunctionBlock:
 					tokens = tokens[1:]
 					if firstToken.Name != "nth" {
 						return nil
 					}
-					var group []parser.Token
-					nth := *firstToken.Arguments
-					for i, argument := range *firstToken.Arguments {
-						if ident, ok := argument.(parser.IdentToken); ok && ident.Value == "of" {
-							nth = (*firstToken.Arguments)[:(i - 1)]
-							group = (*firstToken.Arguments)[i:]
+					var group []pa.Token
+					nth := firstToken.Arguments
+					for i, argument := range firstToken.Arguments {
+						if ident, ok := argument.(pa.Ident); ok && ident.Value == "of" {
+							nth = (firstToken.Arguments)[:(i - 1)]
+							group = (firstToken.Arguments)[i:]
 						}
 					}
-					nthValues := parser.ParseNth(nth)
+					nthValues := pa.ParseNth(nth)
 					if nthValues == nil {
 						return nil
 					}
 					if group != nil {
-						var group_ []parser.Token
+						var group_ []pa.Token
 						for _, token := range group {
-							if ty := token.Type(); ty != parser.CommentT && ty != parser.WhitespaceTokenT {
+							if ty := token.Kind(); ty != pa.KComment && ty != pa.KWhitespace {
 								group_ = append(group_, token)
 							}
 						}
 						if len(group_) != 1 {
 							return nil
 						}
-						if _, ok := group_[0].(parser.IdentToken); ok {
+						if _, ok := group_[0].(pa.Ident); ok {
 							// TODO: handle page groups
 							return nil
 						}
@@ -1258,11 +1258,11 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 	return out
 }
 
-func _isContentNone(rule Token) bool {
+func _isContentNone(rule pa.Compound) bool {
 	switch token := rule.(type) {
-	case parser.QualifiedRule:
+	case pa.QualifiedRule:
 		return token.Content == nil
-	case parser.AtRule:
+	case pa.AtRule:
 		return token.Content == nil
 	default:
 		return true
@@ -1276,7 +1276,7 @@ type selectorPageRule struct {
 }
 
 type PageRule struct {
-	rule         parser.AtRule
+	rule         pa.AtRule
 	selectors    []selectorPageRule
 	declarations []validation.ValidatedProperty
 }
@@ -1284,20 +1284,21 @@ type PageRule struct {
 // Do the work that can be done early on stylesheet, before they are
 // in a document.
 // ignoreImports = false
-func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Token,
+func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []pa.Compound,
 	urlFetcher utils.UrlFetcher, matcher *matcher, pageRules *[]PageRule,
 	fontConfig text.FontConfiguration, counterStyle counters.CounterStyle, ignoreImports bool,
 ) {
 	for _, rule := range stylesheetRules {
-		if atRule, isAtRule := rule.(parser.AtRule); _isContentNone(rule) && (!isAtRule || atRule.AtKeyword.Lower() != "import") {
+		atRule, isAtRule := rule.(pa.AtRule)
+		if _isContentNone(rule) && (!isAtRule || utils.AsciiLower(atRule.AtKeyword) != "import") {
 			continue
 		}
 
 		switch rule := rule.(type) {
-		case parser.QualifiedRule:
-			declarations := validation.PreprocessDeclarations(baseUrl, parser.ParseDeclarationList(*rule.Content, false, false))
+		case pa.QualifiedRule:
+			declarations := validation.PreprocessDeclarations(baseUrl, pa.ParseDeclarationList(rule.Content, false, false))
 			if len(declarations) > 0 {
-				prelude := parser.Serialize(*rule.Prelude)
+				prelude := pa.Serialize(rule.Prelude)
 				selector, err := selector.ParseGroup(prelude)
 				if err != nil {
 					logger.WarningLogger.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
@@ -1318,22 +1319,22 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 			} else {
 				ignoreImports = true
 			}
-		case parser.AtRule:
-			switch rule.AtKeyword.Lower() {
+		case pa.AtRule:
+			switch utils.AsciiLower(rule.AtKeyword) {
 			case "import":
 				if ignoreImports {
 					logger.WarningLogger.Printf("@import rule '%s' not at the beginning of the whole rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 
-				tokens := validation.RemoveWhitespace(*rule.Prelude)
+				tokens := validation.RemoveWhitespace(rule.Prelude)
 				var url string
 				if len(tokens) > 0 {
 					switch str := tokens[0].(type) {
-					case parser.URLToken:
+					case pa.URL:
 						url = str.Value
-					case parser.StringToken:
+					case pa.String:
 						url = str.Value
 					}
 				} else {
@@ -1342,7 +1343,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				media := parseMediaQuery(tokens[1:])
 				if media == nil {
 					logger.WarningLogger.Printf("Invalid media type '%s' the whole @import rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 				if !evaluateMediaQuery(media, deviceMediaType) {
@@ -1357,17 +1358,17 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 					}
 				}
 			case "media":
-				media := parseMediaQuery(*rule.Prelude)
+				media := parseMediaQuery(rule.Prelude)
 				if media == nil {
 					logger.WarningLogger.Printf("Invalid media type '%s' the whole @media rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 				ignoreImports = true
 				if !evaluateMediaQuery(media, deviceMediaType) {
 					continue
 				}
-				contentRules := parser.ParseRuleList(*rule.Content, false, false)
+				contentRules := pa.ParseRuleList(rule.Content, false, false)
 				preprocessStylesheet(
 					deviceMediaType, baseUrl, contentRules, urlFetcher,
 					matcher, pageRules, fontConfig, counterStyle, true)
@@ -1375,14 +1376,14 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				data := parsePageSelectors(rule.QualifiedRule)
 				if data == nil {
 					logger.WarningLogger.Printf("Unsupported @page selector '%s', the whole @page rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 				ignoreImports = true
 				for _, pageType := range data {
 					specificity := pageType.Specificity
 					pageType.Specificity = selector.Specificity{}
-					content := parser.ParseDeclarationList(*rule.Content, false, false)
+					content := pa.ParseDeclarationList(rule.Content, false, false)
 					declarations := validation.PreprocessDeclarations(baseUrl, content)
 
 					var selectors []selectorPageRule
@@ -1392,16 +1393,16 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 					}
 
 					for _, marginRule := range content {
-						atRule, ok := marginRule.(parser.AtRule)
+						atRule, ok := marginRule.(pa.AtRule)
 						if !ok || atRule.Content == nil {
 							continue
 						}
 						declarations = validation.PreprocessDeclarations(
 							baseUrl,
-							parser.ParseDeclarationList(*atRule.Content, false, false))
+							pa.ParseDeclarationList(atRule.Content, false, false))
 						if len(declarations) > 0 {
 							selectors = []selectorPageRule{{
-								specificity: specificity, pseudoType: "@" + atRule.AtKeyword.Lower(),
+								specificity: specificity, pseudoType: "@" + utils.AsciiLower(atRule.AtKeyword),
 								pageType: pageType,
 							}}
 							*pageRules = append(*pageRules, PageRule{rule: atRule, selectors: selectors, declarations: declarations})
@@ -1410,34 +1411,36 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				}
 			case "font-face":
 				ignoreImports = true
-				content := parser.ParseDeclarationList(*rule.Content, false, false)
+				content := pa.ParseDeclarationList(rule.Content, false, false)
 				ruleDescriptors := validation.PreprocessFontFaceDescriptors(baseUrl, content)
 				if ruleDescriptors.Src == nil {
 					logger.WarningLogger.Printf(`Missing src descriptor in "@font-face" rule at %d:%d`+"\n",
-						rule.Position().Line, rule.Position().Column)
+						rule.Pos().Line, rule.Pos().Column)
+					break
 				}
 				if ruleDescriptors.FontFamily == "" {
 					logger.WarningLogger.Printf(`Missing font-family descriptor in "@font-face" rule at %d:%d`+"\n",
-						rule.Position().Line, rule.Position().Column)
+						rule.Pos().Line, rule.Pos().Column)
+					break
 				}
 				if ruleDescriptors.Src != nil && ruleDescriptors.FontFamily != "" && fontConfig != nil {
 					fontConfig.AddFontFace(ruleDescriptors, urlFetcher)
 				}
 
 			case "counter-style":
-				name := validation.ParseCounterStyleName(*rule.Prelude, counterStyle)
+				name := validation.ParseCounterStyleName(rule.Prelude, counterStyle)
 				if name == "" {
 					logger.WarningLogger.Printf(`Invalid counter style name %s, the whole @counter-style rule was ignored at %d:%d.`,
-						parser.Serialize(*rule.Prelude), rule.Position().Line, rule.Position().Column)
+						pa.Serialize(rule.Prelude), rule.Pos().Line, rule.Pos().Column)
 					continue
 				}
 
 				ignoreImports = true
-				content := parser.ParseDeclarationList(*rule.Content, false, false)
+				content := pa.ParseDeclarationList(rule.Content, false, false)
 				ruleDescriptors := validation.PreprocessCounterStyleDescriptors(baseUrl, content)
 
 				if err := ruleDescriptors.Validate(); err != nil {
-					logger.WarningLogger.Printf("In counter style %s at %d:%d, %s", name, rule.Line, rule.Column, err)
+					logger.WarningLogger.Printf("In counter style %s at %d:%d, %s", name, rule.Pos().Line, rule.Pos().Column, err)
 					continue
 				}
 
@@ -1456,7 +1459,7 @@ type sheet struct {
 type styleAttr struct {
 	element     *utils.HTMLNode
 	baseUrl     string
-	declaration []Token
+	declaration []pa.Compound
 }
 
 type styleAttrSpec struct {

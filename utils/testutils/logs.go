@@ -36,8 +36,13 @@ func (c capturedLogs) Logs() []string {
 
 // CheckEqual compares logs ignoring date time in logged.
 func (c capturedLogs) CheckEqual(refs []string, t *testing.T) {
+	t.Helper()
+
 	const prefixLength = len("webrender.warning: ")
 	gots := c.Logs()
+	if len(gots) != len(refs) {
+		t.Fatalf("expected %d logs, got %d", len(refs), len(gots))
+	}
 	for i, ref := range refs {
 		g := gots[i][prefixLength:]
 		if g != ref {
@@ -47,6 +52,8 @@ func (c capturedLogs) CheckEqual(refs []string, t *testing.T) {
 }
 
 func (c *capturedLogs) AssertNoLogs(t *testing.T) {
+	t.Helper()
+
 	l := c.Logs()
 	if len(l) > 0 {
 		t.Fatalf("expected no logs, got (%d): \n %s", len(l), strings.Join(l, "\n"))

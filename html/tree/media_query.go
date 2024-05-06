@@ -4,6 +4,7 @@ import (
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/utils"
 )
 
 // Return the boolean evaluation of `queryList` for the given
@@ -26,8 +27,8 @@ func parseMediaQuery(tokens []Token) []string {
 		var media []string
 		for _, part := range validation.SplitOnComma(tokens) {
 			if len(part) == 1 {
-				if ident, ok := part[0].(parser.IdentToken); ok {
-					media = append(media, ident.Value.Lower())
+				if ident, ok := part[0].(parser.Ident); ok {
+					media = append(media, utils.AsciiLower(ident.Value))
 					continue
 				}
 			}

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/webrender/css/counters"
-	"github.com/benoitkugler/webrender/css/parser"
+	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -38,7 +38,7 @@ func SplitOnComma(tokens []Token) [][]Token {
 	var parts [][]Token
 	var thisPart []Token
 	for _, token := range tokens {
-		litteral, ok := token.(parser.LiteralToken)
+		litteral, ok := token.(pa.Literal)
 		if ok && litteral.Value == "," {
 			parts = append(parts, thisPart)
 			thisPart = nil
@@ -65,7 +65,7 @@ func splitOnOptionalComma(tokens []Token) (parts []Token) {
 
 // If “token“ is a keyword, return its name. Otherwise return empty string.
 func getCustomIdent(token Token) string {
-	if ident, ok := token.(parser.IdentToken); ok {
+	if ident, ok := token.(pa.Ident); ok {
 		return string(ident.Value)
 	}
 	return ""
@@ -73,7 +73,7 @@ func getCustomIdent(token Token) string {
 
 // Parse an <image> token.
 func getImage(_token Token, baseUrl string) (pr.Image, error) {
-	token, ok := _token.(parser.FunctionBlock)
+	token, ok := _token.(pa.FunctionBlock)
 	if !ok {
 		parsed, _, err := getUrl(_token, baseUrl)
 		if err != nil {
@@ -84,8 +84,8 @@ func getImage(_token Token, baseUrl string) (pr.Image, error) {
 		}
 		return nil, nil
 	}
-	arguments := SplitOnComma(RemoveWhitespace(*token.Arguments))
-	name := token.Name.Lower()
+	arguments := SplitOnComma(RemoveWhitespace(token.Arguments))
+	name := utils.AsciiLower(token.Name)
 	var err error
 	switch name {
 	case "linear-gradient", "repeating-linear-gradient":
@@ -248,15 +248,15 @@ func parseRadialGradientParameters(arguments [][]Token) radialGradientParameters
 func parseColorStop(tokens []Token) (pr.ColorStop, error) {
 	switch len(tokens) {
 	case 1:
-		color := parser.ParseColor(tokens[0])
-		if color.Type == parser.ColorCurrentColor {
-			return pr.ColorStop{Color: pr.Color(parser.ParseColorString("black"))}, nil
+		color := pa.ParseColor(tokens[0])
+		if color.Type == pa.ColorCurrentColor {
+			return pr.ColorStop{Color: pr.Color(pa.ParseColorString("black"))}, nil
 		}
 		if !color.IsNone() {
 			return pr.ColorStop{Color: pr.Color(color)}, nil
 		}
 	case 2:
-		color := parser.ParseColor(tokens[0])
+		color := pa.ParseColor(tokens[0])
 		position := getLength(tokens[1], true, true)
 		if !color.IsNone() && !position.IsNone() {
 			return pr.ColorStop{Color: pr.Color(color), Position: position}, nil
@@ -280,14 +280,14 @@ func parseURLToken(value, baseURL string) (url pr.NamedString, attr pr.AttrData,
 
 func getUrl(_token Token, baseUrl string) (url pr.NamedString, attr pr.AttrData, err error) {
 	switch token := _token.(type) {
-	case parser.URLToken:
+	case pa.URL:
 		return parseURLToken(token.Value, baseUrl)
-	case parser.FunctionBlock:
+	case pa.FunctionBlock:
 		if token.Name == "attr" {
 			attr = checkAttrFunction(token, "url")
 			return
-		} else if L := len(*token.Arguments); token.Name == "url" && (L == 1 || L == 2) {
-			val, _ := (*token.Arguments)[0].(parser.StringToken)
+		} else if L := len(token.Arguments); token.Name == "url" && (L == 1 || L == 2) {
+			val, _ := (token.Arguments)[0].(pa.String)
 			return parseURLToken(val.Value, baseUrl)
 		}
 	}
@@ -300,7 +300,7 @@ func checkStringOrElementFunction(stringOrElement string, token Token) (out pr.C
 		return
 	}
 	if name == stringOrElement && (len(args) == 1 || len(args) == 2) {
-		customIdent_, ok := args[0].(parser.IdentToken)
+		customIdent_, ok := args[0].(pa.Ident)
 		args = args[1:]
 		if !ok {
 			return
@@ -310,8 +310,8 @@ func checkStringOrElementFunction(stringOrElement string, token Token) (out pr.C
 		var ident string
 		if len(args) > 0 {
 			ident_ := args[0]
-			identToken, ok := ident_.(parser.IdentToken)
-			val := identToken.Value.Lower()
+			identToken, ok := ident_.(pa.Ident)
+			val := utils.AsciiLower(identToken.Value)
 			if !ok || (val != "first" && val != "start" && val != "last" && val != "first-except") {
 				return
 			}
@@ -330,7 +330,7 @@ func CheckVarFunction(token Token) (out pr.VarData) {
 	if name != "var" || len(args) == 0 {
 		return
 	}
-	ident, ok := args[0].(parser.IdentToken)
+	ident, ok := args[0].(pa.Ident)
 	args = args[1:]
 	if !ok || !strings.HasPrefix(string(ident.Value), "--") {
 		return
@@ -348,11 +348,11 @@ func CheckVarFunction(token Token) (out pr.VarData) {
 //	Return ``(name, args)`` if the given token is a function with comma- or
 //	space-separated arguments. Return zero values otherwise.
 func parseFunction(functionToken_ Token) (string, []Token) {
-	functionToken, ok := functionToken_.(parser.FunctionBlock)
+	functionToken, ok := functionToken_.(pa.FunctionBlock)
 	if !ok {
 		return "", nil
 	}
-	content := RemoveWhitespace(*functionToken.Arguments)
+	content := RemoveWhitespace(functionToken.Arguments)
 	var (
 		arguments []Token
 		token     Token
@@ -360,7 +360,7 @@ func parseFunction(functionToken_ Token) (string, []Token) {
 	lastIsComma := false
 	for len(content) > 0 {
 		token, content = content[0], content[1:]
-		lit, ok := token.(parser.LiteralToken)
+		lit, ok := token.(pa.Literal)
 		isComma := ok && lit.Value == ","
 		if lastIsComma && isComma {
 			return "", nil
@@ -369,7 +369,7 @@ func parseFunction(functionToken_ Token) (string, []Token) {
 			lastIsComma = true
 		} else {
 			lastIsComma = false
-			if fn, isFunc := token.(parser.FunctionBlock); isFunc {
+			if fn, isFunc := token.(pa.FunctionBlock); isFunc {
 				innerName, _ := parseFunction(fn)
 				if innerName == "" {
 					return "", nil
@@ -381,17 +381,17 @@ func parseFunction(functionToken_ Token) (string, []Token) {
 	if lastIsComma {
 		return "", nil
 	}
-	return functionToken.Name.Lower(), arguments
+	return utils.AsciiLower(functionToken.Name), arguments
 }
 
-func checkAttrFunction(token parser.FunctionBlock, allowedType string) (out pr.AttrData) {
+func checkAttrFunction(token pa.FunctionBlock, allowedType string) (out pr.AttrData) {
 	name, args := parseFunction(token)
 	if name == "" {
 		return
 	}
 	la := len(args)
 	if name == "attr" && (la == 1 || la == 2 || la == 3) {
-		ident, ok := args[0].(parser.IdentToken)
+		ident, ok := args[0].(pa.Ident)
 		if !ok {
 			return
 		}
@@ -403,7 +403,7 @@ func checkAttrFunction(token parser.FunctionBlock, allowedType string) (out pr.A
 		if la == 1 {
 			typeOrUnit = "string"
 		} else {
-			ident2, ok := args[1].(parser.IdentToken)
+			ident2, ok := args[1].(pa.Ident)
 			if !ok {
 				return
 			}
@@ -416,7 +416,7 @@ func checkAttrFunction(token parser.FunctionBlock, allowedType string) (out pr.A
 				fallback = fb
 			} else {
 				switch fbValue := args[2].(type) {
-				case parser.StringToken:
+				case pa.String:
 					fallback = pr.String(fbValue.Value)
 				default:
 					// TODO: handle other fallback types
@@ -506,9 +506,9 @@ func parsePosition(tokens []Token) pr.Center {
 // Parse a <string> token.
 func getString(_token Token) (out pr.ContentProperty) {
 	switch token := _token.(type) {
-	case parser.StringToken:
+	case pa.String:
 		return pr.ContentProperty{Type: "string", Content: pr.String(token.Value)}
-	case parser.FunctionBlock:
+	case pa.FunctionBlock:
 		switch token.Name {
 		case "attr":
 			attr := checkAttrFunction(token, "string")
@@ -535,7 +535,7 @@ func checkCounterFunction(token Token) (prop pr.ContentProperty) {
 	var out pr.Counters
 	LA := len(args)
 	if (name == "counter" && (LA == 1 || LA == 2)) || (name == "counters" && (LA == 2 || LA == 3)) {
-		ident, ok := args[0].(parser.IdentToken)
+		ident, ok := args[0].(pa.Ident)
 		args = args[1:]
 		if !ok {
 			return
@@ -543,7 +543,7 @@ func checkCounterFunction(token Token) (prop pr.ContentProperty) {
 		out.Name = string(ident.Value)
 
 		if name == "counters" {
-			str, ok := args[0].(parser.StringToken)
+			str, ok := args[0].(pa.String)
 			args = args[1:]
 			if !ok {
 				return
@@ -575,8 +575,8 @@ func checkContentFunction(token Token) (out pr.ContentProperty) {
 		if len(args) == 0 {
 			return pr.ContentProperty{Type: "content()", Content: pr.String("text")}
 		} else if len(args) == 1 {
-			ident, ok := args[0].(parser.IdentToken)
-			v := ident.Value.Lower()
+			ident, ok := args[0].(pa.Ident)
+			v := utils.AsciiLower(ident.Value)
 			if ok && (v == "text" || v == "before" || v == "after" || v == "first-letter" || v == "marker") {
 				return pr.ContentProperty{Type: "content()", Content: pr.String(v)}
 			}
@@ -652,7 +652,7 @@ func getTarget(token Token, baseUrl string) (out pr.ContentProperty, err error) 
 
 		ident_ := args[0]
 		args = args[1:]
-		ident, ok := ident_.(parser.IdentToken)
+		ident, ok := ident_.(pa.Ident)
 		if !ok {
 			return
 		}
@@ -761,7 +761,7 @@ func getContentListToken(token Token, baseUrl string) (pr.ContentProperty, error
 		arg_ := args[0]
 		var str string
 		switch arg := arg_.(type) {
-		case parser.IdentToken:
+		case pa.Ident:
 			switch arg.Value {
 			case "dotted":
 				str = "."
@@ -772,7 +772,7 @@ func getContentListToken(token Token, baseUrl string) (pr.ContentProperty, error
 			default:
 				return pr.ContentProperty{}, nil
 			}
-		case parser.StringToken:
+		case pa.String:
 			str = arg.Value
 		}
 		return pr.ContentProperty{Type: "leader()", Content: pr.Strings{"string", str}}, nil
@@ -782,20 +782,20 @@ func getContentListToken(token Token, baseUrl string) (pr.ContentProperty, error
 	return pr.ContentProperty{}, nil
 }
 
-func ParseCounterStyleName(tokens []parser.Token, cs counters.CounterStyle) string {
+func ParseCounterStyleName(tokens []pa.Token, cs counters.CounterStyle) string {
 	tokens = RemoveWhitespace(tokens)
 	if len(tokens) != 1 {
 		return ""
 	}
 
 	token := tokens[0]
-	if ident, ok := token.(parser.IdentToken); ok {
-		if v := ident.Value.Lower(); v == "decimal" || v == "disc" {
+	if ident, ok := token.(pa.Ident); ok {
+		if v := utils.AsciiLower(ident.Value); v == "decimal" || v == "disc" {
 			if _, ok := cs[v]; !ok {
-				return string(ident.Value)
+				return ident.Value
 			}
-		} else if ident.Value.Lower() != "none" {
-			return string(ident.Value)
+		} else if utils.AsciiLower(ident.Value) != "none" {
+			return ident.Value
 		}
 	}
 
