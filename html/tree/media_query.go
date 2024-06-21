@@ -2,7 +2,6 @@ package tree
 
 import (
 	"github.com/benoitkugler/webrender/css/parser"
-	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -20,12 +19,12 @@ func evaluateMediaQuery(queryList []string, deviceMediaType string) bool {
 }
 
 func parseMediaQuery(tokens []Token) []string {
-	tokens = validation.RemoveWhitespace(tokens)
+	tokens = parser.RemoveWhitespace(tokens)
 	if len(tokens) == 0 {
 		return []string{"all"}
 	} else {
 		var media []string
-		for _, part := range validation.SplitOnComma(tokens) {
+		for _, part := range parser.SplitOnComma(tokens) {
 			if len(part) == 1 {
 				if ident, ok := part[0].(parser.Ident); ok {
 					media = append(media, utils.AsciiLower(ident.Value))

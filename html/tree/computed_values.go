@@ -160,76 +160,47 @@ func init() {
 
 type computerFunc = func(*ComputedStyle, pr.KnownProp, pr.CssProperty) pr.CssProperty
 
-func resolveVar(specified map[string]pr.ValidatedProperty, var_ pr.VarData) pr.RawTokens {
-	knownVariableNames := utils.NewSet(var_.Name)
-	default_ := var_.Default
+// func resolveVar(specified map[string]pr.ValidatedProperty, var_ pr.VarData) pr.RawTokens {
+// 	knownVariableNames := utils.NewSet(var_.Name)
+// 	default_ := var_.Default
 
-	tmpVal, isSpecified := specified[var_.Name]
+// 	tmpVal, isSpecified := specified[var_.Name]
 
-	computedValue, ok := tmpVal.SpecialProperty.(pr.RawTokens)
+// 	computedValue, ok := tmpVal.SpecialProperty.(pr.RawTokens)
 
-	// handle the initial case
-	if ok && len(computedValue) == 1 {
-		value := computedValue[0]
-		if ident, ok := value.(parser.Ident); ok && ident.Value == "initial" {
-			return default_
-		}
-	}
+// 	// handle the initial case
+// 	if ok && len(computedValue) == 1 {
+// 		value := computedValue[0]
+// 		if ident, ok := value.(parser.Ident); ok && ident.Value == "initial" {
+// 			return default_
+// 		}
+// 	}
 
-	if !isSpecified {
-		computedValue = default_
-	}
-	var in bool
-	// resolve potential variable cycle
-	for len(computedValue) == 1 {
-		varFunction := validation.CheckVarFunction(computedValue[0])
-		if varFunction.IsNone() {
-			break
-		}
-		if knownVariableNames.Has(varFunction.Name) {
-			computedValue = default_
-			break
-		}
-		knownVariableNames.Add(varFunction.Name)
-		tmpVal, in = specified[varFunction.Name]
-		if !in {
-			computedValue = varFunction.Default
-		} else {
-			computedValue, _ = tmpVal.SpecialProperty.(pr.RawTokens)
-		}
-		default_ = varFunction.Default
-	}
-	return computedValue
-}
-
-type variables map[string]pr.ValidatedProperty
-
-// value is either a VarData or a normal property; it cannot be a RawToken
-func computeVariable(varData pr.VarData, name pr.PropKey, computed variables, baseUrl string, parentStyle pr.ElementStyle) (pr.CascadedProperty, bool) {
-	alreadyComputedValue := false
-
-	var newValue pr.CascadedProperty
-	computedValue := resolveVar(computed, varData)
-	if computedValue != nil {
-		newValue, _ = validation.Validate(name.KnownProp, computedValue, baseUrl)
-	}
-
-	// See https://drafts.csswg.org/css-variables/#invalid-variables
-	if newValue.IsNone() {
-		logger.WarningLogger.Printf(`Unsupported computed value "%s" set in variable %s "
-                "for property %s.`, parser.Serialize(computedValue), varData.Name, name.String())
-
-		if _, in := pr.Inherited[name.KnownProp]; in && parentStyle != nil {
-			alreadyComputedValue = true
-			newValue = pr.AsCascaded(parentStyle.Get(name))
-		} else {
-			alreadyComputedValue = !pr.InitialNotComputed.Has(name.KnownProp)
-			newValue = pr.AsCascaded(pr.InitialValues[name.KnownProp])
-		}
-	}
-
-	return newValue, alreadyComputedValue
-}
+// 	if !isSpecified {
+// 		computedValue = default_
+// 	}
+// 	var in bool
+// 	// resolve potential variable cycle
+// 	for len(computedValue) == 1 {
+// 		varFunction := validation.HasVar(computedValue[0])
+// 		if varFunction.IsNone() {
+// 			break
+// 		}
+// 		if knownVariableNames.Has(varFunction.Name) {
+// 			computedValue = default_
+// 			break
+// 		}
+// 		knownVariableNames.Add(varFunction.Name)
+// 		tmpVal, in = specified[varFunction.Name]
+// 		if !in {
+// 			computedValue = varFunction.Default
+// 		} else {
+// 			computedValue, _ = tmpVal.SpecialProperty.(pr.RawTokens)
+// 		}
+// 		default_ = varFunction.Default
+// 	}
+// 	return computedValue
+// }
 
 // backgroundImage computes lenghts in gradient background-image.
 func backgroundImage(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
@@ -239,7 +210,7 @@ func backgroundImage(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPrope
 		case pr.LinearGradient:
 			for j, cl := range gradient.ColorStops {
 				if !cl.Position.IsNone() {
-					cl.Position = length2(computer, pr.Value{Dimension: cl.Position}, -1, false).Dimension
+					cl.Position = length2(computer, pr.DimOrS{Dimension: cl.Position}, -1, false).Dimension
 					gradient.ColorStops[j] = cl
 				}
 			}
@@ -247,7 +218,7 @@ func backgroundImage(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPrope
 		case pr.RadialGradient:
 			for j, cl := range gradient.ColorStops {
 				if !cl.Position.IsNone() {
-					cl.Position = length2(computer, pr.Value{Dimension: cl.Position}, -1, false).Dimension
+					cl.Position = length2(computer, pr.DimOrS{Dimension: cl.Position}, -1, false).Dimension
 					gradient.ColorStops[j] = cl
 				}
 			}
@@ -270,8 +241,8 @@ func centers(computer *ComputedStyle, value pr.Centers) pr.Centers {
 			OriginX: v.OriginX,
 			OriginY: v.OriginY,
 			Pos: pr.Point{
-				length2(computer, pr.Value{Dimension: v.Pos[0]}, -1, false).Dimension,
-				length2(computer, pr.Value{Dimension: v.Pos[1]}, -1, false).Dimension,
+				length2(computer, pr.DimOrS{Dimension: v.Pos[0]}, -1, false).Dimension,
+				length2(computer, pr.DimOrS{Dimension: v.Pos[1]}, -1, false).Dimension,
 			},
 		}
 	}
@@ -338,7 +309,7 @@ func borderRadius(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty
 func _lengthOrPercentageTuple2(computer *ComputedStyle, value []pr.Dimension) []pr.Dimension {
 	out := make([]pr.Dimension, len(value))
 	for index, v := range value {
-		out[index] = length2(computer, pr.Value{Dimension: v}, -1, false).Dimension
+		out[index] = length2(computer, pr.DimOrS{Dimension: v}, -1, false).Dimension
 	}
 	return out
 }
@@ -353,11 +324,11 @@ func break_(_ *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssPrope
 }
 
 func length(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
+	value := _value.(pr.DimOrS)
 	return length2(computer, value, -1, false)
 }
 
-func asPixels(v pr.Value, pixelsOnly bool) pr.Value {
+func asPixels(v pr.DimOrS, pixelsOnly bool) pr.DimOrS {
 	if pixelsOnly {
 		v.Unit = pr.Scalar
 	}
@@ -368,8 +339,8 @@ func asPixels(v pr.Value, pixelsOnly bool) pr.Value {
 // passing a negative fontSize means null
 // Always returns a Value which is interpreted as float64 if Unit is zero.
 // pixelsOnly=false
-func length2(computer *ComputedStyle, value pr.Value, fontSize pr.Float, pixelsOnly bool) pr.Value {
-	if value.String == "auto" || value.String == "content" {
+func length2(computer *ComputedStyle, value pr.DimOrS, fontSize pr.Float, pixelsOnly bool) pr.DimOrS {
+	if value.S == "auto" || value.S == "content" {
 		return value
 	}
 	if value.Value == 0 {
@@ -413,8 +384,8 @@ func length2(computer *ComputedStyle, value pr.Value, fontSize pr.Float, pixelsO
 }
 
 func bleed(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
-	if value.String == "auto" {
+	value := _value.(pr.DimOrS)
+	if value.S == "auto" {
 		if computer.GetMarks().Crop {
 			return pr.Dimension{Value: 8, Unit: pr.Px}.ToValue() // 6pt
 		}
@@ -424,8 +395,8 @@ func bleed(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr
 }
 
 func pixelLength(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
-	if value.String == "normal" {
+	value := _value.(pr.DimOrS)
+	if value.S == "normal" {
 		return value
 	}
 	out := length2(computer, value, -1, true)
@@ -463,14 +434,14 @@ func imageOrientation(_ *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) p
 // Compute the “border-*-width“ pr.
 // value.String may be the string representation of an int
 func borderWidth(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
+	value := _value.(pr.DimOrS)
 	// style prop is just before width
 	style := computer.Get(pr.PropKey{KnownProp: name - 1}).(pr.String)
 
 	if style == "none" || style == "hidden" {
 		return pr.FToV(0)
 	}
-	if bw, in := borderWidthKeywords[value.String]; in {
+	if bw, in := borderWidthKeywords[value.S]; in {
 		return bw.ToValue()
 	}
 	d := length2(computer, value, -1, true)
@@ -479,15 +450,15 @@ func borderWidth(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProper
 
 // Compute the “column-width“ property.
 func columnWidth(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
+	value := _value.(pr.DimOrS)
 	return length(computer, name, value)
 }
 
 // Compute the “column-gap“ property.
 func columnGap(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
-	if value.String == "normal" {
-		value = pr.Value{Dimension: pr.Dimension{Value: 1, Unit: pr.Em}}
+	value := _value.(pr.DimOrS)
+	if value.S == "normal" {
+		value = pr.DimOrS{Dimension: pr.Dimension{Value: 1, Unit: pr.Em}}
 	}
 	return length(computer, name, value)
 }
@@ -702,8 +673,8 @@ func floating(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr
 
 // Compute the “font-size“ property.
 func fontSize(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
-	if fs, in := pr.FontSizeKeywords[value.String]; in {
+	value := _value.(pr.DimOrS)
+	if fs, in := pr.FontSizeKeywords[value.S]; in {
 		return fs.ToValue()
 	}
 
@@ -712,14 +683,14 @@ func fontSize(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr
 		parentFontSize = computer.parentStyle.GetFontSize().Value
 	}
 
-	if value.String == "larger" {
+	if value.S == "larger" {
 		for _, keywordValue := range keywordsValues {
 			if keywordValue > parentFontSize {
 				return keywordValue.ToValue()
 			}
 		}
 		return (parentFontSize * 1.2).ToValue()
-	} else if value.String == "smaller" {
+	} else if value.S == "smaller" {
 		for i := len(keywordsValues) - 1; i >= 0; i -= 1 {
 			if keywordsValues[i] < parentFontSize {
 				return (keywordsValues[i]).ToValue()
@@ -756,10 +727,10 @@ func fontWeight(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) 
 
 // Compute the “line-height“ property.
 func lineHeight(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
+	value := _value.(pr.DimOrS)
 	var pixels pr.Float
 	switch {
-	case value.String == "normal":
+	case value.S == "normal":
 		return value
 	case value.Unit == pr.Scalar:
 		return value
@@ -832,7 +803,7 @@ func lang(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.Css
 
 // Compute the “tab-size“ property.
 func tabSize(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
+	value := _value.(pr.DimOrS)
 	if value.Unit == pr.Scalar {
 		return value
 	}
@@ -854,13 +825,13 @@ func transforms(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) 
 
 // Compute the “vertical-align“ property.
 func verticalAlign(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
+	value := _value.(pr.DimOrS)
 	// Use +/- half an em for super and sub, same as Pango.
 	// (See the SUPERSUBRISE constant in pango-markup.c)
-	var out pr.Value
-	switch value.String {
+	var out pr.DimOrS
+	switch value.S {
 	case "baseline", "middle", "text-top", "text-bottom", "top", "bottom":
-		out.String = value.String
+		out.S = value.S
 	case "super":
 		out.Value = computer.GetFontSize().Value * 0.5
 		out.Unit = pr.Scalar
@@ -881,9 +852,9 @@ func verticalAlign(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssPropert
 
 // Compute the “word-spacing“ property.
 func wordSpacing(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.Value)
-	if value.String == "normal" {
-		return pr.Value{}
+	value := _value.(pr.DimOrS)
+	if value.S == "normal" {
+		return pr.DimOrS{}
 	}
 	return length(computer, name, value)
 }

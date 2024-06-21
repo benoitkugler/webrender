@@ -57,15 +57,28 @@ func ParseOneDeclaration(input []Token) Compound {
 	if firstToken == nil {
 		return ParseError{pos: Pos{1, 1}, kind: errEmpty, Message: "Input is empty"}
 	}
-	return parseDeclaration(firstToken, tokens)
+	return parseDeclaration(firstToken, tokens, false)
+}
+
+func consumeRemnants(input *TokensIter, nested bool) {
+	for input.HasNext() {
+		token := input.Next()
+		if IsLiteral(token, ";") {
+			return
+		}
+		if nested && IsLiteral(token, "}") {
+			return
+		}
+	}
 }
 
 // parses a declaration, by consuming `tokens`
 // until the end of the declaration or the first error.
 // returns either a [ParseError] or a [Declaration]
-func parseDeclaration(firstToken Token, tokens *TokensIter) Compound {
+func parseDeclaration(firstToken Token, tokens *TokensIter, nested bool) Compound {
 	name, ok := firstToken.(Ident)
 	if !ok {
+		consumeRemnants(tokens, nested)
 		return ParseError{
 			pos:     firstToken.Pos(),
 			kind:    errInvalid,
@@ -74,14 +87,13 @@ func parseDeclaration(firstToken Token, tokens *TokensIter) Compound {
 	}
 	colon := tokens.NextSignificant()
 	if colon == nil {
+		consumeRemnants(tokens, nested)
 		return ParseError{
 			pos:     firstToken.Pos(),
 			kind:    errInvalid,
 			Message: "Expected ':' after declaration name, got EOF",
 		}
-	}
-
-	if lit, ok := colon.(Literal); !ok || lit.Value != ":" {
+	} else if !IsLiteral(colon, ":") {
 		return ParseError{
 			pos:     colon.Pos(),
 			kind:    errInvalid,
@@ -96,28 +108,35 @@ func parseDeclaration(firstToken Token, tokens *TokensIter) Compound {
 		sBang
 	)
 	var (
-		value           []Token
-		state           = sValue
-		bangPosition, i = 0, -1
+		value                 []Token
+		state                 = sValue
+		bangPosition, i       = 0, -1
+		containsNonWhitespace = false
+		containsSimpleBlock   = false
 	)
 	for tokens.HasNext() {
 		i += 1
 		token := tokens.Next()
-		switch token := token.(type) {
-		case Literal:
-			if state == sValue && token.Value == "!" {
-				state = sBang
-				bangPosition = i
-			} else {
+		if state == sValue && IsLiteral(token, "!") {
+			state = sBang
+			bangPosition = i
+		} else if ident, _ := token.(Ident); state == sBang && utils.AsciiLower(ident.Value) == "important" {
+			state = sImportant
+		} else {
+			switch token.Kind() {
+			case KWhitespace, KComment:
+			// pass
+			case KCurlyBracketsBlock:
 				state = sValue
-			}
-		case Ident:
-			if state == sBang && utils.AsciiLower(token.Value) == "important" {
-				state = sImportant
-			}
-		default:
-			if token.Kind() != KWhitespace && token.Kind() != KComment {
+				if containsNonWhitespace {
+					containsSimpleBlock = true
+				} else {
+					containsNonWhitespace = true
+				}
+			default:
 				state = sValue
+				containsNonWhitespace = true
+
 			}
 		}
 		value = append(value, token)
@@ -126,6 +145,13 @@ func parseDeclaration(firstToken Token, tokens *TokensIter) Compound {
 	if state == sImportant {
 		value = value[:bangPosition]
 	}
+
+	// TODO: Handle custom property names
+	if containsSimpleBlock && containsNonWhitespace {
+		return ParseError{pos: colon.Pos(), kind: errInvalid, Message: "Declaration contains {} block"}
+	}
+
+	// TODO: Handle unicode-range
 
 	return Declaration{
 		pos:       name.pos,
@@ -140,18 +166,52 @@ func consumeDeclarationInList(firstToken Token, tokens *TokensIter) Compound {
 	var otherDeclarationTokens []Token
 	for tokens.HasNext() {
 		token := tokens.Next()
-		if lit, ok := token.(Literal); ok && lit.Value == ";" {
+		if IsLiteral(token, ";") {
 			break
 		}
 		otherDeclarationTokens = append(otherDeclarationTokens, token)
 	}
-	return parseDeclaration(firstToken, &TokensIter{otherDeclarationTokens, 0})
+	return parseDeclaration(firstToken, NewIter(otherDeclarationTokens), false)
 }
 
-// ParseDeclarationListString tokenizes `css` and calls `ParseDeclarationList`.
-func ParseDeclarationListString(css string, skipComments, skipWhitespace bool) []Compound {
-	l := Tokenize([]byte(css), skipComments)
-	return ParseDeclarationList(l, skipComments, skipWhitespace)
+// ParseBlocksContents parses a block’s contents.
+//
+// This is used e.g. for the [QualifiedRule] content
+// of a style rule or '@page' rule, or for the 'style' attribute of an
+// HTML element.
+//
+// In contexts that don’t expect any at-rule and/or qualified rule,
+// all [AtRule] and [QualifiedRule] objects should simply be rejected as
+// invalid.
+func ParseBlocksContents(input []Token, skipWhitespace bool) []Compound {
+	tokens := NewIter(input)
+	var result []Compound
+	for tokens.HasNext() {
+		token := tokens.Next()
+		switch token := token.(type) {
+		case Whitespace:
+			if !skipWhitespace {
+				result = append(result, token)
+			}
+		case Comment:
+			result = append(result, token)
+		case AtKeyword:
+			result = append(result, consumeAtRule(token, tokens))
+		case Literal:
+			if token.Value != ";" {
+				result = append(result, consumeBlocksContent(token, tokens))
+			}
+		default:
+			result = append(result, consumeBlocksContent(token, tokens))
+		}
+	}
+	return result
+}
+
+// ParseBlocksContentsString tokenizes `css` and calls `ParseBlocksContents`.
+func ParseBlocksContentsString(css string) []Compound {
+	l := Tokenize([]byte(css), false)
+	return ParseBlocksContents(l, false)
 }
 
 // Parse a `declaration list` (which may also contain at-rules).
@@ -183,15 +243,25 @@ func ParseDeclarationList(input []Token, skipComments, skipWhitespace bool) []Co
 			result = append(result, val)
 		case Literal:
 			if token.Value != ";" {
-				val := consumeDeclarationInList(token, tokens)
-				result = append(result, val)
+				result = append(result, consumeDeclarationInList(token, tokens))
 			}
 		default:
-			val := consumeDeclarationInList(token, tokens)
-			result = append(result, val)
+			result = append(result, consumeDeclarationInList(token, tokens))
 		}
 	}
 	return result
+}
+
+// ParseDeclarationListString tokenizes `css` and calls `ParseDeclarationList`.
+func ParseDeclarationListString(css string, skipComments, skipWhitespace bool) []Compound {
+	l := Tokenize([]byte(css), skipComments)
+	return ParseDeclarationList(l, skipComments, skipWhitespace)
+}
+
+// IsLiteral returns true if token is a literal [char].
+func IsLiteral(token Token, char string) bool {
+	lit, ok := token.(Literal)
+	return ok && lit.Value == char
 }
 
 // Parse an at-rule, by consuming just enough of `tokens` for this rule.
@@ -210,8 +280,7 @@ func consumeAtRule(atKeyword AtKeyword, tokens *TokensIter) AtRule {
 			}
 			break
 		}
-		lit, ok := token.(Literal)
-		if ok && lit.Value == ";" {
+		if IsLiteral(token, ";") {
 			break
 		}
 		prelude = append(prelude, token)
@@ -229,39 +298,87 @@ func consumeAtRule(atKeyword AtKeyword, tokens *TokensIter) AtRule {
 // Parse a qualified rule or at-rule, by
 // consuming just enough of `tokens` for this rule.
 func consumeRule(firstToken Token, tokens *TokensIter) Compound {
+	if atKeyword, isAtKeyword := firstToken.(AtKeyword); isAtKeyword {
+		return consumeAtRule(atKeyword, tokens)
+	}
+	return consumeQualifiedRule(firstToken, tokens, false, false)
+}
+
+// Create rule parse error raised because of given token.
+func ruleError(token Token, name string) ParseError {
+	return ParseError{
+		pos:     token.Pos(),
+		kind:    errInvalid,
+		Message: fmt.Sprintf("%s reached before {} block for a qualified rule.", name),
+	}
+}
+
+// Consume a qualified rule.
+// Consume just enough of :obj:`tokens` for this rule.
+func consumeQualifiedRule(firstToken Token, tokens *TokensIter, nested bool, stopAtSemicolon bool) Compound {
+	if stopAtSemicolon && IsLiteral(firstToken, ";") {
+		return ruleError(firstToken, "Stop token")
+	}
+
 	var (
 		prelude []Token
 		block   CurlyBracketsBlock
 	)
-	switch firstToken := firstToken.(type) {
-	case AtKeyword:
-		return consumeAtRule(firstToken, tokens)
-	case CurlyBracketsBlock:
-		block = firstToken
-	default:
+	if curly, isCurly := firstToken.(CurlyBracketsBlock); isCurly {
+		block = curly
+	} else {
 		prelude = []Token{firstToken}
 		hasBroken := false
 		for tokens.HasNext() {
 			token := tokens.Next()
+
+			if stopAtSemicolon && IsLiteral(token, ";") {
+				return ruleError(token, "Stop token")
+			}
+
 			if curly, ok := token.(CurlyBracketsBlock); ok {
 				block = curly
+				// TODO: handle special case for CSS variables (using "nested")
+				// https://drafts.csswg.org/css-syntax-3/#consume-qualified-rule
 				hasBroken = true
 				break
 			}
 			prelude = append(prelude, token)
 		}
 		if !hasBroken {
-			return ParseError{
-				pos:     prelude[len(prelude)-1].Pos(),
-				kind:    errInvalid,
-				Message: "EOF reached before {} block for a qualified rule.",
-			}
+			return ruleError(prelude[len(prelude)-1], "EOF")
 		}
 	}
+
 	return QualifiedRule{
 		pos:     firstToken.Pos(),
 		Content: block.Arguments,
 		Prelude: prelude,
+	}
+}
+
+// Consume declaration or nested rule.
+func consumeBlocksContent(firstToken Token, tokens *TokensIter) Compound {
+	var declarationTokens, semicolonToken []Token
+	if _, isCurly := firstToken.(CurlyBracketsBlock); !IsLiteral(firstToken, ";") && !isCurly {
+		for tokens.HasNext() {
+			token := tokens.Next()
+			if IsLiteral(token, ";") {
+				semicolonToken = append(semicolonToken, token)
+				break
+			}
+			declarationTokens = append(declarationTokens, token)
+			if _, isCurly := token.(CurlyBracketsBlock); isCurly {
+				break
+			}
+		}
+	}
+	declaration := parseDeclaration(firstToken, NewIter(declarationTokens), true)
+	if _, isDecl := declaration.(Declaration); isDecl {
+		return declaration
+	} else {
+		tokens = NewIter(append(append(declarationTokens, semicolonToken...), tokens.tail()...))
+		return consumeQualifiedRule(firstToken, tokens, true, true)
 	}
 }
 

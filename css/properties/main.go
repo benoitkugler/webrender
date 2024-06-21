@@ -7,63 +7,36 @@
 package properties
 
 import (
+	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/utils"
 )
 
 type Fl = utils.Fl
 
-// ValidatedProperty is the most general CSS input for a property.
-// It covers the following cases:
-//   - a plain CSS value, including "initial" or "inherited" special cases (CssProperty)
-//   - a var() call (VarData)
-//   - an input not yet validated, used as definition of variable (RawTokens)
-type ValidatedProperty struct {
-	SpecialProperty specialProperty
-	prop            CascadedProperty
+// DeclaredValue is the most general CSS input for a property,
+// one of:
+//   - the special "initial" or "inherited" keywords.
+//   - a validated [CssProperty]
+//   - a raw slice of tokens (containing var() tokens), pending validation
+type DeclaredValue interface {
+	isDeclaredValue()
 }
 
-func (c ValidatedProperty) IsNone() bool {
-	return c.prop.IsNone() && c.SpecialProperty == nil
+func (DefaultValue) isDeclaredValue() {}
+func (RawTokens) isDeclaredValue()    {}
+
+type RawTokens []parser.Token
+
+func (rt RawTokens) String() string {
+	return parser.Serialize(rt)
 }
 
-// ToCascaded will panic if c.SpecialProperty is not nil.
-func (c ValidatedProperty) ToCascaded() CascadedProperty {
-	if c.SpecialProperty != nil {
-		panic("attempted to bypass the SpecialProperty of a ValidatedProperty")
-	}
-	return c.prop
-}
-
-// CascadedProperty is the second form of a CSS input :
-// var() calls have been resolved and the remaining raw properties have been checked.
-// It is thus either a plain CSS property, or a default value.
-type CascadedProperty struct {
-	prop    CssProperty
-	Default DefaultKind
-}
-
-func (v CascadedProperty) IsNone() bool {
-	return v.prop == nil && v.Default == 0
-}
-
-// ToCSS will panic if c.Default is not 0.
-func (c CascadedProperty) ToCSS() CssProperty {
-	if c.Default != 0 {
-		panic("attempted to bypass the Default of a CascadedProperty")
-	}
-	return c.prop
-}
-
-// AsValidated wraps the property into a ValidatedProperty
-func (c CascadedProperty) AsValidated() ValidatedProperty {
-	return ValidatedProperty{prop: c}
-}
-
-// CssProperty is final form of a css input :
-// default values, "var()" and raw tokens have been resolved.
-// Note than a CssProperty can naturally be seen as a CascadedProperty, but not the other way around.
-
+// CssProperty is the final form of a css input, a.k.a. the computed value.
+// Default values and "var()" have been resolved, and the raw steam ok tokens has been
+// validated.
 type CssProperty interface {
+	DeclaredValue
+
 	isCssProperty()
 }
 
@@ -74,15 +47,19 @@ type specialProperty interface {
 func (v VarData) isSpecialProperty()   {}
 func (v RawTokens) isSpecialProperty() {}
 
-type DefaultKind uint8
+type DefaultValue uint8
 
 const (
-	Inherit DefaultKind = iota + 1
+	Inherit DefaultValue = iota + 1
 	Initial
 )
 
-// AsCascaded wraps the default to a CascadedProperty
-func (d DefaultKind) AsCascaded() CascadedProperty { return CascadedProperty{Default: d} }
+func NewDefaultValue(s string) DefaultValue {
+	if s == "initial" {
+		return Initial
+	}
+	return Inherit
+}
 
 type VarData struct {
 	Name    string // name of a custom property
@@ -93,16 +70,6 @@ func (v VarData) IsNone() bool {
 	return v.Name == "" && v.Default == nil
 }
 
-// ---------- Convenience constructor -------------------------------
-
-func AsCascaded(prop CssProperty) CascadedProperty {
-	return CascadedProperty{prop: prop}
-}
-
-func AsValidated(spe specialProperty) ValidatedProperty {
-	return ValidatedProperty{SpecialProperty: spe}
-}
-
 // KnownProp efficiently encode a known CSS property
 type KnownProp uint8
 
@@ -110,11 +77,12 @@ func (p KnownProp) String() string { return propsNames[p] }
 
 func (p KnownProp) Key() PropKey { return PropKey{KnownProp: p} }
 
-// Properties is the general container for validated, cascaded and computed properties.
+// Properties is a general container for computed properties.
+//
 // In addition to the generic acces, an attempt to provide a "type safe" way is provided through the
 // GetXXX and SetXXX methods. It relies on the convention than all the keys should be present,
 // and values never be nil.
-// "None" values are then encoded by the zero value of the concrete type.
+// Empty values are then encoded by the zero value of the concrete type.
 type Properties map[KnownProp]CssProperty
 
 // Copy return a shallow copy.
@@ -171,8 +139,8 @@ func (tr TextRatioCache) Set(fontKey string, isCh bool, f Float) {
 
 // PropKey stores a CSS property name, supporting variables.
 type PropKey struct {
-	KnownProp
 	Var string // with leading --
+	KnownProp
 }
 
 func (pr PropKey) String() string {
@@ -199,7 +167,7 @@ type ElementStyle interface {
 	Copy() ElementStyle
 
 	ParentStyle() ElementStyle
-	Variables() map[string]ValidatedProperty
+	Variables() map[string]RawTokens
 
 	Specified() SpecifiedAttributes
 

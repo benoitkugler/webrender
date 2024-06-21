@@ -23,6 +23,8 @@ const ( // zero field corresponds to null content
 	Turn
 	Deg
 	Grad
+
+	Fr
 )
 
 var (

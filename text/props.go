@@ -95,7 +95,7 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 
 	if !ignoreSpacing {
 		out.WordSpacing = pr.Fl(style.GetWordSpacing().Value)
-		if ls := style.GetLetterSpacing(); ls.String != "normal" {
+		if ls := style.GetLetterSpacing(); ls.S != "normal" {
 			out.LetterSpacing = pr.Fl(ls.Value)
 		}
 	}
@@ -112,7 +112,7 @@ type TabSize struct {
 	IsMultiple bool // true to use Width * <space character width>
 }
 
-func newTabSize(ts pr.Value) TabSize {
+func newTabSize(ts pr.DimOrS) TabSize {
 	return TabSize{
 		Width:      int(ts.Value),
 		IsMultiple: ts.Unit == 0,
@@ -364,7 +364,7 @@ type HyphenateZone struct {
 	IsPercentage bool
 }
 
-func newHyphenateZone(zone pr.Value) HyphenateZone {
+func newHyphenateZone(zone pr.DimOrS) HyphenateZone {
 	return HyphenateZone{
 		Limit:        pr.Fl(zone.Value),
 		IsPercentage: zone.Unit == pr.Perc,

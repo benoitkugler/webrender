@@ -116,7 +116,7 @@ func TestFindStylesheets(t *testing.T) {
 		pagesRules []PageRule
 	)
 	for _, sheet := range sheets {
-		for _, sheetRules := range sheet.Matcher {
+		for _, sheetRules := range sheet.matcher {
 			rules = append(rules, sheetRules.selector...)
 		}
 		pagesRules = append(pagesRules, sheet.pageRules...)
@@ -135,7 +135,7 @@ func TestExpandShorthands(t *testing.T) {
 		t.Fatal(err)
 	}
 	var sels []selector.Sel
-	for _, match := range sheet.Matcher {
+	for _, match := range sheet.matcher {
 		sels = append(sels, match.selector...)
 	}
 	if len(sels) != 1 {
@@ -145,41 +145,41 @@ func TestExpandShorthands(t *testing.T) {
 		t.Errorf("expected 'li' got %s", sels[0].String())
 	}
 
-	m := (sheet.Matcher)[0].declarations
+	m := (sheet.matcher)[0].declarations
 	if m[0].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[0].Name)
 	}
-	if (m[0].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 3, Unit: pr.Em}.ToValue()) {
+	if (m[0].Value.(pr.DimOrS) != pr.Dimension{Value: 3, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[0].Value)
 	}
 	if m[1].Name != pr.PMarginTop.Key() {
 		t.Errorf("expected margin_top got %s", m[1].Name)
 	}
-	if (m[1].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
+	if (m[1].Value.(pr.DimOrS) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[1].Value)
 	}
 	if m[2].Name != pr.PMarginRight.Key() {
 		t.Errorf("expected margin_right got %s", m[2].Name)
 	}
-	if (m[2].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
+	if (m[2].Value.(pr.DimOrS) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
 		t.Errorf("expected got %v", m[2].Value)
 	}
 	if m[3].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[3].Name)
 	}
-	if (m[3].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
+	if (m[3].Value.(pr.DimOrS) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[3].Value)
 	}
 	if m[4].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[4].Name)
 	}
-	if (m[4].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
+	if (m[4].Value.(pr.DimOrS) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
 		t.Errorf("expected got %v", m[4].Value)
 	}
 	if m[5].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[5].Name)
 	}
-	if (m[5].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()) {
+	if (m[5].Value.(pr.DimOrS) != pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[5].Value)
 	}
 	capt.AssertNoLogs(t)

@@ -1,7 +1,9 @@
 package properties
 
 import (
-	"github.com/benoitkugler/webrender/css/parser"
+	"fmt"
+
+	pa "github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -42,7 +44,7 @@ func (dec Decorations) Union(other Decorations) Decorations {
 
 type Transforms []SDimensions
 
-type Values []Value
+type Values []DimOrS
 
 type SIntStrings struct {
 	String string
@@ -86,17 +88,13 @@ type Int int
 
 type Ints3 [3]int
 
-type Page struct {
-	String string
-	Valid  bool
-	Page   int
-}
+type Page string
 
 // Dimension or "auto" or "cover" or "contain"
 type Size struct {
 	String string
-	Width  Value
-	Height Value
+	Width  DimOrS
+	Height DimOrS
 }
 
 type Center struct {
@@ -105,7 +103,7 @@ type Center struct {
 	Pos     Point
 }
 
-type Color parser.Color
+type Color pa.Color
 
 type ContentProperty struct {
 	// SStrings for type STRING, attr or string, counter, counters
@@ -151,9 +149,16 @@ type IntNamedString struct {
 
 type String string
 
-type Value struct {
-	String string
+type DimOrS struct {
+	S string
 	Dimension
+}
+
+func (ds DimOrS) String() string {
+	if ds.S != "" {
+		return ds.S
+	}
+	return ds.Dimension.String()
 }
 
 // OptionalRanges is either 'auto' or a slice of ranges.
@@ -162,15 +167,59 @@ type OptionalRanges struct {
 	Auto   bool
 }
 
-type NamedProperty struct {
-	Name     PropKey
-	Property ValidatedProperty
+type GridDims struct {
+	Name   byte // '', 'm' for minmax()' or 'f' for fit-content()
+	V1, V2 DimOrS
 }
 
-type NamedProperties []NamedProperty
+// NewGridDims return a non tagged value.
+func NewGridDims(v DimOrS) GridDims { return GridDims{V1: v} }
+
+type GridAuto []GridDims
+
+type GridLine struct {
+	Ident string
+	Val   int
+	Tag   Tag // Auto, Span or 0
+}
+
+func (gl GridLine) IsCustomIdent() bool { return gl.Val == 0 && gl.Tag == 0 }
+
+// An empty list means 'none'
+type GridTemplateAreas [][]string
+
+type GridTemplate struct {
+	Tag   Tag
+	Names []GridSpec
+}
+
+type (
+	GridSpec interface {
+		isGridSpec()
+	}
+	GridNames      []string
+	GridNameRepeat struct {
+		Names  [][]string
+		Repeat int // RepeatAutoFill, >= 1 otherwise
+	}
+
+	GridRepeat struct {
+		Names  []GridSpec
+		Repeat int
+	}
+)
+
+func (GridNames) isGridSpec()      {}
+func (GridNameRepeat) isGridSpec() {}
+func (GridDims) isGridSpec()       {}
+func (GridRepeat) isGridSpec()     {}
+
+const (
+	RepeatAutoFill = -1
+	RepeatAutoFit  = -2
+)
 
 // ---------------------- helpers types -----------------------------------
-type RawTokens []parser.Token
 
 type SContentProp struct {
 	ContentProperty ContentProperty
@@ -192,10 +241,59 @@ type InnerContent interface {
 
 type Unit uint8
 
+func (u Unit) String() string {
+	switch u {
+	case Scalar: // means no unit, but a valid value
+		return ""
+	case Perc: // percentage (%)
+		return "%"
+	case Ex:
+		return "ex"
+	case Em:
+		return "em"
+	case Ch:
+		return "ch"
+	case Rem:
+		return "rem"
+	case Px:
+		return "px"
+	case Pt:
+		return "pt"
+	case Pc:
+		return "pc"
+	case In:
+		return "in"
+	case Cm:
+		return "cm"
+	case Mm:
+		return "mm"
+	case Q:
+		return "q"
+	case Rad:
+		return "rad"
+	case Turn:
+		return "turn"
+	case Deg:
+		return "deg"
+	case Grad:
+		return "grad"
+	case Fr:
+		return "fr"
+	default:
+		return "<invalid unit>"
+	}
+}
+
 // Dimension without unit is interpreted as float
 type Dimension struct {
-	Unit  Unit
 	Value Float
+	Unit  Unit
+}
+
+func NewDim(v Float, u Unit) Dimension { return Dimension{v, u} }
+
+func (d Dimension) String() string {
+	return fmt.Sprintf("<%g %s>", d.Value, d.Unit)
 }
 
 type BoolString struct {
@@ -268,117 +366,64 @@ type RadialGradient struct {
 	Repeating  bool
 }
 
-func (TaggedString) isCssProperty() {}
-func (TaggedInt) isCssProperty()    {}
-
-func (Display) isCssProperty() {}
-
-func (BoolString) isCssProperty()    {}
-func (SFloatStrings) isCssProperty() {}
-func (SBoolFloat) isCssProperty()    {}
-
 func (v BoolString) IsNone() bool {
 	return v == BoolString{}
 }
 
-func (Center) isCssProperty() {}
 func (v Center) IsNone() bool {
 	return v == Center{}
 }
 
-func (Centers) isCssProperty() {}
-
-func (Color) isCssProperty() {}
-
-func (ContentProperties) isCssProperty() {}
-
-func (Float) isCssProperty() {}
-
-func (Images) isCssProperty() {}
-
-func (Int) isCssProperty() {}
-
-func (IntString) isCssProperty() {}
 func (v IntString) IsNone() bool {
 	return v == IntString{}
 }
 
-func (Ints3) isCssProperty() {}
 func (v Ints3) IsNone() bool {
 	return v == Ints3{}
 }
 
-func (Marks) isCssProperty() {}
 func (v Marks) IsNone() bool {
 	return v == Marks{}
 }
 
-func (Decorations) isCssProperty() {}
 func (v Decorations) IsNone() bool { return len(v) == 0 }
 
-func (NamedString) isCssProperty() {}
 func (v NamedString) IsNone() bool {
 	return v == NamedString{}
 }
 
-func (CounterStyleID) isCssProperty() {}
 func (v CounterStyleID) IsNone() bool {
 	return v.Type == "" && v.Name == "" && v.Symbols == nil
 }
 
-func (Page) isCssProperty() {}
-func (v Page) IsNone() bool {
-	return v == Page{}
-}
-
-func (Point) isCssProperty() {}
 func (v Point) IsNone() bool {
 	return v == Point{}
 }
 
-func (Quotes) isCssProperty() {}
 func (v Quotes) IsNone() bool {
 	return v.Open == nil && v.Close == nil
 }
 
-func (Repeats) isCssProperty() {}
-
-func (SContent) isCssProperty() {}
 func (v SContent) IsNone() bool {
 	return v.String == "" && v.Contents == nil
 }
 
-func (SIntStrings) isCssProperty() {}
 func (v SIntStrings) IsNone() bool {
 	return v.String == "" && v.Values == nil
 }
 
-func (SStrings) isCssProperty() {}
 func (v SStrings) IsNone() bool {
 	return v.String == "" && v.Strings == nil
 }
 
-func (Sizes) isCssProperty() {}
-
-func (String) isCssProperty() {}
-
-func (StringSet) isCssProperty() {}
 func (v StringSet) IsNone() bool {
 	return v.String == ""
 }
 
-func (Strings) isCssProperty() {}
-
-func (Transforms) isCssProperty() {}
-
-func (Value) isCssProperty() {}
-func (v Value) IsNone() bool {
-	return v == Value{}
+func (v DimOrS) IsNone() bool {
+	return v == DimOrS{}
 }
 
-func (Values) isCssProperty() {}
-
-func (AttrData) isCssProperty() {}
 func (v AttrData) IsNone() bool {
 	return v.Name == "" && v.TypeOrUnit == "" && v.Fallback == nil
 }
@@ -393,10 +438,6 @@ func (v DirectionType) IsNone() bool {
 
 func (v Dimension) IsNone() bool {
 	return v == Dimension{}
-}
-
-func (v NamedProperty) IsNone() bool {
-	return v.Name.KnownProp == 0 && v.Name.Var == "" && v.Property.IsNone()
 }
 
 func (v ColorStop) IsNone() bool {
@@ -442,3 +483,95 @@ func (v IntNamedString) IsNone() bool {
 func (v Counters) IsNone() bool {
 	return v.Name == "" && v.Separator == "" && v.Style.IsNone()
 }
+
+func (v GridDims) IsNone() bool {
+	return v.Name == 0 && v.V1.IsNone() && v.V2.IsNone()
+}
+
+// method tags
+
+func (TaggedString) isCssProperty()      {}
+func (TaggedInt) isCssProperty()         {}
+func (Display) isCssProperty()           {}
+func (BoolString) isCssProperty()        {}
+func (SFloatStrings) isCssProperty()     {}
+func (SBoolFloat) isCssProperty()        {}
+func (Center) isCssProperty()            {}
+func (Centers) isCssProperty()           {}
+func (Color) isCssProperty()             {}
+func (ContentProperties) isCssProperty() {}
+func (Float) isCssProperty()             {}
+func (Images) isCssProperty()            {}
+func (Int) isCssProperty()               {}
+func (IntString) isCssProperty()         {}
+func (Ints3) isCssProperty()             {}
+func (Marks) isCssProperty()             {}
+func (Decorations) isCssProperty()       {}
+func (NamedString) isCssProperty()       {}
+func (CounterStyleID) isCssProperty()    {}
+func (Page) isCssProperty()              {}
+func (Point) isCssProperty()             {}
+func (Quotes) isCssProperty()            {}
+func (Repeats) isCssProperty()           {}
+func (SContent) isCssProperty()          {}
+func (SIntStrings) isCssProperty()       {}
+func (SStrings) isCssProperty()          {}
+func (Sizes) isCssProperty()             {}
+func (String) isCssProperty()            {}
+func (StringSet) isCssProperty()         {}
+func (Strings) isCssProperty()           {}
+func (Transforms) isCssProperty()        {}
+func (DimOrS) isCssProperty()            {}
+func (Values) isCssProperty()            {}
+func (AttrData) isCssProperty()          {}
+func (NoneImage) isCssProperty()         {}
+func (UrlImage) isCssProperty()          {}
+func (LinearGradient) isCssProperty()    {}
+func (RadialGradient) isCssProperty()    {}
+func (GridAuto) isCssProperty()          {}
+func (GridLine) isCssProperty()          {}
+func (GridTemplateAreas) isCssProperty() {}
+func (GridTemplate) isCssProperty()      {}
+
+func (TaggedString) isDeclaredValue()      {}
+func (TaggedInt) isDeclaredValue()         {}
+func (Display) isDeclaredValue()           {}
+func (BoolString) isDeclaredValue()        {}
+func (SFloatStrings) isDeclaredValue()     {}
+func (SBoolFloat) isDeclaredValue()        {}
+func (Center) isDeclaredValue()            {}
+func (Centers) isDeclaredValue()           {}
+func (Color) isDeclaredValue()             {}
+func (ContentProperties) isDeclaredValue() {}
+func (Float) isDeclaredValue()             {}
+func (Images) isDeclaredValue()            {}
+func (Int) isDeclaredValue()               {}
+func (IntString) isDeclaredValue()         {}
+func (Ints3) isDeclaredValue()             {}
+func (Marks) isDeclaredValue()             {}
+func (Decorations) isDeclaredValue()       {}
+func (NamedString) isDeclaredValue()       {}
+func (CounterStyleID) isDeclaredValue()    {}
+func (Page) isDeclaredValue()              {}
+func (Point) isDeclaredValue()             {}
+func (Quotes) isDeclaredValue()            {}
+func (Repeats) isDeclaredValue()           {}
+func (SContent) isDeclaredValue()          {}
+func (SIntStrings) isDeclaredValue()       {}
+func (SStrings) isDeclaredValue()          {}
+func (Sizes) isDeclaredValue()             {}
+func (String) isDeclaredValue()            {}
+func (StringSet) isDeclaredValue()         {}
+func (Strings) isDeclaredValue()           {}
+func (Transforms) isDeclaredValue()        {}
+func (DimOrS) isDeclaredValue()            {}
+func (Values) isDeclaredValue()            {}
+func (AttrData) isDeclaredValue()          {}
+func (NoneImage) isDeclaredValue()         {}
+func (UrlImage) isDeclaredValue()          {}
+func (LinearGradient) isDeclaredValue()    {}
+func (RadialGradient) isDeclaredValue()    {}
+func (GridAuto) isDeclaredValue()          {}
+func (GridLine) isDeclaredValue()          {}
+func (GridTemplateAreas) isDeclaredValue() {}
+func (GridTemplate) isDeclaredValue()      {}

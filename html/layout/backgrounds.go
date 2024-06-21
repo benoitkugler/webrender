@@ -132,7 +132,7 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 	box.Background = &bo.Background{Color: color, ImageRendering: style.GetImageRendering(), Layers: layers}
 }
 
-func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, image images.Image, size pr.Size, clip string, repeat [2]string,
+func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, image images.Image, size pr.Size, clip string, repeat [2]string,
 	origin string, position pr.Center, attachment string,
 ) bo.BackgroundLayer {
 	var (
@@ -264,7 +264,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 		nRepeats := utils.MaxInt(1, int(math.Round(float64(positioningWidth/imageWidth))))
 		newWidth := positioningWidth / pr.Float(nRepeats)
 		positionX = pr.Float(0) // Ignore background-position for this dimension
-		if repeatY != "round" && size.Height.String == "auto" {
+		if repeatY != "round" && size.Height.S == "auto" {
 			imageHeight *= newWidth / imageWidth
 		}
 		imageWidth = newWidth
@@ -273,7 +273,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 		nRepeats := utils.MaxInt(1, int(math.Round(float64(positioningHeight/imageHeight))))
 		newHeight := positioningHeight / pr.Float(nRepeats)
 		positionY = pr.Float(0) // Ignore background-position for this dimension
-		if repeatX != "round" && size.Width.String == "auto" {
+		if repeatX != "round" && size.Width.S == "auto" {
 			imageWidth *= newHeight / imageHeight
 		}
 		imageHeight = newHeight

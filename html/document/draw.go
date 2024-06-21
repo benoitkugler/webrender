@@ -243,16 +243,16 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 		if clips := box.Style.GetClip(); box.IsAbsolutelyPositioned() && len(clips) != 0 {
 			top, right, bottom, left := clips[0], clips[1], clips[2], clips[3]
-			if top.String == "auto" {
+			if top.S == "auto" {
 				top.Value = 0
 			}
-			if right.String == "auto" {
+			if right.S == "auto" {
 				right.Value = 0
 			}
-			if bottom.String == "auto" {
+			if bottom.S == "auto" {
 				bottom.Value = box.BorderHeight()
 			}
-			if left.String == "auto" {
+			if left.S == "auto" {
 				left.Value = box.BorderWidth()
 			}
 			ctx.dst.Rectangle(
@@ -607,7 +607,7 @@ func (ctx drawContext) drawBorder(box_ Box) {
 
 	// Draw column borders.
 	drawColumnBorder := func() {
-		columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto")
+		columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().S != "auto" || box.Style.GetColumnCount().String != "auto")
 		if crw := box.Style.GetColumnRuleWidth(); columns && !crw.IsNone() {
 			borderWidths := pr.Rectangle{0, 0, 0, crw.Value}
 

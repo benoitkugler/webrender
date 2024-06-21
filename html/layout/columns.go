@@ -50,7 +50,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 
 	// Set height if defined
 	heightDefined := false
-	if height_.String != "auto" && height_.Unit != pr.Perc {
+	if height_.S != "auto" && height_.Unit != pr.Perc {
 		if height_.Unit != pr.Px {
 			panic(fmt.Sprintf("expected Px got %v", height_))
 		}
@@ -67,10 +67,10 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		width pr.Float
 		count int
 	)
-	if width_.String == "auto" && count_.String != "auto" {
+	if width_.S == "auto" && count_.String != "auto" {
 		count = count_.Int
 		width = pr.Max(0, availableWidth-(pr.Float(count)-1)*gap) / pr.Float(count)
-	} else if width_.String != "auto" && count_.String == "auto" {
+	} else if width_.S != "auto" && count_.String == "auto" {
 		count = int(pr.Max(1, pr.Floor((availableWidth+gap)/(width_.Value+gap))))
 		width = (availableWidth+gap)/pr.Float(count) - gap
 	} else { // overconstrained, with width != 'auto' and count != 'auto'

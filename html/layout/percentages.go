@@ -14,7 +14,7 @@ import (
 //
 // the return value should be set on the box
 // mainFlexDirection is either 0, Width or Height
-func resolveOnePercentage(value pr.Value, propertyName pr.KnownProp, referTo pr.Float, mainFlexDirection pr.KnownProp) pr.MaybeFloat {
+func resolveOnePercentage(value pr.DimOrS, propertyName pr.KnownProp, referTo pr.Float, mainFlexDirection pr.KnownProp) pr.MaybeFloat {
 	// box attributes are used values
 	percent := pr.ResoudPercentage(value, referTo)
 
@@ -80,7 +80,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		// Special handling when the height of the containing block
 		// depends on its content.
 		height := box.Style.GetHeight()
-		if height.String == "auto" || height.Unit == pr.Perc {
+		if height.S == "auto" || height.Unit == pr.Perc {
 			box.Height = pr.AutoF
 		} else {
 			if height.Unit != pr.Px {

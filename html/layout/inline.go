@@ -1241,9 +1241,9 @@ func lineBoxVerticality(context *layoutContext, box Box) (pr.Float, pr.Float) {
 		var dy pr.Float
 		if v.box.Box().IsFloated() {
 			dy = minY - v.box.Box().PositionY
-		} else if va.String == "top" {
+		} else if va.S == "top" {
 			dy = minY - v.min.V()
-		} else if va.String == "bottom" {
+		} else if va.S == "bottom" {
 			dy = maxY - v.max.V()
 		} else {
 			panic(fmt.Sprintf("expected top or bottom, got %v", va))
@@ -1256,7 +1256,7 @@ func lineBoxVerticality(context *layoutContext, box Box) (pr.Float, pr.Float) {
 func translateSubtree(box Box, dy pr.Float) {
 	if bo.InlineT.IsInstance(box) {
 		box.Box().PositionY += dy
-		if va := box.Box().Style.GetVerticalAlign().String; va == "top" || va == "bottom" {
+		if va := box.Box().Style.GetVerticalAlign().S; va == "top" || va == "bottom" {
 			for _, child := range box.Box().Children {
 				translateSubtree(child, dy)
 			}
@@ -1303,7 +1303,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 		}
 		var childBaselineY pr.Float
 		verticalAlign := child.Style.GetVerticalAlign()
-		switch verticalAlign.String {
+		switch verticalAlign.S {
 		case "baseline":
 			childBaselineY = baselineY
 		case "middle":
@@ -1341,7 +1341,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 			// grand-children for inline boxes are handled below
 		}
 
-		if verticalAlign.String == "top" || verticalAlign.String == "bottom" {
+		if verticalAlign.S == "top" || verticalAlign.S == "bottom" {
 			// top or bottom are special, they need to be handled in
 			// a later pass.
 			*topBottomSubtrees = append(*topBottomSubtrees, child_)
@@ -1484,9 +1484,9 @@ func isPhantomLinebox(linebox *bo.BoxFields) bool {
 				return false
 			}
 			for side := pr.KnownProp(0); side < 4; side++ {
-				m := child.Style.Get((pr.PMarginBottom + side*5).Key()).(pr.Value).Value
-				b := child.Style.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.Value).Value
-				p := child.Style.Get((pr.PPaddingBottom + side*5).Key()).(pr.Value).Value
+				m := child.Style.Get((pr.PMarginBottom + side*5).Key()).(pr.DimOrS).Value
+				b := child.Style.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.DimOrS).Value
+				p := child.Style.Get((pr.PPaddingBottom + side*5).Key()).(pr.DimOrS).Value
 				if m != 0 || b != 0 || p != 0 {
 					return false
 				}

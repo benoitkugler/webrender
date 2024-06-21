@@ -223,11 +223,8 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 	features.SetFontVariantEastAsian(pr.SStrings{})
 	features.SetFontFeatureSettings(pr.SIntStrings{})
 	for _, rules := range ruleDescriptors.FontVariant {
-		if rules.Property.SpecialProperty != nil {
-			continue
-		}
-		if cascaded := rules.Property.ToCascaded(); cascaded.Default == 0 {
-			features[rules.Name.KnownProp] = cascaded.ToCSS()
+		if value, ok := rules.Value.(pr.CssProperty); ok {
+			features[rules.Name] = value
 		}
 	}
 	if !ruleDescriptors.FontFeatureSettings.IsNone() {

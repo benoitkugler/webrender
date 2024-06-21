@@ -204,7 +204,7 @@ type BoxFields struct {
 	GridX int
 	Index int
 
-	FlexBasis                                                      pr.Value
+	FlexBasis                                                      pr.DimOrS
 	FlexBaseSize, TargetMainSize, Adjustment, HypotheticalMainSize pr.Float
 	FlexFactor, ScaledFlexShrinkFactor                             pr.Float
 	Frozen                                                         bool
@@ -532,10 +532,10 @@ func (b *BoxFields) PageValues() (pr.Page, pr.Page) {
 		startBox, endBox := children[0], children[len(children)-1]
 		childStart, _ := startBox.PageValues()
 		_, childEnd := endBox.PageValues()
-		if !childStart.IsNone() {
+		if childStart != "" {
 			start = childStart
 		}
-		if !childEnd.IsNone() {
+		if childEnd != "" {
 			end = childEnd
 		}
 	}

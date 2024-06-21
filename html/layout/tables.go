@@ -265,8 +265,8 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			for _, cell_ := range row.Children {
 				cell := cell_.Box()
 				verticalAlign := cell.Style.GetVerticalAlign()
-				if verticalAlign.String == "top" || verticalAlign.String == "middle" || verticalAlign.String == "bottom" {
-					cell.VerticalAlign = verticalAlign.String
+				if verticalAlign.S == "top" || verticalAlign.S == "middle" || verticalAlign.S == "bottom" {
+					cell.VerticalAlign = verticalAlign.S
 				} else {
 					// Assume "baseline" for any other value
 					cell.VerticalAlign = "baseline"

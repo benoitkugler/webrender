@@ -127,11 +127,11 @@ func TestNamedPages(t *testing.T) {
 	div := unpack1(body)
 	p := unpack1(div)
 	span := unpack1(p)
-	tu.AssertEqual(t, html.Box().Style.GetPage(), pr.Page{String: "", Valid: true})
-	tu.AssertEqual(t, body.Box().Style.GetPage(), pr.Page{String: "", Valid: true})
-	tu.AssertEqual(t, div.Box().Style.GetPage(), pr.Page{String: "", Valid: true})
-	tu.AssertEqual(t, p.Box().Style.GetPage(), pr.Page{String: "NARRow", Valid: true})
-	tu.AssertEqual(t, span.Box().Style.GetPage(), pr.Page{String: "NARRow", Valid: true})
+	tu.AssertEqual(t, html.Box().Style.GetPage(), pr.Page(""))
+	tu.AssertEqual(t, body.Box().Style.GetPage(), pr.Page(""))
+	tu.AssertEqual(t, div.Box().Style.GetPage(), pr.Page(""))
+	tu.AssertEqual(t, p.Box().Style.GetPage(), pr.Page("NARRow"))
+	tu.AssertEqual(t, span.Box().Style.GetPage(), pr.Page("NARRow"))
 }
 
 func TestUnits(t *testing.T) {
@@ -185,5 +185,29 @@ func TestMediaQueries(t *testing.T) {
 		html := unpack1(page)
 		tu.AssertEqual(t, html.Box().Width, data.width)
 		logs.AssertNoLogs(t)
+	}
+}
+
+func TestNestingBlock(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, style := range [...]string{
+		"div { p { width: 10px } }",
+		"p { div & { width: 10px } }",
+		"p { width: 20px; div & { width: 10px } }",
+		"p { div & { width: 10px } width: 20px }",
+		"div { & { & { p { & { width: 10px } } } } }",
+		"@media print { div { p { width: 10px } } }",
+	} {
+		page := renderOnePage(t, fmt.Sprintf(`
+      <style>%s</style>
+      <div><p></p></div><p></p>
+    `, style))
+		html := unpack1(page)
+		body := unpack1(html)
+		div, p := unpack2(body)
+		div_p := unpack1(div)
+		tu.AssertEqual(t, div_p.Box().Width, pr.Float(10))
+		tu.AssertEqual(t, p.Box().Width != pr.Float(10), true)
 	}
 }

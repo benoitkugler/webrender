@@ -11,6 +11,7 @@ import (
 
 	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/css/selector"
 )
 
 // Expand shorthands and validate property values.
@@ -34,16 +35,16 @@ var (
 		"no-close-quote": {Open: false, Insert: false},
 	}
 
-	ZEROPERCENT    = pr.Dimension{Value: 0, Unit: pr.Perc}
-	fiftyPercent   = pr.Dimension{Value: 50, Unit: pr.Perc}
-	HUNDREDPERCENT = pr.Dimension{Value: 100, Unit: pr.Perc}
+	zeroPercent    = pr.PercToD(0)
+	fiftyPercent   = pr.PercToD(50)
+	hundredPercent = pr.PercToD(100)
 
 	backgroundPositionsPercentages = map[string]pr.Dimension{
-		"top":    ZEROPERCENT,
-		"left":   ZEROPERCENT,
+		"top":    zeroPercent,
+		"left":   zeroPercent,
 		"center": fiftyPercent,
-		"bottom": HUNDREDPERCENT,
-		"right":  HUNDREDPERCENT,
+		"bottom": hundredPercent,
+		"right":  hundredPercent,
 	}
 
 	// http://drafts.csswg.org/csswg/css3-values/#angles
@@ -138,6 +139,10 @@ var (
 		pr.PBorderRightWidth:        borderWidth,
 		pr.PBorderLeftWidth:         borderWidth,
 		pr.PBorderBottomWidth:       borderWidth,
+		pr.PBorderImageSlice:        borderImageSlice,
+		pr.PBorderImageWidth:        borderImageWidth,
+		pr.PBorderImageOutset:       borderImageOutset,
+		pr.PBorderImageRepeat:       borderImageRepeat,
 		pr.PColumnRuleWidth:         borderWidth,
 		pr.POutlineWidth:            borderWidth,
 		pr.PColumnWidth:             columnWidth,
@@ -156,7 +161,6 @@ var (
 		pr.PMarginLeft:              lengthPercOrAuto,
 		pr.PHeight:                  widthHeight,
 		pr.PWidth:                   widthHeight,
-		pr.PColumnGap:               columnGap,
 		pr.PColumnFill:              columnFill,
 		pr.PDirection:               direction,
 		pr.PDisplay:                 display,
@@ -228,29 +232,44 @@ var (
 		pr.PFlexGrow:                flexGrowShrink,
 		pr.PFlexShrink:              flexGrowShrink,
 		pr.POrder:                   order,
+		pr.PColumnGap:               gap,
+		pr.PRowGap:                  gap,
 		pr.PFlexWrap:                flexWrap,
-		pr.PJustifyContent:          justifyContent,
+		pr.PAlignContent:            alignContent,
 		pr.PAlignItems:              alignItems,
 		pr.PAlignSelf:               alignSelf,
-		pr.PAlignContent:            alignContent,
+		pr.PJustifyContent:          justifyContent,
+		pr.PJustifyItems:            justifyItems,
+		pr.PJustifySelf:             justifySelf,
 		pr.PAnchor:                  anchor,
 		pr.PBlockEllipsis:           blockEllipsis,
 		pr.PContinue:                continue_,
 		pr.PMaxLines:                maxLines,
 		pr.PWordBreak:               wordBreak,
+		pr.PGridAutoColumns:         gridAuto,
+		pr.PGridAutoRows:            gridAuto,
+		pr.PGridAutoFlow:            gridAutoFlow,
+		pr.PGridTemplateColumns:     gridTemplate,
+		pr.PGridTemplateRows:        gridTemplate,
+		pr.PGridTemplateAreas:       gridTemplateAreas,
+		pr.PGridRowStart:            gridLine,
+		pr.PGridColumnStart:         gridLine,
+		pr.PGridRowEnd:              gridLine,
+		pr.PGridColumnEnd:           gridLine,
 	}
 	validatorsError = map[pr.KnownProp]validatorError{
-		pr.PBackgroundImage:  backgroundImage,
-		pr.PListStyleImage:   listStyleImage,
-		pr.PContent:          content,
-		pr.PCounterIncrement: counterIncrement,
-		pr.PCounterReset:     counterReset,
-		pr.PCounterSet:       counterReset,
-		pr.PFontSize:         fontSize,
-		pr.PBookmarkLabel:    bookmarkLabel,
-		pr.PTransform:        transform,
-		pr.PStringSet:        stringSet,
-		pr.PLink:             link,
+		pr.PBackgroundImage:   backgroundImage,
+		pr.PBorderImageSource: borderImageSource,
+		pr.PListStyleImage:    listStyleImage,
+		pr.PContent:           content,
+		pr.PCounterIncrement:  counterIncrement,
+		pr.PCounterReset:      counterReset,
+		pr.PCounterSet:        counterReset,
+		pr.PFontSize:          fontSize,
+		pr.PBookmarkLabel:     bookmarkLabel,
+		pr.PTransform:         transform,
+		pr.PStringSet:         stringSet,
+		pr.PLink:              link,
 	}
 
 	// regroup the two cases (with error or without error)
@@ -324,18 +343,11 @@ type Token = pa.Token
 type (
 	validator      func(tokens []Token, baseUrl string) pr.CssProperty // dont support var(), attr()
 	validatorError func(tokens []Token, baseUrl string) (pr.CssProperty, error)
-	expander       func(baseUrl, name string, tokens []Token) (pr.NamedProperties, error)
 )
 
-type ValidatedProperty struct {
-	Name      pr.PropKey
-	Value     pr.ValidatedProperty
-	Important bool
-}
-
-// Validate validate one property.
-func Validate(name pr.KnownProp, tokens []Token, baseUrl string) (out pr.CascadedProperty, err error) {
-	if name == pr.PColor { // special case to handle inherit inherit
+// ValidateKnown validate one known, non shortand, property.
+func ValidateKnown(name pr.KnownProp, tokens []Token, baseUrl string) (out pr.DeclaredValue, err error) {
+	if name == pr.PColor { // special case to handle inherit
 		return color(tokens, ""), nil
 	}
 
@@ -345,64 +357,56 @@ func Validate(name pr.KnownProp, tokens []Token, baseUrl string) (out pr.Cascade
 	} else if functionE := validatorsError[name]; functionE != nil {
 		value, err = functionE(tokens, baseUrl)
 	}
-	return pr.AsCascaded(value), err
+	return value, err
+}
+
+func Validate(key pr.PropKey, tokens []Token) (pr.DeclaredValue, error) {
+	out, err := validateNonShorthand("", key.String(), tokens, false)
+	return out.property, err
 }
 
 // Default validator for non-shorthand pr.
 // required = false
-func validateNonShorthand(baseUrl string, name string, tokens []pa.Token, required bool) (out pr.NamedProperty, err error) {
+func validateNonShorthand(baseUrl string, name string, tokens []pa.Token, required bool) (out namedProperty, err error) {
 	if strings.HasPrefix(name, "--") { // variable
-		key := pr.PropKey{Var: name}
 		// can't validate variables contents before substitution
-		return pr.NamedProperty{
-			Name:     key,
-			Property: pr.AsValidated(pr.RawTokens(tokens)),
+		return namedProperty{
+			name:     pr.PropKey{Var: name},
+			property: pr.RawTokens(tokens),
 		}, nil
 	}
 
-	prop, ok := pr.PropsFromNames[name]
-	if !ok {
-		hyphensName := strings.ReplaceAll(string(name), "_", "-")
-		if _, ok := pr.PropsFromNames[hyphensName]; ok {
-			return out, fmt.Errorf("did you mean %s?", hyphensName)
-		} else {
-			return out, errors.New("unknown property")
-		}
+	prop, _ := pr.PropsFromNames[name]
+	if !required && !pr.KnownProperties.Has(prop) {
+		return out, errors.New("unknown property")
 	}
 
-	if _, isIn := allValidators[prop]; !required && !isIn {
+	if _, isSupported := allValidators[prop]; !required && !isSupported {
 		return out, fmt.Errorf("property %s not supported yet", name)
 	}
 
-	if _, isIn := multiValProperties[prop]; !isIn {
-		for _, token := range tokens {
-			var_ := CheckVarFunction(token)
-			if !var_.IsNone() {
-				return pr.NamedProperty{Name: pr.PropKey{KnownProp: prop}, Property: pr.AsValidated(var_)}, nil
-			}
+	for _, token := range tokens {
+		if HasVar(token) {
+			// Found CSS variable, return pending-substitution values.
+			return namedProperty{name: pr.PropKey{KnownProp: prop}, property: pr.RawTokens(tokens)}, nil
 		}
 	}
 
-	var value pr.CascadedProperty
+	var value pr.DeclaredValue
 	keyword := getSingleKeyword(tokens)
 	if keyword == "initial" || keyword == "inherit" {
-		value = defaultFromString(keyword).AsCascaded()
+		value = pr.NewDefaultValue(keyword)
 	} else {
-		value, err = Validate(prop, tokens, baseUrl)
+		value, err = ValidateKnown(prop, tokens, baseUrl)
 		if err != nil {
 			return out, err
 		}
-		if value.IsNone() {
+		if value == nil {
 			return out, errors.New("invalid value (nil function return)")
 		}
 	}
 
-	return pr.NamedProperty{Name: pr.PropKey{KnownProp: prop}, Property: value.AsValidated()}, nil
-}
-
-func defaultValidateShorthand(baseUrl, name string, tokens []pa.Token) (pr.NamedProperties, error) {
-	np, err := validateNonShorthand(baseUrl, name, tokens, false)
-	return pr.NamedProperties{np}, err
+	return namedProperty{name: pr.PropKey{KnownProp: prop}, property: value}, nil
 }
 
 // Not applicable to the print media
@@ -504,22 +508,114 @@ var notPrintMedia = utils.NewSet(
 	"scrollbar-width",
 )
 
-// Expand shorthand properties and filter unsupported properties and values.
+// Declaration is the input form of a CSS property,
+// possibly containing variables.
+type Declaration struct {
+	Name  pr.PropKey
+	Value pr.DeclaredValue
+
+	// Shortand is not zero for shortands containing 'var()' tokens, waiting to be expanded and validated
+	// In this case, [Value] is [pr.RawTokens] and refers to the associate shorthand, not to the expanded [Name]
+	Shortand pr.Shortand
+
+	Important bool
+}
+
+type KeyedDeclarations struct {
+	Selector     selector.SelectorGroup
+	Declarations []Declaration
+}
+
+var (
+	pos11 = pa.Pos{Line: 1, Column: 1}
+	colon = pa.NewLiteral(":", pos11)
+)
+
+// See PreprocessDeclarationsPrelude
+func PreprocessDeclarations(baseUrl string, declarations []pa.Compound) []Declaration {
+	tmp, _ := PreprocessDeclarationsPrelude(baseUrl, declarations, nil)
+	return tmp[0].Declarations
+}
+
+// PreprocessDeclarationsPrelude filter unsupported properties or parsing errors,
+// and expand shortand properties.
+//
+// Properties containing var() tokens are not validated yet.
+// Shortand containing var() tokens are not expanded.
+//
 // Log a warning for every ignored declaration.
-// Return a iterable of “(name, value, important)“ tuples.
-func PreprocessDeclarations(baseUrl string, declarations []pa.Compound) []ValidatedProperty {
-	var out []ValidatedProperty
-	for _, _declaration := range declarations {
-		if errToken, ok := _declaration.(pa.ParseError); ok {
+//
+// If [prelude] is nil, the returned error is always nil.
+// The returned slice is never empty, and has always length 1 if [prelude] is nil.
+func PreprocessDeclarationsPrelude(baseURL string, declarations []pa.Compound, prelude []pa.Token) ([]KeyedDeclarations, error) {
+	// Compile list of selectors.
+	var selectors selector.SelectorGroup
+	if prelude != nil {
+		// Handle & selector in non-nested rule. MDN explains that & is
+		// then equivalent to :scope, and :scope is equivalent to :root
+		// as we don’t support :scope yet.
+		originalPrelude := prelude
+		prelude = []Token{}
+		for _, token := range originalPrelude {
+			if pa.IsLiteral(token, "&") {
+				prelude = append(prelude, colon, pa.NewIdent("root", pos11))
+			} else {
+				prelude = append(prelude, token)
+			}
+		}
+		var err error
+		selectors, err = selector.ParseGroup(pa.Serialize(prelude))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Yield declarations.
+	is := pa.NewFunctionBlock(pos11, "is", prelude)
+	var (
+		out      []KeyedDeclarations
+		ownDecls []Declaration
+	)
+	for _, declaration := range declarations {
+		if errToken, ok := declaration.(pa.ParseError); ok {
 			logger.WarningLogger.Printf("Error: %s \n", errToken.Message)
 		}
 
-		declaration, ok := _declaration.(pa.Declaration)
+		if declaration, ok := declaration.(pa.QualifiedRule); ok {
+			// Nested rule.
+			if prelude == nil {
+				continue
+			}
+			hasNesting := false
+			// Replace & selector by parent.
+			var declarationPrelude []Token
+			for _, token := range declaration.Prelude {
+				if pa.IsLiteral(token, "&") {
+					hasNesting = true
+					declarationPrelude = append(declarationPrelude, colon, is)
+				} else {
+					declarationPrelude = append(declarationPrelude, token)
+				}
+			}
+			if !hasNesting {
+				// No & selector, prepend parent.
+				declarationPrelude = append([]Token{colon, is, pa.NewWhitespace(" ", pos11)},
+					declaration.Prelude...)
+			}
+			contents, err := PreprocessDeclarationsPrelude(baseURL, pa.ParseBlocksContents(declaration.Content, false),
+				declarationPrelude)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, contents...)
+		}
+
+		declaration, ok := declaration.(pa.Declaration)
 		if !ok {
 			continue
 		}
 
-		name := string(declaration.Name)
+		name := declaration.Name
 		if !strings.HasPrefix(name, "--") { // check for non variable, case insensitive
 			name = utils.AsciiLower(declaration.Name)
 		}
@@ -553,12 +649,7 @@ func PreprocessDeclarations(baseUrl string, declarations []pa.Compound) []Valida
 			continue
 		}
 
-		tokens := RemoveWhitespace(declaration.Value)
-
-		validator, in := expanders[name]
-		if !in {
-			validator = defaultValidateShorthand
-		}
+		tokens := pa.RemoveWhitespace(declaration.Value)
 
 		// Having no tokens is allowed by grammar but refused by all
 		// properties and expanders.
@@ -566,7 +657,20 @@ func PreprocessDeclarations(baseUrl string, declarations []pa.Compound) []Valida
 			validationError("no value")
 			continue
 		}
-		result, err := validator(baseUrl, name, tokens)
+
+		var (
+			result expandedProperties
+			err    error
+		)
+		if sh := pr.NewShortand(name); sh != 0 {
+			result, err = expanders[sh](baseURL, sh, tokens)
+		} else {
+			// validate without any expansion
+			var r namedProperty
+			r, err = validateNonShorthand(baseURL, name, tokens, false)
+			result = append(result, r)
+		}
+
 		if err != nil {
 			validationError(err.Error())
 			continue
@@ -575,17 +679,21 @@ func PreprocessDeclarations(baseUrl string, declarations []pa.Compound) []Valida
 		important := declaration.Important
 
 		for _, np := range result {
-			out = append(out, ValidatedProperty{
-				Name:      np.Name,
-				Value:     np.Property,
+			ownDecls = append(ownDecls, Declaration{
+				Name:      np.name,
+				Value:     np.property,
 				Important: important,
+				Shortand:  np.shortand,
 			})
 		}
 	}
-	return out
+
+	out = append(out, KeyedDeclarations{selectors, ownDecls})
+
+	return out, nil
 }
 
-// If `token` is a keyword, return its name.
+// If `token` is [Ident], return its lower name.
 // Otherwise return empty string.
 func getKeyword(token Token) string {
 	if ident, ok := token.(pa.Ident); ok {
@@ -594,7 +702,7 @@ func getKeyword(token Token) string {
 	return ""
 }
 
-// If `tokens` is a 1-element list of keywords, return its name.
+// If `tokens` is a 1-element list of [Ident], return its name.
 // Otherwise return empty string.
 func getSingleKeyword(tokens []Token) string {
 	if len(tokens) == 1 {
@@ -608,16 +716,16 @@ func getLength(token Token, negative, percentage bool) pr.Dimension {
 	switch token := token.(type) {
 	case pa.Percentage:
 		if percentage && (negative || token.ValueF >= 0) {
-			return pr.Dimension{Value: pr.Float(token.ValueF), Unit: pr.Perc}
+			return pr.PercToD(token.ValueF)
 		}
 	case pa.Dimension:
 		unit, isKnown := LENGTHUNITS[string(token.Unit)]
 		if isKnown && (negative || token.ValueF >= 0) {
-			return pr.Dimension{Value: pr.Float(token.ValueF), Unit: unit}
+			return pr.NewDim(pr.Float(token.ValueF), unit)
 		}
 	case pa.Number:
 		if token.ValueF == 0 {
-			return pr.Dimension{Unit: pr.Scalar}
+			return pr.NewDim(0, pr.Scalar)
 		}
 	}
 	return pr.Dimension{}
@@ -661,8 +769,8 @@ func _backgroundAttachment(tokens []Token) string {
 
 func backgroundAttachment(tokens []Token, _ string) pr.CssProperty {
 	var out pr.Strings
-	for _, part := range SplitOnComma(tokens) {
-		part = RemoveWhitespace(part)
+	for _, part := range pa.SplitOnComma(tokens) {
+		part = pa.RemoveWhitespace(part)
 		result := _backgroundAttachment(part)
 		if result == "" {
 			return nil
@@ -731,16 +839,16 @@ func emptyCells(tokens []Token, _ string) pr.CssProperty {
 // @validator("color")
 // @singleToken
 // “*-color“ && “color“ properties validation.
-func color(tokens []Token, _ string) pr.CascadedProperty {
+func color(tokens []Token, _ string) pr.DeclaredValue {
 	if len(tokens) != 1 {
-		return pr.CascadedProperty{}
+		return nil
 	}
 	token := tokens[0]
 	result := pa.ParseColor(token)
 	if result.Type == pa.ColorCurrentColor {
-		return pr.Inherit.AsCascaded()
+		return pr.Inherit
 	} else {
-		return pr.AsCascaded(pr.Color(result))
+		return pr.Color(result)
 	}
 }
 
@@ -763,8 +871,8 @@ func _backgroundImage(tokens []Token, baseUrl string) (pr.Image, error) {
 
 func backgroundImage(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	var out pr.Images
-	for _, part := range SplitOnComma(tokens) {
-		part = RemoveWhitespace(part)
+	for _, part := range pa.SplitOnComma(tokens) {
+		part = pa.RemoveWhitespace(part)
 		result, err := _backgroundImage(part, baseUrl)
 		if err != nil {
 			return nil, err
@@ -846,8 +954,8 @@ func backgroundPosition(tokens []Token, _ string) pr.CssProperty {
 
 func centers(tokens []Token) pr.Centers {
 	var out pr.Centers
-	for _, part := range SplitOnComma(tokens) {
-		result := parsePosition(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result := parsePosition(pa.RemoveWhitespace(part))
 		if result.IsNone() {
 			return nil
 		}
@@ -929,8 +1037,8 @@ func _backgroundRepeat(tokens []Token) [2]string {
 
 func backgroundRepeat(tokens []Token, _ string) pr.CssProperty {
 	var out pr.Repeats
-	for _, part := range SplitOnComma(tokens) {
-		result := _backgroundRepeat(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result := _backgroundRepeat(pa.RemoveWhitespace(part))
 		if result == [2]string{} {
 			return nil
 		}
@@ -955,21 +1063,21 @@ func _backgroundSize(tokens []Token) pr.Size {
 		}
 		length := getLength(token, false, true)
 		if !length.IsNone() {
-			return pr.Size{Width: pr.Value{Dimension: length}, Height: pr.SToV("auto")}
+			return pr.Size{Width: length.ToValue(), Height: pr.SToV("auto")}
 		}
 	case 2:
 		var out pr.Size
 		lengthW := getLength(tokens[0], false, true)
 		lengthH := getLength(tokens[1], false, true)
 		if !lengthW.IsNone() {
-			out.Width = pr.Value{Dimension: lengthW}
+			out.Width = lengthW.ToValue()
 		} else if getKeyword(tokens[0]) == "auto" {
 			out.Width = pr.SToV("auto")
 		} else {
 			return pr.Size{}
 		}
 		if !lengthH.IsNone() {
-			out.Height = pr.Value{Dimension: lengthH}
+			out.Height = lengthH.ToValue()
 		} else if getKeyword(tokens[1]) == "auto" {
 			out.Height = pr.SToV("auto")
 		} else {
@@ -982,8 +1090,8 @@ func _backgroundSize(tokens []Token) pr.Size {
 
 func backgroundSize(tokens []Token, _ string) pr.CssProperty {
 	var out pr.Sizes
-	for _, part := range SplitOnComma(tokens) {
-		result := _backgroundSize(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result := _backgroundSize(pa.RemoveWhitespace(part))
 		if (result == pr.Size{}) {
 			return nil
 		}
@@ -1011,8 +1119,8 @@ func _box(tokens []Token) string {
 
 func box(tokens []Token, _ string) pr.CssProperty {
 	var out pr.Strings
-	for _, part := range SplitOnComma(tokens) {
-		result := _box(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result := _box(pa.RemoveWhitespace(part))
 		if result == "" {
 			return nil
 		}
@@ -1135,9 +1243,9 @@ func page(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	if ident, ok := token.(pa.Ident); ok {
 		if utils.AsciiLower(ident.Value) == "auto" {
-			return pr.Page{String: "auto", Valid: true}
+			return pr.Page("auto")
 		}
-		return pr.Page{String: ident.Value, Valid: true}
+		return pr.Page(ident.Value)
 	}
 	return nil
 }
@@ -1155,9 +1263,9 @@ func bleed(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	keyword := getKeyword(token)
 	if keyword == "auto" {
-		return pr.Value{String: "auto"}
+		return pr.DimOrS{S: "auto"}
 	} else {
-		return pr.Value{Dimension: getLength(token, true, false)}
+		return getLength(token, true, false).ToValue()
 	}
 }
 
@@ -1197,13 +1305,13 @@ func outlineStyle(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator("border-top-width")
-// //@validator("border-right-width")
-// //@validator("border-left-width")
-// //@validator("border-bottom-width")
-// //@validator("column-rule-width")
-// //@validator("outline-width")
-// //@singleToken
+// @validator("border-top-width")
+// @validator("border-right-width")
+// @validator("border-left-width")
+// @validator("border-bottom-width")
+// @validator("column-rule-width")
+// @validator("outline-width")
+// @singleToken
 // Border, column rule && outline widths properties validation.
 func borderWidth(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
@@ -1212,17 +1320,110 @@ func borderWidth(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, false)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	keyword := getKeyword(token)
 	if keyword == "thin" || keyword == "medium" || keyword == "thick" {
-		return pr.Value{String: keyword}
+		return pr.DimOrS{S: keyword}
 	}
 	return nil
 }
 
-// //@validator()
-// //@singleToken
+// @single_token
+func borderImageSource(tokens []Token, baseURL string) (pr.CssProperty, error) {
+	if len(tokens) != 1 {
+		return nil, nil
+	}
+	token := tokens[0]
+	if getKeyword(token) == "none" {
+		return pr.NoneImage{}, nil
+	}
+	return getImage(token, baseURL)
+}
+
+func borderImageSlice(tokens []Token, _ string) pr.CssProperty {
+	var (
+		values pr.Values
+		fill   bool
+	)
+	for i, token := range tokens {
+		// Don't use get_length() because a dimension with a unit is disallowed.
+		if v, ok := token.(pa.Percentage); ok && v.ValueF >= 0 {
+			values = append(values, pr.PercToV(v.ValueF))
+		} else if v, ok := token.(pa.Number); ok && v.ValueF >= 0 {
+			values = append(values, pr.FToV(v.ValueF))
+		} else if getKeyword(token) == "fill" && !fill && (i == 0 || i == len(tokens)-1) {
+			fill = true
+			values = append(values, pr.SToV("fill"))
+		} else {
+			return nil
+		}
+	}
+	if L := len(values); (fill && 2 <= L && L <= 5) || (1 <= L && L <= 4) {
+		return values
+	}
+	return nil
+}
+
+func borderImageWidth(tokens []Token, _ string) pr.CssProperty {
+	var values pr.Values
+	for _, token := range tokens {
+		if getKeyword(token) == "auto" {
+			values = append(values, pr.SToV("auto"))
+		} else if v, ok := token.(pa.Number); ok && v.ValueF >= 0 {
+			values = append(values, pr.FToV(v.ValueF))
+		} else {
+			if length := getLength(token, false, true); !length.IsNone() {
+				values = append(values, length.ToValue())
+			} else {
+				return nil
+			}
+		}
+	}
+
+	if L := len(values); 1 <= L && L <= 4 {
+		return values
+	}
+	return nil
+}
+
+func borderImageOutset(tokens []Token, _ string) pr.CssProperty {
+	var values pr.Values
+	for _, token := range tokens {
+		if v, ok := token.(pa.Number); ok && v.ValueF >= 0 {
+			values = append(values, pr.FToV(v.ValueF))
+		} else {
+			if length := getLength(token, false, false); !length.IsNone() {
+				values = append(values, length.ToValue())
+			} else {
+				return nil
+			}
+		}
+	}
+	if L := len(values); 1 <= L && L <= 4 {
+		return values
+	}
+	return nil
+}
+
+func borderImageRepeat(tokens []Token, _ string) pr.CssProperty {
+	if L := len(tokens); 1 <= L && L <= 2 {
+		var keywords pr.Strings
+		for _, token := range tokens {
+			switch k := getKeyword(token); k {
+			case "stretch", "repeat", "round", "space":
+				keywords = append(keywords, k)
+			default:
+				return nil
+			}
+		}
+		return keywords
+	}
+	return nil
+}
+
+// @validator()
+// @singleToken
 // “column-width“ property validation.
 func columnWidth(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
@@ -1231,17 +1432,17 @@ func columnWidth(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, false)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	keyword := getKeyword(token)
 	if keyword == "auto" {
-		return pr.Value{String: keyword}
+		return pr.DimOrS{S: keyword}
 	}
 	return nil
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 // “column-span“ property validation.
 func columnSpan(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
@@ -1253,8 +1454,8 @@ func columnSpan(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 // Validation for the “box-sizing“ property from css3-ui
 func boxSizing(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
@@ -1266,8 +1467,8 @@ func boxSizing(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 // “caption-side“ properties validation.
 func captionSide(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
@@ -1279,8 +1480,8 @@ func captionSide(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 // “clear“ property validation.
 func clear(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
@@ -1292,25 +1493,25 @@ func clear(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
-// //@singleToken
+// @validator()
+// @singleToken
 // Validation for the “clip“ property.
 func clip(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
 		return nil
 	}
 	token := tokens[0]
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name != "" {
 		if name == "rect" && len(args) == 4 {
 			var values pr.Values
 			for _, arg := range args {
 				if getKeyword(arg) == "auto" {
-					values = append(values, pr.Value{String: "auto"})
+					values = append(values, pr.DimOrS{S: "auto"})
 				} else {
 					length := getLength(arg, true, false)
 					if !length.IsNone() {
-						values = append(values, pr.Value{Dimension: length})
+						values = append(values, length.ToValue())
 					}
 				}
 			}
@@ -1325,7 +1526,7 @@ func clip(tokens []Token, _ string) pr.CssProperty {
 	return nil
 }
 
-// //@validator(wantsBaseUrl=true)
+// @validator(wantsBaseUrl=true)
 // “content“ property validation.
 func content(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	var token Token
@@ -1373,7 +1574,7 @@ func content(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	return pr.SContent{Contents: l}, nil
 }
 
-// //@validator()
+// @validator()
 // “counter-increment“ property validation.
 func counterIncrement(tokens []Token, _ string) (pr.CssProperty, error) {
 	ci, err := counter(tokens, 1)
@@ -1431,15 +1632,15 @@ func counter(tokens []Token, defaultInteger int) ([]pr.IntString, error) {
 	return results, nil
 }
 
-// //@validator("top")
-// //@validator("right")
-// //@validator("left")
-// //@validator("bottom")
-// //@validator("margin-top")
-// //@validator("margin-right")
-// //@validator("margin-bottom")
-// //@validator("margin-left")
-// //@singleToken
+// @validator("top")
+// @validator("right")
+// @validator("left")
+// @validator("bottom")
+// @validator("margin-top")
+// @validator("margin-right")
+// @validator("margin-bottom")
+// @validator("margin-left")
+// @singleToken
 // “margin-*“ properties validation.
 func lengthPercOrAuto(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
@@ -1448,17 +1649,17 @@ func lengthPercOrAuto(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, true, true)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	if getKeyword(token) == "auto" {
-		return pr.Value{String: "auto"}
+		return pr.DimOrS{S: "auto"}
 	}
 	return nil
 }
 
-// //@validator("height")
-// //@validator("width")
-// //@singleToken
+// @validator("height")
+// @validator("width")
+// @singleToken
 // Validation for the “width“ && “height“ pr.
 func widthHeight(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
@@ -1467,28 +1668,26 @@ func widthHeight(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	if getKeyword(token) == "auto" {
-		return pr.Value{String: "auto"}
+		return pr.DimOrS{S: "auto"}
 	}
 	return nil
 }
 
-// //@validator()
-// //@singleToken
-// Validation for the “column-gap“ property.
-func columnGap(tokens []Token, _ string) pr.CssProperty {
+// Validation for the “column-gap“ and "row-gap" property.
+func gap(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
 		return nil
 	}
 	token := tokens[0]
 	length := getLength(token, false, false)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	if getKeyword(token) == "normal" {
-		return pr.Value{String: "normal"}
+		return pr.DimOrS{S: "normal"}
 	}
 	return nil
 }
@@ -1613,13 +1812,13 @@ func _fontFamily(tokens []Token) string {
 	return ""
 }
 
-// //@validator()
-// //@commaSeparatedList
+// @validator()
+// @commaSeparatedList
 // “font-family“ property validation.
 func fontFamily(tokens []Token, _ string) pr.CssProperty {
 	var out pr.Strings
-	for _, part := range SplitOnComma(tokens) {
-		result := _fontFamily(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result := _fontFamily(pa.RemoveWhitespace(part))
 		if result == "" {
 			return nil
 		}
@@ -1628,8 +1827,8 @@ func fontFamily(tokens []Token, _ string) pr.CssProperty {
 	return out
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 func fontKerning(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
@@ -1640,8 +1839,8 @@ func fontKerning(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
-// //@singleToken
+// @validator()
+// @singleToken
 func fontLanguageOverride(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) != 1 {
 		return nil
@@ -1697,7 +1896,7 @@ func parseFontVariant(tokens []Token, all utils.Set, couples [][]string) pr.SStr
 	return pr.SStrings{}
 }
 
-// //@validator()
+// @validator()
 func fontVariantLigatures(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
 		keyword := getKeyword(tokens[0])
@@ -1712,8 +1911,8 @@ func fontVariantLigatures(tokens []Token, _ string) pr.CssProperty {
 	return ss
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 func fontVariantPosition(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
@@ -1724,8 +1923,8 @@ func fontVariantPosition(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
-// //@singleKeyword
+// @validator()
+// @singleKeyword
 func fontVariantCaps(tokens []Token, _ string) pr.CssProperty {
 	keyword := getSingleKeyword(tokens)
 	switch keyword {
@@ -1752,7 +1951,7 @@ func fontVariantNumeric(tokens []Token, _ string) pr.CssProperty {
 	return ss
 }
 
-// //@validator()
+// @validator()
 // “font-feature-settings“ property validation.
 func fontFeatureSettings(tokens []Token, _ string) pr.CssProperty {
 	s := _fontFeatureSettings(tokens)
@@ -1813,8 +2012,8 @@ func _fontFeatureSettings(tokens []Token) pr.SIntStrings {
 	}
 
 	var out pr.SIntStrings
-	for _, part := range SplitOnComma(tokens) {
-		result := fontFeatureSettingsList(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result := fontFeatureSettingsList(pa.RemoveWhitespace(part))
 		if (result == pr.IntString{}) {
 			return pr.SIntStrings{}
 		}
@@ -1837,7 +2036,7 @@ func fontVariantAlternates(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
-// //@validator()
+// @validator()
 func fontVariantEastAsian(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
 		keyword := getKeyword(tokens[0])
@@ -1871,8 +2070,8 @@ func fontVariationSettings(tokens []Token, _ string) pr.CssProperty {
 	}
 
 	var out pr.SFloatStrings
-	for _, part := range SplitOnComma(tokens) {
-		result, ok := fontVariationSettingsList(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, ok := fontVariationSettingsList(pa.RemoveWhitespace(part))
 		if !ok {
 			return nil
 		}
@@ -1891,11 +2090,11 @@ func fontSize(tokens []Token, _ string) (pr.CssProperty, error) {
 	token := tokens[0]
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}, nil
+		return length.ToValue(), nil
 	}
 	fontSizeKeyword := getKeyword(token)
 	if _, isIn := pr.FontSizeKeywords[fontSizeKeyword]; isIn || fontSizeKeyword == "smaller" || fontSizeKeyword == "larger" {
-		return pr.Value{String: fontSizeKeyword}, nil
+		return pr.DimOrS{S: fontSizeKeyword}, nil
 	}
 	return nil, nil
 }
@@ -1988,11 +2187,11 @@ func spacing(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if getKeyword(token) == "normal" {
-		return pr.Value{String: "normal"}
+		return pr.DimOrS{S: "normal"}
 	}
 	length := getLength(token, true, false)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	return nil
 }
@@ -2006,17 +2205,17 @@ func lineHeight(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if getKeyword(token) == "normal" {
-		return pr.Value{String: "normal"}
+		return pr.DimOrS{S: "normal"}
 	}
 
 	switch tt := token.(type) {
 	case pa.Number:
 		if tt.ValueF >= 0 {
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.ValueF), Unit: pr.Scalar}}
+			return pr.NewDim(pr.Float(tt.ValueF), pr.Scalar).ToValue()
 		}
 	case pa.Percentage:
 		if tt.ValueF >= 0 {
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(tt.ValueF), Unit: pr.Perc}}
+			return pr.PercToV(tt.ValueF)
 		}
 	case pa.Dimension:
 		if tt.ValueF >= 0 {
@@ -2068,7 +2267,7 @@ func listStyleType_(tokens []Token) (out pr.CounterStyleID, ok bool) {
 		if token.Name != "symbols" {
 			return out, false
 		}
-		functionArguments := RemoveWhitespace(token.Arguments)
+		functionArguments := pa.RemoveWhitespace(token.Arguments)
 		if len(functionArguments) == 0 {
 			return out, false
 		}
@@ -2138,7 +2337,7 @@ func lengthOrPercentage(tokens []Token, _ string) pr.CssProperty {
 	if l.IsNone() {
 		return nil
 	}
-	return pr.Value{Dimension: l}
+	return l.ToValue()
 }
 
 // @validator("max-width")
@@ -2152,10 +2351,10 @@ func maxWidthHeight(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	if getKeyword(token) == "none" {
-		return pr.Value{Dimension: pr.Dimension{Value: pr.Inf, Unit: pr.Px}}
+		return pr.NewDim(pr.Inf, pr.Px).ToValue()
 	}
 	return nil
 }
@@ -2397,7 +2596,7 @@ func textIndent(tokens []Token, _ string) pr.CssProperty {
 	if l.IsNone() {
 		return nil
 	}
-	return pr.Value{Dimension: l}
+	return l.ToValue()
 }
 
 // @validator()
@@ -2423,11 +2622,11 @@ func verticalAlign(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	length := getLength(token, true, true)
 	if !length.IsNone() {
-		return pr.Value{Dimension: length}
+		return length.ToValue()
 	}
 	keyword := getKeyword(token)
 	if keyword == "baseline" || keyword == "middle" || keyword == "sub" || keyword == "super" || keyword == "text-top" || keyword == "text-bottom" || keyword == "top" || keyword == "bottom" {
-		return pr.Value{String: keyword}
+		return pr.DimOrS{S: keyword}
 	}
 	return nil
 }
@@ -2545,6 +2744,474 @@ func _flexGrowShrink(tokens []Token) (pr.Fl, bool) {
 	return 0, false
 }
 
+// Parse “inflexible-breadth“.
+func parseInflexibleBreadth(token Token) pr.DimOrS {
+	keyword := getKeyword(token)
+	switch keyword {
+	case "auto", "min-content", "max-content":
+		return pr.DimOrS{S: keyword}
+	case "":
+		length := getLength(token, false, true)
+		if !length.IsNone() {
+			return length.ToValue()
+		}
+	}
+
+	return pr.DimOrS{}
+}
+
+// Parse “track-breadth“.
+func parseTrackBreadth(token Token) pr.DimOrS {
+	if dim, ok := token.(pa.Dimension); ok && dim.ValueF >= 0 && dim.Unit == "fr" {
+		return pr.NewDim(pr.Float(dim.ValueF), pr.Fr).ToValue()
+	}
+	return parseInflexibleBreadth(token)
+}
+
+// Parse “track-size“.
+func parseTrackSize(token Token) pr.GridDims {
+	trackBreadth := parseTrackBreadth(token)
+	if !trackBreadth.IsNone() {
+		return pr.GridDims{V1: trackBreadth}
+	}
+	name, args := pa.ParseFunction(token)
+	if name == "minmax" {
+		if len(args) == 2 {
+			inflexibleBreadth := parseInflexibleBreadth(args[0])
+			trackBreadth := parseTrackBreadth(args[1])
+			if !inflexibleBreadth.IsNone() && !trackBreadth.IsNone() {
+				return pr.GridDims{Name: 'm', V1: inflexibleBreadth, V2: trackBreadth}
+			}
+		}
+	} else if name == "fit-content" {
+		if len(args) == 1 {
+			length := getLength(args[0], false, true)
+			if !length.IsNone() {
+				return pr.GridDims{Name: 'f', V1: length.ToValue()}
+			}
+		}
+	}
+
+	return pr.GridDims{}
+}
+
+// Parse “fixed-size“.
+func parseFixedSize(token Token) pr.GridDims {
+	length := getLength(token, false, true)
+	if !length.IsNone() {
+		return pr.GridDims{V1: length.ToValue()}
+	}
+	name, args := pa.ParseFunction(token)
+	if name == "minmax" && len(args) == 2 {
+		length := getLength(args[0], false, true)
+		if !length.IsNone() {
+			trackBreadth := parseTrackBreadth(args[1])
+			if !trackBreadth.IsNone() {
+				return pr.GridDims{Name: 'm', V1: length.ToValue(), V2: trackBreadth}
+			}
+		}
+		keyword := getKeyword(args[0])
+		if keyword == "min-content" || keyword == "max-content" || keyword == "auto" || !length.IsNone() {
+			fixedBreadth := getLength(args[1], false, true)
+			if !fixedBreadth.IsNone() {
+				v1 := length.ToValue()
+				if v1.IsNone() {
+					v1 = pr.SToV(keyword)
+				}
+				return pr.GridDims{Name: 'm', V1: v1, V2: fixedBreadth.ToValue()}
+			}
+		}
+	}
+
+	return pr.GridDims{}
+}
+
+// parse “line-names“, returning nil if invalid,
+// but an empty list for '[]'
+func parseLineNames(arg Token) []string {
+	if arg, ok := arg.(pa.SquareBracketsBlock); ok {
+		names := []string{}
+		for _, token := range arg.Arguments {
+			if ident, ok := token.(pa.Ident); ok {
+				names = append(names, ident.Value)
+			} else if _, ok := token.(pa.Whitespace); ok {
+				continue
+			} else {
+				return nil
+			}
+		}
+		return names
+	}
+
+	return nil
+}
+
+// @property("grid-auto-columns")
+// @property("grid-auto-rows")
+// “grid-auto-columns“ and “grid-auto-rows“ properties validation.
+func gridAuto(tokens []Token, _ string) pr.CssProperty {
+	var returnTokens pr.GridAuto
+	for _, token := range tokens {
+		trackSize := parseTrackSize(token)
+		if trackSize.IsNone() {
+			return nil
+		}
+		returnTokens = append(returnTokens, trackSize)
+	}
+	return returnTokens
+}
+
+// @property()
+// “grid-auto-flow“ property validation.
+func gridAutoFlow(tokens []Token, _ string) pr.CssProperty {
+	if len(tokens) == 1 {
+		keyword := getKeyword(tokens[0])
+		switch keyword {
+		case "row", "column":
+			return pr.Strings{keyword}
+		case "dense":
+			return pr.Strings{keyword, "row"}
+		}
+	} else if len(tokens) == 2 {
+		keywords := [2]string{getKeyword(tokens[0]), getKeyword(tokens[1])}
+		switch keywords {
+		case [2]string{"dense", "row"}, [2]string{"dense", "column"}, [2]string{"row", "dense"}, [2]string{"column", "dense"}:
+			return pr.Strings(keywords[:])
+		}
+	}
+	return nil
+}
+
+func parseRepeat(token Token, acceptAutoFit bool) (int, bool) {
+	if nb, ok := token.(pa.Number); ok && nb.IsInt() && nb.ValueF >= 1 {
+		return nb.Int(), true
+	}
+	switch getKeyword(token) {
+	case "auto-fill":
+		return pr.RepeatAutoFill, true
+	case "auto-fit":
+		if acceptAutoFit {
+			return pr.RepeatAutoFit, true
+		}
+	}
+	return 0, false
+}
+
+// [tokens] start right after 'subgrid'
+func parseSubgrid(tokens []Token) ([]pr.GridSpec, bool) {
+	var subgrid []pr.GridSpec
+	for _, token := range tokens {
+		lineNames := parseLineNames(token)
+		if lineNames != nil {
+			subgrid = append(subgrid, pr.GridNames(lineNames))
+			continue
+		}
+
+		name, args := pa.ParseFunction(token)
+		if !(name == "repeat" && len(args) >= 2) {
+			return nil, false
+		}
+
+		reapeat, ok := parseRepeat(args[0], false)
+		if !ok { // invalid
+			return nil, false
+		}
+		var names [][]string
+		for _, arg := range args[1:] {
+			lineNames := parseLineNames(arg)
+			if lineNames != nil {
+				names = append(names, lineNames)
+			}
+		}
+		subgrid = append(subgrid, pr.GridNameRepeat{Repeat: reapeat, Names: names})
+	}
+	return subgrid, true
+}
+
+// @property("grid-template-columns")
+// @property("grid-template-rows")
+// “grid-template-columns“ and “grid-template-rows“ validation.
+func gridTemplate(tokens []Token, _ string) pr.CssProperty {
+	if v, ok := gridTemplateImpl(tokens); ok {
+		return v
+	}
+	return nil
+}
+
+func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
+	if len(tokens) == 0 {
+		return out, false
+	}
+	if len(tokens) == 1 && getKeyword(tokens[0]) == "none" {
+		return pr.GridTemplate{Tag: pr.None}, true
+	}
+	if getKeyword(tokens[0]) == "subgrid" {
+		if subgrid, ok := parseSubgrid(tokens[1:]); ok {
+			return pr.GridTemplate{Tag: pr.Subgrid, Names: subgrid}, true
+		}
+		return out, false
+	}
+
+	var (
+		returnTokens       []pr.GridSpec
+		includesAutoRepeat = false
+		includesTrack      = false
+		lastIsLineName     = false
+	)
+	for _, token := range tokens {
+		lineNames := parseLineNames(token)
+		if lineNames != nil {
+			if lastIsLineName {
+				return out, false
+			}
+			lastIsLineName = true
+			returnTokens = append(returnTokens, pr.GridNames(lineNames))
+			continue
+		}
+		fixedSize := parseFixedSize(token)
+		if !fixedSize.IsNone() {
+			if !lastIsLineName {
+				returnTokens = append(returnTokens, nil)
+			}
+			lastIsLineName = false
+			returnTokens = append(returnTokens, fixedSize)
+			continue
+		}
+		trackSize := parseTrackSize(token)
+		if !trackSize.IsNone() {
+			if !lastIsLineName {
+				returnTokens = append(returnTokens, nil)
+			}
+			lastIsLineName = false
+			returnTokens = append(returnTokens, trackSize)
+			includesTrack = true
+			continue
+		}
+		name, args := pa.ParseFunction(token)
+		if name == "repeat" && len(args) >= 2 {
+			number, ok := parseRepeat(args[0], true)
+			if !ok {
+				return out, false
+			}
+			if number <= -1 { // auto-repeat
+				if includesAutoRepeat {
+					return out, false
+				}
+				includesAutoRepeat = true
+			}
+
+			var (
+				namesAndSizes        []pr.GridSpec
+				repeatLastIsLineName = false
+			)
+			for _, arg := range args[1:] {
+				lineNames = parseLineNames(arg)
+				if lineNames != nil {
+					if repeatLastIsLineName {
+						return out, false
+					}
+					namesAndSizes = append(namesAndSizes, pr.GridNames(lineNames))
+					repeatLastIsLineName = true
+					continue
+				}
+				// fixed-repead
+				fixedSize = parseFixedSize(arg)
+				if !fixedSize.IsNone() {
+					if !repeatLastIsLineName {
+						namesAndSizes = append(namesAndSizes, nil)
+					}
+					repeatLastIsLineName = false
+					namesAndSizes = append(namesAndSizes, fixedSize)
+					continue
+				}
+				// track-repeat
+				trackSize = parseTrackSize(arg)
+				if !trackSize.IsNone() {
+					includesTrack = true
+					if !repeatLastIsLineName {
+						namesAndSizes = append(namesAndSizes, nil)
+					}
+					repeatLastIsLineName = false
+					namesAndSizes = append(namesAndSizes, trackSize)
+					continue
+				}
+				return out, false
+			}
+			if !lastIsLineName {
+				returnTokens = append(returnTokens, nil)
+			}
+			lastIsLineName = false
+			if !repeatLastIsLineName {
+				namesAndSizes = append(namesAndSizes, nil)
+			}
+			returnTokens = append(returnTokens, pr.GridRepeat{Names: namesAndSizes, Repeat: number})
+			continue
+		}
+		return out, false
+	}
+	if includesAutoRepeat && includesTrack {
+		return out, false
+	}
+	if !lastIsLineName {
+		returnTokens = append(returnTokens, nil)
+	}
+	return pr.GridTemplate{Names: returnTokens}, true
+}
+
+// @property()
+// “grid-template-areas“ property validation.
+func gridTemplateAreas(tokens []Token, _ string) pr.CssProperty {
+	if len(tokens) == 1 && getKeyword(tokens[0]) == "none" {
+		return pr.GridTemplateAreas{}
+	}
+	var gridAreas pr.GridTemplateAreas
+	for _, token := range tokens {
+		s, ok := token.(pa.String)
+		if !ok {
+			return nil
+		}
+		componentValues := pa.Tokenize([]byte(s.Value), true)
+		var (
+			row       []string
+			lastIsDot = false
+		)
+		for _, value := range componentValues {
+			switch value := value.(type) {
+			case pa.Ident:
+				row = append(row, value.Value)
+				lastIsDot = false
+			case pa.Literal:
+				if value.Value != "." {
+					return nil
+				}
+				if lastIsDot {
+					continue
+				}
+				row = append(row, "")
+				lastIsDot = true
+			case pa.Whitespace:
+				lastIsDot = false
+			default:
+				return nil
+			}
+		}
+		if len(row) == 0 {
+			return nil
+		}
+		gridAreas = append(gridAreas, row)
+	}
+
+	// check row / column have the same sizes
+	L := len(gridAreas[0])
+	for _, other := range gridAreas {
+		if len(other) != L {
+			return nil
+		}
+	}
+	// check areas are continuous rectangles
+	coordinates := make(map[[2]int]bool)
+	areas := make(map[string]bool)
+	for y, row := range gridAreas {
+		for x, area := range row {
+			if in := coordinates[[2]int{x, y}]; in || area == "" {
+				continue
+			}
+			if in := areas[area]; in {
+				return nil
+			}
+			areas[area] = true
+			coordinates[[2]int{x, y}] = true
+			nx := x + 1
+			for ; nx < len(row); nx++ {
+				narea := row[nx]
+				if narea != area {
+					break
+				}
+				coordinates[[2]int{nx, y}] = true
+			}
+			for ny := y + 1; ny < len(gridAreas); ny++ {
+				nrow := gridAreas[ny]
+				if set := utils.NewSet(nrow[x:nx]...); len(set) == 1 && set.Has(area) {
+					for nnx := x; nnx < nx; nnx++ {
+						coordinates[[2]int{nnx, ny}] = true
+					}
+				} else {
+					break
+				}
+			}
+		}
+	}
+	return gridAreas
+}
+
+// @property("grid-row-start")
+// @property("grid-row-end")
+// @property("grid-column-start")
+// @property("grid-column-end")
+// “grid-[row|column]-[start—end]“ properties validation.
+func gridLine(tokens []Token, _ string) pr.CssProperty {
+	v, ok := gridLineImpl(tokens)
+	if ok {
+		return v
+	}
+	return nil
+}
+
+func gridLineImpl(tokens []Token) (pr.GridLine, bool) {
+	if len(tokens) == 1 {
+		token := tokens[0]
+		if keyword := getKeyword(token); keyword != "" {
+			if keyword == "auto" {
+				return pr.GridLine{Tag: pr.Auto}, true
+			} else if keyword != "span" {
+				return pr.GridLine{Ident: keyword}, true
+			}
+		} else if number, ok := token.(pa.Number); ok && number.IsInt() && number.ValueF != 0 {
+			return pr.GridLine{Val: number.Int()}, true
+		}
+		return pr.GridLine{}, false
+	}
+	var (
+		number int
+		ident  string
+		span   pr.Tag
+	)
+
+	for _, token := range tokens {
+		if keyword := getKeyword(token); keyword != "" {
+			if keyword == "auto" {
+				return pr.GridLine{}, false
+			}
+			if keyword == "span" {
+				if span == 0 {
+					span = pr.Span
+					continue
+				}
+			} else if ident == "" {
+				ident = keyword
+				continue
+			}
+		} else if nbT, ok := token.(pa.Number); ok && nbT.IsInt() && nbT.ValueF != 0 {
+			if number == 0 {
+				number = nbT.Int()
+				continue
+			}
+		}
+		return pr.GridLine{}, false
+	}
+	if span != 0 {
+		if number < 0 {
+			return pr.GridLine{}, false
+		} else if ident != "" || number != 0 {
+			return pr.GridLine{Tag: span, Val: number, Ident: ident}, true
+		}
+	} else if number != 0 {
+		return pr.GridLine{Tag: span, Val: number, Ident: ident}, true
+	}
+
+	return pr.GridLine{}, false
+}
+
 // @validator()
 // @singleToken
 func order(tokens []Token, _ string) pr.CssProperty {
@@ -2575,53 +3242,195 @@ func flexWrap(tokens []Token, _ string) pr.CssProperty {
 // @singleKeyword
 // “justify-content“ property validation.
 func justifyContent(tokens []Token, _ string) pr.CssProperty {
-	keyword := getSingleKeyword(tokens)
-	switch keyword {
-	case "flex-start", "flex-end", "center", "space-between", "space-around", "space-evenly", "stretch":
-		return pr.String(keyword)
-	default:
-		return nil
+	if len(tokens) == 1 {
+		switch keyword := getKeyword(tokens[0]); keyword {
+		case "center", "space-between", "space-around", "space-evenly",
+			"stretch", "normal", "flex-start", "flex-end",
+			"start", "end", "left", "right":
+			return pr.Strings{keyword}
+		}
+	} else if len(tokens) == 2 {
+		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
+		if kw1 == "safe" || kw1 == "unsafe" {
+			switch kw2 {
+			case "center", "start", "end", "flex-start", "flex-end", "left",
+				"right":
+				return pr.Strings{kw1, kw2}
+			}
+		}
 	}
+	return nil
 }
 
 // @validator()
-// @singleKeyword
+// “align-items“ property validation.
+func justifyItems(tokens []Token, _ string) pr.CssProperty {
+	if len(tokens) == 1 {
+		switch keyword := getKeyword(tokens[0]); keyword {
+		case "normal", "stretch", "center", "start", "end", "self-start",
+			"self-end", "flex-start", "flex-end", "left", "right",
+			"legacy":
+			return pr.Strings{keyword}
+		case "baseline":
+			return pr.Strings{"first", keyword}
+		}
+	} else if len(tokens) == 2 {
+		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
+		if kw1 == "safe" || kw1 == "unsafe" {
+			switch kw2 {
+			case "center", "start", "end", "self-start", "self-end",
+				"flex-start", "flex-end", "left", "right":
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw1 == "baseline" {
+			if kw2 == "first" || kw2 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw2 == "baseline" {
+			if kw1 == "first" || kw1 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw1 == "legacy" {
+			if kw2 == "left" || kw2 == "right" || kw2 == "center" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw2 == "legacy" {
+			if kw1 == "left" || kw1 == "right" || kw1 == "center" {
+				return pr.Strings{kw1, kw2}
+			}
+		}
+	}
+	return nil
+}
+
+// @validator()
+// “align-items“ property validation.
+func justifySelf(tokens []Token, _ string) pr.CssProperty {
+	if len(tokens) == 1 {
+		switch keyword := getKeyword(tokens[0]); keyword {
+		case "auto", "normal", "stretch", "center", "start", "end",
+			"self-start", "self-end", "flex-start", "flex-end", "left",
+			"right":
+			return pr.Strings{keyword}
+		case "baseline":
+			return pr.Strings{"first", keyword}
+		}
+	} else if len(tokens) == 2 {
+		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
+		if kw1 == "safe" || kw1 == "unsafe" {
+			switch kw2 {
+			case "center", "start", "end", "self-start", "self-end",
+				"flex-start", "flex-end", "left", "right":
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw1 == "baseline" {
+			if kw2 == "first" || kw2 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw2 == "baseline" {
+			if kw1 == "first" || kw1 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		}
+	}
+	return nil
+}
+
+// @validator()
 // “align-items“ property validation.
 func alignItems(tokens []Token, _ string) pr.CssProperty {
-	keyword := getSingleKeyword(tokens)
-	switch keyword {
-	case "flex-start", "flex-end", "center", "baseline", "stretch":
-		return pr.String(keyword)
-	default:
-		return nil
+	if len(tokens) == 1 {
+		switch keyword := getKeyword(tokens[0]); keyword {
+		case "normal", "stretch", "center", "start", "end", "self-start",
+			"self-end", "flex-start", "flex-end":
+			return pr.Strings{keyword}
+		case "baseline":
+			return pr.Strings{"first", keyword}
+		}
+	} else if len(tokens) == 2 {
+		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
+		if kw1 == "safe" || kw1 == "unsafe" {
+			switch kw2 {
+			case "center", "start", "end", "self-start", "self-end",
+				"flex-start", "flex-end":
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw1 == "baseline" {
+			if kw2 == "first" || kw2 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw2 == "baseline" {
+			if kw1 == "first" || kw1 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		}
 	}
+	return nil
 }
 
 // @validator()
 // @singleKeyword
 // “align-self“ property validation.
 func alignSelf(tokens []Token, _ string) pr.CssProperty {
-	keyword := getSingleKeyword(tokens)
-	switch keyword {
-	case "auto", "flex-start", "flex-end", "center", "baseline", "stretch":
-		return pr.String(keyword)
-	default:
-		return nil
+	if len(tokens) == 1 {
+		switch keyword := getKeyword(tokens[0]); keyword {
+		case "auto", "normal", "stretch", "center", "start", "end",
+			"self-start", "self-end", "flex-start", "flex-end":
+			return pr.Strings{keyword}
+		case "baseline":
+			return pr.Strings{"first", keyword}
+		}
+	} else if len(tokens) == 2 {
+		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
+		if kw1 == "safe" || kw1 == "unsafe" {
+			switch kw2 {
+			case "center", "start", "end", "self-start", "self-end",
+				"flex-start", "flex-end":
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw1 == "baseline" {
+			if kw2 == "first" || kw2 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw2 == "baseline" {
+			if kw1 == "first" || kw1 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		}
 	}
+	return nil
 }
 
 // @validator()
-// @singleKeyword
 // “align-content“ property validation.
 func alignContent(tokens []Token, _ string) pr.CssProperty {
-	keyword := getSingleKeyword(tokens)
-	switch keyword {
-	case "flex-start", "flex-end", "center", "space-between", "space-around",
-		"space-evenly", "stretch":
-		return pr.String(keyword)
-	default:
-		return nil
+	if len(tokens) == 1 {
+		switch keyword := getKeyword(tokens[0]); keyword {
+		case "center", "space-between", "space-around", "space-evenly",
+			"stretch", "normal", "flex-start", "flex-end",
+			"start", "end":
+			return pr.Strings{keyword}
+		case "baseline":
+			return pr.Strings{"first", keyword}
+		}
+	} else if len(tokens) == 2 {
+		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
+		if kw1 == "safe" || kw1 == "unsafe" {
+			switch kw2 {
+			case "center", "start", "end", "flex-start", "flex-end":
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw1 == "baseline" {
+			if kw2 == "first" || kw2 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		} else if kw2 == "baseline" {
+			if kw1 == "first" || kw1 == "last" {
+				return pr.Strings{kw1, kw2}
+			}
+		}
 	}
+	return nil
 }
 
 // @validator(unstable=true)
@@ -2736,7 +3545,7 @@ func anchor(tokens []Token, _ string) (out pr.CssProperty) {
 	if getKeyword(token) == "none" {
 		return pr.String("none")
 	}
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
 			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
@@ -2766,7 +3575,7 @@ func link(tokens []Token, baseUrl string) (out pr.CssProperty, err error) {
 	if !parsedUrl.IsNone() {
 		return parsedUrl, nil
 	}
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
 			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
@@ -2791,10 +3600,10 @@ func tabSize(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	if number, ok := token.(pa.Number); ok {
 		if number.IsInt() && number.ValueF >= 0 { // no unit means multiple of space width
-			return pr.Value{Dimension: pr.Dimension{Value: pr.Float(number.ValueF)}}
+			return pr.NewDim(pr.Float(number.ValueF), 0).ToValue()
 		}
 	}
-	return pr.Value{Dimension: getLength(token, false, false)}
+	return getLength(token, false, false).ToValue()
 }
 
 // @validator(unstable=true)
@@ -2843,7 +3652,7 @@ func hyphenateLimitZone(tokens []Token, _ string) pr.CssProperty {
 	if d.IsNone() {
 		return nil
 	}
-	return pr.Value{Dimension: d}
+	return d.ToValue()
 }
 
 // @validator(unstable=true)
@@ -2912,7 +3721,7 @@ func lang(tokens []Token, _ string) pr.CssProperty {
 	if getKeyword(token) == "none" {
 		return pr.NamedString{Name: "none"}
 	}
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
 			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
@@ -2999,8 +3808,8 @@ func _stringSet(tokens []Token, baseUrl string) (out pr.SContent, err error) {
 
 func stringSet(tokens []Token, baseUrl string) (pr.CssProperty, error) {
 	var out pr.StringSet
-	for _, part := range SplitOnComma(tokens) {
-		result, err := _stringSet(RemoveWhitespace(part), baseUrl)
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := _stringSet(pa.RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -3056,7 +3865,7 @@ func blockEllipsis_(tokens []Token) (out pr.TaggedString, ok bool) {
 }
 
 func transformFunction(token Token) (pr.SDimensions, error) {
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return pr.SDimensions{}, ErrInvalidValue
 	}
@@ -3162,15 +3971,4 @@ func appearance(tokens []Token, _ string) pr.CssProperty {
 	default:
 		return nil
 	}
-}
-
-// Remove any top-level whitespace in a token list.
-func RemoveWhitespace(tokens []Token) []Token {
-	var out []Token
-	for _, token := range tokens {
-		if token.Kind() != pa.KWhitespace && token.Kind() != pa.KComment {
-			out = append(out, token)
-		}
-	}
-	return out
 }

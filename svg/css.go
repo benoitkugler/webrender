@@ -153,7 +153,7 @@ func expandProperty(d declaration) []declaration {
 		return []declaration{d}
 	}
 
-	tokens := validation.RemoveWhitespace(pa.Tokenize([]byte(d.value), true))
+	tokens := pa.RemoveWhitespace(pa.Tokenize([]byte(d.value), true))
 	expanded, err := validation.ExpandFont(tokens)
 	if err != nil {
 		logger.WarningLogger.Printf("ignoring %s property: %s", d.property, err)
@@ -162,10 +162,7 @@ func expandProperty(d declaration) []declaration {
 
 	out := make([]declaration, len(expanded))
 	for i, p := range expanded {
-		out[i] = declaration{
-			property: p.Name,
-			value:    pa.Serialize(p.Tokens),
-		}
+		out[i] = declaration{p[0], p[1]}
 	}
 	return out
 }

@@ -8,11 +8,11 @@ import "github.com/benoitkugler/webrender/css/parser"
 const (
 	_ KnownProp = iota
 
+	// DO NOT CHANGE the order, because
 	// the following properties are grouped by side,
 	// in the [bottom, left, right, top] order,
 	// so that, if side in an index (0, 1, 2 or 3),
 	// the property is a PBorderBottomColor + side * 5
-	// DO NOT CHANGE the order, because
 	PBorderBottomColor
 	PBorderBottomStyle
 	PBorderBottomWidth
@@ -36,6 +36,12 @@ const (
 	PBorderTopWidth
 	PMarginTop
 	PPaddingTop
+
+	PBorderImageSource
+	PBorderImageSlice
+	PBorderImageWidth
+	PBorderImageOutset
+	PBorderImageRepeat
 
 	// min-XXX is at +2, max-XXX is a + 4
 	PWidth
@@ -149,6 +155,17 @@ const (
 	PBreakBefore
 	PBreakInside
 
+	PGridAutoColumns
+	PGridAutoFlow
+	PGridAutoRows
+	PGridTemplateAreas
+	PGridTemplateColumns
+	PGridTemplateRows
+	PGridRowStart
+	PGridColumnStart
+	PGridRowEnd
+	PGridColumnEnd
+
 	PAlignContent
 	PAlignItems
 	PAlignSelf
@@ -158,7 +175,11 @@ const (
 	PFlexShrink
 	PFlexWrap
 	PJustifyContent
+	PJustifyItems
+	PJustifySelf
 	POrder
+	PColumnGap
+	PRowGap
 
 	PBottom
 	PCaptionSide
@@ -194,7 +215,6 @@ const (
 	PImageResolution
 	PImageRendering
 
-	PColumnGap
 	PColumnFill
 	PColumnSpan
 	PColumnRuleColor
@@ -273,6 +293,18 @@ var InitialValues = Properties{
 	PBorderTopWidth:    FToV(3), // computed value for "medium"
 	PBorderRightWidth:  FToV(3),
 
+	PBorderImageSource: NoneImage{},
+	PBorderImageSlice: Values{
+		PercToV(100), PercToV(100), PercToV(100), PercToV(100),
+		DimOrS{},
+	},
+	PBorderImageWidth: Values{FToV(1), FToV(1), FToV(1), FToV(1)},
+	PBorderImageOutset: Values{
+		FToV(0), FToV(0),
+		FToV(0), FToV(0),
+	},
+	PBorderImageRepeat: Strings{"stretch", "stretch"},
+
 	PBorderBottomLeftRadius:  Point{ZeroPixels, ZeroPixels},
 	PBorderBottomRightRadius: Point{ZeroPixels, ZeroPixels},
 	PBorderTopLeftRadius:     Point{ZeroPixels, ZeroPixels},
@@ -284,7 +316,6 @@ var InitialValues = Properties{
 	// Multi-column Layout (WD): https://www.w3.org/TR/css-multicol-1/
 	PColumnWidth:     SToV("auto"),
 	PColumnCount:     IntString{String: "auto"},
-	PColumnGap:       Value{Dimension: Dimension{Value: 1, Unit: Em}},
 	PColumnRuleColor: CurrentColor,
 	PColumnRuleStyle: String("none"),
 	PColumnRuleWidth: SToV("medium"),
@@ -341,7 +372,7 @@ var InitialValues = Properties{
 
 	// Paged Media 3 (WD): https://www.w3.org/TR/css-page-3/
 	PSize:        A4.ToPixels(),
-	PPage:        Page{String: "auto"},
+	PPage:        Page("auto"),
 	PBleedLeft:   SToV("auto"),
 	PBleedRight:  SToV("auto"),
 	PBleedTop:    SToV("auto"),
@@ -354,14 +385,14 @@ var InitialValues = Properties{
 	PHyphenateLimitZone:  zeroPixelsValue,
 	PHyphens:             String("manual"),
 	PLetterSpacing:       SToV("normal"),
-	PTabSize:             Value{Dimension: Dimension{Value: 8}},
+	PTabSize:             DimOrS{Dimension: Dimension{Value: 8}},
 	PTextAlignAll:        String("start"),
 	PTextAlignLast:       String("auto"),
 	PTextIndent:          zeroPixelsValue,
 	PTextTransform:       String("none"),
 	PWhiteSpace:          String("normal"),
 	PWordBreak:           String("normal"),
-	PWordSpacing:         Value{}, // computed value for "normal"
+	PWordSpacing:         DimOrS{}, // computed value for "normal"
 
 	// Transforms 1 (CR): https://www.w3.org/TR/css-transforms-1/
 	PTransformOrigin: Point{{Value: 50, Unit: Perc}, {Value: 50, Unit: Perc}},
@@ -371,28 +402,46 @@ var InitialValues = Properties{
 	PAppearance:   String("none"),
 	POutlineColor: CurrentColor, // invert is not supported
 	POutlineStyle: String("none"),
-	POutlineWidth: Value{Dimension: Dimension{Value: 3}}, // computed value for "medium"
+	POutlineWidth: DimOrS{Dimension: Dimension{Value: 3}}, // computed value for "medium"
 
 	// Sizing 3 (WD): https://www.w3.org/TR/css-sizing-3/
 	PBoxSizing: String("content-box"),
 	PHeight:    SToV("auto"),
-	PMaxHeight: Value{Dimension: Dimension{Value: Inf, Unit: Px}}, // parsed value for "none}"
-	PMaxWidth:  Value{Dimension: Dimension{Value: Inf, Unit: Px}},
+	PMaxHeight: DimOrS{Dimension: Dimension{Value: Inf, Unit: Px}}, // parsed value for "none}"
+	PMaxWidth:  DimOrS{Dimension: Dimension{Value: Inf, Unit: Px}},
 	PMinHeight: SToV("auto"),
 	PMinWidth:  SToV("auto"),
 	PWidth:     SToV("auto"),
 
 	// Flexible Box Layout Module 1 (CR): https://www.w3.org/TR/css-flexbox-1/
-	PAlignContent:   String("stretch"),
-	PAlignItems:     String("stretch"),
+	PFlexBasis:     SToV("auto"),
+	PFlexDirection: String("row"),
+	PFlexGrow:      Float(0),
+	PFlexShrink:    Float(1),
+	PFlexWrap:      String("nowrap"),
+
+	// Grid Layout Module Level 2 (CR): https://www.w3.org/TR/css-grid-2/
+	PGridAutoFlow:        Strings{"row"},
+	PGridAutoColumns:     GridAuto{NewGridDims(SToV("auto"))},
+	PGridAutoRows:        GridAuto{NewGridDims(SToV("auto"))},
+	PGridTemplateAreas:   GridTemplateAreas{},
+	PGridTemplateColumns: GridTemplate{Tag: None},
+	PGridTemplateRows:    GridTemplate{Tag: None},
+	PGridRowStart:        GridLine{Tag: Auto},
+	PGridColumnStart:     GridLine{Tag: Auto},
+	PGridRowEnd:          GridLine{Tag: Auto},
+	PGridColumnEnd:       GridLine{Tag: Auto},
+
+	// CSS Box Alignment Module Level 3 (WD): https://www.w3.org/TR/css-align-3/
+	PAlignContent:   String("normal"),
+	PAlignItems:     String("normal"),
 	PAlignSelf:      String("auto"),
-	PFlexBasis:      SToV("auto"),
-	PFlexDirection:  String("row"),
-	PFlexGrow:       Float(0),
-	PFlexShrink:     Float(1),
-	PFlexWrap:       String("nowrap"),
-	PJustifyContent: String("flex-start"),
+	PJustifyContent: String("normal"),
+	PJustifyItems:   String("normal"),
+	PJustifySelf:    String("auto"),
 	POrder:          Int(0),
+	PColumnGap:      DimOrS{S: "normal"},
+	PRowGap:         DimOrS{S: "normal"},
 
 	// Text Decoration Module 3 (CR): https://www.w3.org/TR/css-text-decor-3/
 	PTextDecorationLine:  Decorations{},
@@ -426,4 +475,198 @@ var InitialValues = Properties{
 
 func (pr KnownProp) IsTextDecoration() bool {
 	return PTextDecorationLine <= pr && pr <= PTextDecorationStyle
+}
+
+// Shortand is a compact representation of CSS keywords
+// used as shortand for several properties
+type Shortand uint8
+
+const (
+	_ Shortand = iota
+	SBorderColor
+	SBorderStyle
+	SBorderWidth
+	SBorderImage
+	SMargin
+	SPadding
+	SBleed
+	SBorderRadius
+	SPageBreakAfter
+	SPageBreakBefore
+	SPageBreakInside
+	SBackground
+	SWordWrap
+	SListStyle
+	SBorder
+	SBorderTop
+	SBorderRight
+	SBorderBottom
+	SBorderLeft
+	SColumnRule
+	SOutline
+	SColumns
+	SFontVariant
+	SFont
+	STextDecoration
+	SFlex
+	SFlexFlow
+	SLineClamp
+	STextAlign
+	SGridColumn
+	SGridRow
+	SGridArea
+	SGridTemplate
+	SGrid
+)
+
+// NewShortand return the tag for 's' or 0 if not supported
+func NewShortand(s string) Shortand {
+	switch s {
+	case "border-color":
+		return SBorderColor
+	case "border-style":
+		return SBorderStyle
+	case "border-width":
+		return SBorderWidth
+	case "border-image":
+		return SBorderImage
+	case "margin":
+		return SMargin
+	case "padding":
+		return SPadding
+	case "bleed":
+		return SBleed
+	case "border-radius":
+		return SBorderRadius
+	case "page-break-after":
+		return SPageBreakAfter
+	case "page-break-before":
+		return SPageBreakBefore
+	case "page-break-inside":
+		return SPageBreakInside
+	case "background":
+		return SBackground
+	case "word-wrap":
+		return SWordWrap
+	case "list-style":
+		return SListStyle
+	case "border":
+		return SBorder
+	case "border-top":
+		return SBorderTop
+	case "border-right":
+		return SBorderRight
+	case "border-bottom":
+		return SBorderBottom
+	case "border-left":
+		return SBorderLeft
+	case "column-rule":
+		return SColumnRule
+	case "outline":
+		return SOutline
+	case "columns":
+		return SColumns
+	case "font-variant":
+		return SFontVariant
+	case "font":
+		return SFont
+	case "text-decoration":
+		return STextDecoration
+	case "flex":
+		return SFlex
+	case "flex-flow":
+		return SFlexFlow
+	case "line-clamp":
+		return SLineClamp
+	case "text-align":
+		return STextAlign
+	case "grid-column":
+		return SGridColumn
+	case "grid-row":
+		return SGridRow
+	case "grid-area":
+		return SGridArea
+	case "grid-template":
+		return SGridTemplate
+	case "grid":
+		return SGrid
+	default:
+		return 0
+	}
+}
+
+// String returns the CSS keyword.
+func (sh Shortand) String() string {
+	switch sh {
+	case SBorderColor:
+		return "border-color"
+	case SBorderStyle:
+		return "border-style"
+	case SBorderWidth:
+		return "border-width"
+	case SBorderImage:
+		return "border-image"
+	case SMargin:
+		return "margin"
+	case SPadding:
+		return "padding"
+	case SBleed:
+		return "bleed"
+	case SBorderRadius:
+		return "border-radius"
+	case SPageBreakAfter:
+		return "page-break-after"
+	case SPageBreakBefore:
+		return "page-break-before"
+	case SPageBreakInside:
+		return "page-break-inside"
+	case SBackground:
+		return "background"
+	case SWordWrap:
+		return "word-wrap"
+	case SListStyle:
+		return "list-style"
+	case SBorder:
+		return "border"
+	case SBorderTop:
+		return "border-top"
+	case SBorderRight:
+		return "border-right"
+	case SBorderBottom:
+		return "border-bottom"
+	case SBorderLeft:
+		return "border-left"
+	case SColumnRule:
+		return "column-rule"
+	case SOutline:
+		return "outline"
+	case SColumns:
+		return "columns"
+	case SFontVariant:
+		return "font-variant"
+	case SFont:
+		return "font"
+	case STextDecoration:
+		return "text-decoration"
+	case SFlex:
+		return "flex"
+	case SFlexFlow:
+		return "flex-flow"
+	case SLineClamp:
+		return "line-clamp"
+	case STextAlign:
+		return "text-align"
+	case SGridColumn:
+		return "grid-column"
+	case SGridRow:
+		return "grid-row"
+	case SGridArea:
+		return "grid-area"
+	case SGridTemplate:
+		return "grid-template"
+	case SGrid:
+		return "grid"
+	default:
+		return ""
+	}
 }

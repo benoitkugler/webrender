@@ -30,29 +30,9 @@ func init() {
 	}
 }
 
-// Split a list of tokens on commas, ie “parser.LiteralToken(",")“.
-//
-//	Only "top-level" comma tokens are splitting points, not commas inside a
-//	function or blocks.
-func SplitOnComma(tokens []Token) [][]Token {
-	var parts [][]Token
-	var thisPart []Token
-	for _, token := range tokens {
-		litteral, ok := token.(pa.Literal)
-		if ok && litteral.Value == "," {
-			parts = append(parts, thisPart)
-			thisPart = nil
-		} else {
-			thisPart = append(thisPart, token)
-		}
-	}
-	parts = append(parts, thisPart)
-	return parts
-}
-
 // Split a list of tokens on optional commas, ie “LiteralToken(",")“.
 func splitOnOptionalComma(tokens []Token) (parts []Token) {
-	for _, splitPart := range SplitOnComma(tokens) {
+	for _, splitPart := range pa.SplitOnComma(tokens) {
 		if len(splitPart) == 0 {
 			// Happens when there"s a comma at the beginning, at the end, or
 			// when two commas are next to each other.
@@ -73,20 +53,20 @@ func getCustomIdent(token Token) string {
 
 // Parse an <image> token.
 func getImage(_token Token, baseUrl string) (pr.Image, error) {
+	parsed, _, err := getUrl(_token, baseUrl)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Name == "external" {
+		return pr.UrlImage(parsed.String), nil
+	}
+
 	token, ok := _token.(pa.FunctionBlock)
 	if !ok {
-		parsed, _, err := getUrl(_token, baseUrl)
-		if err != nil {
-			return nil, err
-		}
-		if parsed.Name == "external" {
-			return pr.UrlImage(parsed.String), nil
-		}
 		return nil, nil
 	}
-	arguments := SplitOnComma(RemoveWhitespace(token.Arguments))
+	arguments := pa.SplitOnComma(pa.RemoveWhitespace(token.Arguments))
 	name := utils.AsciiLower(token.Name)
-	var err error
 	switch name {
 	case "linear-gradient", "repeating-linear-gradient":
 		direction, colorStops := parseLinearGradientParameters(arguments)
@@ -295,7 +275,7 @@ func getUrl(_token Token, baseUrl string) (url pr.NamedString, attr pr.AttrData,
 }
 
 func checkStringOrElementFunction(stringOrElement string, token Token) (out pr.ContentProperty) {
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return
 	}
@@ -324,68 +304,31 @@ func checkStringOrElementFunction(stringOrElement string, token Token) (out pr.C
 	return
 }
 
-// CheckVarFunction parse a var(...) token
-func CheckVarFunction(token Token) (out pr.VarData) {
-	name, args := parseFunction(token)
-	if name != "var" || len(args) == 0 {
-		return
+// HasVar returns true if [token] is a var(...),
+// or is a function with any var()
+func HasVar(token Token) bool {
+	name, args := pa.ParseFunction(token)
+	if name == "" {
+		return false
 	}
-	ident, ok := args[0].(pa.Ident)
-	args = args[1:]
-	if !ok || !strings.HasPrefix(string(ident.Value), "--") {
-		return
+	if name == "var" && len(args) != 0 {
+		// TODO: we should check authorized tokens
+		// https://drafts.csswg.org/css-syntax-3/#typedef-declaration-value
+		ident, ok := args[0].(pa.Ident)
+		return ok && strings.HasPrefix(ident.Value, "--")
 	}
-	// TODO: we should check authorized tokens
-	// https://drafts.csswg.org/css-syntax-3/#typedef-declaration-value
-	return pr.VarData{
-		Name:    string(ident.Value),
-		Default: args,
-	}
-}
 
-// Parse functional notation.
-//
-//	Return ``(name, args)`` if the given token is a function with comma- or
-//	space-separated arguments. Return zero values otherwise.
-func parseFunction(functionToken_ Token) (string, []Token) {
-	functionToken, ok := functionToken_.(pa.FunctionBlock)
-	if !ok {
-		return "", nil
-	}
-	content := RemoveWhitespace(functionToken.Arguments)
-	var (
-		arguments []Token
-		token     Token
-	)
-	lastIsComma := false
-	for len(content) > 0 {
-		token, content = content[0], content[1:]
-		lit, ok := token.(pa.Literal)
-		isComma := ok && lit.Value == ","
-		if lastIsComma && isComma {
-			return "", nil
-		}
-		if isComma {
-			lastIsComma = true
-		} else {
-			lastIsComma = false
-			if fn, isFunc := token.(pa.FunctionBlock); isFunc {
-				innerName, _ := parseFunction(fn)
-				if innerName == "" {
-					return "", nil
-				}
-			}
-			arguments = append(arguments, token)
+	// recurse
+	for _, arg := range args {
+		if HasVar(arg) {
+			return true
 		}
 	}
-	if lastIsComma {
-		return "", nil
-	}
-	return utils.AsciiLower(functionToken.Name), arguments
+	return false
 }
 
 func checkAttrFunction(token pa.FunctionBlock, allowedType string) (out pr.AttrData) {
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return
 	}
@@ -491,11 +434,11 @@ func parsePosition(tokens []Token) pr.Center {
 				}
 			case "top", "bottom":
 				if keyword == "left" || keyword == "right" {
-					return pr.Center{OriginX: keyword, OriginY: otherKeyword, Pos: pr.Point{length, ZEROPERCENT}}
+					return pr.Center{OriginX: keyword, OriginY: otherKeyword, Pos: pr.Point{length, zeroPercent}}
 				}
 			case "left", "right":
 				if keyword == "top" || keyword == "bottom" {
-					return pr.Center{OriginX: otherKeyword, OriginY: keyword, Pos: pr.Point{ZEROPERCENT, length}}
+					return pr.Center{OriginX: otherKeyword, OriginY: keyword, Pos: pr.Point{zeroPercent, length}}
 				}
 			}
 		}
@@ -528,7 +471,7 @@ func getString(_token Token) (out pr.ContentProperty) {
 }
 
 func checkCounterFunction(token Token) (prop pr.ContentProperty) {
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return
 	}
@@ -567,7 +510,7 @@ func checkCounterFunction(token Token) (prop pr.ContentProperty) {
 }
 
 func checkContentFunction(token Token) (out pr.ContentProperty) {
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return
 	}
@@ -594,7 +537,7 @@ func getQuote(token Token) (pr.Quote, bool) {
 
 // Parse a <target> token.
 func getTarget(token Token, baseUrl string) (out pr.ContentProperty, err error) {
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return
 	}
@@ -715,12 +658,6 @@ func getContentListToken(token Token, baseUrl string) (pr.ContentProperty, error
 		return string_, nil
 	}
 
-	// <var>
-	var_ := CheckVarFunction(token)
-	if !var_.IsNone() {
-		return pr.ContentProperty{Type: "var()", Content: var_}, nil
-	}
-
 	// contents
 	if getKeyword(token) == "contents" {
 		return pr.ContentProperty{Type: "content()", Content: pr.String("text")}, nil
@@ -750,7 +687,7 @@ func getContentListToken(token Token, baseUrl string) (pr.ContentProperty, error
 	}
 
 	// <leader>
-	name, args := parseFunction(token)
+	name, args := pa.ParseFunction(token)
 	if name == "" {
 		return pr.ContentProperty{}, nil
 	}
@@ -783,7 +720,7 @@ func getContentListToken(token Token, baseUrl string) (pr.ContentProperty, error
 }
 
 func ParseCounterStyleName(tokens []pa.Token, cs counters.CounterStyle) string {
-	tokens = RemoveWhitespace(tokens)
+	tokens = pa.RemoveWhitespace(tokens)
 	if len(tokens) != 1 {
 		return ""
 	}

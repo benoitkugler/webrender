@@ -46,6 +46,13 @@ func TestDeclarationList(t *testing.T) {
 	})
 }
 
+func TestBlocksContents(t *testing.T) {
+	inputs, resJson := loadJson(t, "blocks_contents.json")
+	runTest(t, inputs, resJson, func(s string) []TC {
+		return fromC(ParseBlocksContents(tokenizeString(s, true), true))
+	})
+}
+
 func TestOneDeclaration(t *testing.T) {
 	inputs, resJson := loadJson(t, "one_declaration.json")
 	runTestOne(t, inputs, resJson, func(s string) TC {

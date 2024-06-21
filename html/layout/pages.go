@@ -575,7 +575,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 	box := newBox_.Box()
 	verticalAlign := box.Style.GetVerticalAlign()
 	// Every other value is read as "top", ie. no change.
-	if L := len(box.Children); (verticalAlign.String == "middle" || verticalAlign.String == "bottom") && L != 0 {
+	if L := len(box.Children); (verticalAlign.S == "middle" || verticalAlign.S == "bottom") && L != 0 {
 		firstChild := box.Children[0]
 		lastChild := box.Children[L-1].Box()
 		top := firstChild.Box().PositionY
@@ -584,7 +584,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 		bottom := lastChild.PositionY + lastChild.MarginHeight()
 		contentHeight := bottom - top
 		offset := box.Height.V() - contentHeight
-		if verticalAlign.String == "middle" {
+		if verticalAlign.S == "middle" {
 			offset /= 2
 		}
 		for _, child := range box.Children {
@@ -915,7 +915,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	// PageType for current page, values for pageMaker[index + 1].
 	// Don't modify actual pageMaker[index] values!
 	pageState := tmp.InitialPageState.Copy()
-	nextPageName := tmp.InitialNextPage.Page.String
+	nextPageName := string(tmp.InitialNextPage.Page)
 	first := index == 0
 	var nextPageSide string
 	switch tmp.InitialNextPage.Break {
@@ -942,7 +942,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	pageType := utils.PageElement{Side: side, Blank: blank, First: first, Index: index, Name: nextPageName}
 	context.styleFor.SetPageComputedStylesT(pageType, html)
 
-	context.forcedBreak = tmp.InitialNextPage.Break != "any" || tmp.InitialNextPage.Page.String != ""
+	context.forcedBreak = tmp.InitialNextPage.Break != "any" || tmp.InitialNextPage.Page != ""
 	context.marginClearance = false
 
 	// makePage wants a pageNumber of index + 1

@@ -104,7 +104,7 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout) {
 	box := box_.Box()
-	if box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto" {
+	if box.Style.GetColumnWidth().S != "auto" || box.Style.GetColumnCount().String != "auto" {
 		newBox_, result := columnsLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins)
 		resumeAt := result.resumeAt
@@ -549,7 +549,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		}
 	}
 
-	if nextPage.Page.IsNone() {
+	if nextPage.Page == "" {
 		_, nextPage.Page = newBox.PageValues()
 	}
 
@@ -794,7 +794,7 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 		// Between in-flow siblings
 		pageBreak = blockLevelPageBreak(lastInFlowChild, child_)
 		pageName_ := blockLevelPageName(lastInFlowChild, child_)
-		if (pageName_.String != "" || pageName_.Page != 0) || forcePageBreak(pageBreak, context) {
+		if pageName_ != "" || forcePageBreak(pageBreak, context) {
 			pageName, _ := child.PageValues()
 			nextPage = tree.PageBreak{Break: pageBreak, Page: pageName}
 			resumeAt = tree.ResumeStack{index: nil}
@@ -1076,7 +1076,7 @@ func blockLevelPageName(siblingBefore, siblingAfter Box) pr.Page {
 	if beforePage != afterPage {
 		return afterPage
 	}
-	return pr.Page{}
+	return ""
 }
 
 // Find the last possible page break in “children“

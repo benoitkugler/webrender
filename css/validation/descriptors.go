@@ -44,6 +44,11 @@ var (
 	}
 )
 
+type NamedProp struct {
+	Name  pr.KnownProp
+	Value pr.DeclaredValue
+}
+
 type FontFaceDescriptors struct {
 	Src                 []pr.NamedString
 	FontFamily          pr.String
@@ -51,7 +56,7 @@ type FontFaceDescriptors struct {
 	FontWeight          pr.IntString
 	FontStretch         pr.String
 	FontFeatureSettings pr.SIntStrings
-	FontVariant         pr.NamedProperties
+	FontVariant         []NamedProp
 }
 
 type fontFaceDescriptorParser = func(tokens []Token, baseUrl string, out *FontFaceDescriptors) error
@@ -119,8 +124,8 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 
 func src(tokens []Token, baseUrl string, out *FontFaceDescriptors) error {
 	var l []pr.NamedString
-	for _, part := range SplitOnComma(tokens) {
-		result, err := _src(RemoveWhitespace(part), baseUrl)
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := _src(pa.RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return err
 		}
@@ -208,17 +213,17 @@ func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 			return nil
 		}
 	}
-	var values pr.NamedProperties
+	var values []NamedProp
 	expanded, err := expandFontVariant(tokens)
 	if err != nil {
 		return err
 	}
 	for _, subTokens := range expanded {
-		prop, err := validateNonShorthand("", "font-variant"+subTokens.Name, subTokens.Tokens, true)
+		prop, err := validateNonShorthand("", "font-variant"+subTokens.name, subTokens.tokens, true)
 		if err != nil {
 			return ErrInvalidValue
 		}
-		values = append(values, prop)
+		values = append(values, NamedProp{prop.name.KnownProp, prop.property})
 	}
 	out.FontVariant = values
 	return nil
@@ -349,8 +354,8 @@ func rangeD(tokens []Token, _ string, out *csDescriptors) error {
 		}
 	}
 
-	for _, part := range SplitOnComma(tokens) {
-		result, err := range_(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := range_(pa.RemoveWhitespace(part))
 		if err != nil {
 			return err
 		}
@@ -456,8 +461,8 @@ func symbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 // @descriptor("counter-style", wantsBaseUrl=true)
 // “additive-symbols“ descriptor validation.
 func additiveSymbols(tokens []Token, baseUrl string, out *csDescriptors) error {
-	for _, part := range SplitOnComma(tokens) {
-		result, err := pad_(RemoveWhitespace(part), baseUrl)
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := pad_(pa.RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return err
 		}
@@ -512,7 +517,7 @@ func preprocessDescriptors(baseUrl string, descriptors []pa.Compound, out parsed
 			continue
 		}
 
-		tokens := RemoveWhitespace(decl.Value)
+		tokens := pa.RemoveWhitespace(decl.Value)
 		name := string(decl.Name)
 		err := out.validateDescriptor(baseUrl, name, tokens)
 		if err != nil {

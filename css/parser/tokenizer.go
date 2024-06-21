@@ -203,6 +203,10 @@ func (k Kind) String() string {
 
 func NewIdent(v string, pos Pos) Ident { return Ident{stringVal{Value: v, pos: pos}} }
 
+func NewLiteral(v string, pos Pos) Literal { return Literal{stringVal{Value: v, pos: pos}} }
+
+func NewWhitespace(v string, pos Pos) Whitespace { return Whitespace{stringVal{Value: v, pos: pos}} }
+
 func NewNumber(v utils.Fl, pos Pos) Number {
 	isInt := v == utils.Fl(math.Trunc((float64(v))))
 	repr := fmt.Sprintf("%v", v)
@@ -214,6 +218,10 @@ func newNumber(v string, vf utils.Fl, isInt bool, pos Pos) Number {
 }
 
 func NewDimension(nb Number, dim string) Dimension { return Dimension{dim, nb.numberVal} }
+
+func NewFunctionBlock(pos Pos, name string, arguments []Token) FunctionBlock {
+	return FunctionBlock{Name: name, listVal: listVal{arguments, pos}}
+}
 
 // bitmask for misc token properties
 type flag uint8
@@ -866,6 +874,9 @@ func (it *TokensIter) NextSignificant() Token {
 	return nil
 }
 
+// returns the remaining tokens
+func (it *TokensIter) tail() []Token { return it.tokens[it.index:] }
+
 // Parse a single `component value`.
 // This is used e.g. for an attribute value referred to by “attr(foo length)“.
 func ParseOneComponentValue(input []Token) Token {
@@ -883,4 +894,72 @@ func ParseOneComponentValue(input []Token) Token {
 
 func parseOneComponentValue(css []byte, skipComments bool) Token {
 	return ParseOneComponentValue(Tokenize(css, skipComments))
+}
+
+// Remove any [Whitespace] and [Comment] tokens from the list.
+func RemoveWhitespace(tokens []Token) []Token {
+	var out []Token
+	for _, token := range tokens {
+		if token.Kind() != KWhitespace && token.Kind() != KComment {
+			out = append(out, token)
+		}
+	}
+	return out
+}
+
+// Split a list of tokens on commas, ie on [LiteralToken].
+func SplitOnComma(tokens []Token) [][]Token {
+	var parts [][]Token
+	var thisPart []Token
+	for _, token := range tokens {
+		litteral, ok := token.(Literal)
+		if ok && litteral.Value == "," {
+			parts = append(parts, thisPart)
+			thisPart = nil
+		} else {
+			thisPart = append(thisPart, token)
+		}
+	}
+	parts = append(parts, thisPart)
+	return parts
+}
+
+// ParseFunction parses functional notation.
+//
+// Return “(name, args)“ if the given token is a function with comma or
+// space-separated arguments. Return zero values otherwise.
+func ParseFunction(functionToken_ Token) (string, []Token) {
+	functionToken, ok := functionToken_.(FunctionBlock)
+	if !ok {
+		return "", nil
+	}
+	content := RemoveWhitespace(functionToken.Arguments)
+	var (
+		arguments []Token
+		token     Token
+	)
+	lastIsComma := false
+	for len(content) > 0 {
+		token, content = content[0], content[1:]
+		isComma := IsLiteral(token, ",")
+		if lastIsComma && isComma {
+			return "", nil
+		}
+		if isComma {
+			lastIsComma = true
+		} else {
+			lastIsComma = false
+			if fn, isFunc := token.(FunctionBlock); isFunc {
+				innerName, _ := ParseFunction(fn)
+				if innerName == "" {
+					return "", nil
+				}
+			}
+			arguments = append(arguments, token)
+		}
+	}
+	if lastIsComma {
+		return "", nil
+	}
+	return utils.AsciiLower(functionToken.Name), arguments
 }
