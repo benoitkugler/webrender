@@ -61,6 +61,17 @@ func NewDefaultValue(s string) DefaultValue {
 	return Inherit
 }
 
+func (d DefaultValue) String() string {
+	switch d {
+	case Inherit:
+		return "<inherit>"
+	case Initial:
+		return "<initial>"
+	default:
+		return "invalid value"
+	}
+}
+
 type VarData struct {
 	Name    string // name of a custom property
 	Default RawTokens
