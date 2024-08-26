@@ -174,7 +174,7 @@ func TestListStyle(t *testing.T) {
 	assertInvalid(t, "list-style: none inside none none", "invalid")
 	assertInvalid(t, "list-style: 1px", "invalid")
 	assertInvalid(t, "list-style: circle disc",
-		"got multiple type values in a list-style shorthand")
+		"got multiple list-style-type values in a list-style shorthand")
 }
 
 // Test the “background“ property.
@@ -399,14 +399,14 @@ func TestBorderImage(t *testing.T) {
 		css    string
 		reason string
 	}{
-		{"url(border.png) url(border.png)", "multiple source"},
-		{"10 10 10 10 10", "multiple slice"},
+		{"url(border.png) url(border.png)", "multiple border-image-source"},
+		{"10 10 10 10 10", "multiple border-image-slice"},
 		{"1 / 2 / 3 / 4", "invalid"},
 		{"/1", "invalid"},
 		{"/1", "invalid"},
 		{"round round round", "invalid"},
 		{"-1", "invalid"},
-		{"1 repeat 2", "multiple slice"},
+		{"1 repeat 2", "multiple border-image-slice"},
 		{"1% // 1%", "invalid"},
 		{"1 / repeat", "invalid"},
 		{"", "no value"},

@@ -219,7 +219,7 @@ func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 		return err
 	}
 	for _, subTokens := range expanded {
-		prop, err := validateNonShorthand("", "font-variant"+subTokens.name, subTokens.tokens, true)
+		prop, err := validateNonShorthand("", subTokens.name.String(), subTokens.tokens, true)
 		if err != nil {
 			return ErrInvalidValue
 		}

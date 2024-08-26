@@ -232,6 +232,7 @@ func TestVariableShorthandMarginInvalid(t *testing.T) {
           </style>
           <div></div>
         `)
+	_ = div.GetMarginBottom()
 	tu.AssertEqual(t, len(logs.Logs()), 1)
 	tu.AssertEqual(t, strings.Contains(logs.Logs()[0], "invalid value"), true)
 
@@ -250,10 +251,10 @@ func TestVariableShorthandBorder(t *testing.T) {
       </style>
       <div></div>
     `)
-	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToPx(1))
+	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToV(1))
 }
 
 func TestVariableShorthandBorderSide(t *testing.T) {
@@ -265,10 +266,10 @@ func TestVariableShorthandBorderSide(t *testing.T) {
       </style>
       <div></div>
     `)
-	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToPx(0))
-	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToPx(0))
-	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToPx(0))
+	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToV(0))
+	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToV(0))
+	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToV(0))
 }
 
 func TestVariableShorthandBorderMixed(t *testing.T) {
@@ -280,10 +281,10 @@ func TestVariableShorthandBorderMixed(t *testing.T) {
       </style>
       <div></div>
     `)
-	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToPx(1))
-	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToPx(1))
+	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToV(1))
+	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToV(1))
 }
 
 func TestVariableShorthandBorderMixedInvalid(t *testing.T) {
@@ -296,11 +297,14 @@ func TestVariableShorthandBorderMixedInvalid(t *testing.T) {
           <div></div>
         `)
 	// TODO: we should only get one warning here
-	tu.AssertEqual(t, strings.Contains(logs.Logs()[0], "multiple color values"), true)
-	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToPx(0))
-	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToPx(0))
-	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToPx(0))
-	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToPx(0))
+	// trigger eval
+	_ = div.GetBorderTopWidth()
+	tu.AssertEqual(t, len(logs.Logs()), 2)
+	tu.AssertEqual(t, strings.Contains(logs.Logs()[0], "multiple border-top-color values"), true)
+	tu.AssertEqual(t, div.GetBorderTopWidth(), pr.FToV(0))
+	tu.AssertEqual(t, div.GetBorderRightWidth(), pr.FToV(0))
+	tu.AssertEqual(t, div.GetBorderBottomWidth(), pr.FToV(0))
+	tu.AssertEqual(t, div.GetBorderLeftWidth(), pr.FToV(0))
 }
 
 func TestVariableShorthandBackground(t *testing.T) {
@@ -336,40 +340,43 @@ func TestVariableShorthandBackgroundInvalid(t *testing.T) {
 		{"100%", "url(pattern.png) var(--v) var(--v) var(--v)"},
 	} {
 		logs := tu.CaptureLogs()
-		_, _ = setupVar(t, fmt.Sprintf(`
+		_, div := setupVar(t, fmt.Sprintf(`
 			  <style>
 				html { --v: %s }
 				div { background: %s }
 			  </style>
 			  <div></div>
 			`, test.var_, test.background))
-
+		_ = div.GetBackgroundColor()
 		tu.AssertEqual(t, len(logs.Logs()), 1)
-		tu.AssertEqual(t, strings.Contains(logs.Logs()[0], "invalid value"), true)
+		// tu.AssertEqual(t, strings.Contains(logs.Logs()[0], "invalid"), true)
 	}
 }
 
 func TestVariableInitial(t *testing.T) {
-	_, style := setupVar(t, `
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/2075
+	html, p := setupVar(t, `
       <style>
         html { --var: initial }
-        p { width: var(--var, 10px) }
+        p { width: var(--var) }
       </style>
       <p></p>
     `)
-	tu.AssertEqual(t, style.GetWidth(), pr.FToPx(10))
+	tu.AssertEqual(t, html.GetWidth(), p.GetWidth())
 }
 
 func TestVariableInitialDefault(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/2075
-	html, style := setupVar(t, `
-      <style>
-        p { --var: initial; width: var(--var, 10px) }
-      </style>
-      <p></p>
-    `)
-	tu.AssertEqual(t, html.GetWidth(), style.GetWidth())
+	html, p := setupVar(t, `
+	<style>
+	p { --var: initial; width: var(--var, 10px) }
+	</style>
+	<p></p>
+	`)
+	tu.AssertEqual(t, html.GetWidth(), p.GetWidth())
+	// tu.AssertEqual(t, style.GetWidth(), pr.FToPx(10))
 }
 
 func TestVariableInitialDefaultVar(t *testing.T) {

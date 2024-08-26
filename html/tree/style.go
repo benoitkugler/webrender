@@ -433,7 +433,6 @@ func (c *ComputedStyle) cascadeValue(key pr.PropKey) (value pr.DeclaredValue, sa
 			err = errors.New("no value")
 		} else if shortand != 0 {
 			// the tokens must be expanded (shortand are never variable)
-			// key.KnownPsrop.
 			value, err = validation.ExpandValidatePending(key.KnownProp, shortand, solvedTokens)
 		} else {
 			value, err = validation.Validate(key, solvedTokens)
@@ -516,7 +515,7 @@ func (c *ComputedStyle) Get(key pr.PropKey) pr.CssProperty {
 		// Value not computed yet: compute.
 		out = fn(c, key.KnownProp, out)
 	}
-	c.Set(key, out)
+	c.propsCache.Set(key, out)
 	return out
 }
 

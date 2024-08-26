@@ -510,7 +510,7 @@ func TestBorderImageWidth(t *testing.T) {
 		{"1", pr.Values{pr.FToV(1)}},
 		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
 		{"50% 1000.1 0", pr.Values{pr.PercToV(50), pr.FToV(1000.1), pr.FToV(0)}},
-		{"1% 2px 3em 4", pr.Values{pr.PercToV(1), pr.FToPx(2), pr.DimOrS{Dimension: pr.Dimension{pr.Em, 3}}, pr.FToV(4)}},
+		{"1% 2px 3em 4", pr.Values{pr.PercToV(1), pr.FToPx(2), pr.DimOrS{Dimension: pr.Dimension{3, pr.Em}}, pr.FToV(4)}},
 		{"auto", pr.Values{pr.SToV("auto")}},
 		{"1 auto", pr.Values{pr.FToV(1), pr.SToV("auto")}},
 		{"auto auto", pr.Values{pr.SToV("auto"), pr.SToV("auto")}},
@@ -546,7 +546,7 @@ func TestBorderImageOutset(t *testing.T) {
 		{"1", pr.Values{pr.FToV(1)}},
 		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
 		{"50px 1000.1 0", pr.Values{pr.FToPx(50), pr.FToV(1000.1), pr.FToV(0)}},
-		{"1in 2px 3em 4", pr.Values{pr.Dimension{pr.In, 1}.ToValue(), pr.FToPx(2), pr.Dimension{pr.Em, 3}.ToValue(), pr.FToV(4)}},
+		{"1in 2px 3em 4", pr.Values{pr.Dimension{1, pr.In}.ToValue(), pr.FToPx(2), pr.Dimension{3, pr.Em}.ToValue(), pr.FToV(4)}},
 	} {
 		assertValidDict(t, fmt.Sprintf("border-image-outset: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PBorderImageOutset: test.value,
@@ -897,7 +897,7 @@ func TestGridAutoColumnsRows(t *testing.T) {
 		value pr.GridAuto
 	}{
 		{"40px", pr.GridAuto{pr.NewGridDims(pr.FToPx(40))}},
-		{"2fr", pr.GridAuto{pr.NewGridDims(pr.Dimension{pr.Fr, 2}.ToValue())}},
+		{"2fr", pr.GridAuto{pr.NewGridDims(pr.Dimension{2, pr.Fr}.ToValue())}},
 		{"18%", pr.GridAuto{pr.NewGridDims(pr.PercToV(18))}},
 		{"auto", pr.GridAuto{pr.NewGridDims(pr.SToV("auto"))}},
 		{"min-content", pr.GridAuto{pr.NewGridDims(pr.SToV("min-content"))}},

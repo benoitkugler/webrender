@@ -84,12 +84,15 @@ const (
 	PFontSize
 	PFontStretch
 	PFontStyle
+
+	// The order for this group matters (see expandFontVariant)
 	PFontVariantAlternates
 	PFontVariantCaps
 	PFontVariantEastAsian
 	PFontVariantLigatures
 	PFontVariantNumeric
 	PFontVariantPosition
+
 	PFontWeight
 	PFontVariationSettings
 
@@ -158,9 +161,10 @@ const (
 	PGridAutoColumns
 	PGridAutoFlow
 	PGridAutoRows
-	PGridTemplateAreas
+	// the order matter
 	PGridTemplateColumns
 	PGridTemplateRows
+	PGridTemplateAreas
 	PGridRowStart
 	PGridColumnStart
 	PGridRowEnd
