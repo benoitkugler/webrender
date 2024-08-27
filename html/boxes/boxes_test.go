@@ -1181,9 +1181,8 @@ func TestBorderCollapse1(t *testing.T) {
 	wrapper := body.Box().Children[0]
 	table := wrapper.Box().Children[0].(TableBoxITF)
 
-	if !(table.Table().CollapsedBorderGrid.Horizontal == nil && table.Table().CollapsedBorderGrid.Vertical == nil) {
-		t.Fatal()
-	}
+	tu.AssertEqual(t, table.Table().CollapsedBorderGrid.Horizontal == nil, true)
+	tu.AssertEqual(t, table.Table().CollapsedBorderGrid.Vertical == nil, true)
 
 	borders := getGrid(t, `<table style="border-collapse: collapse"></table>`, 0, 0)
 	tu.AssertEqual(t, len(borders.Horizontal) == 0 && len(borders.Vertical) == 0, true)

@@ -956,7 +956,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	if blank {
 		nextPage.Page = tmp.InitialNextPage.Page
 	}
-	rightPage := !tmp.RightPage
+	tmp.RightPage = !tmp.RightPage
 
 	// Check whether we need to append or update the next pageMaker item
 	var pageMakerNextChanged bool
@@ -966,12 +966,12 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	} else {
 		// Check whether something changed
 		// TODO: Find what we need to compare. Is resumeAt enough?
-		tmp := context.pageMaker[index+1]
+		next := context.pageMaker[index+1]
 		// (nextResumeAt, nextNextPage, nextRightPage,nextPageState, )
-		pageMakerNextChanged = !tmp.InitialResumeAt.Equals(resumeAt) ||
-			tmp.InitialNextPage != nextPage ||
-			tmp.RightPage != rightPage ||
-			!tmp.InitialPageState.Equal(pageState)
+		pageMakerNextChanged = !next.InitialResumeAt.Equals(resumeAt) ||
+			next.InitialNextPage != nextPage ||
+			next.RightPage != tmp.RightPage ||
+			!next.InitialPageState.Equal(pageState)
 	}
 
 	if pageMakerNextChanged {
@@ -983,7 +983,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 		remakeState.ContentChanged = resumeAt != nil
 		// pageState is already a deepcopy
 		item := tree.PageMaker{
-			InitialResumeAt: resumeAt, InitialNextPage: nextPage, RightPage: rightPage,
+			InitialResumeAt: resumeAt, InitialNextPage: nextPage, RightPage: tmp.RightPage,
 			InitialPageState: pageState, RemakeState: remakeState,
 		}
 		if index+1 >= len(context.pageMaker) {

@@ -992,17 +992,17 @@ func TestPageBreaks1(t *testing.T) {
 
 	tu.AssertEqual(t, len(pages), 2)
 
-	var pageDivPosY [][]pr.Float
+	var positionsY [][]pr.Float
 	for _, page := range pages {
-		var images []pr.Float
+		var divPos []pr.Float
 		for _, d := range bo.Descendants(page) {
 			if d.Box().ElementTag() == "div" {
-				images = append(images, d.Box().PositionY)
+				divPos = append(divPos, d.Box().PositionY)
 			}
 		}
-		pageDivPosY = append(pageDivPosY, images)
+		positionsY = append(positionsY, divPos)
 	}
-	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10, 70}})
+	tu.AssertEqual(t, positionsY, [][]pr.Float{{10, 70}, {10}})
 }
 
 func TestPageBreaks2(t *testing.T) {
@@ -1035,17 +1035,17 @@ func TestPageBreaks2(t *testing.T) {
 
 	tu.AssertEqual(t, len(pages), 2)
 
-	var pageDivPosY [][]pr.Float
+	var positionsY [][]pr.Float
 	for _, page := range pages {
-		var images []pr.Float
+		var divPos []pr.Float
 		for _, d := range bo.Descendants(page) {
 			if d.Box().ElementTag() == "div" {
-				images = append(images, d.Box().PositionY)
+				divPos = append(divPos, d.Box().PositionY)
 			}
 		}
-		pageDivPosY = append(pageDivPosY, images)
+		positionsY = append(positionsY, divPos)
 	}
-	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10}, {10}})
+	tu.AssertEqual(t, positionsY, [][]pr.Float{{10}, {10, 30}})
 }
 
 func TestPageBreaks3(t *testing.T) {
@@ -1077,15 +1077,15 @@ func TestPageBreaks3(t *testing.T) {
     `)
 
 	tu.AssertEqual(t, len(pages), 3)
-	var pageDivPosY [][]pr.Float
+	var positionsY [][]pr.Float
 	for _, page := range pages {
-		var images []pr.Float
+		var divPos []pr.Float
 		for _, d := range bo.Descendants(page) {
 			if d.Box().ElementTag() == "div" {
-				images = append(images, d.Box().PositionY)
+				divPos = append(divPos, d.Box().PositionY)
 			}
 		}
-		pageDivPosY = append(pageDivPosY, images)
+		positionsY = append(positionsY, divPos)
 	}
-	tu.AssertEqual(t, pageDivPosY, [][]pr.Float{{10}, {10}})
+	tu.AssertEqual(t, positionsY, [][]pr.Float{{10}, {10}, {10}})
 }
