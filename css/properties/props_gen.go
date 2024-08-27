@@ -61,8 +61,8 @@ func (s Properties) GetBookmarkLabel() ContentProperties {
 }
 func (s Properties) SetBookmarkLabel(v ContentProperties) { s[PBookmarkLabel] = v }
 
-func (s Properties) GetBookmarkLevel() IntString  { return s[PBookmarkLevel].(IntString) }
-func (s Properties) SetBookmarkLevel(v IntString) { s[PBookmarkLevel] = v }
+func (s Properties) GetBookmarkLevel() TaggedInt  { return s[PBookmarkLevel].(TaggedInt) }
+func (s Properties) SetBookmarkLevel(v TaggedInt) { s[PBookmarkLevel] = v }
 
 func (s Properties) GetBookmarkState() String  { return s[PBookmarkState].(String) }
 func (s Properties) SetBookmarkState(v String) { s[PBookmarkState] = v }
@@ -357,8 +357,8 @@ func (s Properties) SetJustifyItems(v String) { s[PJustifyItems] = v }
 func (s Properties) GetJustifySelf() String  { return s[PJustifySelf].(String) }
 func (s Properties) SetJustifySelf(v String) { s[PJustifySelf] = v }
 
-func (s Properties) GetLang() NamedString  { return s[PLang].(NamedString) }
-func (s Properties) SetLang(v NamedString) { s[PLang] = v }
+func (s Properties) GetLang() TaggedString  { return s[PLang].(TaggedString) }
+func (s Properties) SetLang(v TaggedString) { s[PLang] = v }
 
 func (s Properties) GetLeft() DimOrS  { return s[PLeft].(DimOrS) }
 func (s Properties) SetLeft(v DimOrS) { s[PLeft] = v }
@@ -601,8 +601,8 @@ type StyleAccessor interface {
 	GetBookmarkLabel() ContentProperties
 	SetBookmarkLabel(v ContentProperties)
 
-	GetBookmarkLevel() IntString
-	SetBookmarkLevel(v IntString)
+	GetBookmarkLevel() TaggedInt
+	SetBookmarkLevel(v TaggedInt)
 
 	GetBookmarkState() String
 	SetBookmarkState(v String)
@@ -889,8 +889,8 @@ type StyleAccessor interface {
 	GetJustifySelf() String
 	SetJustifySelf(v String)
 
-	GetLang() NamedString
-	SetLang(v NamedString)
+	GetLang() TaggedString
+	SetLang(v TaggedString)
 
 	GetLeft() DimOrS
 	SetLeft(v DimOrS)

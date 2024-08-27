@@ -357,12 +357,12 @@ var InitialValues = Properties{
 
 	// Generated Content 3 (WD): https://www.w3.org/TR/css-content-3/
 	PBookmarkLabel:   ContentProperties{{Type: "content", Content: String("text")}},
-	PBookmarkLevel:   IntString{String: "none"},
+	PBookmarkLevel:   TaggedInt{Tag: None},
 	PBookmarkState:   String("open"),
 	PContent:         SContent{String: "normal"},
 	PFootnoteDisplay: String("block"),
 	PFootnotePolicy:  String("auto"),
-	PQuotes:          Quotes{Open: []string{"“", "‘"}, Close: []string{"”", "’"}}, // chosen by the user agent
+	PQuotes:          Quotes{Tag: Auto}, // chosen by the user agent
 	PStringSet:       StringSet{String: "none"},
 
 	// Images 3/4 (CR/WD): https://www.w3.org/TR/css-images-4/
@@ -472,9 +472,9 @@ var InitialValues = Properties{
 	PListStyleType:     CounterStyleID{Name: "disc"},
 
 	// Proprietary
-	PAnchor: String(""),    // computed value of "none"
-	PLink:   NamedString{}, // computed value of "none"
-	PLang:   NamedString{}, // computed value of "none"
+	PAnchor: String(""),     // computed value of "none"
+	PLink:   NamedString{},  // computed value of "none"
+	PLang:   TaggedString{}, // computed value of "none"
 }
 
 func (pr KnownProp) IsTextDecoration() bool {

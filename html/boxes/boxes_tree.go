@@ -144,6 +144,16 @@ type InlineFlexBox struct {
 	BoxFields
 }
 
+type GridBox struct {
+	BlockLevelBox
+	BoxFields
+}
+
+type InlineGridBox struct {
+	InlineLevelBox
+	BoxFields
+}
+
 type methodsBlockLevelBox interface {
 	BlockLevel() *BlockLevelBox
 }
@@ -431,5 +441,19 @@ func NewInlineFlexBox(style pr.ElementStyle, element *html.Node, pseudoType stri
 }
 
 func (u InlineFlexBox) RemoveDecoration(b *BoxFields, start, end bool) {
+	u.BoxFields.RemoveDecoration(b, start, end)
+}
+
+func NewGridBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) *GridBox {
+	out := GridBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
+	return &out
+}
+
+func NewInlineGridBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) *InlineGridBox {
+	out := InlineGridBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
+	return &out
+}
+
+func (u InlineGridBox) RemoveDecoration(b *BoxFields, start, end bool) {
 	u.BoxFields.RemoveDecoration(b, start, end)
 }

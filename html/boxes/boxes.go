@@ -153,6 +153,7 @@ type BoxFields struct {
 	// Default, may be overriden on instances.
 	IsTableWrapper   bool
 	IsFlexItem       bool
+	IsGridItem       bool
 	IsForRootElement bool
 	IsColumn         bool
 	IsLeader         bool
@@ -304,10 +305,16 @@ func Deepcopy(b Box) Box {
 
 // Descendants returns `b` and its children,
 // and their children, etc...
-func Descendants(b Box) []Box {
+func Descendants(b Box) []Box { return DescendantsPlaceholders(b, false) }
+
+func DescendantsPlaceholders(b Box, placeholders bool) []Box {
 	out := []Box{b}
 	for _, child := range b.Box().Children {
-		out = append(out, Descendants(child)...)
+		if placeholders || child.IsClassicalBox() {
+			out = append(out, Descendants(child)...)
+		} else {
+			out = append(out, child)
+		}
 	}
 	return out
 }
@@ -521,21 +528,33 @@ func (b *BoxFields) IsInNormalFlow() bool {
 	return !(b.IsFloated() || b.IsAbsolutelyPositioned() || b.IsRunning() || b.IsFootnote())
 }
 
+// Return whether this box is monolithic.
+// See https://www.w3.org/TR/css-break-3/#monolithic
+func IsMonolithic(box Box) bool {
+	style := box.Box().Style
+	overflow, height := style.GetOverflow(), style.GetHeight()
+	return AtomicInlineLevelT.IsInstance(box) || ReplacedT.IsInstance(box) ||
+		overflow == "auto" || overflow == "scroll" || (overflow == "hidden" && height.S != "auto")
+}
+
 // Start and end page values for named pages
 
 // Return start and end page values.
 func (b *BoxFields) PageValues() (pr.Page, pr.Page) {
 	start := b.Style.GetPage()
 	end := start
-	children := b.Children
+	var children []Box
+	for _, child := range b.Children {
+		if child.Box().IsInNormalFlow() {
+			children = append(children, child)
+		}
+	}
 	if len(children) > 0 {
 		startBox, endBox := children[0], children[len(children)-1]
-		childStart, _ := startBox.PageValues()
-		_, childEnd := endBox.PageValues()
-		if childStart != "" {
+		if childStart, _ := startBox.PageValues(); childStart != "" {
 			start = childStart
 		}
-		if childEnd != "" {
+		if _, childEnd := endBox.PageValues(); childEnd != "" {
 			end = childEnd
 		}
 	}

@@ -2493,6 +2493,15 @@ func position(tokens []Token, _ string) pr.CssProperty {
 // “quotes“ property validation.
 func quotes(tokens []Token, _ string) pr.CssProperty {
 	var opens, closes []string
+	if len(tokens) == 1 {
+		keyword := getKeyword(tokens[0])
+		switch keyword {
+		case "auto":
+			return pr.Quotes{Tag: pr.Auto}
+		case "none":
+			return pr.Quotes{Tag: pr.None}
+		}
+	}
 	if len(tokens) > 0 && len(tokens)%2 == 0 {
 		// Separate open && close quotes.
 		// eg.  ("«", "»", "“", "”")  -> (("«", "“"), ("»", "”"))
@@ -3719,17 +3728,17 @@ func lang(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if getKeyword(token) == "none" {
-		return pr.NamedString{Name: "none"}
+		return pr.TaggedString{Tag: pr.None}
 	}
 	name, args := pa.ParseFunction(token)
 	if name != "" {
 		if len(args) == 1 {
 			if ident, ok := args[0].(pa.Ident); ok && name == "attr" {
-				return pr.NamedString{Name: "attr()", String: string(ident.Value)}
+				return pr.TaggedString{Tag: pr.Attr, S: ident.Value}
 			}
 		}
 	} else if str, ok := token.(pa.String); ok {
-		return pr.NamedString{Name: "string", String: str.Value}
+		return pr.TaggedString{S: str.Value}
 	}
 	return nil
 }
@@ -3759,9 +3768,9 @@ func bookmarkLevel(tokens []Token, _ string) pr.CssProperty {
 	}
 	token := tokens[0]
 	if number, ok := token.(pa.Number); ok && number.IsInt() && number.Int() >= 1 {
-		return pr.IntString{Int: number.Int()}
+		return pr.TaggedInt{I: number.Int()}
 	} else if getKeyword(token) == "none" {
-		return pr.IntString{String: "none"}
+		return pr.TaggedInt{Tag: pr.None}
 	}
 	return nil
 }

@@ -117,6 +117,35 @@ func (FootnoteAreaBox) isBlockContainerBox() {}
 func (FootnoteAreaBox) isBlockLevelBox()     {}
 func (FootnoteAreaBox) isParentBox()         {}
 
+// A box that is both block-level and a grid container.
+// It behaves as block on the outside and as a grid container on the inside.
+type GridBoxITF interface {
+	BlockLevelBoxITF
+	GridContainerBoxITF
+	isGridBox()
+}
+
+func (GridBox) Type() BoxType        { return GridT }
+func (b *GridBox) Box() *BoxFields   { return &b.BoxFields }
+func (b GridBox) Copy() Box          { return &b }
+func (GridBox) IsClassicalBox() bool { return true }
+func (GridBox) isGridBox()           {}
+func (GridBox) isBlockLevelBox()     {}
+func (GridBox) isGridContainerBox()  {}
+func (GridBox) isParentBox()         {}
+
+func GridBoxAnonymousFrom(parent Box, children []Box) *GridBox {
+	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
+	out := NewGridBox(style, parent.Box().Element, parent.Box().PseudoType, children)
+	return out
+}
+
+// A box that contains only grid-items.
+type GridContainerBoxITF interface {
+	ParentBoxITF
+	isGridContainerBox()
+}
+
 // A box that is both inline-level and a block container.
 // It behaves as inline on the outside and as a block on the inside.
 // A non-replaced element with a 'display' value of 'inline-block' generates
@@ -188,6 +217,29 @@ func (InlineFlexBox) isParentBox()         {}
 func InlineFlexBoxAnonymousFrom(parent Box, children []Box) *InlineFlexBox {
 	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
 	out := NewInlineFlexBox(style, parent.Box().Element, parent.Box().PseudoType, children)
+	return out
+}
+
+// A box that is both inline-level and a grid container.
+// It behaves as inline on the outside and as a grid container on the inside.
+type InlineGridBoxITF interface {
+	GridContainerBoxITF
+	InlineLevelBoxITF
+	isInlineGridBox()
+}
+
+func (InlineGridBox) Type() BoxType        { return InlineGridT }
+func (b *InlineGridBox) Box() *BoxFields   { return &b.BoxFields }
+func (b InlineGridBox) Copy() Box          { return &b }
+func (InlineGridBox) IsClassicalBox() bool { return true }
+func (InlineGridBox) isInlineGridBox()     {}
+func (InlineGridBox) isGridContainerBox()  {}
+func (InlineGridBox) isInlineLevelBox()    {}
+func (InlineGridBox) isParentBox()         {}
+
+func InlineGridBoxAnonymousFrom(parent Box, children []Box) *InlineGridBox {
+	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
+	out := NewInlineGridBox(style, parent.Box().Element, parent.Box().PseudoType, children)
 	return out
 }
 
@@ -477,9 +529,12 @@ const (
 	FlexT
 	FlexContainerT
 	FootnoteAreaT
+	GridT
+	GridContainerT
 	InlineBlockT
 	InlineT
 	InlineFlexT
+	InlineGridT
 	InlineLevelT
 	InlineReplacedT
 	InlineTableT
@@ -520,12 +575,18 @@ func (t BoxType) IsInstance(box BoxITF) bool {
 		_, isInstance = box.(FlexContainerBoxITF)
 	case FootnoteAreaT:
 		_, isInstance = box.(FootnoteAreaBoxITF)
+	case GridT:
+		_, isInstance = box.(GridBoxITF)
+	case GridContainerT:
+		_, isInstance = box.(GridContainerBoxITF)
 	case InlineBlockT:
 		_, isInstance = box.(InlineBlockBoxITF)
 	case InlineT:
 		_, isInstance = box.(InlineBoxITF)
 	case InlineFlexT:
 		_, isInstance = box.(InlineFlexBoxITF)
+	case InlineGridT:
+		_, isInstance = box.(InlineGridBoxITF)
 	case InlineLevelT:
 		_, isInstance = box.(InlineLevelBoxITF)
 	case InlineReplacedT:
@@ -582,12 +643,18 @@ func (t BoxType) String() string {
 		return "FlexContainerBox"
 	case FootnoteAreaT:
 		return "FootnoteAreaBox"
+	case GridT:
+		return "GridBox"
+	case GridContainerT:
+		return "GridContainerBox"
 	case InlineBlockT:
 		return "InlineBlockBox"
 	case InlineT:
 		return "InlineBox"
 	case InlineFlexT:
 		return "InlineFlexBox"
+	case InlineGridT:
+		return "InlineGridBox"
 	case InlineLevelT:
 		return "InlineLevelBox"
 	case InlineReplacedT:
@@ -629,9 +696,11 @@ var (
 	_ BlockReplacedBoxITF    = (*BlockReplacedBox)(nil)
 	_ FlexBoxITF             = (*FlexBox)(nil)
 	_ FootnoteAreaBoxITF     = (*FootnoteAreaBox)(nil)
+	_ GridBoxITF             = (*GridBox)(nil)
 	_ InlineBlockBoxITF      = (*InlineBlockBox)(nil)
 	_ InlineBoxITF           = (*InlineBox)(nil)
 	_ InlineFlexBoxITF       = (*InlineFlexBox)(nil)
+	_ InlineGridBoxITF       = (*InlineGridBox)(nil)
 	_ InlineReplacedBoxITF   = (*InlineReplacedBox)(nil)
 	_ InlineTableBoxITF      = (*InlineTableBox)(nil)
 	_ LineBoxITF             = (*LineBox)(nil)
@@ -654,12 +723,16 @@ func (t BoxType) AnonymousFrom(parent Box, children []Box) Box {
 		return BlockBoxAnonymousFrom(parent, children)
 	case FlexT:
 		return FlexBoxAnonymousFrom(parent, children)
+	case GridT:
+		return GridBoxAnonymousFrom(parent, children)
 	case InlineBlockT:
 		return InlineBlockBoxAnonymousFrom(parent, children)
 	case InlineT:
 		return InlineBoxAnonymousFrom(parent, children)
 	case InlineFlexT:
 		return InlineFlexBoxAnonymousFrom(parent, children)
+	case InlineGridT:
+		return InlineGridBoxAnonymousFrom(parent, children)
 	case InlineTableT:
 		return InlineTableBoxAnonymousFrom(parent, children)
 	case TableT:
@@ -677,5 +750,5 @@ func (t BoxType) AnonymousFrom(parent Box, children []Box) Box {
 	case TableRowGroupT:
 		return TableRowGroupBoxAnonymousFrom(parent, children)
 	}
-	return nil
+	panic("unsupported box type in AnonymousFrom " + t.String())
 }

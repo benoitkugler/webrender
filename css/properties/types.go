@@ -72,6 +72,7 @@ type IntStrings []IntString
 type Quotes struct {
 	Open  Strings
 	Close Strings
+	Tag   Tag
 }
 
 type ContentProperties []ContentProperty
@@ -401,7 +402,7 @@ func (v Point) IsNone() bool {
 }
 
 func (v Quotes) IsNone() bool {
-	return v.Open == nil && v.Close == nil
+	return v.Tag == 0 && v.Open == nil && v.Close == nil
 }
 
 func (v SContent) IsNone() bool {

@@ -270,17 +270,17 @@ func (s *AnonymousStyle) SetBookmarkLabel(v pr.ContentProperties) {
 	s.propsCache.known[pr.PBookmarkLabel] = v
 }
 
-func (s *ComputedStyle) GetBookmarkLevel() pr.IntString {
-	return s.Get(pr.PBookmarkLevel.Key()).(pr.IntString)
+func (s *ComputedStyle) GetBookmarkLevel() pr.TaggedInt {
+	return s.Get(pr.PBookmarkLevel.Key()).(pr.TaggedInt)
 }
-func (s *ComputedStyle) SetBookmarkLevel(v pr.IntString) {
+func (s *ComputedStyle) SetBookmarkLevel(v pr.TaggedInt) {
 	s.propsCache.known[pr.PBookmarkLevel] = v
 }
 
-func (s *AnonymousStyle) GetBookmarkLevel() pr.IntString {
-	return s.Get(pr.PBookmarkLevel.Key()).(pr.IntString)
+func (s *AnonymousStyle) GetBookmarkLevel() pr.TaggedInt {
+	return s.Get(pr.PBookmarkLevel.Key()).(pr.TaggedInt)
 }
-func (s *AnonymousStyle) SetBookmarkLevel(v pr.IntString) {
+func (s *AnonymousStyle) SetBookmarkLevel(v pr.TaggedInt) {
 	s.propsCache.known[pr.PBookmarkLevel] = v
 }
 
@@ -1614,17 +1614,17 @@ func (s *AnonymousStyle) SetJustifySelf(v pr.String) {
 	s.propsCache.known[pr.PJustifySelf] = v
 }
 
-func (s *ComputedStyle) GetLang() pr.NamedString {
-	return s.Get(pr.PLang.Key()).(pr.NamedString)
+func (s *ComputedStyle) GetLang() pr.TaggedString {
+	return s.Get(pr.PLang.Key()).(pr.TaggedString)
 }
-func (s *ComputedStyle) SetLang(v pr.NamedString) {
+func (s *ComputedStyle) SetLang(v pr.TaggedString) {
 	s.propsCache.known[pr.PLang] = v
 }
 
-func (s *AnonymousStyle) GetLang() pr.NamedString {
-	return s.Get(pr.PLang.Key()).(pr.NamedString)
+func (s *AnonymousStyle) GetLang() pr.TaggedString {
+	return s.Get(pr.PLang.Key()).(pr.TaggedString)
 }
-func (s *AnonymousStyle) SetLang(v pr.NamedString) {
+func (s *AnonymousStyle) SetLang(v pr.TaggedString) {
 	s.propsCache.known[pr.PLang] = v
 }
 

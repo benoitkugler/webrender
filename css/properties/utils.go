@@ -19,6 +19,7 @@ const (
 	None        // "none"
 	Span        // "span"
 	Subgrid     // "subgrid"
+	Attr        // "attr()"
 )
 
 // --------------- Values  -----------------------------------------------

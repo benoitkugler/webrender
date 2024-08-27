@@ -80,7 +80,7 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	out.FontVariationSettings = newFontVariationSettings(style.GetFontVariationSettings())
 
 	out.FontLanguageOverride = newFontLanguageOverrride(style.GetFontLanguageOverride())
-	out.Lang = style.GetLang().String
+	out.Lang = style.GetLang().S
 
 	out.TextDecorationLine = style.GetTextDecorationLine()
 

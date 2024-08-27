@@ -19,6 +19,7 @@ ABSTRACT_TYPES = [
     "AtomicInlineLevelBox",
     "BlockLevelBox",
     "InlineLevelBox",
+    "GridContainerBox"
 ]
 
 
@@ -168,7 +169,7 @@ type_anonymous = """
 func(t BoxType) AnonymousFrom(parent Box, children []Box) Box {{
     switch t {{
         {type_anonymous_switches}}}
-    return nil
+    panic("unsupported box type in AnonymousFrom " + t.String())
 }}
 """
 

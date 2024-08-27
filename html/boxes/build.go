@@ -8,6 +8,7 @@ import (
 
 	"github.com/benoitkugler/webrender/images"
 	"github.com/benoitkugler/webrender/logger"
+	"github.com/benoitkugler/webrender/text"
 
 	"github.com/benoitkugler/webrender/css/parser"
 
@@ -91,6 +92,7 @@ var (
 func CreateAnonymousBox(box Box) Box {
 	box = AnonymousTableBoxes(box)
 	box = FlexBoxes(box)
+	box = GridBoxes(box)
 	box = InlineInBlock(box)
 	box = BlockInInline(box)
 	return box
@@ -120,61 +122,50 @@ func BuildFormattingStructure(elementTree *utils.HTMLNode, styleFor *tree.StyleF
 }
 
 // Maps values of the “display“ CSS property to box types.
-func makeBox(style pr.ElementStyle, content []Box, element *utils.HTMLNode, pseudoType string) (Box, error) {
+func makeBox(style pr.ElementStyle, content []Box, element *utils.HTMLNode, pseudoType string) (b Box, _ error) {
 	tmp := style.GetDisplay()
 	display := [2]string{tmp[0], tmp[1]}
 	switch display {
 	case [2]string{"block", "flow"}:
-		b := NewBlockBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewBlockBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"inline", "flow"}:
-		b := NewInlineBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewInlineBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"block", "flow-root"}:
-		b := NewBlockBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewBlockBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"inline", "flow-root"}:
-		b := NewInlineBlockBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewInlineBlockBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"block", "table"}:
-		b := NewTableBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"inline", "table"}:
-		b := NewInlineTableBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewInlineTableBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"block", "flex"}:
-		b := NewFlexBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewFlexBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"inline", "flex"}:
-		b := NewInlineFlexBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewInlineFlexBox(style, (*html.Node)(element), pseudoType, content)
+	case [2]string{"block", "grid"}:
+		b = NewGridBox(style, (*html.Node)(element), pseudoType, content)
+	case [2]string{"inline", "grid"}:
+		b = NewInlineGridBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-row"}:
-		b := NewTableRowBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableRowBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-row-group"}:
-		b := NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-header-group"}:
-		b := NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-footer-group"}:
-		b := NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableRowGroupBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-column"}:
-		b := NewTableColumnBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableColumnBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-column-group"}:
-		b := NewTableColumnGroupBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableColumnGroupBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-cell"}:
-		b := NewTableCellBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableCellBox(style, (*html.Node)(element), pseudoType, content)
 	case [2]string{"table-caption"}:
-		b := NewTableCaptionBox(style, (*html.Node)(element), pseudoType, content)
-		return b, nil
+		b = NewTableCaptionBox(style, (*html.Node)(element), pseudoType, content)
 	default:
 		return nil, fmt.Errorf("ignored box %s: display property %s not supported", element.Data, tmp)
 	}
+	return b, nil
 }
 
 // Convert an element and its children into a box with children.
@@ -404,7 +395,9 @@ func beforeAfterToBox(element *utils.HTMLNode, pseudoType string, state *tree.Pa
 	box.Box().Children = children
 
 	// calculate the bookmark-label
-	computeBookmarkLabel(element, box, style.GetBookmarkLabel(), state.CounterValues, targetCollector, cs)
+	if style.GetBookmarkLevel().Tag != pr.None {
+		computeBookmarkLabel(element, box, style.GetBookmarkLabel(), state.CounterValues, targetCollector, cs)
+	}
 
 	return []Box{box}
 }
@@ -518,7 +511,7 @@ func collectMissingTargetCounter(counterName string, lookupCounterValues tree.Co
 // required reparsing.
 func computeContentList(contentList pr.ContentProperties, parentBox Box, counterValues tree.CounterValues,
 	cssToken string, parseAgain tree.ParseFunc, targetCollector *tree.TargetCollector, cs counters.CounterStyle,
-	resolver URLResolver, quoteDepth []int, quoteStyle pr.Quotes, context Context, page Box,
+	resolver URLResolver, quoteDepth []int, quoteStyle pr.Quotes, lang pr.TaggedString, context Context, page Box,
 ) []Box {
 	contentBoxes := []Box{}
 
@@ -690,12 +683,15 @@ outerLoop:
 			if quoteDepth != nil && !quoteStyle.IsNone() {
 				value := content.AsQuote()
 				isOpen := value.Open
-				insert := value.Insert
+				insert := value.Insert && quoteStyle.Tag != pr.None
 				if !isOpen {
 					quoteDepth[0] = utils.MaxInt(0, quoteDepth[0]-1)
 				}
 				if insert {
 					openQuotes, closeQuotes := quoteStyle.Open, quoteStyle.Close
+					if quoteStyle.Tag == pr.Auto {
+						openQuotes, closeQuotes = text.GetLangQuotes(lang.S)
+					}
 					quotes := closeQuotes
 					if isOpen {
 						quotes = openQuotes
@@ -797,7 +793,7 @@ func ContentToBoxes(style pr.ElementStyle, parentBox Box, quoteDepth []int, coun
 	cssToken := "content"
 	boxList := computeContentList(
 		style.GetContent().Contents, parentBox, counterValues, cssToken, parseAgain,
-		targetCollector, cs, resolver, quoteDepth, style.GetQuotes(),
+		targetCollector, cs, resolver, quoteDepth, style.GetQuotes(), style.GetLang(),
 		context, page)
 	return boxList
 }
@@ -820,7 +816,7 @@ func computeStringSet(element *utils.HTMLNode, box Box, stringName string, conte
 
 	cssToken := "string-set::" + stringName
 	boxList := computeContentList(contentList, box, counterValues, cssToken, parseAgain,
-		targetCollector, cs, URLResolver{}, nil, pr.Quotes{}, nil, nil)
+		targetCollector, cs, URLResolver{}, nil, pr.Quotes{}, pr.TaggedString{}, nil, nil)
 	if boxList != nil {
 		var builder strings.Builder
 		for _, box1 := range boxList {
@@ -861,7 +857,7 @@ func computeBookmarkLabel(element *utils.HTMLNode, box Box, contentList pr.Conte
 
 	cssToken := "bookmark-label"
 	boxList := computeContentList(contentList, box, counterValues, cssToken, parseAgain, targetCollector, cs,
-		URLResolver{}, nil, pr.Quotes{}, nil, nil)
+		URLResolver{}, nil, pr.Quotes{}, pr.TaggedString{}, nil, nil)
 
 	var builder strings.Builder
 	for _, box := range boxList {
@@ -884,7 +880,9 @@ func setContentLists(element *utils.HTMLNode, box Box, style pr.ElementStyle, co
 			computeStringSet(element, box, stringName, stringValues, counterValues, targetCollector, cs)
 		}
 	}
-	computeBookmarkLabel(element, box, style.GetBookmarkLabel(), counterValues, targetCollector, cs)
+	if style.GetBookmarkLevel().Tag != pr.None {
+		computeBookmarkLabel(element, box, style.GetBookmarkLabel(), counterValues, targetCollector, cs)
+	}
 }
 
 // Handle the “counter-*“ properties.
@@ -1046,7 +1044,7 @@ func tableBoxesChildren(box Box, children []Box) Box {
 	if TableColumnT.IsInstance(box) { // rule 1.1
 		// Remove all children.
 		children = nil
-	} else if box, ok := box.(*TableColumnGroupBox); ok { // rule 1.2
+	} else if tableBox, ok := box.(*TableColumnGroupBox); ok { // rule 1.2
 		// Remove children other than table-column.
 		newChildren := make([]Box, 0, len(children))
 		for _, child := range children {
@@ -1059,7 +1057,7 @@ func tableBoxesChildren(box Box, children []Box) Box {
 		// Rule XXX (not in the spec): column groups have at least
 		// one column child.
 		if len(children) == 0 {
-			span := box.span()
+			span := tableBox.span()
 			if span < 1 {
 				span = 1
 			}
@@ -1281,6 +1279,7 @@ func wrapTable(box TableBoxITF, children boxIterator) Box {
 		gridHeight += len(groupChildren)
 	}
 	table := CopyWithChildren(box, rowGroups).(TableBoxITF)
+	table.Box().Style = table.Box().Style.Copy()
 	tableBox := table.Table()
 	tableBox.ColumnGroups = columnGroups
 	if tableBox.Style.GetBorderCollapse() == "collapse" {
@@ -1575,6 +1574,49 @@ func flexChildren(box Box, children []Box) []Box {
 	return children
 }
 
+// Remove and add boxes according to the grid model.
+// See https://drafts.csswg.org/css-grid-2/#grid-item
+func GridBoxes(box Box) Box {
+	if !ParentT.IsInstance(box) || box.Box().IsRunning() {
+		return box
+	}
+	// Do recursion.
+	children := make([]Box, len(box.Box().Children))
+	for i, child := range box.Box().Children {
+		children[i] = GridBoxes(child)
+	}
+	box.Box().Children = gridChildren(box, children)
+	return box
+}
+
+func gridChildren(box Box, children []Box) []Box {
+	if GridContainerT.IsInstance(box) {
+		var gridChildren []Box
+		for _, child := range children {
+			if !child.Box().IsAbsolutelyPositioned() {
+				child.Box().IsGridItem = true
+			}
+			if text, ok := child.(*TextBox); ok && strings.Trim(text.Text, " ") == "" {
+				// TODO: ignore texts only containing "characters that can be
+				// affected by the white-space property"
+				// https://drafts.csswg.org/css-grid-2/#grid-item
+				continue
+			}
+			if InlineLevelT.IsInstance(child) {
+				anonymous := BlockBoxAnonymousFrom(child, []Box{child})
+				anonymous.Box().Style = child.Box().Style
+				child.Box().IsGridItem = false
+				anonymous.Box().IsGridItem = true
+				gridChildren = append(gridChildren, anonymous)
+			} else {
+				gridChildren = append(gridChildren, child)
+			}
+		}
+		return gridChildren
+	}
+	return children
+}
+
 // ProcessWhitespace executes the first part of "The 'white-space' processing model".
 // See https://www.w3.org/TR/CSS21/text.html#white-space-model
 // and https://drafts.csswg.org/css-text-3/#white-space-rules
@@ -1616,7 +1658,7 @@ func ProcessWhitespace(box Box, followingCollapsibleSpace bool) bool {
 			followingCollapsibleSpace = false
 		}
 		box_.Text = text
-	} else if _, ok := box.(ParentBoxITF); ok {
+	} else {
 		for _, child := range box.Box().Children {
 			switch child.(type) {
 			case *TextBox, *InlineBox: // leaf
@@ -1679,7 +1721,7 @@ func ProcessTextTransform(box Box) {
 			text = strings.ReplaceAll(text, "\u00AD", "") //  U+00AD SOFT HYPHEN (SHY)
 		}
 		tb.Text = text
-	} else if ParentT.IsInstance(box) && !box.Box().IsRunning() {
+	} else if !box.Box().IsRunning() {
 		// recursion
 		for _, child := range box.Box().Children {
 			if TextT.IsInstance(child) || InlineT.IsInstance(child) {
@@ -1725,7 +1767,7 @@ func ProcessTextTransform(box Box) {
 //	    ]
 //	]
 func InlineInBlock(box Box) Box {
-	if !ParentT.IsInstance(box) || box.Box().IsRunning() {
+	if len(box.Box().Children) == 0 || box.Box().IsRunning() {
 		return box
 	}
 	baseBox := box.Box()
@@ -1865,7 +1907,7 @@ func InlineInBlock(box Box) Box {
 //	        ],
 //	    ]
 func BlockInInline(box Box) Box {
-	if !ParentT.IsInstance(box) || box.Box().IsRunning() {
+	if len(box.Box().Children) == 0 || box.Box().IsRunning() {
 		return box
 	}
 
