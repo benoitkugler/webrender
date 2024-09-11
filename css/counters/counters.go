@@ -177,7 +177,7 @@ func (c CounterStyle) renderValue(counterValue int, counter *CounterStyleDescrip
 		negativePrefix, negativeSuffix = symbol(vs[0]), symbol(vs[1])
 		useNegative = system == "symbolic" || system == "alphabetic" || system == "numeric" || system == "additive"
 		if useNegative {
-			counterValue = abs(counterValue)
+			counterValue = utils.Abs(counterValue)
 		}
 	}
 
@@ -304,7 +304,7 @@ func numeric(symbols []pr.NamedString, value int) (string, bool) {
 		return "", false
 	}
 	var reversedParts []string
-	value = abs(value)
+	value = utils.Abs(value)
 	L := len(symbols)
 	for value != 0 {
 		reversedParts = append(reversedParts, symbol(symbols[value%L]))
@@ -443,8 +443,4 @@ func reverse(a []string) {
 	for left, right := 0, len(a)-1; left < right; left, right = left+1, right-1 {
 		a[left], a[right] = a[right], a[left]
 	}
-}
-
-func abs(v int) int {
-	return int(math.Abs(float64(v)))
 }

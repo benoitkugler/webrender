@@ -67,6 +67,7 @@ func Floor(x Fl) Fl {
 }
 
 // FloatModulo implements Python modulo for float numbers, like
+//
 //	4.456 % 3
 func FloatModulo(x Fl, i int) Fl {
 	x2 := Floor(x)
@@ -88,4 +89,11 @@ func Round(f Fl) Fl {
 // Hypot returns SQRT(a^2 + b^2)
 func Hypot(a, b Fl) Fl {
 	return Fl(math.Hypot(float64(a), float64(b)))
+}
+
+func Abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
