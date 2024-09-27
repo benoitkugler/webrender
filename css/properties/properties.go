@@ -437,12 +437,12 @@ var InitialValues = Properties{
 	PGridColumnEnd:       GridLine{Tag: Auto},
 
 	// CSS Box Alignment Module Level 3 (WD): https://www.w3.org/TR/css-align-3/
-	PAlignContent:   String("normal"),
-	PAlignItems:     String("normal"),
-	PAlignSelf:      String("auto"),
-	PJustifyContent: String("normal"),
-	PJustifyItems:   String("normal"),
-	PJustifySelf:    String("auto"),
+	PAlignContent:   Strings{"normal"},
+	PAlignItems:     Strings{"normal"},
+	PAlignSelf:      Strings{"auto"},
+	PJustifyContent: Strings{"normal"},
+	PJustifyItems:   Strings{"normal"},
+	PJustifySelf:    Strings{"auto"},
 	POrder:          Int(0),
 	PColumnGap:      DimOrS{S: "normal"},
 	PRowGap:         DimOrS{S: "normal"},

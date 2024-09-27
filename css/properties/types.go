@@ -24,6 +24,19 @@ type Repeats [][2]string
 
 type Strings []string
 
+// Intersects returns true if at least one value in [values]
+// is also in the list.
+func (ss Strings) Intersects(values ...string) bool {
+	for _, v1 := range ss {
+		for _, v2 := range values {
+			if v1 == v2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 type SContent struct {
 	String   string
 	Contents ContentProperties
