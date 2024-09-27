@@ -758,7 +758,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	footnoteArea = bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(*bo.FootnoteAreaBox)
 	tmpBox, _, _ := blockLevelLayout(
 		context, footnoteArea, -pr.Inf, nil, &footnoteArea.Page.BoxFields,
-		true, &positionedBoxes, &positionedBoxes, new([]pr.Float), false, -1)
+		true, &positionedBoxes, &positionedBoxes, nil, false, -1)
 	footnoteArea = tmpBox.(*bo.FootnoteAreaBox)
 	footnoteArea.Translate(footnoteArea, 0, -footnoteArea.MarginHeight(), false)
 

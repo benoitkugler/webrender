@@ -509,7 +509,7 @@ func (l *layoutContext) updateFootnoteArea() bool {
 		footnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(l.currentFootnoteArea)).(bo.BlockLevelBoxITF)
 		footnoteArea, _, _ = blockLevelLayout(
 			l, footnoteArea, -pr.Inf, nil,
-			&l.currentFootnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false, -1)
+			&l.currentFootnoteArea.Page.BoxFields, true, nil, nil, nil, false, -1)
 		l.currentFootnoteArea.Height = footnoteArea.Box().Height
 		if !l.inColumn {
 			l.pageBottom -= footnoteArea.Box().MarginHeight()

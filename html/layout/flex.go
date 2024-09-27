@@ -263,8 +263,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			newChild.Box().Style.SetMinHeight(pr.ZeroPixels.ToValue())
 			newChild.Box().Style.SetMaxHeight(pr.Dimension{Value: pr.Inf, Unit: pr.Px}.ToValue())
 			newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF),
-				-pr.Inf, childSkipStack, parentBox, pageIsEmpty,
-				new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false, -1)
+				-pr.Inf, childSkipStack, parentBox, pageIsEmpty, nil, nil, nil, false, -1)
 			contentSize := newChild.Box().Height.V()
 			child.MinHeight = pr.Min(specifiedSize, contentSize)
 		}
@@ -338,7 +337,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					}
 					newChild.Box().Width = pr.Inf
 					newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
-						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
+						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
 					child.FlexBaseSize = newChild.Box().MarginHeight()
 				}
 			} else if styleAxis.S == "min-content" {

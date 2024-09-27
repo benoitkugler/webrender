@@ -18,51 +18,64 @@ type blockLayout struct {
 	collapsingThrough bool
 }
 
-// Lay out the block-level “box“.
+// Lay out the block-level [box].
 //
-// `maxPositionY` is the absolute vertical position (as in
-// “someBox.PositionY“) of the bottom of the
+// [maxPositionY] is the absolute vertical position (as in
+// 'someBox.PositionY') of the bottom of the
 // content box of the current page area.
-func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
-	containingBlock *bo.BoxFields, pageIsEmpty bool, absoluteBoxes,
-	fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float,
+//
+// [absoluteBoxes], [fixedBoxes] and [adjoiningMargins] may be nil
+// [discard] default to false, [maxLines] default to -1
+func blockLevelLayout(context *layoutContext, box bo.BlockLevelBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
+	containingBlock *bo.BoxFields, pageIsEmpty bool,
+	absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float,
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
-	box := box_.Box()
-	if !bo.TableT.IsInstance(box_) {
-		resolvePercentagesBox(box_, containingBlock, 0)
+	if absoluteBoxes == nil {
+		absoluteBoxes = new([]*AbsolutePlaceholder)
+	}
+	if fixedBoxes == nil {
+		fixedBoxes = new([]*AbsolutePlaceholder)
+	}
+	if adjoiningMargins == nil {
+		adjoiningMargins = new([]pr.Float)
+	}
 
-		if box.MarginTop == pr.AutoF {
-			box.MarginTop = pr.Float(0)
+	box_ := box.Box()
+	if !bo.TableT.IsInstance(box) {
+		resolvePercentagesBox(box, containingBlock, 0)
+
+		if box_.MarginTop == pr.AutoF {
+			box_.MarginTop = pr.Float(0)
 		}
-		if box.MarginBottom == pr.AutoF {
-			box.MarginBottom = pr.Float(0)
+		if box_.MarginBottom == pr.AutoF {
+			box_.MarginBottom = pr.Float(0)
 		}
 
 		if context.currentPage > 1 && pageIsEmpty {
 			// When an unforced break occurs before or after a block-level box,
 			// any margins adjoining the break are truncated to zero.
 			if collapseWithPage := containingBlock.IsForRootElement || len(*adjoiningMargins) != 0; collapseWithPage {
-				if box.Style.GetMarginBreak() == "discard" {
-					box.MarginTop = pr.Float(0)
-				} else if box.Style.GetMarginBreak() == "auto" {
+				if box_.Style.GetMarginBreak() == "discard" {
+					box_.MarginTop = pr.Float(0)
+				} else if box_.Style.GetMarginBreak() == "auto" {
 					if !context.forcedBreak {
-						box.MarginTop = pr.Float(0)
+						box_.MarginTop = pr.Float(0)
 					}
 				}
 			}
 		}
 
-		collapsedMargin := collapseMargin(append(*adjoiningMargins, box.MarginTop.V()))
-		bl := box_.BlockLevel()
-		bl.Clearance = getClearance(context, box, collapsedMargin)
+		collapsedMargin := collapseMargin(append(*adjoiningMargins, box_.MarginTop.V()))
+		bl := box.BlockLevel()
+		bl.Clearance = getClearance(context, box_, collapsedMargin)
 		if bl.Clearance != nil {
-			topBorderEdge := box.PositionY + collapsedMargin + bl.Clearance.V()
-			box.PositionY = topBorderEdge - box.MarginTop.V()
+			topBorderEdge := box_.PositionY + collapsedMargin + bl.Clearance.V()
+			box_.PositionY = topBorderEdge - box_.MarginTop.V()
 			adjoiningMargins = new([]pr.Float)
 		}
 	}
-	return blockLevelLayoutSwitch(context, box_, bottomSpace, skipStack, containingBlock,
+	return blockLevelLayoutSwitch(context, box, bottomSpace, skipStack, containingBlock,
 		pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
 }
 
