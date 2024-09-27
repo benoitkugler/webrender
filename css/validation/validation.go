@@ -2781,7 +2781,7 @@ func parseTrackBreadth(token Token) pr.DimOrS {
 func parseTrackSize(token Token) pr.GridDims {
 	trackBreadth := parseTrackBreadth(token)
 	if !trackBreadth.IsNone() {
-		return pr.GridDims{V1: trackBreadth}
+		return pr.NewGridDimsValue(trackBreadth)
 	}
 	name, args := pa.ParseFunction(token)
 	if name == "minmax" {
@@ -2789,14 +2789,14 @@ func parseTrackSize(token Token) pr.GridDims {
 			inflexibleBreadth := parseInflexibleBreadth(args[0])
 			trackBreadth := parseTrackBreadth(args[1])
 			if !inflexibleBreadth.IsNone() && !trackBreadth.IsNone() {
-				return pr.GridDims{Name: 'm', V1: inflexibleBreadth, V2: trackBreadth}
+				return pr.NewGridDimsMinmax(inflexibleBreadth, trackBreadth)
 			}
 		}
 	} else if name == "fit-content" {
 		if len(args) == 1 {
 			length := getLength(args[0], false, true)
 			if !length.IsNone() {
-				return pr.GridDims{Name: 'f', V1: length.ToValue()}
+				return pr.NewGridDimsFitcontent(length)
 			}
 		}
 	}
@@ -2808,7 +2808,7 @@ func parseTrackSize(token Token) pr.GridDims {
 func parseFixedSize(token Token) pr.GridDims {
 	length := getLength(token, false, true)
 	if !length.IsNone() {
-		return pr.GridDims{V1: length.ToValue()}
+		return pr.NewGridDimsValue(length.ToValue())
 	}
 	name, args := pa.ParseFunction(token)
 	if name == "minmax" && len(args) == 2 {
@@ -2816,7 +2816,7 @@ func parseFixedSize(token Token) pr.GridDims {
 		if !length.IsNone() {
 			trackBreadth := parseTrackBreadth(args[1])
 			if !trackBreadth.IsNone() {
-				return pr.GridDims{Name: 'm', V1: length.ToValue(), V2: trackBreadth}
+				return pr.NewGridDimsMinmax(length.ToValue(), trackBreadth)
 			}
 		}
 		keyword := getKeyword(args[0])
@@ -2827,7 +2827,7 @@ func parseFixedSize(token Token) pr.GridDims {
 				if v1.IsNone() {
 					v1 = pr.SToV(keyword)
 				}
-				return pr.GridDims{Name: 'm', V1: v1, V2: fixedBreadth.ToValue()}
+				return pr.NewGridDimsMinmax(v1, fixedBreadth.ToValue())
 			}
 		}
 	}
@@ -2980,7 +2980,7 @@ func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
 		fixedSize := parseFixedSize(token)
 		if !fixedSize.IsNone() {
 			if !lastIsLineName {
-				returnTokens = append(returnTokens, nil)
+				returnTokens = append(returnTokens, pr.GridNames{})
 			}
 			lastIsLineName = false
 			returnTokens = append(returnTokens, fixedSize)
@@ -2989,7 +2989,7 @@ func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
 		trackSize := parseTrackSize(token)
 		if !trackSize.IsNone() {
 			if !lastIsLineName {
-				returnTokens = append(returnTokens, nil)
+				returnTokens = append(returnTokens, pr.GridNames{})
 			}
 			lastIsLineName = false
 			returnTokens = append(returnTokens, trackSize)
@@ -3027,7 +3027,7 @@ func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
 				fixedSize = parseFixedSize(arg)
 				if !fixedSize.IsNone() {
 					if !repeatLastIsLineName {
-						namesAndSizes = append(namesAndSizes, nil)
+						namesAndSizes = append(namesAndSizes, pr.GridNames{})
 					}
 					repeatLastIsLineName = false
 					namesAndSizes = append(namesAndSizes, fixedSize)
@@ -3038,7 +3038,7 @@ func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
 				if !trackSize.IsNone() {
 					includesTrack = true
 					if !repeatLastIsLineName {
-						namesAndSizes = append(namesAndSizes, nil)
+						namesAndSizes = append(namesAndSizes, pr.GridNames{})
 					}
 					repeatLastIsLineName = false
 					namesAndSizes = append(namesAndSizes, trackSize)
@@ -3047,11 +3047,11 @@ func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
 				return out, false
 			}
 			if !lastIsLineName {
-				returnTokens = append(returnTokens, nil)
+				returnTokens = append(returnTokens, pr.GridNames{})
 			}
 			lastIsLineName = false
 			if !repeatLastIsLineName {
-				namesAndSizes = append(namesAndSizes, nil)
+				namesAndSizes = append(namesAndSizes, pr.GridNames{})
 			}
 			returnTokens = append(returnTokens, pr.GridRepeat{Names: namesAndSizes, Repeat: number})
 			continue
@@ -3062,7 +3062,7 @@ func gridTemplateImpl(tokens []Token) (out pr.GridTemplate, _ bool) {
 		return out, false
 	}
 	if !lastIsLineName {
-		returnTokens = append(returnTokens, nil)
+		returnTokens = append(returnTokens, pr.GridNames{})
 	}
 	return pr.GridTemplate{Names: returnTokens}, true
 }

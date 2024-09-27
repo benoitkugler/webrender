@@ -401,11 +401,9 @@ func resolveKeyword(keyword, name string, page Box) string {
 					}
 				}
 			}
-			if bo.ParentT.IsInstance(element) {
-				if len(element.Box().Children) > 0 {
-					element = element.Box().Children[0]
-					continue
-				}
+			if len(element.Box().Children) > 0 {
+				element = element.Box().Children[0]
+				continue
 			}
 			break
 		}

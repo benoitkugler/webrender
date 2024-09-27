@@ -43,9 +43,7 @@ func boxRectangle(box bo.BoxFields, whichRectangle string) [4]pr.Float {
 
 // emulate Python itertools.cycle
 // i is the current iteration index, N the length of the target slice.
-func cycle(i, N int) int {
-	return i % N
-}
+func cycle(i, N int) int { return i % N }
 
 func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.Gifu) images.Image {
 	switch img := image.(type) {

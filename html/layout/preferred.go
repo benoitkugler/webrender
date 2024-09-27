@@ -33,7 +33,7 @@ func shrinkToFit(context *layoutContext, box Box, availableContentWidth pr.Float
 
 // Return the min-content width for “box“.
 // This is the width by breaking at every line-break opportunity.
-// outer should default to true
+// [outer] defaults to true
 func minContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 	if box.Box().IsTableWrapper {
 		return tableAndColumnsPreferredWidths(context, box, outer).tableMinContentWidth

@@ -426,8 +426,8 @@ var InitialValues = Properties{
 
 	// Grid Layout Module Level 2 (CR): https://www.w3.org/TR/css-grid-2/
 	PGridAutoFlow:        Strings{"row"},
-	PGridAutoColumns:     GridAuto{NewGridDims(SToV("auto"))},
-	PGridAutoRows:        GridAuto{NewGridDims(SToV("auto"))},
+	PGridAutoColumns:     GridAuto{NewGridDimsValue(SToV("auto"))},
+	PGridAutoRows:        GridAuto{NewGridDimsValue(SToV("auto"))},
 	PGridTemplateAreas:   GridTemplateAreas{},
 	PGridTemplateColumns: GridTemplate{Tag: None},
 	PGridTemplateRows:    GridTemplate{Tag: None},

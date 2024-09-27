@@ -215,10 +215,9 @@ func absoluteHeight(box_ Box, containingBlock block) (bool, pr.Float) {
 	return translateBoxHeight, translateY
 }
 
-// performs either blockContainerLayout or flexLayout on box_
-func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder,
+// performs either "blockContainer", "flex" or "grid" layout on box_
+func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder,
 	bottomSpace pr.Float, skipStack tree.ResumeStack,
-	isBlock bool,
 ) (Box, tree.ResumeStack) {
 	box := box_.Box()
 	cbWidth, cbHeight := containingBlock.Width, containingBlock.Height
@@ -246,11 +245,13 @@ func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock bloc
 		newBox Box
 		bl     blockLayout
 	)
-	if isBlock {
+	if bo.BlockT.IsInstance(box_) {
 		newBox, bl, _ = blockContainerLayout(context, box_, bottomSpace, skipStack, true,
 			&absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
-	} else {
+	} else if bo.FlexContainerT.IsInstance(box_) {
 		newBox, bl = flexLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes)
+	} else if bo.GridContainerT.IsInstance(box_) {
+		newBox, bl = gridLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes)
 	}
 
 	for _, childPlaceholder := range absoluteBoxes {
@@ -267,14 +268,6 @@ func absoluteLayoutDriver(context *layoutContext, box_ Box, containingBlock bloc
 	newBox.Translate(newBox, translateX, translateY, false)
 
 	return newBox, bl.resumeAt
-}
-
-func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
-	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, bottomSpace, skipStack, true)
-}
-
-func absoluteFlex(context *layoutContext, box_ Box, containingBlock block, fixedBoxes *[]*AbsolutePlaceholder, bottomSpace pr.Float, skipStack tree.ResumeStack) (Box, tree.ResumeStack) {
-	return absoluteLayoutDriver(context, box_, containingBlock, fixedBoxes, bottomSpace, skipStack, false)
 }
 
 // Set the width of absolute positioned “box“.
@@ -323,20 +316,15 @@ func absoluteBoxLayout(context *layoutContext, box Box, cb_ Box, fixedBoxes *[]*
 	resolvePositionPercentages(box.Box(), bo.Point{containingBlock.Width, containingBlock.Height})
 
 	context.createBlockFormattingContext()
-	// Absolute tables are wrapped into block boxes
 	var (
 		newBox   Box
 		resumeAt tree.ResumeStack
 	)
-	if bo.BlockT.IsInstance(box) {
-		newBox, resumeAt = absoluteBlock(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
-	} else if bo.FlexContainerT.IsInstance(box) {
-		newBox, resumeAt = absoluteFlex(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
-	} else {
-		if !bo.BlockReplacedT.IsInstance(box) {
-			panic(fmt.Sprintf("box should be a BlockReplaced, got %T", box))
-		}
+	if bo.BlockReplacedT.IsInstance(box) {
 		newBox = absoluteReplaced(box, containingBlock)
+	} else {
+		// Absolute tables are wrapped into block boxes
+		newBox, resumeAt = absoluteBlock(context, box, containingBlock, fixedBoxes, bottomSpace, skipStack)
 	}
 	context.finishBlockFormattingContext(newBox)
 	return newBox, resumeAt

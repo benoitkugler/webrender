@@ -168,16 +168,50 @@ type OptionalRanges struct {
 	Auto   bool
 }
 
+// GridDims is a compact form for a grid template
+// dimension. It is either :
+//   - a single value V1
+//   - minmax(V1, V2)
+//   - fit-content(V1)
 type GridDims struct {
-	Name   byte // '', 'm' for minmax()' or 'f' for fit-content()
-	V1, V2 DimOrS
+	v1, v2 DimOrS
+	tag    byte // '', 'm' for minmax()' or 'f' for fit-content()
 }
 
-// NewGridDims return a non tagged value.
-func NewGridDims(v DimOrS) GridDims { return GridDims{V1: v} }
+// NewGridDimsValue returns a non tagged value.
+func NewGridDimsValue(v DimOrS) GridDims { return GridDims{v1: v} }
+
+// NewGridDimsMinmax returns minmax(...)
+func NewGridDimsMinmax(v1, v2 DimOrS) GridDims { return GridDims{tag: 'm', v1: v1, v2: v2} }
+
+// NewGridDimsFitcontent returns fit-content(...)
+func NewGridDimsFitcontent(v Dimension) GridDims { return GridDims{tag: 'f', v1: v.ToValue()} }
+
+func (size GridDims) SizingFunctions() [2]DimOrS {
+	minSizing, maxSizing := size.v1, size.v1
+	if size.tag == 'm' {
+		minSizing, maxSizing = size.v1, size.v2
+	}
+	if size.tag == 'f' {
+		minSizing, maxSizing = SToV("auto"), SToV("auto")
+	} else if minSizing.Unit == Fr {
+		minSizing = SToV("auto")
+	}
+	return [2]DimOrS{minSizing, maxSizing}
+}
 
 type GridAuto []GridDims
 
+// Reverse returns a new, reversed slice
+func (ga GridAuto) Reverse() GridAuto {
+	out := make(GridAuto, len(ga))
+	for i, v := range ga {
+		out[len(ga)-1-i] = v
+	}
+	return out
+}
+
+// See https://developer.mozilla.org/en-US/docs/Web/CSS/grid-row-start
 type GridLine struct {
 	Ident string
 	Val   int
@@ -186,11 +220,17 @@ type GridLine struct {
 
 func (gl GridLine) IsCustomIdent() bool { return gl.Val == 0 && gl.Tag == 0 }
 
+func (gl GridLine) IsSpan() bool { return gl.Tag == Span }
+
 // An empty list means 'none'
 type GridTemplateAreas [][]string
 
+// IsNone returns true for the CSS 'none' keyword
+func (gt GridTemplateAreas) IsNone() bool { return len(gt) == 0 }
+
 type GridTemplate struct {
-	Tag   Tag
+	Tag Tag
+	// Every even value is a [GridNames]
 	Names []GridSpec
 }
 
@@ -199,12 +239,13 @@ type (
 		isGridSpec()
 	}
 	GridNames      []string
-	GridNameRepeat struct {
+	GridNameRepeat struct { // only found in subgrid
 		Names  [][]string
 		Repeat int // RepeatAutoFill, >= 1 otherwise
 	}
 
 	GridRepeat struct {
+		// Every even value is a [GridNames]
 		Names  []GridSpec
 		Repeat int
 	}
@@ -486,7 +527,7 @@ func (v Counters) IsNone() bool {
 }
 
 func (v GridDims) IsNone() bool {
-	return v.Name == 0 && v.V1.IsNone() && v.V2.IsNone()
+	return v.tag == 0 && v.v1.IsNone() && v.v2.IsNone()
 }
 
 // method tags
