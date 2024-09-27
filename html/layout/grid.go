@@ -3,9 +3,9 @@ package layout
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
+	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -82,16 +82,16 @@ func getTemplateTracks(tracks pr.GridTemplate) []pr.GridSpec {
 	return tracksList
 }
 
-func getLine(line pr.GridLine, lines []string, side string) (isSpan bool, _ int, _ string, coord int) {
+func getLine(line pr.GridLine, lines []pr.GridNames, side string) (isSpan bool, _ int, _ string, coord int) {
 	isSpan, number, ident := line.IsSpan(), line.Val, line.Ident
 	if ident != "" && line.IsCustomIdent() {
 		hasBroken := false
 		var (
-			line string
+			line pr.GridNames
 			tag  = fmt.Sprintf("{%s}-{%s}", ident, side)
 		)
 		for coord, line = range lines {
-			if strings.Contains(line, tag) {
+			if utils.IsIn(line, tag) {
 				hasBroken = true
 				break
 			}
@@ -112,7 +112,7 @@ func getLine(line pr.GridLine, lines []string, side string) (isSpan bool, _ int,
 			hasBroken := false
 			for coord := 0; coord < L; coord++ {
 				line := lines[coord*step]
-				if strings.Contains(line, ident) {
+				if utils.IsIn(line, ident) {
 					number -= step
 					hasBroken = true
 					break
@@ -139,7 +139,7 @@ func getLine(line pr.GridLine, lines []string, side string) (isSpan bool, _ int,
 
 type placement [2]int // coord, size
 
-func (pl placement) isNotNone() bool {return  pl[1] != 0}
+func (pl placement) isNotNone() bool { return pl[1] != 0 }
 
 // Input coordinates are 1-indexed, returned coordinates are 0-indexed.
 func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
@@ -182,7 +182,7 @@ func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
 				hasBroken := false
 				for index, line := range lines[coord+1:] {
 					size = index + 1
-					if strings.Contains(line, spanIdent) {
+					if utils.IsIn(line, spanIdent) {
 						spanNumber -= 1
 					}
 					if spanNumber == 0 {
@@ -209,7 +209,7 @@ func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
 					hasBroken := false
 					for coord := range slice {
 						line := slice[len(slice)-1-coord]
-						if strings.Contains(line, spanIdent) {
+						if utils.IsIn(line, spanIdent) {
 							number -= 1
 						}
 						if number == 0 {
@@ -250,7 +250,7 @@ func getSpan(place pr.GridLine) int {
 }
 
 func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
-	columns []string, childrenPositions map[Box][4]int, dense bool,
+	columns []pr.GridNames, childrenPositions map[Box][4]int, dense bool,
 ) placement {
 	occupiedColumns := map[int]bool{}
 	for _, rect := range childrenPositions {
@@ -318,243 +318,249 @@ func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
 	}
 }
 
+const (
+	sizeMin byte = iota
+	sizeMax
+)
 
-func distributeExtraSpace(affectedSizes, affectedTracksTypes,
-	sizeContribution, tracksChildren,
-	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]int, span bool, direction,
-	context *layoutContext, containingBlock containingBlock,
+// affectedSizes : sizeMin or sizeMax ("min", "max")
+// affectedTracksTypes : i, c, m ("intrinsic", "content-based", "max-content")
+// sizeContribution : m, c, C ("mininum", "min-content", "max-content")
+// direction : x, y
+func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksTypes, sizeContribution byte, tracksChildren [][]Box,
+	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.Float, span int, direction byte, containingBlock *bo.BoxFields,
 ) {
-	// assert affectedSizes in ("min", "max")
-	// assert affectedTracksTypes in ("intrinsic", "content-based", "max-content")
-	// assert sizeContribution in ("mininum", "min-content", "max-content")
-	// assert direction in "xy"
-
 	// 1. Maintain separately for each affected track a planned increase.
-	plannedIncreases := make([]int, len(tracksSizes))
+	plannedIncreases := make([]pr.Float, len(tracksSizes))
 
 	// 2. Distribute space.
-	var affectedTracks []bool
-	affectedSizeIndex := 0
-	if affectedSizes != "min" {
-		affectedSizeIndex = 1
-	}
-	for _, functions := range sizingFunctions {
-		function = functions[affectedSizeIndex]
-		if affectedTracksTypes == "intrinsic" {
-			if (function == "min-content" || function == "max-content" || function == "auto") ||
-				function[0] == "fit-content()" {
-				affectedTracks.append(true)
-				continue
-			} else if affectedTracksTypes == "content-based" {
-				if function == "min-content" || function == "max-content" {
-					affectedTracks.append(true)
-					continue
-				}
-			} else if affectedTracksTypes == "max-content" {
-				if function == "max-content" || function == "auto" {
-					affectedTracks.append(true)
-					continue
-				}
-			}
-			affectedTracks.append(false)
+	affectedTracks := make([]bool, len(sizingFunctions))
+	for i, functions := range sizingFunctions {
+		function := functions[affectedSizes]
+		isAffected := false
+		switch affectedTracksTypes {
+		case 'i':
+			isAffected = function.S == "min-content" || function.S == "max-content" || function.S == "auto"
+		case 'c':
+			isAffected = function.S == "min-content" || function.S == "max-content"
+		case 'm':
+			isAffected = function.S == "max-content" || function.S == "auto"
 		}
-		for i, children := range tracksChildren {
-			if !children {
-				continue
-			}
-			for item := range children {
-				// 2.1 Find the space distribution.
-				// TODO: Differenciate minimum && min-content values.
-				// TODO: Find a better way to get height.
-				if direction == "x" {
-					if sizeContribution == "minimum" || sizeContribution == "min-content" {
-						space = minContentWidth(context, item)
-					} else {
-						space = maxContentWidth(context, item)
-					}
+		affectedTracks[i] = isAffected
+	}
+	for i, children := range tracksChildren {
+		if len(children) == 0 {
+			continue
+		}
+		for _, item := range children {
+			// 2.1 Find the space distribution.
+			// TODO: Differenciate minimum && min-content values.
+			// TODO: Find a better way to get height.
+			var space pr.Float
+			if direction == 'x' {
+				if sizeContribution == 'm' || sizeContribution == 'c' {
+					space = minContentWidth(context, item, true)
 				} else {
-					// from .block import blockLevelLayout
-					item = item.deepcopy()
-					item.positionX = 0
-					item.positionY = 0
-					item, _, _, _, _, _ = blockLevelLayout(context, item, -inf, nil,
-						containingBlock, true, new(), new())
-					space = item.marginHeight()
+					space = maxContentWidth(context, item, true)
 				}
-				for _, sizes := range tracksSizes[i : i+span] {
-					space -= sizes[affectedSizeIndex]
+			} else {
+				item = bo.Deepcopy(item)
+				item.Box().PositionX = 0
+				item.Box().PositionY = 0
+				item, _, _ = blockLevelLayout(context, item.(bo.BlockLevelBoxITF), -pr.Inf, nil,
+					containingBlock, true, nil, nil, nil, false, -1)
+				space = item.Box().MarginHeight()
+			}
+			for _, sizes := range tracksSizes[i : i+span] {
+				space -= pr.Float(sizes[affectedSizes])
+			}
+			space = pr.Max(0, space)
+			// 2.2 Distribute space up to limits.
+			var affectedTracksNumbers, unaffectedTracksNumbers []int
+			for j := i; j < i+span; j++ {
+				if affectedTracks[j] {
+					affectedTracksNumbers = append(affectedTracksNumbers, j)
+				} else {
+					unaffectedTracksNumbers = append(unaffectedTracksNumbers, j)
 				}
-				space = max(0, space)
-				// 2.2 Distribute space up to limits.
-				tracksNumbers = list(
-					enumerate(affectedTracks[i:i+span], i))
-				itemIncurredIncreases = [0]*len(sizingFunctions)
-				// affectedTracksNumbers = [                j for j, affected := range tracksNumbers if affected]
-				distributedSpace = space / (len(affectedTracksNumbers) || 1)
-				for _, trackNumber := range affectedTracksNumbers {
-					baseSize, growthLimit = tracksSizes[trackNumber]
-					itemIncurredIncrease = distributedSpace
-					affectedSize = tracksSizes[trackNumber][affectedSizeIndex]
-					limit = tracksSizes[trackNumber][1]
+			}
+			// tracksNumbers = list(enumerate(affectedTracks[i:i+span], i))
+			// affectedTracksNumbers = [                j for j, affected := range tracksNumbers if affected]
+			itemIncurredIncreases := make([]pr.Float, len(sizingFunctions))
+			distributedSpace := space
+			if L := len(affectedTracksNumbers); L != 0 {
+				distributedSpace /= pr.Float(L)
+			}
+			for _, trackNumber := range affectedTracksNumbers {
+				// baseSize, growthLimit := tracksSizes[trackNumber]
+				itemIncurredIncrease := distributedSpace
+				affectedSize := tracksSizes[trackNumber][affectedSizes]
+				limit := tracksSizes[trackNumber][1]
+				if affectedSize+itemIncurredIncrease >= limit {
+					extra := (itemIncurredIncrease + affectedSize - limit)
+					itemIncurredIncrease -= extra
+				}
+				space -= itemIncurredIncrease
+				itemIncurredIncreases[trackNumber] = itemIncurredIncrease
+			}
+			// 2.3 Distribute space to non-affected tracks.
+			if space != 0 && len(affectedTracksNumbers) != 0 {
+				// unaffectedTracksNumbers = [                    j for j, affected := range tracksNumbers if ! affected]
+				distributedSpace := space
+				if L := len(unaffectedTracksNumbers); L != 0 {
+					distributedSpace /= pr.Float(L)
+				}
+				for _, trackNumber := range unaffectedTracksNumbers {
+					// baseSize, growthLimit = tracksSizes[trackNumber]
+					itemIncurredIncrease := distributedSpace
+					affectedSize := (tracksSizes[trackNumber][affectedSizes])
+					limit := tracksSizes[trackNumber][1]
 					if affectedSize+itemIncurredIncrease >= limit {
-						extra = (itemIncurredIncrease + affectedSize - limit)
+						extra := (itemIncurredIncrease + affectedSize - limit)
 						itemIncurredIncrease -= extra
 					}
 					space -= itemIncurredIncrease
-					itemIncurredIncreases[trackNumber] = itemIncurredIncrease
-				} // 2.3 Distribute space to non-affected tracks.
-				if space && affectedTracksNumbers {
-					// unaffectedTracksNumbers = [                    j for j, affected := range tracksNumbers if ! affected]
-					distributedSpace = (space / (len(unaffectedTracksNumbers) || 1))
-					for trackNumber := range unaffectedTracksNumbers {
-						baseSize, growthLimit = tracksSizes[trackNumber]
-						itemIncurredIncrease = distributedSpace
-						affectedSize = (tracksSizes[trackNumber][affectedSizeIndex])
-						limit = tracksSizes[trackNumber][1]
-						if affectedSize+itemIncurredIncrease >= limit {
-							extra = (itemIncurredIncrease + affectedSize - limit)
-							itemIncurredIncrease -= extra
-						}
-						space -= itemIncurredIncrease
-						itemIncurredIncreases[trackNumber] = (itemIncurredIncrease)
-					}
-				} // 2.4 Distribute space beyond limits.
-				if space {
-					// TODO: Distribute space beyond limits.
-				} // 2.5. Set the track’s planned increase.
-				for k, extra := range itemIncurredIncreases {
-					if extra > plannedIncreases[k] {
-						plannedIncreases[k] = extra
-					}
+					itemIncurredIncreases[trackNumber] = (itemIncurredIncrease)
 				}
 			}
-		} // 3. Update the tracks’ affected size.
-		for i, increase := range plannedIncreases {
-			if affectedSizes == "max" && tracksSizes[i][1] == inf {
-				tracksSizes[i][1] = tracksSizes[i][0] + increase
-			} else {
-				tracksSizes[i][affectedSizeIndex] += increase
+			// 2.4 Distribute space beyond limits.
+			if space != 0 {
+				// TODO: Distribute space beyond limits.
 			}
+			// 2.5. Set the track’s planned increase.
+			for k, extra := range itemIncurredIncreases {
+				if extra > plannedIncreases[k] {
+					plannedIncreases[k] = extra
+				}
+			}
+		}
+	}
+	// 3. Update the tracks’ affected size.
+	for i, increase := range plannedIncreases {
+		if affectedSizes == sizeMax && tracksSizes[i][1] == pr.Inf {
+			tracksSizes[i][1] = tracksSizes[i][0] + increase
+		} else {
+			tracksSizes[i][affectedSizes] += increase
 		}
 	}
 }
 
-func resolveTracksSizes(sizingFunctions [][2]pr.DimOrS, boxSize, childrenPositions map[Box][4]int,
-                          implicitStart int, direction byte, gap, context,
-                          containingBlock Box, orthogonalSizes [][2]pr.DimOrS) {
-    // assert direction := range "xy"
-    // TODO: Check that auto box size is 0 for percentages.
-    percentBoxSize = 0 
+func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, boxSize, childrenPositions map[Box][4]int,
+	implicitStart int, direction byte, gap,
+	containingBlock *bo.BoxFields, orthogonalSizes [][2]pr.DimOrS,
+) [][2]pr.Float {
+	// assert direction := range "xy"
+	// TODO: Check that auto box size is 0 for percentages.
+	percentBoxSize := 0
 	if boxSize != "auto" {
 		percentBoxSize = boxSize
-		} 
-		
-		// 1.1 Initialize track sizes.
-		 tracksSizes := make([][2]int, len(sizingFunctions))
-    for i ,funcs := range sizingFunctions {
-		minFunction, maxFunction := funcs[0], funcs[1]
-        baseSize = None
-        if isLength(minFunction) {
-            baseSize = percentage(minFunction, percentBoxSize)
-			} else if (minFunction.S  == "min-content" || minFunction.S == "max-content" || minFunction.S== "auto")  {
-            baseSize = 0
-			  }
-        growthLimit = None
-        if isLength(maxFunction) {
-            growthLimit = percentage(maxFunction, percentBoxSize)
-        } else if (maxFunction.S  == "min-content" || maxFunction.S  ==  "max-content" || maxFunction.S  ==  "auto") ||
-               isFr(maxFunction) {
-              }
-            growthLimit = inf
-        if baseSize != None && growthLimit != None {
-            growthLimit = max(baseSize, growthLimit)
-        } 
-		tracksSizes[i] =  [2]int{baseSize, growthLimit}
-    }
+	}
 
-    // 1.2 Resolve intrinsic track sizes.
-    // 1.2.1 Shim baseline-aligned items.
-    // TODO: Shim items.
-    // 1.2.2 Size tracks to fit non-spanning items.
-    tracksChildren = make([][]Box, len(tracksSizes))
-    for child, rect := range childrenPositions{
+	// 1.1 Initialize track sizes.
+	tracksSizes := make([][2]pr.Float, len(sizingFunctions))
+	for i, funcs := range sizingFunctions {
+		minFunction, maxFunction := funcs[0], funcs[1]
+		baseSize = None
+		if isLength(minFunction) {
+			baseSize = percentage(minFunction, percentBoxSize)
+		} else if minFunction.S == "min-content" || minFunction.S == "max-content" || minFunction.S == "auto" {
+			baseSize = 0
+		}
+		growthLimit = None
+		if isLength(maxFunction) {
+			growthLimit = percentage(maxFunction, percentBoxSize)
+		} else if (maxFunction.S == "min-content" || maxFunction.S == "max-content" || maxFunction.S == "auto") ||
+			isFr(maxFunction) {
+		}
+		growthLimit = inf
+		if baseSize != None && growthLimit != None {
+			growthLimit = max(baseSize, growthLimit)
+		}
+		tracksSizes[i] = [2]int{baseSize, growthLimit}
+	}
+
+	// 1.2 Resolve intrinsic track sizes.
+	// 1.2.1 Shim baseline-aligned items.
+	// TODO: Shim items.
+	// 1.2.2 Size tracks to fit non-spanning items.
+	tracksChildren := make([][]Box, len(tracksSizes))
+	for child, rect := range childrenPositions {
 		x, y, width, height := rect[0], rect[1], rect[2], rect[3]
 		coord, size := y, height
-		if direction == "x" {
+		if direction == 'x' {
 			coord, size = x, width
 		}
-        if size != 1 {
-            continue
-        } 
-		tracksChildren[coord - implicitStart].append(child)
-    } 
+		if size != 1 {
+			continue
+		}
+		tracksChildren[coord-implicitStart] = append(tracksChildren[coord-implicitStart], child)
+	}
 	// iterable = zip(tracksChildren, sizingFunctions, tracksSizes)
-    for i, children := range tracksChildren {
-		  minFunction, maxFunction := sizingFunctions[i][0], sizingFunctions[i][1]
-		   sizes := trackSizes[i]
-        if ! children {
-            continue
-        } 
-		if direction == "y" {
-            // TODO: Find a better way to get height.
-            // from .block import blockLevelLayout
-            height = 0
-            for _, child := range children {
-                x, _, width, _ = childrenPositions[child]
-                width = sum(orthogonalSizes[x:x+width])
-                child = child.deepcopy()
-                child.positionX = 0
-                child.positionY = 0
-                parent = boxes.BlockContainerBox.anonymousFrom(
-                    containingBlock, nil)
-                resolvePercentages(parent, containingBlock)
-                parent.positionX = child.positionX
-                parent.positionY = child.positionY
-                parent.width = width
-                parent.height = height
-                bottomSpace = -inf
-                child, _, _, _, _, _ = blockLevelLayout(                    context, child, bottomSpace, nil,
-                    parent, true,                    new(), new())
-                height = max(height, child.marginHeight())
-            } 
-			if minFunction.S == "min-content"|| minFunction.S == "maxContent"|| minFunction.S == "auto" {
-                sizes[0] = height
-            } 
-			if maxFunction.S == "min-content" ||  maxFunction.S == "maxContent" {
-                sizes[1] = height
-            } 
-			if sizes[0] != nil && sizes[1] != nil{
-                sizes[1] = max(sizes)
-            }
-			 continue
-        }
-		 if minFunction == "min-content" {
-			ma := 0
+	for i, children := range tracksChildren {
+		minFunction, maxFunction := sizingFunctions[i][0], sizingFunctions[i][1]
+		sizes := tracksSizes[i]
+		if len(children) == 0 {
+			continue
+		}
+		if direction == 'y' {
+			// TODO: Find a better way to get height.
+			height := 0
+			for _, child := range children {
+				x, _, width, _ = childrenPositions[child]
+				width = sum(orthogonalSizes[x : x+width])
+				child = child.deepcopy()
+				child.positionX = 0
+				child.positionY = 0
+				parent = bo.BlockContainerBox.anonymousFrom(
+					containingBlock, nil)
+				resolvePercentages(parent, containingBlock)
+				parent.positionX = child.positionX
+				parent.positionY = child.positionY
+				parent.width = width
+				parent.height = height
+				bottomSpace = -inf
+				child, _, _, _, _, _ = blockLevelLayout(context, child, bottomSpace, nil,
+					parent, true, new(), new())
+				height = max(height, child.marginHeight())
+			}
+			if minFunction.S == "min-content" || minFunction.S == "maxContent" || minFunction.S == "auto" {
+				sizes[0] = height
+			}
+			if maxFunction.S == "min-content" || maxFunction.S == "maxContent" {
+				sizes[1] = height
+			}
+			if sizes[0] != nil && sizes[1] != nil {
+				sizes[1] = max(sizes)
+			}
+			continue
+		}
+		if minFunction == "min-content" {
+			ma := pr.Float(0)
 			for _, child := range children {
 				if v := minContentWidth(context, child, true); v > ma {
 					ma = v
 				}
 			}
-            sizes[0] = ma
-        } else if minFunction == "max-content" {
-			ma := 0
+			sizes[0] = ma
+		} else if minFunction == "max-content" {
+			ma := pr.Float(0)
 			for _, child := range children {
 				if v := maxContentWidth(context, child, true); v > ma {
 					ma = v
 				}
 			}
-            sizes[0] = ma
-        } else if minFunction == "auto" {
-            // TODO: Handle min-/max-content constrained parents.
-            // TODO: Use real "minimum contributions".
-			ma := 0
+			sizes[0] = ma
+		} else if minFunction == "auto" {
+			// TODO: Handle min-/max-content constrained parents.
+			// TODO: Use real "minimum contributions".
+			ma := pr.Float(0)
 			for _, child := range children {
 				if v := minContentWidth(context, child, true); v > ma {
 					ma = v
 				}
 			}
-            sizes[0] = ma
-        } 
+			sizes[0] = ma
+		}
 		if maxFunction == "min-content" {
 			ma := -pr.Inf
 			for _, child := range children {
@@ -562,248 +568,244 @@ func resolveTracksSizes(sizingFunctions [][2]pr.DimOrS, boxSize, childrenPositio
 					ma = v
 				}
 			}
-            sizes[1] = ma
-        } else if (maxFunction.S == "auto" ||  maxFunction.S == "max-content")   {
-            ma := -pr.Inf
+			sizes[1] = ma
+		} else if maxFunction.S == "auto" || maxFunction.S == "max-content" {
+			ma := -pr.Inf
 			for _, child := range children {
 				if v := maxContentWidth(context, child, true); v > ma {
 					ma = v
 				}
 			}
-            sizes[1] = ma
-        if sizes[0] != nil && sizes[1] != nil{
-            sizes[1] = max(sizes)
-        }
-    } 
+			sizes[1] = ma
+			if sizes[0] != nil && sizes[1] != nil {
+				sizes[1] = pr.Max(sizes[0], sizes[1])
+			}
+		}
 	}
 	// 1.2.3 Increase sizes to accommodate items spanning content-sized tracks.
 	var spans []int
-	for _ , rect := range childrenPositions {
+	for _, rect := range childrenPositions {
 		v := rect[2] // width
 		if direction == 'y' {
-			v =  rect[3] // height
+			v = rect[3] // height
 		}
-		if v >=2 {
+		if v >= 2 {
 			spans = append(spans, v)
 		}
 	}
 	sort.Ints(spans)
-   
-    for _, span := range spans {
-        tracksChildren := make([][]Box,  len(sizingFunctions))
+
+	for _, span := range spans {
+		tracksChildren := make([][]Box, len(sizingFunctions))
 		i := -1
-        for child, rect := range childrenPositions {
+		for child, rect := range childrenPositions {
 			i++
 			x, y, width, height := rect[0], rect[1], rect[2], rect[3]
-            coord, size = x, width
-			 if direction == "y" {
+			coord, size := x, width
+			if direction == 'y' {
 				coord, size = y, height
-			 }
-            if size != span {
-                continue
-            } 
+			}
+			if size != span {
+				continue
+			}
 			hasFr := false
-			for _, maxFunction := range sizingFunctions[i:i+span+1] {
-                if isFr(maxFunction) {
+			for _, functions := range sizingFunctions[i : i+span+1] {
+				if isFr(functions[1]) {
 					hasFr = true
-                    break
-                }
-            } 
+					break
+				}
+			}
 			if !hasFr {
-                tracksChildren[coord - implicitStart] = append(tracksChildren[coord - implicitStart],child)
-            }
-        } 
+				tracksChildren[coord-implicitStart] = append(tracksChildren[coord-implicitStart], child)
+			}
+		}
 		// 1.2.3.1 For intrinsic minimums.
-        // TODO: Respect min-/max-content constraint.
-        distributeExtraSpace(            "min", "intrinsic", "mininum", tracksChildren,
-            sizingFunctions, tracksSizes, span, direction, context,            containingBlock)
-        // 1.2.3.2 For content-based minimums.
-        distributeExtraSpace(            "min", "content-based", "min-content", tracksChildren,
-            sizingFunctions, tracksSizes, span, direction, context,            containingBlock)
-        // 1.2.3.3 For max-content minimums.
-        // TODO: Respect max-content constraint.
-        distributeExtraSpace(            "min", "max-content", "max-content", tracksChildren,
-            sizingFunctions, tracksSizes, span, direction, context,            containingBlock)
-        // 1.2.3.4 Increase growth limit.
-        for _, sizes := range tracksSizes {
-            if sizes[0] != nil && sizes[1] != nil {
-                sizes[1] = utils.MaxInt(sizes[0], sizes[1])
-            }
-        } 
-		i := -1
-        for child, rect := range childrenPositions {
+		// TODO: Respect min-/max-content constraint.
+		distributeExtraSpace(context, sizeMin, 'i', 'm', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		// 1.2.3.2 For content-based minimums.
+		distributeExtraSpace(context, sizeMin, 'c', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		// 1.2.3.3 For max-content minimums.
+		// TODO: Respect max-content constraint.
+		distributeExtraSpace(context, sizeMin, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		// 1.2.3.4 Increase growth limit.
+		for _, sizes := range tracksSizes {
+			if sizes[0] != nil && sizes[1] != nil {
+				sizes[1] = pr.Max(sizes[0], sizes[1])
+			}
+		}
+		i = -1
+		for child, rect := range childrenPositions {
 			i++
 			x, y, width, height := rect[0], rect[1], rect[2], rect[3]
-			coord, size = x, width
-			if direction == "y" {
-			   coord, size = y, height
-			}          
-			  if size != span {
-                continue
-            } 
+			coord, size := x, width
+			if direction == 'y' {
+				coord, size = y, height
+			}
+			if size != span {
+				continue
+			}
 
 			hasFr := false
-			for _, maxFunction := range sizingFunctions[i:i+span+1] {
-                if isFr(maxFunction) {
+			for _, functions := range sizingFunctions[i : i+span+1] {
+				if isFr(functions[1]) {
 					hasFr = true
-                    break
-                }
-            } 
+					break
+				}
+			}
 			if !hasFr {
-                tracksChildren[coord - implicitStart] = append(tracksChildren[coord - implicitStart],child)
-            }
-        } 
+				tracksChildren[coord-implicitStart] = append(tracksChildren[coord-implicitStart], child)
+			}
+		}
 		// 1.2.3.5 For intrinsic maximums.
-        distributeExtraSpace(            "max", "intrinsic", "min-content", tracksChildren,
-            sizingFunctions, tracksSizes, span, direction, context,            containingBlock)
-        // 1.2.3.6 For max-content maximums.
-        distributeExtraSpace(            "max", "max-content", "max-content", tracksChildren,
-            sizingFunctions, tracksSizes, span, direction, context,            containingBlock)
-    } 
+		distributeExtraSpace(context, sizeMax, 'i', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		// 1.2.3.6 For max-content maximums.
+		distributeExtraSpace(context, sizeMax, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+	}
 	// 1.2.4 Increase sizes to accommodate items spanning flexible tracks.
-    // TODO: Support spans for flexible tracks.
-    // 1.2.5 Fix infinite growth limits.
-    for sizes := range tracksSizes {
-        if sizes[1] == inf {
-            sizes[1] = sizes[0]
-        }
-    } 
+	// TODO: Support spans for flexible tracks.
+	// 1.2.5 Fix infinite growth limits.
+	for i, sizes := range tracksSizes {
+		if sizes[1] == pr.Inf {
+			tracksSizes[i][1] = sizes[0]
+		}
+	}
 	// 1.3 Maximize tracks.
-    if boxSize == "auto" {
-        freeSpace = None
-    } else {
+	if boxSize == "auto" {
+		freeSpace = None
+	} else {
 		sum := 0
 		for _, size := range tracksSizes {
-sum += size[0]
+			sum += size[0]
 		}
 
-        freeSpace =             boxSize -            sum  -            (len(tracksSizes) - 1) * gap
-    } 
-	if freeSpace  != nil  && freeSpace > 0 {
-        distributedFreeSpace = freeSpace / len(tracksSizes)
-        for i, sizes := range enumerate(tracksSizes) {
-            baseSize, growthLimit = sizes
-            if baseSize + distributedFreeSpace > growthLimit {
-                sizes[0] = growthLimit
-                freeSpace -= growthLimit - baseSize
-            } else {
-                sizes[0] += distributedFreeSpace
-                freeSpace -= distributedFreeSpace
-            }
-        }
-    } 
+		freeSpace = boxSize - sum - (len(tracksSizes)-1)*gap
+	}
+	if freeSpace != nil && freeSpace > 0 {
+		distributedFreeSpace = freeSpace / len(tracksSizes)
+		for i, sizes := range tracksSizes {
+			baseSize, growthLimit = sizes
+			if baseSize+distributedFreeSpace > growthLimit {
+				sizes[0] = growthLimit
+				freeSpace -= growthLimit - baseSize
+			} else {
+				sizes[0] += distributedFreeSpace
+				freeSpace -= distributedFreeSpace
+			}
+		}
+	}
 	// TODO: Respect max-width/-height.
-    // 1.4 Expand flexible tracks.
-    if freeSpace  != nil  && freeSpace <= 0 {
-        // TODO: Respect min-content constraint.
-        flexFraction = 0
-    } else if freeSpace  != nil  {
-        stop = false
-        inflexibleTracks = set()
-        for !stop {
-            leftoverSpace = freeSpace
-            flexFactorSum = 0
-            for i, sizes := range tracksSizes {
-				maxFunction:= sizingFunctions[i][1]
-                if isFr(maxFunction) {
-                    leftoverSpace += sizes[0]
-                    if !  inflexibleTracks[i] {
-                        flexFactorSum += maxFunction.value
-                    }
-                }
-            } 
-			flexFactorSum = max(1, flexFactorSum)
-            hypotheticalFrSize = leftoverSpace / flexFactorSum
-            stop = true
-            iterable = enumerate(zip(tracksSizes, sizingFunctions))
+	// 1.4 Expand flexible tracks.
+	if freeSpace != nil && freeSpace <= 0 {
+		// TODO: Respect min-content constraint.
+		flexFraction = 0
+	} else if freeSpace != nil {
+		stop = false
+		inflexibleTracks = set()
+		for !stop {
+			leftoverSpace = freeSpace
+			flexFactorSum = 0
 			for i, sizes := range tracksSizes {
-				maxFunction:= sizingFunctions[i][1]
-                if !  inflexibleTracks[i] && isFr(maxFunction) {
-                    if hypotheticalFrSize * maxFunction.value < sizes[0] {
-                        inflexibleTracks.add(i)
-                        stop = false
-                    }
-                }
-            }
-        } 
+				maxFunction := sizingFunctions[i][1]
+				if isFr(maxFunction) {
+					leftoverSpace += sizes[0]
+					if !inflexibleTracks[i] {
+						flexFactorSum += maxFunction.value
+					}
+				}
+			}
+			flexFactorSum = max(1, flexFactorSum)
+			hypotheticalFrSize = leftoverSpace / flexFactorSum
+			stop = true
+			// iterable = enumerate(zip(tracksSizes, sizingFunctions))
+			for i, sizes := range tracksSizes {
+				maxFunction := sizingFunctions[i][1]
+				if !inflexibleTracks[i] && isFr(maxFunction) {
+					if hypotheticalFrSize*maxFunction.value < sizes[0] {
+						inflexibleTracks.add(i)
+						stop = false
+					}
+				}
+			}
+		}
 		flexFraction = hypotheticalFrSize
-    } else {
-        flexFraction = 0
-        for i, sizes := range tracksSizes {
-			maxFunction:= sizingFunctions[i][1]
-            if isFr(maxFunction) {
-                if maxFunction.value > 1 {
-                    flexFraction = max(
-                        flexFraction, maxFunction.value * sizes[0])
-                } else {
-                    flexFraction = max(flexFraction, sizes[0])
-                }
-            }
-        } 
+	} else {
+		flexFraction = 0
+		for i, sizes := range tracksSizes {
+			maxFunction := sizingFunctions[i][1]
+			if isFr(maxFunction) {
+				if maxFunction.value > 1 {
+					flexFraction = max(
+						flexFraction, maxFunction.value*sizes[0])
+				} else {
+					flexFraction = max(flexFraction, sizes[0])
+				}
+			}
+		}
 		// TODO: Respect grid items max-content contribution.
-        // TODO: Respect min-* constraint.
-    } 
+		// TODO: Respect min-* constraint.
+	}
 	for i, sizes := range tracksSizes {
-		maxFunction:= sizingFunctions[i][1]
-        if isFr(maxFunction) {
-            if flexFraction * maxFunction.value > sizes[0] {
-                if freeSpace  != nil  {
-                    freeSpace -= flexFraction * maxFunction.value
-                }
-				 sizes[0] = flexFraction * maxFunction.value
-            }
-        }
-    } 
+		maxFunction := sizingFunctions[i][1]
+		if isFr(maxFunction) {
+			if flexFraction*maxFunction.value > sizes[0] {
+				if freeSpace != nil {
+					freeSpace -= flexFraction * maxFunction.value
+				}
+				sizes[0] = flexFraction * maxFunction.value
+			}
+		}
+	}
 	// 1.5 Expand stretched auto tracks.
-    justifyContent = containingBlock.Box().Style.GetJustifyContent()
-    alignContent = containingBlock.Box().Style.GetAlignContent()
-    xStretch = (
-        direction == "x" && set(justifyContent) & {"normal", "stretch"})
-    yStretch = (
-        direction == "y" && set(alignContent) & {"normal", "stretch"})
-    if (xStretch || yStretch) && freeSpace  != nil  && freeSpace > 0 {
-        autoTracksSizes = [
-            sizes for sizes, (minFunction, )
-            := range zip(tracksSizes, sizingFunctions)
-            if minFunction == "auto"]
-        if autoTracksSizes {
-            distributedFreeSpace = freeSpace / len(autoTracksSizes)
-            for sizes := range autoTracksSizes {
-                sizes[0] += distributedFreeSpace
-            }
-        }
-    }
+	justifyContent := containingBlock.Style.GetJustifyContent()
+	alignContent := containingBlock.Style.GetAlignContent()
+	xStretch := direction == 'x' && justifyContent.Intersects("normal", "stretch")
+	yStretch := direction == 'y' && alignContent.Intersects("normal", "stretch")
+	if (xStretch || yStretch) && freeSpace != nil && freeSpace > 0 {
+		var autoTracksSizes [][2]pr.Float
+		for i, sizes := range tracksSizes {
+			minFunction := sizingFunctions[i][0]
+			if minFunction.S == "auto" {
+				autoTracksSizes = append(autoTracksSizes, sizes)
+			}
+		}
+		if len(autoTracksSizes) != 0 {
+			distributedFreeSpace := freeSpace / len(autoTracksSizes)
+			for i := range autoTracksSizes {
+				autoTracksSizes[i][0] += distributedFreeSpace
+			}
+		}
+	}
 
-    return tracksSizes
-						  }
+	return tracksSizes
+}
 
 // return the equivalent of Python l[::2]
-func extractNames(l []pr.GridSpec) []pr.GridNames {
-	var  names []pr.GridNames
+func extractNames(rows []pr.GridSpec) []pr.GridNames {
+	var names []pr.GridNames
 	for i, row := range rows {
-		if i % 2 != 0 {
+		if i%2 != 0 {
 			continue
 		}
-		names = append(names,  row.(pr.GridNames))
+		names = append(names, row.(pr.GridNames))
 	}
 	return names
 }
 
 // return the equivalent of Python l[1::2]
-func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
-	var  names []pr.GridNames
+func extractDims(rows []pr.GridSpec) [][2]pr.DimOrS {
+	var dims [][2]pr.DimOrS
 	for i, row := range rows {
-		if i % 2 != 1 {
+		if i%2 != 1 {
 			continue
 		}
-		names = append(names, getSizingFunctions(row.(pr.GridDims)))
+		dims = append(dims, row.(pr.GridDims).SizingFunctions())
 	}
-	return names
+	return dims
 }
 
 // func gridLayout(context *layoutContext, box Box, bottomSpace, skipStack, containingBlock,
 //                 pageIsEmpty, absoluteBoxes, fixedBoxes int) {
-            
+
 //     context.createBlockFormattingContext()
 
 //     // Define explicit grid
@@ -817,7 +819,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     columnGap := style.GetColumnGap()
 //     if columnGap.S == "normal" {
 //         columnGap = 0
-//     } 
+//     }
 // 	rowGap := style.GetRowGap()
 //     if rowGap == "normal" {
 //         rowGap = 0
@@ -829,16 +831,16 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     }
 
 //     if gridAreas.IsNone() {
-//         gridAreas =  pr.GridTemplateAreas{{""}} 
-//     } 
- 
+//         gridAreas =  pr.GridTemplateAreas{{""}}
+//     }
+
 //     rows := getTemplateTracks(style.GetGridTemplateRows())
 //     columns := getTemplateTracks(style.GetGridTemplateColumns())
 
 //     // Adjust rows number
-//     gridAreasColumns := 0 
+//     gridAreasColumns := 0
 // 	if len(gridAreas) != 0 {
-// 		gridAreasColumns = len(gridAreas[0]) 
+// 		gridAreasColumns = len(gridAreas[0])
 // 	}
 //     rowsDiff := (len(rows) - 1) / 2 - len(gridAreas)
 //     if rowsDiff > 0 {
@@ -870,7 +872,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //         for x, areaName := range row {
 //             if areaName  == nil  {
 //                 continue
-//             } 
+//             }
 // 			startName = areaName +  "-start"
 // 			var  names []string
 // 			for _, row := range extractNames(rows) {
@@ -878,7 +880,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 // 			}
 //              if ! utils.IsIn(names,   startName) {
 //                 rows[2*y]=  append(rows[2*y], startName)
-//             } 
+//             }
 // 				names= names[:0]
 // 			for i, column := range extractNames(columns) {
 // 				names = append(names,column ... )
@@ -887,14 +889,14 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                 columns[2*x] = append(columns[2*x],startName)
 //             }
 //         }
-//     } 
+//     }
 // 	for y := range gridAreas {
 // 		row := gridAreas[len(gridAreas)-1-y] // reverse
 //         for x := range row {
 // 			areaName := row[len(row)-1-x] // reverse
 //             if areaName  == ""  {
 //                 continue
-//             } 
+//             }
 // 			endName = areaName+"-end"
 
 // 			var  names []string
@@ -903,7 +905,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 // 			}
 //              if ! utils.IsIn(names,   endName) {
 //                 rows[-2*y-1]=  append(rows[-2*y-1], endName)
-//             } 
+//             }
 // 				names= names[:0]
 // 			for i, column := range extractNames(columns) {
 // 				names = append(names,column ... )
@@ -923,7 +925,6 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //         columnEnd := child.Box().Style.GetGridColumnEnd()
 //         rowStart := child.Box().Style.GetGridRowStart()
 //         rowEnd := child.Box().Style.GetGridRowEnd()
-    
 
 //         columnPlacement := getPlacement(            columnStart, columnEnd, extractNames(columns))
 //         rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
@@ -942,13 +943,13 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     for _, child := range children {
 //         if _, has := childrenPositions[child]; has {
 //             continue
-//         } 
+//         }
 // 		rowStart := child.style["gridRowStart"]
 //         rowEnd := child.style["gridRowEnd"]
 //         rowPlacement := getPlacement(rowStart, rowEnd, extractNames( rows))
 //         if !rowPlacement.isNotNone() {
 //             continue
-//         } 
+//         }
 // 		y, height = rowPlacement
 //         columnStart = child.style["gridColumnStart"]
 //         columnEnd = child.style["gridColumnEnd"]
@@ -962,7 +963,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     implicitX1 = 0
 //     implicitX2 =   0
 // 	if gridAreas {
-// 		implicitX2 = len(gridAreas[0]) 
+// 		implicitX2 = len(gridAreas[0])
 // 	}
 //     // 1.3.2 Add columns to the beginning and end of the implicit grid.
 //    var remainingGridItems []Box
@@ -979,10 +980,10 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //             } else {
 //                 continue
 //             }
-//         } 
+//         }
 // 		implicitX1 = utils.MinInt(x, implicitX1)
 //         implicitX2 = utils.MaxInt(x + width, implicitX2)
-//     } 
+//     }
 // 	// 1.3.3 Add columns to accommodate max column span.
 //     for _, child := range remainingGridItems {
 //         columnStart = child.style["gridColumnStart"]
@@ -992,7 +993,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //             span = columnStart[1]
 //         } else if columnEnd != "auto" && columnEnd[0] == "span" {
 //             span = columnEnd[1]
-//         } 
+//         }
 // 		implicitX2 = utils.MaxInt(implicitX1 + (span || 1), implicitX2)
 //     }
 
@@ -1003,7 +1004,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //         _, y, _, height = position
 //         implicitY1 = utils.MinInt(y, implicitY1)
 //         implicitY2 = utils.MaxInt(y + height, implicitY2)
-//     } 
+//     }
 // 	cursorX, cursorY = implicitX1, implicitY1
 //     if utils.IsIn(flow, "dense" ) {
 //         for _,child := range remainingGridItems {
@@ -1031,7 +1032,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                     }
 // 					 if y < cursorY {
 //                         continue
-//                     } 
+//                     }
 // 					hasBroken := false
 // 					for row := y; row<  y + height; row++ {
 //                         intersect = intersectWithChildren(x, y, width, height, childrenPositions.values())
@@ -1041,20 +1042,20 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 // 							hasBroken = true
 //                             break
 //                         }
-//                     } 
+//                     }
 // 					if !hasBroken{
 //                         // Child doesn’t intersect with any positioned child on
 //                         // any row.
 //                         break
 //                     }
-//                 } 
+//                 }
 // 				yDiff = y + height - implicitY2
 //                 if yDiff > 0 {
 //                     for c := 0; c < yDiff; c++{
 //                         rows = append(rows, next(autoRows), nil)
-//                     } 
+//                     }
 // 					implicitY2 = y + height
-//                 } 
+//                 }
 // 				// 3. Set the item’s row-start line.
 //                 childrenPositions[child] = [4]int{ x, y, width, height}
 //             } else {
@@ -1080,7 +1081,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                         } else {
 //                             span = getSpan(columnStart)
 //                             x, width = getPlacement(   columnStart, pr.GridLine{Val:x + 1 + span}, extractNames(columns))
-//                         } 
+//                         }
 // 						intersect = intersectWithChildren(                            x, y, width, height, childrenPositions.values())
 //                         if intersect {
 //                             // Child intersects with a positioned child.
@@ -1093,13 +1094,13 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                             if yDiff > 0 {
 //                                 for c := 0; c <yDiff; c++ {
 //                                     rows.append(next(autoRows), nil)
-//                                 } 
+//                                 }
 // 								implicitY2 = cursorY + height - 1
 //                             }
 // 							hasBroken = true
 // 							 break
 //                         }
-//                     } 
+//                     }
 // 					if !hasBroken {
 //                         // No room found.
 //                         // 2. Return to the previous step.
@@ -1108,12 +1109,12 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                         if yDiff > 0 {
 //                             for c := 0; c <yDiff; c++ {
 //                                 rows.append(next(autoRows), nil)
-//                             } 
+//                             }
 // 							implicitY2 = cursorY
-//                         } 
+//                         }
 // 						cursorX = implicitX1
 //                         continue
-//                     } 
+//                     }
 // 					break
 //                 }
 //             }
@@ -1129,7 +1130,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                 x, width = columnPlacement
 //                 if x < cursorX {
 //                     cursorY += 1
-//                 } 
+//                 }
 // 				cursorX = x
 //                 // 2. Increment the cursor’s row position.
 //                 rowStart = child.style["gridRowStart"]
@@ -1143,10 +1144,10 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                         span = getSpan(rowStart)
 //                         y, height = getPlacement(                            rowStart,pr.GridLine{Val: cursorY + 1 + span},
 //                             extractNames(rows))
-//                     } 
+//                     }
 // 					if y < cursorY {
 //                         continue
-//                     } 
+//                     }
 // 					hasBroken := false
 // 					for row := y; row < y + height;row++ {
 //                         intersect = intersectWithChildren(                            x, y, width, height, childrenPositions.values())
@@ -1156,7 +1157,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 // 							hasBroken = true
 //                             break
 //                         }
-//                     } 
+//                     }
 // 					if !hasBroken {
 //                         // Child doesn’t intersect with any positioned child on
 //                         // any row.
@@ -1167,7 +1168,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                 if yDiff > 0 {
 //                     for  c := 0; c <yDiff; c++  {
 //                         rows.append(next(autoRows), nil)
-//                     } 
+//                     }
 // 					implicitY2 = y + height
 //                 } // 3. Set the item’s row-start line.
 //                 childrenPositions[child] = [4]int{x, y, width, height}
@@ -1194,7 +1195,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                             span = getSpan(columnStart)
 //                             x, width = getPlacement(                                columnStart, pr.GridLine{Val:x + 1 + span},
 //                                 extractNames(columns))
-//                         } 
+//                         }
 // 						intersect = intersectWithChildren(                            x, y, width, height, childrenPositions.values())
 //                         if intersect {
 //                             // Child intersects with a positioned child.
@@ -1206,7 +1207,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                             hasBroken = true
 // 							break
 //                         }
-//                     } 
+//                     }
 // 					if !hasBroken {
 //                         // No room found.
 //                         // 2. Return to the previous step.
@@ -1215,9 +1216,9 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //                         if yDiff > 0 {
 //                             for c := 0; c <yDiff; c++ {
 //                                 rows.append(next(autoRows), nil)
-//                             } 
+//                             }
 // 							implicitY2 = cursorY
-//                         } 
+//                         }
 // 						cursorX = implicitX1
 //                         continue
 //                     }
@@ -1230,7 +1231,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     for c:= 0; c <  - implicitX1; c++ {
 //         columns.insert(0, next(autoColumnsBack))
 //         columns.insert(0, nil)
-//     } 
+//     }
 // 	start := 0
 // 	if len(gridAreas) != 0 {
 // 		start = len(gridAreas[0])
@@ -1241,7 +1242,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 // 	 for c:= 0; c <  - implicitY1; c++ {
 //         rows.insert(0, next(auoRowsBack))
 //         rows.insert(0, nil)
-//     } 
+//     }
 // 	for c := len(gridAreas); c < implicitY2; c++ {
 //         rows.append(next(autoRows),nil)
 //     }
@@ -1255,7 +1256,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //         // assert isinstance(box, boxes.InlineGridBox)
 //         // from .inline import inlineBlockWidth
 //         inlineBlockWidth(box, context, containingBlock)
-//     } 
+//     }
 // 	if box.width == "auto" {
 //         // TODO: Calculate max-width.
 //         box.width = containingBlock.width
@@ -1264,7 +1265,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     // 3. Run the grid sizing algorithm.
 
 //     // 3.0 List min/max sizing functions.
-//     rowSizingFunctions := extractDims(rows)   
+//     rowSizingFunctions := extractDims(rows)
 //     columnSizingFunctions := extractDims( columns)
 
 //     // 3.1 Resolve the sizes of the grid columns.
@@ -1336,7 +1337,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //             sum(size for size, _ := range rowsSizes) -
 //             (len(rowsSizes) - 1) * rowGap)
 //         freeHeight = max(0, freeHeight)
-//     } 
+//     }
 // 	rowsPositions = []
 //     rowsNumber = len(rowsSizes)
 //     if alignContent & {"center"} {
@@ -1392,14 +1393,14 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //     } else {
 //         skipRow = 0
 //         skipHeight = 0
-//     } 
+//     }
 // 	resumeAt = None
 //     for i, rowY := range enumerate(rowsPositions[skipRow:], start=skipRow) {
 //         // TODO: Check that page is ! empty.
 //         if context.overflowsPage(bottomSpace, rowY - skipHeight) {
 //             if i == 0 {
 //                 return None, None, {"break": "any", "page": None}, [], false
-//             } 
+//             }
 // 			resumeRow = i - 1
 //             resumeAt = {i-1: None}
 //             for child := range children {
@@ -1436,7 +1437,7 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //             childSkipStack = skipStack[y][index]
 //         } else {
 //             childSkipStack = None
-//         } 
+//         }
 // 		child = child.deepcopy()
 //         child.positionX = columnsPositions[x]
 //         child.positionY = rowsPositions[y] - skipHeight
@@ -1458,16 +1459,16 @@ func extractDims(l []pr.GridSpec) [][2]pr.DimOrS {
 //         justifySelf = set(child.style["justifySelf"])
 //         if justifySelf & {"auto"} {
 //             justifySelf = justifyItems
-//         } 
+//         }
 // 		if justifySelf & {"normal", "stretch"} {
 //             if child.style["width"] == "auto" {
 //                 child.style["width"] = Dimension(childWidth, "px")
 //             }
-//         } 
+//         }
 // 		alignSelf = set(child.style["alignSelf"])
 //         if alignSelf & {"auto"} {
 //             alignSelf = alignItems
-//         } 
+//         }
 // 		if alignSelf & {"normal", "stretch"} {
 //             if child.style["height"] == "auto" {
 //                 child.style["height"] = Dimension(childHeight, "px")
