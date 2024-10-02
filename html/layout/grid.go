@@ -6,6 +6,7 @@ import (
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
+	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 )
@@ -20,9 +21,9 @@ func intersect(position1, size1, position2, size2 int) bool {
 	return position1 < position2+size2 && position2 < position1+size1
 }
 
-func intersectWithChildren(x, y, width, height int, positions [][4]int) bool {
+func intersectWithChildren(x, y, width, height int, positions map[Box]rect) bool {
 	for _, rect := range positions {
-		fullX, fullY, fullWidth, fullHeight := rect[0], rect[1], rect[2], rect[3]
+		fullX, fullY, fullWidth, fullHeight := rect.unpack()
 		xIntersect := intersect(x, width, fullX, fullWidth)
 		yIntersect := intersect(y, height, fullY, fullHeight)
 		if xIntersect && yIntersect {
@@ -141,10 +142,12 @@ type placement [2]int // coord, size
 
 func (pl placement) isNotNone() bool { return pl[1] != 0 }
 
+func (pl placement) unpack() (coord, size int) { return pl[0], pl[1] }
+
 // Input coordinates are 1-indexed, returned coordinates are 0-indexed.
 func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
-	if start.Tag == pr.Auto || start.Tag == pr.Span {
-		if end.Tag == pr.Auto || end.Tag == pr.Span {
+	if start.IsAuto() || start.Tag == pr.Span {
+		if end.IsAuto() || end.Tag == pr.Span {
 			return placement{}
 		}
 	}
@@ -250,11 +253,11 @@ func getSpan(place pr.GridLine) int {
 }
 
 func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
-	columns []pr.GridNames, childrenPositions map[Box][4]int, dense bool,
+	columns []pr.GridNames, childrenPositions map[Box]rect, dense bool,
 ) placement {
 	occupiedColumns := map[int]bool{}
 	for _, rect := range childrenPositions {
-		x, y, width, height := rect[0], rect[1], rect[2], rect[3]
+		x, y, width, height := rect.unpack()
 		// Test whether cells overlap.
 		if intersect(y, height, rowPlacement[0], rowPlacement[1]) {
 			for xv := x; xv < x+width; xv++ {
@@ -268,7 +271,7 @@ func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
 				continue
 			}
 			var placement placement
-			if columnStart.Tag == pr.Auto {
+			if columnStart.IsAuto() {
 				placement = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, columns)
 			} else {
 				if columnStart.Tag == pr.Span {
@@ -299,7 +302,7 @@ func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
 			}
 		}
 		y += 1
-		if columnStart.Tag == pr.Auto {
+		if columnStart.IsAuto() {
 			return getPlacement(pr.GridLine{Val: y + 1}, columnEnd, columns)
 		} else {
 			if columnStart.Tag == pr.Span {
@@ -328,7 +331,7 @@ const (
 // sizeContribution : m, c, C ("mininum", "min-content", "max-content")
 // direction : x, y
 func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksTypes, sizeContribution byte, tracksChildren [][]Box,
-	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.Float, span int, direction byte, containingBlock *bo.BoxFields,
+	sizingFunctions [][2]pr.DimOrS, tracksSizes [][2]pr.MaybeFloat, span int, direction byte, containingBlock *bo.BoxFields,
 ) {
 	// 1. Maintain separately for each affected track a planned increase.
 	plannedIncreases := make([]pr.Float, len(tracksSizes))
@@ -372,7 +375,7 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 				space = item.Box().MarginHeight()
 			}
 			for _, sizes := range tracksSizes[i : i+span] {
-				space -= pr.Float(sizes[affectedSizes])
+				space -= sizes[affectedSizes].V()
 			}
 			space = pr.Max(0, space)
 			// 2.2 Distribute space up to limits.
@@ -394,8 +397,8 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 			for _, trackNumber := range affectedTracksNumbers {
 				// baseSize, growthLimit := tracksSizes[trackNumber]
 				itemIncurredIncrease := distributedSpace
-				affectedSize := tracksSizes[trackNumber][affectedSizes]
-				limit := tracksSizes[trackNumber][1]
+				affectedSize := tracksSizes[trackNumber][affectedSizes].V()
+				limit := tracksSizes[trackNumber][1].V()
 				if affectedSize+itemIncurredIncrease >= limit {
 					extra := (itemIncurredIncrease + affectedSize - limit)
 					itemIncurredIncrease -= extra
@@ -413,8 +416,8 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 				for _, trackNumber := range unaffectedTracksNumbers {
 					// baseSize, growthLimit = tracksSizes[trackNumber]
 					itemIncurredIncrease := distributedSpace
-					affectedSize := (tracksSizes[trackNumber][affectedSizes])
-					limit := tracksSizes[trackNumber][1]
+					affectedSize := tracksSizes[trackNumber][affectedSizes].V()
+					limit := tracksSizes[trackNumber][1].V()
 					if affectedSize+itemIncurredIncrease >= limit {
 						extra := (itemIncurredIncrease + affectedSize - limit)
 						itemIncurredIncrease -= extra
@@ -438,45 +441,45 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 	// 3. Update the tracks’ affected size.
 	for i, increase := range plannedIncreases {
 		if affectedSizes == sizeMax && tracksSizes[i][1] == pr.Inf {
-			tracksSizes[i][1] = tracksSizes[i][0] + increase
+			tracksSizes[i][1] = tracksSizes[i][0].V() + increase
 		} else {
-			tracksSizes[i][affectedSizes] += increase
+			tracksSizes[i][affectedSizes] = tracksSizes[i][affectedSizes].V() + increase
 		}
 	}
 }
 
-func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, boxSize, childrenPositions map[Box][4]int,
-	implicitStart int, direction byte, gap,
-	containingBlock *bo.BoxFields, orthogonalSizes [][2]pr.DimOrS,
+// direction : 'x' or 'y'
+func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, boxSize pr.MaybeFloat, childrenPositions map[Box]rect,
+	implicitStart int, direction byte, gap pr.Float,
+	containingBlock bo.Box, orthogonalSizes [][2]pr.Float,
 ) [][2]pr.Float {
-	// assert direction := range "xy"
 	// TODO: Check that auto box size is 0 for percentages.
-	percentBoxSize := 0
-	if boxSize != "auto" {
-		percentBoxSize = boxSize
+	percentBoxSize := pr.Float(0)
+	if boxSize != pr.AutoF {
+		percentBoxSize = boxSize.V()
 	}
 
 	// 1.1 Initialize track sizes.
-	tracksSizes := make([][2]pr.Float, len(sizingFunctions))
+	tracksSizes := make([][2]pr.MaybeFloat, len(sizingFunctions))
 	for i, funcs := range sizingFunctions {
 		minFunction, maxFunction := funcs[0], funcs[1]
-		baseSize = None
+		var baseSize pr.MaybeFloat
 		if isLength(minFunction) {
-			baseSize = percentage(minFunction, percentBoxSize)
+			baseSize = pr.ResolvePercentage(minFunction, percentBoxSize)
 		} else if minFunction.S == "min-content" || minFunction.S == "max-content" || minFunction.S == "auto" {
-			baseSize = 0
+			baseSize = pr.Float(0)
 		}
-		growthLimit = None
+		var growthLimit pr.MaybeFloat
 		if isLength(maxFunction) {
-			growthLimit = percentage(maxFunction, percentBoxSize)
+			growthLimit = pr.ResolvePercentage(maxFunction, percentBoxSize)
 		} else if (maxFunction.S == "min-content" || maxFunction.S == "max-content" || maxFunction.S == "auto") ||
 			isFr(maxFunction) {
+			growthLimit = pr.Inf
 		}
-		growthLimit = inf
-		if baseSize != None && growthLimit != None {
-			growthLimit = max(baseSize, growthLimit)
+		if baseSize != nil && growthLimit != nil {
+			growthLimit = pr.Max(baseSize.V(), growthLimit.V())
 		}
-		tracksSizes[i] = [2]int{baseSize, growthLimit}
+		tracksSizes[i] = [2]pr.MaybeFloat{baseSize, growthLimit}
 	}
 
 	// 1.2 Resolve intrinsic track sizes.
@@ -485,7 +488,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 	// 1.2.2 Size tracks to fit non-spanning items.
 	tracksChildren := make([][]Box, len(tracksSizes))
 	for child, rect := range childrenPositions {
-		x, y, width, height := rect[0], rect[1], rect[2], rect[3]
+		x, y, width, height := rect.unpack()
 		coord, size := y, height
 		if direction == 'x' {
 			coord, size = x, width
@@ -495,33 +498,34 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		}
 		tracksChildren[coord-implicitStart] = append(tracksChildren[coord-implicitStart], child)
 	}
-	// iterable = zip(tracksChildren, sizingFunctions, tracksSizes)
+
 	for i, children := range tracksChildren {
 		minFunction, maxFunction := sizingFunctions[i][0], sizingFunctions[i][1]
-		sizes := tracksSizes[i]
+		sizes := &tracksSizes[i]
 		if len(children) == 0 {
 			continue
 		}
 		if direction == 'y' {
 			// TODO: Find a better way to get height.
-			height := 0
+			height := pr.Float(0)
 			for _, child := range children {
-				x, _, width, _ = childrenPositions[child]
-				width = sum(orthogonalSizes[x : x+width])
-				child = child.deepcopy()
-				child.positionX = 0
-				child.positionY = 0
-				parent = bo.BlockContainerBox.anonymousFrom(
-					containingBlock, nil)
-				resolvePercentages(parent, containingBlock)
-				parent.positionX = child.positionX
-				parent.positionY = child.positionY
-				parent.width = width
-				parent.height = height
-				bottomSpace = -inf
-				child, _, _, _, _, _ = blockLevelLayout(context, child, bottomSpace, nil,
-					parent, true, new(), new())
-				height = max(height, child.marginHeight())
+				pos := childrenPositions[child]
+				x, _, width, _ := pos.unpack()
+				widthF := sum0(orthogonalSizes[x : x+width])
+				child = bo.Deepcopy(child)
+				child.Box().PositionX = 0
+				child.Box().PositionY = 0
+				parent := bo.BlockContainerT.AnonymousFrom(containingBlock, nil)
+				cbW, cbH := containingBlock.Box().ContainingBlock()
+				resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
+				parent.Box().PositionX = child.Box().PositionX
+				parent.Box().PositionY = child.Box().PositionY
+				parent.Box().Width = widthF
+				parent.Box().Height = height
+				bottomSpace := -pr.Inf
+				child, _, _ = blockLevelLayout(context, child.(bo.BlockLevelBoxITF), bottomSpace, nil,
+					parent.Box(), true, nil, nil, nil, false, -1)
+				height = pr.Max(height, child.Box().MarginHeight())
 			}
 			if minFunction.S == "min-content" || minFunction.S == "maxContent" || minFunction.S == "auto" {
 				sizes[0] = height
@@ -530,11 +534,11 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				sizes[1] = height
 			}
 			if sizes[0] != nil && sizes[1] != nil {
-				sizes[1] = max(sizes)
+				sizes[1] = pr.Max(sizes[0].V(), sizes[1].V())
 			}
 			continue
 		}
-		if minFunction == "min-content" {
+		if minFunction.S == "min-content" {
 			ma := pr.Float(0)
 			for _, child := range children {
 				if v := minContentWidth(context, child, true); v > ma {
@@ -542,7 +546,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				}
 			}
 			sizes[0] = ma
-		} else if minFunction == "max-content" {
+		} else if minFunction.S == "max-content" {
 			ma := pr.Float(0)
 			for _, child := range children {
 				if v := maxContentWidth(context, child, true); v > ma {
@@ -550,7 +554,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				}
 			}
 			sizes[0] = ma
-		} else if minFunction == "auto" {
+		} else if minFunction.S == "auto" {
 			// TODO: Handle min-/max-content constrained parents.
 			// TODO: Use real "minimum contributions".
 			ma := pr.Float(0)
@@ -561,7 +565,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 			sizes[0] = ma
 		}
-		if maxFunction == "min-content" {
+		if maxFunction.S == "min-content" {
 			ma := -pr.Inf
 			for _, child := range children {
 				if v := minContentWidth(context, child, true); v > ma {
@@ -578,10 +582,11 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 			sizes[1] = ma
 			if sizes[0] != nil && sizes[1] != nil {
-				sizes[1] = pr.Max(sizes[0], sizes[1])
+				sizes[1] = pr.Max(sizes[0].V(), sizes[1].V())
 			}
 		}
 	}
+
 	// 1.2.3 Increase sizes to accommodate items spanning content-sized tracks.
 	var spans []int
 	for _, rect := range childrenPositions {
@@ -600,7 +605,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		i := -1
 		for child, rect := range childrenPositions {
 			i++
-			x, y, width, height := rect[0], rect[1], rect[2], rect[3]
+			x, y, width, height := rect.unpack()
 			coord, size := x, width
 			if direction == 'y' {
 				coord, size = y, height
@@ -621,22 +626,22 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		}
 		// 1.2.3.1 For intrinsic minimums.
 		// TODO: Respect min-/max-content constraint.
-		distributeExtraSpace(context, sizeMin, 'i', 'm', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		distributeExtraSpace(context, sizeMin, 'i', 'm', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
 		// 1.2.3.2 For content-based minimums.
-		distributeExtraSpace(context, sizeMin, 'c', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		distributeExtraSpace(context, sizeMin, 'c', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
 		// 1.2.3.3 For max-content minimums.
 		// TODO: Respect max-content constraint.
-		distributeExtraSpace(context, sizeMin, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		distributeExtraSpace(context, sizeMin, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
 		// 1.2.3.4 Increase growth limit.
-		for _, sizes := range tracksSizes {
+		for j, sizes := range tracksSizes {
 			if sizes[0] != nil && sizes[1] != nil {
-				sizes[1] = pr.Max(sizes[0], sizes[1])
+				tracksSizes[j][1] = pr.Max(sizes[0].V(), sizes[1].V())
 			}
 		}
 		i = -1
 		for child, rect := range childrenPositions {
 			i++
-			x, y, width, height := rect[0], rect[1], rect[2], rect[3]
+			x, y, width, height := rect.unpack()
 			coord, size := x, width
 			if direction == 'y' {
 				coord, size = y, height
@@ -657,9 +662,9 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 		}
 		// 1.2.3.5 For intrinsic maximums.
-		distributeExtraSpace(context, sizeMax, 'i', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		distributeExtraSpace(context, sizeMax, 'i', 'c', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
 		// 1.2.3.6 For max-content maximums.
-		distributeExtraSpace(context, sizeMax, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock)
+		distributeExtraSpace(context, sizeMax, 'm', 'C', tracksChildren, sizingFunctions, tracksSizes, span, direction, containingBlock.Box())
 	}
 	// 1.2.4 Increase sizes to accommodate items spanning flexible tracks.
 	// TODO: Support spans for flexible tracks.
@@ -670,58 +675,61 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		}
 	}
 	// 1.3 Maximize tracks.
-	if boxSize == "auto" {
-		freeSpace = None
-	} else {
-		sum := 0
+	var freeSpace pr.MaybeFloat
+	if boxSize != pr.AutoF {
+		sum := pr.Float(0)
 		for _, size := range tracksSizes {
-			sum += size[0]
+			sum += size[0].V()
 		}
 
-		freeSpace = boxSize - sum - (len(tracksSizes)-1)*gap
-	}
-	if freeSpace != nil && freeSpace > 0 {
-		distributedFreeSpace = freeSpace / len(tracksSizes)
-		for i, sizes := range tracksSizes {
-			baseSize, growthLimit = sizes
-			if baseSize+distributedFreeSpace > growthLimit {
-				sizes[0] = growthLimit
-				freeSpace -= growthLimit - baseSize
-			} else {
-				sizes[0] += distributedFreeSpace
-				freeSpace -= distributedFreeSpace
+		freeSpaceF := boxSize.V() - sum - pr.Float(len(tracksSizes)-1)*gap
+		if freeSpaceF > 0 {
+			distributedFreeSpace := freeSpaceF / pr.Float(len(tracksSizes))
+			for i := range tracksSizes {
+				sizes := &tracksSizes[i]
+				baseSize, growthLimit := sizes[0].V(), sizes[1].V()
+				if baseSize+distributedFreeSpace > growthLimit {
+					sizes[0] = growthLimit
+					freeSpaceF -= growthLimit - baseSize
+				} else {
+					sizes[0] = baseSize + distributedFreeSpace
+					freeSpaceF -= distributedFreeSpace
+				}
 			}
 		}
+		freeSpace = freeSpaceF
 	}
 	// TODO: Respect max-width/-height.
 	// 1.4 Expand flexible tracks.
-	if freeSpace != nil && freeSpace <= 0 {
+	var flexFraction pr.Float
+	if freeSpace != nil && freeSpace.V() <= 0 {
 		// TODO: Respect min-content constraint.
 		flexFraction = 0
 	} else if freeSpace != nil {
-		stop = false
-		inflexibleTracks = set()
+		stop := false
+		inflexibleTracks := make([]bool, len(tracksSizes))
+		var hypotheticalFrSize pr.Float
 		for !stop {
-			leftoverSpace = freeSpace
-			flexFactorSum = 0
+			leftoverSpace := freeSpace.V()
+			flexFactorSum := pr.Float(0)
 			for i, sizes := range tracksSizes {
 				maxFunction := sizingFunctions[i][1]
 				if isFr(maxFunction) {
-					leftoverSpace += sizes[0]
+					leftoverSpace += sizes[0].V()
 					if !inflexibleTracks[i] {
-						flexFactorSum += maxFunction.value
+						flexFactorSum += maxFunction.Value
 					}
 				}
 			}
-			flexFactorSum = max(1, flexFactorSum)
+			flexFactorSum = pr.Max(1, flexFactorSum)
 			hypotheticalFrSize = leftoverSpace / flexFactorSum
 			stop = true
 			// iterable = enumerate(zip(tracksSizes, sizingFunctions))
 			for i, sizes := range tracksSizes {
 				maxFunction := sizingFunctions[i][1]
 				if !inflexibleTracks[i] && isFr(maxFunction) {
-					if hypotheticalFrSize*maxFunction.value < sizes[0] {
-						inflexibleTracks.add(i)
+					if hypotheticalFrSize*maxFunction.Value < sizes[0].V() {
+						inflexibleTracks[i] = true
 						stop = false
 					}
 				}
@@ -733,11 +741,10 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		for i, sizes := range tracksSizes {
 			maxFunction := sizingFunctions[i][1]
 			if isFr(maxFunction) {
-				if maxFunction.value > 1 {
-					flexFraction = max(
-						flexFraction, maxFunction.value*sizes[0])
+				if maxFunction.Value > 1 {
+					flexFraction = pr.Max(flexFraction, maxFunction.Value*sizes[0].V())
 				} else {
-					flexFraction = max(flexFraction, sizes[0])
+					flexFraction = pr.Max(flexFraction, sizes[0].V())
 				}
 			}
 		}
@@ -747,36 +754,40 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 	for i, sizes := range tracksSizes {
 		maxFunction := sizingFunctions[i][1]
 		if isFr(maxFunction) {
-			if flexFraction*maxFunction.value > sizes[0] {
+			if flexFraction*maxFunction.Value > sizes[0].V() {
 				if freeSpace != nil {
-					freeSpace -= flexFraction * maxFunction.value
+					freeSpace = freeSpace.V() - flexFraction*maxFunction.Value
 				}
-				sizes[0] = flexFraction * maxFunction.value
+				tracksSizes[i][0] = flexFraction * maxFunction.Value
 			}
 		}
 	}
 	// 1.5 Expand stretched auto tracks.
-	justifyContent := containingBlock.Style.GetJustifyContent()
-	alignContent := containingBlock.Style.GetAlignContent()
+	justifyContent := containingBlock.Box().Style.GetJustifyContent()
+	alignContent := containingBlock.Box().Style.GetAlignContent()
 	xStretch := direction == 'x' && justifyContent.Intersects("normal", "stretch")
 	yStretch := direction == 'y' && alignContent.Intersects("normal", "stretch")
-	if (xStretch || yStretch) && freeSpace != nil && freeSpace > 0 {
-		var autoTracksSizes [][2]pr.Float
-		for i, sizes := range tracksSizes {
+	if (xStretch || yStretch) && freeSpace != nil && freeSpace.V() > 0 {
+		var autoTracksSizes []*[2]pr.MaybeFloat
+		for i := range tracksSizes {
 			minFunction := sizingFunctions[i][0]
 			if minFunction.S == "auto" {
-				autoTracksSizes = append(autoTracksSizes, sizes)
+				autoTracksSizes = append(autoTracksSizes, &tracksSizes[i])
 			}
 		}
 		if len(autoTracksSizes) != 0 {
-			distributedFreeSpace := freeSpace / len(autoTracksSizes)
-			for i := range autoTracksSizes {
-				autoTracksSizes[i][0] += distributedFreeSpace
+			distributedFreeSpace := freeSpace.V() / pr.Float(len(autoTracksSizes))
+			for _, ptr := range autoTracksSizes {
+				ptr[0] = ptr[0].V() + distributedFreeSpace
 			}
 		}
 	}
 
-	return tracksSizes
+	out := make([][2]pr.Float, len(tracksSizes))
+	for i, m := range tracksSizes {
+		out[i] = [2]pr.Float{m[0].V(), m[1].V()}
+	}
+	return out
 }
 
 // return the equivalent of Python l[::2]
@@ -803,735 +814,754 @@ func extractDims(rows []pr.GridSpec) [][2]pr.DimOrS {
 	return dims
 }
 
-// func gridLayout(context *layoutContext, box Box, bottomSpace, skipStack, containingBlock,
-//                 pageIsEmpty, absoluteBoxes, fixedBoxes int) {
+func sum0(l [][2]pr.Float) pr.Float {
+	su := pr.Float(0)
+	for _, size := range l {
+		su += size[0]
+	}
+	return su
+}
 
-//     context.createBlockFormattingContext()
+type rect [4]int
 
-//     // Define explicit grid
-// 	style := box.Box().Style
-//     gridAreas := style.GetGridTemplateAreas()
-//     flow := style.GetGridAutoFlow()
-//     autoRows := cycle(style.GetGridAutoRows())
-//     autoColumns := cycle(style.GetGridAutoColumns())
-//     autoRowsBack := cycle(style.GetGridAutoRows().Reverse())
-//     autoColumnsBack := cycle(style.GetGridAutoColumns().Reverse())
-//     columnGap := style.GetColumnGap()
-//     if columnGap.S == "normal" {
-//         columnGap = 0
-//     }
-// 	rowGap := style.GetRowGap()
-//     if rowGap == "normal" {
-//         rowGap = 0
-//     }
+func (ir rect) unpack() (x, y, width, height int) {
+	return ir[0], ir[1], ir[2], ir[3]
+}
 
-//     // TODO: Support "column" value in grid-auto-flow.
-//     if   flow.Contains("column") {
-//         LOGGER.warning(`"column" is ! supported in grid-auto-flow`)
-//     }
+func findBoxIndex(l []Box, v Box) int {
+	for i, b := range l {
+		if b == v {
+			return i
+		}
+	}
+	return -1
+}
 
-//     if gridAreas.IsNone() {
-//         gridAreas =  pr.GridTemplateAreas{{""}}
-//     }
+func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStack tree.ResumeStack, containingBlock containingBlock,
+	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder,
+) (Box, blockLayout) {
+	context.createBlockFormattingContext()
 
-//     rows := getTemplateTracks(style.GetGridTemplateRows())
-//     columns := getTemplateTracks(style.GetGridTemplateColumns())
+	// Define explicit grid
+	box, style := box_.Box(), box_.Box().Style
+	gridAreas := style.GetGridTemplateAreas()
+	flow := style.GetGridAutoFlow()
+	autoRows := style.GetGridAutoRows().Cycle()
+	autoColumns := style.GetGridAutoColumns().Cycle()
+	autoRowsBack := style.GetGridAutoRows().Reverse().Cycle()
+	autoColumnsBack := style.GetGridAutoColumns().Reverse().Cycle()
+	var rowGap, columnGap pr.Float
+	if v := style.GetColumnGap(); v.S != "normal" {
+		columnGap = v.Value
+	}
+	if v := style.GetRowGap(); v.S != "normal" {
+		rowGap = v.Value
+	}
 
-//     // Adjust rows number
-//     gridAreasColumns := 0
-// 	if len(gridAreas) != 0 {
-// 		gridAreasColumns = len(gridAreas[0])
-// 	}
-//     rowsDiff := (len(rows) - 1) / 2 - len(gridAreas)
-//     if rowsDiff > 0 {
-//         for c := 0; c < rowsDiff; c++ {
-//             gridAreas = append(gridAreas, [None] * gridAreasColumns)
-//         }
-//     } else if rowsDiff < 0 {
-//         for c := 0; c < -rowsDiff; c++ {
-//             rows = append(rows, next(autoRows),nil)
-//         }
-//     }
+	// TODO: Support "column" value in grid-auto-flow.
+	if utils.IsIn(flow, "column") {
+		logger.WarningLogger.Println(`"column" is not supported in grid-auto-flow`)
+	}
 
-//     // Adjust columns number
-//     columnsDiff := (len(columns) - 1) / 2 - gridAreasColumns
-//     if columnsDiff > 0 {
-//         for row := range gridAreas {
-//             for c := 0; c < columnsDiff; c++ {
-//                 row = append(row, None)
-//             }
-//         }
-//     } else if columnsDiff < 0 {
-//         for c := 0; c < -columnsDiff; c++ {
-//             columns = append(columns, next(autoColumns), nil)
-//         }
-//     }
+	if gridAreas.IsNone() {
+		gridAreas = pr.GridTemplateAreas{{""}}
+	}
 
-//     // Add implicit line names
-//     for y, row := range gridAreas {
-//         for x, areaName := range row {
-//             if areaName  == nil  {
-//                 continue
-//             }
-// 			startName = areaName +  "-start"
-// 			var  names []string
-// 			for _, row := range extractNames(rows) {
-// 				names = append(names,row...)
-// 			}
-//              if ! utils.IsIn(names,   startName) {
-//                 rows[2*y]=  append(rows[2*y], startName)
-//             }
-// 				names= names[:0]
-// 			for i, column := range extractNames(columns) {
-// 				names = append(names,column ... )
-// 			}
-//              if ! utils.IsIn(names,   startName){
-//                 columns[2*x] = append(columns[2*x],startName)
-//             }
-//         }
-//     }
-// 	for y := range gridAreas {
-// 		row := gridAreas[len(gridAreas)-1-y] // reverse
-//         for x := range row {
-// 			areaName := row[len(row)-1-x] // reverse
-//             if areaName  == ""  {
-//                 continue
-//             }
-// 			endName = areaName+"-end"
+	rows := getTemplateTracks(style.GetGridTemplateRows())
+	columns := getTemplateTracks(style.GetGridTemplateColumns())
 
-// 			var  names []string
-// 			for _, row := range extractNames(rows) {
-// 				names = append(names,row ... )
-// 			}
-//              if ! utils.IsIn(names,   endName) {
-//                 rows[-2*y-1]=  append(rows[-2*y-1], endName)
-//             }
-// 				names= names[:0]
-// 			for i, column := range extractNames(columns) {
-// 				names = append(names,column ... )
-// 			}
-//              if ! utils.IsIn(names,   endName){
-//                 columns[-2*x-1] = append(columns[-2*x-1],endName)
-//             }
-//         }
-//     }
+	// Adjust rows number
+	gridAreasColumns := 0
+	if len(gridAreas) != 0 {
+		gridAreasColumns = len(gridAreas[0])
+	}
+	rowsDiff := (len(rows)-1)/2 - len(gridAreas)
+	if rowsDiff > 0 {
+		for c := 0; c < rowsDiff; c++ {
+			gridAreas = append(gridAreas, make([]string, gridAreasColumns))
+		}
+	} else if rowsDiff < 0 {
+		for c := 0; c < -rowsDiff; c++ {
+			rows = append(rows, autoRows.Next(), pr.GridNames{})
+		}
+	}
 
-//     // 1. Run the grid placement algorithm.
+	// Adjust columns number
+	columnsDiff := (len(columns)-1)/2 - gridAreasColumns
+	if columnsDiff > 0 {
+		for i := range gridAreas {
+			gridAreas[i] = append(gridAreas[i], make([]string, columnsDiff)...)
+		}
+	} else if columnsDiff < 0 {
+		for c := 0; c < -columnsDiff; c++ {
+			columns = append(columns, autoColumns.Next(), pr.GridNames{})
+		}
+	}
 
-//     // 1.1 Position anything that’s not auto-positioned.
-//     childrenPositions := map[Box][4]int{}
-//     for _, child := range box.Box().Children {
-//         columnStart := child.Box().Style.GetGridColumnStart()
-//         columnEnd := child.Box().Style.GetGridColumnEnd()
-//         rowStart := child.Box().Style.GetGridRowStart()
-//         rowEnd := child.Box().Style.GetGridRowEnd()
+	// Add implicit line names
+	for y, row := range gridAreas {
+		for x, areaName := range row {
+			if areaName == "" {
+				continue
+			}
+			startName := areaName + "-start"
+			var names []string
+			for _, row := range extractNames(rows) {
+				names = append(names, row...)
+			}
+			if !utils.IsIn(names, startName) {
+				rows[2*y] = append(rows[2*y].(pr.GridNames), startName)
+			}
+			names = names[:0]
+			for _, column := range extractNames(columns) {
+				names = append(names, column...)
+			}
+			if !utils.IsIn(names, startName) {
+				columns[2*x] = append(columns[2*x].(pr.GridNames), startName)
+			}
+		}
+	}
+	for y := range gridAreas {
+		row := gridAreas[len(gridAreas)-1-y] // reverse
+		for x := range row {
+			areaName := row[len(row)-1-x] // reverse
+			if areaName == "" {
+				continue
+			}
+			endName := areaName + "-end"
 
-//         columnPlacement := getPlacement(            columnStart, columnEnd, extractNames(columns))
-//         rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
+			var names []string
+			for _, row := range extractNames(rows) {
+				names = append(names, row...)
+			}
+			if !utils.IsIn(names, endName) {
+				rows[-2*y-1] = append(rows[-2*y-1].(pr.GridNames), endName)
+			}
+			names = names[:0]
+			for _, column := range extractNames(columns) {
+				names = append(names, column...)
+			}
+			if !utils.IsIn(names, endName) {
+				columns[-2*x-1] = append(columns[-2*x-1].(pr.GridNames), endName)
+			}
+		}
+	}
 
-//         if columnPlacement.isNotNone() && rowPlacement.isNotNone() {
-//             x, width = columnPlacement
-//             y, height = rowPlacement
-//             childrenPositions[child] = [4]int{ x, y, width, height}
-//         }
-// 	}
+	// 1. Run the grid placement algorithm.
 
-//     // 1.2 Process the items locked to a given row.
-// 	children := make([]Box, len(box.Box().Children))
-// 	copy(children, box.Box().Children)
-// 		sort.Slice(children, func(i, j int) bool { return children[i].Box().Style.GetOrder() < children[j].Box().Style.GetOrder()})
-//     for _, child := range children {
-//         if _, has := childrenPositions[child]; has {
-//             continue
-//         }
-// 		rowStart := child.style["gridRowStart"]
-//         rowEnd := child.style["gridRowEnd"]
-//         rowPlacement := getPlacement(rowStart, rowEnd, extractNames( rows))
-//         if !rowPlacement.isNotNone() {
-//             continue
-//         }
-// 		y, height = rowPlacement
-//         columnStart = child.style["gridColumnStart"]
-//         columnEnd = child.style["gridColumnEnd"]
-//         x, width = getColumnPlacement(            rowPlacement, columnStart, columnEnd, columns,
-//             childrenPositions,  utils.IsIn(flow, "dense"))
-//         childrenPositions[child] = [4]int{x, y, width, height}
-//     }
+	// 1.1 Position anything that’s not auto-positioned.
+	childrenPositions := map[Box]rect{}
+	for _, child := range box.Children {
+		columnStart := child.Box().Style.GetGridColumnStart()
+		columnEnd := child.Box().Style.GetGridColumnEnd()
+		rowStart := child.Box().Style.GetGridRowStart()
+		rowEnd := child.Box().Style.GetGridRowEnd()
 
-//     // 1.3 Determine the columns in range the implicit grid.
-//     // 1.3.1 Start with the columns from the explicit grid.
-//     implicitX1 = 0
-//     implicitX2 =   0
-// 	if gridAreas {
-// 		implicitX2 = len(gridAreas[0])
-// 	}
-//     // 1.3.2 Add columns to the beginning and end of the implicit grid.
-//    var remainingGridItems []Box
-//     for _, child := range children {
-//         if _, has :=  childrenPositions[child]; has {
-//             x, _, width, _ = childrenPositions[child]
-//         } else {
-//             columnStart = child.style["gridColumnStart"]
-//             columnEnd = child.style["gridColumnEnd"]
-//             columnPlacement = getPlacement(columnStart, columnEnd, extractNames( columns))
-//             remainingGridItems = append(remainingGridItems, child)
-//             if columnPlacement {
-//                 x, width = columnPlacement
-//             } else {
-//                 continue
-//             }
-//         }
-// 		implicitX1 = utils.MinInt(x, implicitX1)
-//         implicitX2 = utils.MaxInt(x + width, implicitX2)
-//     }
-// 	// 1.3.3 Add columns to accommodate max column span.
-//     for _, child := range remainingGridItems {
-//         columnStart = child.style["gridColumnStart"]
-//         columnEnd = child.style["gridColumnEnd"]
-//         span = 1
-//         if columnStart != "auto" && columnStart[0] == "span" {
-//             span = columnStart[1]
-//         } else if columnEnd != "auto" && columnEnd[0] == "span" {
-//             span = columnEnd[1]
-//         }
-// 		implicitX2 = utils.MaxInt(implicitX1 + (span || 1), implicitX2)
-//     }
+		columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
+		rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
 
-//     // 1.4 Position the remaining grid items.
-//     implicitY1 = 0
-//     implicitY2 = len(gridAreas)
-//     for position := range childrenPositions.values() {
-//         _, y, _, height = position
-//         implicitY1 = utils.MinInt(y, implicitY1)
-//         implicitY2 = utils.MaxInt(y + height, implicitY2)
-//     }
-// 	cursorX, cursorY = implicitX1, implicitY1
-//     if utils.IsIn(flow, "dense" ) {
-//         for _,child := range remainingGridItems {
-//             columnStart = child.style["gridColumnStart"]
-//             columnEnd = child.style["gridColumnEnd"]
-//             columnPlacement = getPlacement(
-//                 columnStart, columnEnd, extractNames( columns))
-//             if columnPlacement {
-//                 // 1. Set the row position of the cursor.
-//                 cursorY = implicitY1
-//                 x, width = columnPlacement
-//                 cursorX = x
-//                 // 2. Increment the cursor’s row position.
-//                 rowStart = child.style["gridRowStart"]
-//                 rowEnd = child.style["gridRowEnd"]
-//                 for y := range count(cursorY) {
-//                     if rowStart == "auto" {
-//                         y, height = getPlacement( pr.GridLine{Val:y+1} , rowEnd, extractNames(rows))
-//                     } else {
-//                         // assert rowStart[0] == "span"
-//                         // assert rowStart == "auto" || rowStart[0] == "span"
-//                         span = getSpan(rowStart)
-//                         y, height = getPlacement(
-//                             rowStart, pr.GridLine{Val:y+1+span}, extractNames(rows))
-//                     }
-// 					 if y < cursorY {
-//                         continue
-//                     }
-// 					hasBroken := false
-// 					for row := y; row<  y + height; row++ {
-//                         intersect = intersectWithChildren(x, y, width, height, childrenPositions.values())
-//                         if intersect {
-//                             // Child intersects with a positioned child on
-//                             // current row.
-// 							hasBroken = true
-//                             break
-//                         }
-//                     }
-// 					if !hasBroken{
-//                         // Child doesn’t intersect with any positioned child on
-//                         // any row.
-//                         break
-//                     }
-//                 }
-// 				yDiff = y + height - implicitY2
-//                 if yDiff > 0 {
-//                     for c := 0; c < yDiff; c++{
-//                         rows = append(rows, next(autoRows), nil)
-//                     }
-// 					implicitY2 = y + height
-//                 }
-// 				// 3. Set the item’s row-start line.
-//                 childrenPositions[child] = [4]int{ x, y, width, height}
-//             } else {
-//                 // 1. Set the cursor’s row && column positions.
-//                 cursorX, cursorY = implicitX1, implicitY1
-//                 for {
-//                     // 2. Increment the column position of the cursor.
-//                     y = cursorY
-//                     rowStart = child.style["gridRowStart"]
-//                     rowEnd = child.style["gridRowEnd"]
-//                     columnStart = child.style["gridColumnStart"]
-//                     columnEnd = child.style["gridColumnEnd"]
-// 					hasBroken := false
-//                     for x := cursorX; x <  implicitX2; x++ {
-//                         if rowStart == "auto" {
-//                             y, height = getPlacement(   pr.GridLine{Val:y + 1}, rowEnd, extractNames(rows))
-//                         } else {
-//                             span = getSpan(rowStart)
-//                             y, height = getPlacement(   rowStart, pr.GridLine{Val:y + 1 + span},      extractNames(rows))
-//                         }
-// 						if columnStart == "auto" {
-//                             x, width = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, extractNames(columns))
-//                         } else {
-//                             span = getSpan(columnStart)
-//                             x, width = getPlacement(   columnStart, pr.GridLine{Val:x + 1 + span}, extractNames(columns))
-//                         }
-// 						intersect = intersectWithChildren(                            x, y, width, height, childrenPositions.values())
-//                         if intersect {
-//                             // Child intersects with a positioned child.
-//                             continue
-//                         } else {
-//                             // Free place found.
-//                             // 3. Set the item’s row-/column-start lines.
-//                             childrenPositions[child] =[4]int{x, y, width, height}
-//                             yDiff = cursorY + height - 1 - implicitY2
-//                             if yDiff > 0 {
-//                                 for c := 0; c <yDiff; c++ {
-//                                     rows.append(next(autoRows), nil)
-//                                 }
-// 								implicitY2 = cursorY + height - 1
-//                             }
-// 							hasBroken = true
-// 							 break
-//                         }
-//                     }
-// 					if !hasBroken {
-//                         // No room found.
-//                         // 2. Return to the previous step.
-//                         cursorY += 1
-//                         yDiff = cursorY + 1 - implicitY2
-//                         if yDiff > 0 {
-//                             for c := 0; c <yDiff; c++ {
-//                                 rows.append(next(autoRows), nil)
-//                             }
-// 							implicitY2 = cursorY
-//                         }
-// 						cursorX = implicitX1
-//                         continue
-//                     }
-// 					break
-//                 }
-//             }
-//         }
-//     } else {
-//         for _, child := range remainingGridItems {
-//             columnStart = child.style["gridColumnStart"]
-//             columnEnd = child.style["gridColumnEnd"]
-//             columnPlacement = getPlacement(
-//                 columnStart, columnEnd, extractNames(columns))
-//             if columnPlacement {
-//                 // 1. Set the column position of the cursor.
-//                 x, width = columnPlacement
-//                 if x < cursorX {
-//                     cursorY += 1
-//                 }
-// 				cursorX = x
-//                 // 2. Increment the cursor’s row position.
-//                 rowStart = child.style["gridRowStart"]
-//                 rowEnd = child.style["gridRowEnd"]
-//                 for cursorY := range count(cursorY) {
-//                     if rowStart == "auto" {
-//                         y, height = getPlacement(                           pr.GridLine{Val: cursorY + 1}, rowEnd, extractNames(rows))
-//                     } else {
-//                         // assert rowStart[0] == "span"
-//                         // assert rowStart == "auto" || rowStart[0] == "span"
-//                         span = getSpan(rowStart)
-//                         y, height = getPlacement(                            rowStart,pr.GridLine{Val: cursorY + 1 + span},
-//                             extractNames(rows))
-//                     }
-// 					if y < cursorY {
-//                         continue
-//                     }
-// 					hasBroken := false
-// 					for row := y; row < y + height;row++ {
-//                         intersect = intersectWithChildren(                            x, y, width, height, childrenPositions.values())
-//                         if intersect {
-//                             // Child intersects with a positioned child on
-//                             // current row.
-// 							hasBroken = true
-//                             break
-//                         }
-//                     }
-// 					if !hasBroken {
-//                         // Child doesn’t intersect with any positioned child on
-//                         // any row.
-//                         break
-//                     }
-//                 }
-// 				 yDiff = y + height - implicitY2
-//                 if yDiff > 0 {
-//                     for  c := 0; c <yDiff; c++  {
-//                         rows.append(next(autoRows), nil)
-//                     }
-// 					implicitY2 = y + height
-//                 } // 3. Set the item’s row-start line.
-//                 childrenPositions[child] = [4]int{x, y, width, height}
-//             } else {
-//                 for {
-//                     // 1. Increment the column position of the cursor.
-//                     y = cursorY
-//                     rowStart = child.style["gridRowStart"]
-//                     rowEnd = child.style["gridRowEnd"]
-//                     columnStart = child.style["gridColumnStart"]
-//                     columnEnd = child.style["gridColumnEnd"]
-// 					hasBroken := false
-//                     for x := cursorX; x < implicitX2; x++ {
-//                         if rowStart == "auto" {
-//                             y, height = getPlacement(                                pr.GridLine{Val:y + 1}, rowEnd, extractNames(rows))
-//                         } else {
-//                             span = getSpan(rowStart)
-//                             y, height = getPlacement(                                rowStart, pr.GridLine{Val:y + 1 + span},
-//                                 extractNames(rows))
-//                         }
-// 						 if columnStart == "auto" {
-//                             x, width = getPlacement(                                 pr.GridLine{Val: x + 1}, columnEnd, extractNames(columns))
-//                         } else {
-//                             span = getSpan(columnStart)
-//                             x, width = getPlacement(                                columnStart, pr.GridLine{Val:x + 1 + span},
-//                                 extractNames(columns))
-//                         }
-// 						intersect = intersectWithChildren(                            x, y, width, height, childrenPositions.values())
-//                         if intersect {
-//                             // Child intersects with a positioned child.
-//                             continue
-//                         } else {
-//                             // Free place found.
-//                             // 2. Set the item’s row-/column-start lines.
-//                             childrenPositions[child] =[4]int{x, y, width, height}
-//                             hasBroken = true
-// 							break
-//                         }
-//                     }
-// 					if !hasBroken {
-//                         // No room found.
-//                         // 2. Return to the previous step.
-//                         cursorY += 1
-//                         yDiff = cursorY + 1 - implicitY2
-//                         if yDiff > 0 {
-//                             for c := 0; c <yDiff; c++ {
-//                                 rows.append(next(autoRows), nil)
-//                             }
-// 							implicitY2 = cursorY
-//                         }
-// 						cursorX = implicitX1
-//                         continue
-//                     }
-// 					 break
-//                 }
-//             }
-//         }
-//     }
+		if columnPlacement.isNotNone() && rowPlacement.isNotNone() {
+			x, width := columnPlacement[0], columnPlacement[1]
+			y, height := rowPlacement[0], rowPlacement[1]
+			childrenPositions[child] = rect{x, y, width, height}
+		}
+	}
 
-//     for c:= 0; c <  - implicitX1; c++ {
-//         columns.insert(0, next(autoColumnsBack))
-//         columns.insert(0, nil)
-//     }
-// 	start := 0
-// 	if len(gridAreas) != 0 {
-// 		start = len(gridAreas[0])
-// 	}
-// 	for c:= start;c < implicitX2 ; c++ {
-//         columns.append(next(autoColumns), nil)
-//     }
-// 	 for c:= 0; c <  - implicitY1; c++ {
-//         rows.insert(0, next(auoRowsBack))
-//         rows.insert(0, nil)
-//     }
-// 	for c := len(gridAreas); c < implicitY2; c++ {
-//         rows.append(next(autoRows),nil)
-//     }
+	// 1.2 Process the items locked to a given row.
+	children := make([]Box, len(box.Children))
+	copy(children, box.Children)
+	sort.Slice(children, func(i, j int) bool { return children[i].Box().Style.GetOrder() < children[j].Box().Style.GetOrder() })
+	for _, child := range children {
+		if _, has := childrenPositions[child]; has {
+			continue
+		}
+		rowStart := child.Box().Style.GetGridRowStart()
+		rowEnd := child.Box().Style.GetGridRowEnd()
+		rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
+		if !rowPlacement.isNotNone() {
+			continue
+		}
+		y, height := rowPlacement[0], rowPlacement[1]
+		columnStart := child.Box().Style.GetGridColumnStart()
+		columnEnd := child.Box().Style.GetGridColumnEnd()
+		x, width := getColumnPlacement(rowPlacement, columnStart, columnEnd, extractNames(columns),
+			childrenPositions, utils.IsIn(flow, "dense")).unpack()
+		childrenPositions[child] = [4]int{x, y, width, height}
+	}
 
-//     // 2. Find the size of the grid container.
+	// 1.3 Determine the columns in range the implicit grid.
+	// 1.3.1 Start with the columns from the explicit grid.
+	implicitX1 := 0
+	implicitX2 := 0
+	if len(gridAreas) != 0 {
+		implicitX2 = len(gridAreas[0])
+	}
+	// 1.3.2 Add columns to the beginning and end of the implicit grid.
+	var remainingGridItems []Box
+	for _, child := range children {
+		var x, width int
+		if r, has := childrenPositions[child]; has {
+			x, _, width, _ = r.unpack()
+		} else {
+			columnStart := child.Box().Style.GetGridColumnStart()
+			columnEnd := child.Box().Style.GetGridColumnEnd()
+			columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
+			remainingGridItems = append(remainingGridItems, child)
+			if columnPlacement.isNotNone() {
+				x, width = columnPlacement.unpack()
+			} else {
+				continue
+			}
+		}
+		implicitX1 = utils.MinInt(x, implicitX1)
+		implicitX2 = utils.MaxInt(x+width, implicitX2)
+	}
+	// 1.3.3 Add columns to accommodate max column span.
+	for _, child := range remainingGridItems {
+		columnStart := child.Box().Style.GetGridColumnStart()
+		columnEnd := child.Box().Style.GetGridColumnEnd()
+		span := 1
+		if columnStart.IsSpan() {
+			span = columnStart.Val
+		} else if columnEnd.IsSpan() {
+			span = columnEnd.Val
+		}
+		if span == 0 {
+			span = 1
+		}
+		implicitX2 = utils.MaxInt(implicitX1+span, implicitX2)
+	}
 
-//     if isinstance(box, boxes.GridBox) {
-//         // from .block import blockLevelWidth
-//         blockLevelWidth(box, containingBlock)
-//     } else {
-//         // assert isinstance(box, boxes.InlineGridBox)
-//         // from .inline import inlineBlockWidth
-//         inlineBlockWidth(box, context, containingBlock)
-//     }
-// 	if box.width == "auto" {
-//         // TODO: Calculate max-width.
-//         box.width = containingBlock.width
-//     }
+	// 1.4 Position the remaining grid items.
+	implicitY1 := 0
+	implicitY2 := len(gridAreas)
+	for _, position := range childrenPositions {
+		_, y, _, height := position.unpack()
+		implicitY1 = utils.MinInt(y, implicitY1)
+		implicitY2 = utils.MaxInt(y+height, implicitY2)
+	}
+	cursorX, cursorY := implicitX1, implicitY1
+	if utils.IsIn(flow, "dense") {
+		for _, child := range remainingGridItems {
+			columnStart := child.Box().Style.GetGridColumnStart()
+			columnEnd := child.Box().Style.GetGridColumnEnd()
+			columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
+			if columnPlacement.isNotNone() {
+				// 1. Set the row position of the cursor.
+				cursorY = implicitY1
+				x, width := columnPlacement[0], columnPlacement[1]
+				cursorX = x
+				// 2. Increment the cursor’s row position.
+				rowStart := child.Box().Style.GetGridRowStart()
+				rowEnd := child.Box().Style.GetGridRowEnd()
+				var y, height int
+				for y = cursorY; ; y++ {
+					if rowStart.IsAuto() {
+						y, height = getPlacement(pr.GridLine{Val: y + 1}, rowEnd, extractNames(rows)).unpack()
+					} else {
+						// assert rowStart[0] == "span"
+						// assert rowStart.IsAuto() || rowStart[0] == "span"
+						span := getSpan(rowStart)
+						y, height = getPlacement(rowStart, pr.GridLine{Val: y + 1 + span}, extractNames(rows)).unpack()
+					}
+					if y < cursorY {
+						continue
+					}
+					hasBroken := false
+					for row := y; row < y+height; row++ {
+						intersect := intersectWithChildren(x, y, width, height, childrenPositions)
+						if intersect {
+							// Child intersects with a positioned child on
+							// current row.
+							hasBroken = true
+							break
+						}
+					}
+					if !hasBroken {
+						// Child doesn’t intersect with any positioned child on
+						// any row.
+						break
+					}
+				}
+				yDiff := y + height - implicitY2
+				if yDiff > 0 {
+					for c := 0; c < yDiff; c++ {
+						rows = append(rows, autoRows.Next(), pr.GridNames{})
+					}
+					implicitY2 = y + height
+				}
+				// 3. Set the item’s row-start line.
+				childrenPositions[child] = rect{x, y, width, height}
+			} else {
+				// 1. Set the cursor’s row && column positions.
+				cursorX, cursorY = implicitX1, implicitY1
+				for {
+					// 2. Increment the column position of the cursor.
+					y := cursorY
+					rowStart := child.Box().Style.GetGridRowStart()
+					rowEnd := child.Box().Style.GetGridRowEnd()
+					columnStart = child.Box().Style.GetGridColumnStart()
+					columnEnd = child.Box().Style.GetGridColumnEnd()
+					hasBroken := false
+					for x := cursorX; x < implicitX2; x++ {
+						var width, height int
+						if rowStart.IsAuto() {
+							y, height = getPlacement(pr.GridLine{Val: y + 1}, rowEnd, extractNames(rows)).unpack()
+						} else {
+							span := getSpan(rowStart)
+							y, height = getPlacement(rowStart, pr.GridLine{Val: y + 1 + span}, extractNames(rows)).unpack()
+						}
+						if columnStart.IsAuto() {
+							x, width = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, extractNames(columns)).unpack()
+						} else {
+							span := getSpan(columnStart)
+							x, width = getPlacement(columnStart, pr.GridLine{Val: x + 1 + span}, extractNames(columns)).unpack()
+						}
+						intersect := intersectWithChildren(x, y, width, height, childrenPositions)
+						if intersect {
+							// Child intersects with a positioned child.
+							continue
+						} else {
+							// Free place found.
+							// 3. Set the item’s row-/column-start lines.
+							childrenPositions[child] = [4]int{x, y, width, height}
+							yDiff := cursorY + height - 1 - implicitY2
+							if yDiff > 0 {
+								for c := 0; c < yDiff; c++ {
+									rows = append(rows, autoRows.Next(), pr.GridNames{})
+								}
+								implicitY2 = cursorY + height - 1
+							}
+							hasBroken = true
+							break
+						}
+					}
+					if !hasBroken {
+						// No room found.
+						// 2. Return to the previous step.
+						cursorY += 1
+						yDiff := cursorY + 1 - implicitY2
+						if yDiff > 0 {
+							for c := 0; c < yDiff; c++ {
+								rows = append(rows, autoRows.Next(), pr.GridNames{})
+							}
+							implicitY2 = cursorY
+						}
+						cursorX = implicitX1
+						continue
+					}
+					break
+				}
+			}
+		}
+	} else {
+		for _, child := range remainingGridItems {
+			columnStart := child.Box().Style.GetGridColumnStart()
+			columnEnd := child.Box().Style.GetGridColumnEnd()
+			columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
+			if columnPlacement.isNotNone() {
+				// 1. Set the column position of the cursor.
+				x, width := columnPlacement.unpack()
+				if x < cursorX {
+					cursorY += 1
+				}
+				cursorX = x
+				// 2. Increment the cursor’s row position.
+				rowStart := child.Box().Style.GetGridRowStart()
+				rowEnd := child.Box().Style.GetGridRowEnd()
+				var y, height int
+				for {
+					if rowStart.IsAuto() {
+						y, height = getPlacement(pr.GridLine{Val: cursorY + 1}, rowEnd, extractNames(rows)).unpack()
+					} else {
+						// assert rowStart[0] == "span"
+						// assert rowStart.IsAuto() || rowStart[0] == "span"
+						span := getSpan(rowStart)
+						y, height = getPlacement(rowStart, pr.GridLine{Val: cursorY + 1 + span},
+							extractNames(rows)).unpack()
+					}
+					if y < cursorY {
+						continue
+					}
+					hasBroken := false
+					for row := y; row < y+height; row++ {
+						intersect := intersectWithChildren(x, y, width, height, childrenPositions)
+						if intersect {
+							// Child intersects with a positioned child on
+							// current row.
+							hasBroken = true
+							break
+						}
+					}
+					if !hasBroken {
+						// Child doesn’t intersect with any positioned child on
+						// any row.
+						break
+					}
+				}
+				yDiff := y + height - implicitY2
+				if yDiff > 0 {
+					for c := 0; c < yDiff; c++ {
+						rows = append(rows, autoRows.Next(), pr.GridNames{})
+					}
+					implicitY2 = y + height
+				} // 3. Set the item’s row-start line.
+				childrenPositions[child] = [4]int{x, y, width, height}
+			} else {
+				for {
+					// 1. Increment the column position of the cursor.
+					y := cursorY
+					rowStart := child.Box().Style.GetGridRowStart()
+					rowEnd := child.Box().Style.GetGridRowEnd()
+					columnStart = child.Box().Style.GetGridColumnStart()
+					columnEnd = child.Box().Style.GetGridColumnEnd()
+					hasBroken := false
+					for x := cursorX; x < implicitX2; x++ {
+						var width, height int
+						if rowStart.IsAuto() {
+							y, height = getPlacement(pr.GridLine{Val: y + 1}, rowEnd, extractNames(rows)).unpack()
+						} else {
+							span := getSpan(rowStart)
+							y, height = getPlacement(rowStart, pr.GridLine{Val: y + 1 + span},
+								extractNames(rows)).unpack()
+						}
+						if columnStart.IsAuto() {
+							x, width = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, extractNames(columns)).unpack()
+						} else {
+							span := getSpan(columnStart)
+							x, width = getPlacement(columnStart, pr.GridLine{Val: x + 1 + span},
+								extractNames(columns)).unpack()
+						}
+						intersect := intersectWithChildren(x, y, width, height, childrenPositions)
+						if intersect {
+							// Child intersects with a positioned child.
+							continue
+						} else {
+							// Free place found.
+							// 2. Set the item’s row-/column-start lines.
+							childrenPositions[child] = [4]int{x, y, width, height}
+							hasBroken = true
+							break
+						}
+					}
+					if !hasBroken {
+						// No room found.
+						// 2. Return to the previous step.
+						cursorY += 1
+						yDiff := cursorY + 1 - implicitY2
+						if yDiff > 0 {
+							for c := 0; c < yDiff; c++ {
+								rows = append(rows, autoRows.Next(), pr.GridNames{})
+							}
+							implicitY2 = cursorY
+						}
+						cursorX = implicitX1
+						continue
+					}
+					break
+				}
+			}
+		}
+	}
 
-//     // 3. Run the grid sizing algorithm.
+	for c := 0; c < -implicitX1; c++ {
+		columns = append([]pr.GridSpec{pr.GridNames{}, autoColumnsBack.Next()}, columns...)
+	}
+	start := 0
+	if len(gridAreas) != 0 {
+		start = len(gridAreas[0])
+	}
+	for c := start; c < implicitX2; c++ {
+		columns = append(columns, autoColumns.Next(), pr.GridNames{})
+	}
+	for c := 0; c < -implicitY1; c++ {
+		rows = append([]pr.GridSpec{pr.GridNames{}, autoRowsBack.Next()}, rows...)
+	}
+	for c := len(gridAreas); c < implicitY2; c++ {
+		rows = append(rows, autoRows.Next(), pr.GridNames{})
+	}
 
-//     // 3.0 List min/max sizing functions.
-//     rowSizingFunctions := extractDims(rows)
-//     columnSizingFunctions := extractDims( columns)
+	// 2. Find the size of the grid container.
 
-//     // 3.1 Resolve the sizes of the grid columns.
-//     columnsSizes := resolveTracksSizes(        columnSizingFunctions, box.width, childrenPositions, implicitX1,
-//         "x", columnGap, context, box, nil)
+	if bo.GridT.IsInstance(box_) {
+		blockLevelWidth(box_, context, containingBlock)
+	} else {
+		// assert isinstance(box, boxes.InlineGridBox)
+		// from .inline import inlineBlockWidth
+		inlineBlockWidth(box_, context, containingBlock)
+	}
+	if box.Width == pr.AutoF {
+		// TODO: Calculate max-width.
+		box.Width, _ = containingBlock.ContainingBlock()
+	}
 
-//     // 3.2 Resolve the sizes of the grid rows.
-//     rowsSizes := resolveTracksSizes(        rowSizingFunctions, box.height, childrenPositions, implicitY1, "y",
-//         rowGap, context, box,   columnsSizes)
+	// 3. Run the grid sizing algorithm.
 
-//     // 3.3 Re-resolve the sizes of the grid columns with min-/max-content.
-//     // TODO: Re-resolve.
+	// 3.0 List min/max sizing functions.
+	rowSizingFunctions := extractDims(rows)
+	columnSizingFunctions := extractDims(columns)
 
-//     // 3.4 Re-re-resolve the sizes of the grid columns with min-/max-content.
-//     // TODO: Re-re-resolve.
+	// 3.1 Resolve the sizes of the grid columns.
+	columnsSizes := resolveTracksSizes(context, columnSizingFunctions, box.Width, childrenPositions, implicitX1,
+		'x', columnGap, box_, nil)
 
-//     // 3.5 Align the tracks within the grid container.
-//     // TODO: Support safe/unsafe.
-//     justifyContent := set(box.style["justifyContent"])
-//     x := box.contentBoxX()
-//     freeWidth = max(0, box.width - sum(size for size, _ := range columnsSizes))
-//     columnsPositions = []
-//     columnsNumber = len(columnsSizes)
-//     if justifyContent & {"center"} {
-//         x += freeWidth / 2
-//         for size, _ := range columnsSizes {
-//             columnsPositions.append(x)
-//             x += size + columnGap
-//         }
-//     } else if justifyContent & {"right", "end", "flex-end"} {
-//         x += freeWidth
-//         for size, _ := range columnsSizes {
-//             columnsPositions.append(x)
-//             x += size + columnGap
-//         }
-//     } else if justifyContent & {"space-around"} {
-//         x += freeWidth / 2 / columnsNumber
-//         for size, _ := range columnsSizes {
-//             columnsPositions.append(x)
-//             x += size + freeWidth / columnsNumber + columnGap
-//         }
-//     } else if justifyContent & {"space-between"} {
-//         for size, _ := range columnsSizes {
-//             columnsPositions.append(x)
-//             if columnsNumber >= 2 {
-//                 x += size + freeWidth / (columnsNumber - 1) + columnGap
-//             }
-//         }
-//     } else if justifyContent & {"space-evenly"} {
-//         x += freeWidth / (columnsNumber + 1)
-//         for size, _ := range columnsSizes {
-//             columnsPositions.append(x)
-//             x += size + freeWidth / (columnsNumber + 1) + columnGap
-//         }
-//     } else {
-//         for size, _ := range columnsSizes {
-//             columnsPositions.append(x)
-//             x += size + columnGap
-//         }
-//     }
+	// 3.2 Resolve the sizes of the grid rows.
+	rowsSizes := resolveTracksSizes(context, rowSizingFunctions, box.Height, childrenPositions, implicitY1,
+		'y', rowGap, box_, columnsSizes)
 
-//     alignContent = set(box.style["alignContent"])
-//     y = box.contentBoxY()
-//     if box.height == "auto" {
-//         freeHeight = 0
-//     } else {
-//         freeHeight = (
-//             box.height -
-//             sum(size for size, _ := range rowsSizes) -
-//             (len(rowsSizes) - 1) * rowGap)
-//         freeHeight = max(0, freeHeight)
-//     }
-// 	rowsPositions = []
-//     rowsNumber = len(rowsSizes)
-//     if alignContent & {"center"} {
-//         y += freeHeight / 2
-//         for size, _ := range rowsSizes {
-//             rowsPositions.append(y)
-//             y += size + rowGap
-//         }
-//     } else if alignContent & {"right", "end", "flex-end"} {
-//         y += freeHeight
-//         for size, _ := range rowsSizes {
-//             rowsPositions.append(y)
-//             y += size + rowGap
-//         }
-//     } else if alignContent & {"space-around"} {
-//         y += freeHeight / 2 / rowsNumber
-//         for size, _ := range rowsSizes {
-//             rowsPositions.append(y)
-//             y += size + freeHeight / rowsNumber + rowGap
-//         }
-//     } else if alignContent & {"space-between"} {
-//         for size, _ := range rowsSizes {
-//             rowsPositions.append(y)
-//             if rowsNumber >= 2 {
-//                 y += size + freeHeight / (rowsNumber - 1) + rowGap
-//             }
-//         }
-//     } else if alignContent & {"space-evenly"} {
-//         y += freeHeight / (rowsNumber + 1)
-//         for size, _ := range rowsSizes {
-//             rowsPositions.append(y)
-//             y += size + freeHeight / (rowsNumber + 1) + rowGap
-//         }
-//     } else {
-//         if alignContent & {"baseline"} {
-//             // TODO: Support baseline value.
-//             LOGGER.warning("Baseline alignment is not supported for grid layout")
-//         } for size, _ := range rowsSizes {
-//             rowsPositions.append(y)
-//             y += size + rowGap
-//         }
-//     }
+	// 3.3 Re-resolve the sizes of the grid columns with min-/max-content.
+	// TODO: Re-resolve.
 
-//     // 4. Lay out the grid items into their respective containing blocks.
-//     // Find resumeAt row.
-//     thisPageChildren = []
-//     resumeRow = None
-//     if skipStack {
-//         skipRow = next(iter(skipStack))
-//         skipHeight = (
-//             sum(size for size, _ := range rowsSizes[:skipRow]) +
-//             (len(rowsSizes[:skipRow]) - 1) * rowGap)
-//     } else {
-//         skipRow = 0
-//         skipHeight = 0
-//     }
-// 	resumeAt = None
-//     for i, rowY := range enumerate(rowsPositions[skipRow:], start=skipRow) {
-//         // TODO: Check that page is ! empty.
-//         if context.overflowsPage(bottomSpace, rowY - skipHeight) {
-//             if i == 0 {
-//                 return None, None, {"break": "any", "page": None}, [], false
-//             }
-// 			resumeRow = i - 1
-//             resumeAt = {i-1: None}
-//             for child := range children {
-//                 _, y, _, _ = childrenPositions[child]
-//                 if skipRow <= y <= i-2 {
-//                     thisPageChildren.append(child)
-//                 }
-//             }
-// 			 break
-//         }
-//     } else {
-//         for child := range children {
-//             _, y, _, _ = childrenPositions[child]
-//             if skipRow <= y {
-//                 thisPageChildren.append(child)
-//             }
-//         }
-//     } if box.height == "auto" {
-//         box.height = (
-//             sum(size for size, _ := range rowsSizes[skipRow:resumeRow]) +
-//             (len(rowsSizes[skipRow:resumeRow]) - 1) * rowGap)
-//     }
-// 	// Lay out grid items.
-//     justifyItems = set(box.style["justifyItems"])
-//     alignItems = set(box.style["alignItems"])
-//     newChildren = []
-//     baseline = None
-//     nextPage = {"break": "any", "page": None}
-//     // from .block import blockLevelLayout
-//     for child := range thisPageChildren {
-//         x, y, width, height = childrenPositions[child]
-//         index = box.children.index(child)
-//         if skipStack && skipStack.get(y) && index := range skipStack[y] {
-//             childSkipStack = skipStack[y][index]
-//         } else {
-//             childSkipStack = None
-//         }
-// 		child = child.deepcopy()
-//         child.positionX = columnsPositions[x]
-//         child.positionY = rowsPositions[y] - skipHeight
-//         resolvePercentages(child, box)
-//         width = (
-//             sum(size for size, _ := range columnsSizes[x:x+width]) +
-//             (width - 1) * columnGap)
-//         height = (
-//             sum(size for size, _ := range rowsSizes[y:y+height]) +
-//             (height - 1) * rowGap)
-//         childWidth = width - (
-//             child.marginLeft + child.borderLeftWidth + child.paddingLeft +
-//             child.marginRight + child.borderRightWidth + child.paddingRight)
-//         childHeight = height - (
-//             child.marginTop + child.borderTopWidth + child.paddingTop +
-//             child.marginBottom + child.borderBottomWidth + child.paddingBottom)
-//     }
+	// 3.4 Re-re-resolve the sizes of the grid columns with min-/max-content.
+	// TODO: Re-re-resolve.
 
-//         justifySelf = set(child.style["justifySelf"])
-//         if justifySelf & {"auto"} {
-//             justifySelf = justifyItems
-//         }
-// 		if justifySelf & {"normal", "stretch"} {
-//             if child.style["width"] == "auto" {
-//                 child.style["width"] = Dimension(childWidth, "px")
-//             }
-//         }
-// 		alignSelf = set(child.style["alignSelf"])
-//         if alignSelf & {"auto"} {
-//             alignSelf = alignItems
-//         }
-// 		if alignSelf & {"normal", "stretch"} {
-//             if child.style["height"] == "auto" {
-//                 child.style["height"] = Dimension(childHeight, "px")
-//             }
-//         }
+	// 3.5 Align the tracks within the grid container.
+	// TODO: Support safe/unsafe.
+	justifyContent := box.Style.GetJustifyContent()
+	x := box.ContentBoxX()
 
-//         // TODO: Find a better solution for the layout.
-//         parent = boxes.BlockContainerBox.anonymousFrom(box, ())
-//         resolvePercentages(parent, containingBlock)
-//         parent.positionX = child.positionX
-//         parent.positionY = child.positionY
-//         parent.width = width
-//         parent.height = height
-//         newChild, childResumeAt, childNextPage = blockLevelLayout(
-//             context, child, bottomSpace, childSkipStack, parent,
-//             pageIsEmpty, absoluteBoxes, fixedBoxes)[:3]
-//         if newChild {
-//             pageIsEmpty = false
-//             // TODO: Support fragmentation in grid items.
-//         } else {
-//             // TODO: Support fragmentation in grid rows.
-//             continue
-//         }
+	freeWidth := pr.Max(0, box.Width.V()-sum0(columnsSizes))
+	columnsNumber := pr.Float(len(columnsSizes))
+	columnsPositions := make([]pr.Float, len(columnsSizes))
+	if justifyContent.Intersects("center") {
+		x += freeWidth / 2
+		for i, size := range columnsSizes {
+			columnsPositions[i] = x
+			x += size[0] + columnGap
+		}
+	} else if justifyContent.Intersects("right", "end", "flex-end") {
+		x += freeWidth
+		for i, size := range columnsSizes {
+			columnsPositions[i] = x
+			x += size[0] + columnGap
+		}
+	} else if justifyContent.Intersects("space-around") {
+		x += freeWidth / 2 / columnsNumber
+		for i, size := range columnsSizes {
+			columnsPositions[i] = x
+			x += size[0] + freeWidth/columnsNumber + columnGap
+		}
+	} else if justifyContent.Intersects("space-between") {
+		for i, size := range columnsSizes {
+			columnsPositions[i] = x
+			if columnsNumber >= 2 {
+				x += size[0] + freeWidth/(columnsNumber-1) + columnGap
+			}
+		}
+	} else if justifyContent.Intersects("space-evenly") {
+		x += freeWidth / (columnsNumber + 1)
+		for i, size := range columnsSizes {
+			columnsPositions[i] = x
+			x += size[0] + freeWidth/(columnsNumber+1) + columnGap
+		}
+	} else {
+		for i, size := range columnsSizes {
+			columnsPositions[i] = x
+			x += size[0] + columnGap
+		}
+	}
 
-//         // TODO: Apply auto margins.
-//         if justifySelf & {"normal", "stretch"} {
-//             newChild.width = max(childWidth, newChild.width)
-//         } else {
-//             newChild.width = maxContentWidth(context, newChild)
-//             diff = childWidth - newChild.width
-//             if justifySelf & {"center"} {
-//                 newChild.translate(diff / 2, 0)
-//             } else if justifySelf & {"right", "end", "flex-end", "self-end"} {
-//                 newChild.translate(diff, 0)
-//             }
-//         }
+	alignContent := box.Style.GetAlignContent()
+	y := box.ContentBoxY()
+	freeHeight := pr.Float(0)
+	if h := box.Height; h != pr.AutoF {
+		freeHeight = h.V() - sum0(rowsSizes) - pr.Float(len(rowsSizes)-1)*rowGap
+		freeHeight = pr.Max(0, freeHeight)
+	}
+	rowsNumber := pr.Float(len(rowsSizes))
+	rowsPositions := make([]pr.Float, len(rowsSizes))
+	if alignContent.Intersects("center") {
+		y += freeHeight / 2
+		for i, size := range rowsSizes {
+			rowsPositions[i] = y
+			y += size[0] + rowGap
+		}
+	} else if alignContent.Intersects("right", "end", "flex-end") {
+		y += freeHeight
+		for i, size := range rowsSizes {
+			rowsPositions[i] = y
+			y += size[0] + rowGap
+		}
+	} else if alignContent.Intersects("space-around") {
+		y += freeHeight / 2 / rowsNumber
+		for i, size := range rowsSizes {
+			rowsPositions[i] = y
+			y += size[0] + freeHeight/rowsNumber + rowGap
+		}
+	} else if alignContent.Intersects("space-between") {
+		for i, size := range rowsSizes {
+			rowsPositions[i] = y
+			if rowsNumber >= 2 {
+				y += size[0] + freeHeight/(rowsNumber-1) + rowGap
+			}
+		}
+	} else if alignContent.Intersects("space-evenly") {
+		y += freeHeight / (rowsNumber + 1)
+		for i, size := range rowsSizes {
+			rowsPositions[i] = y
+			y += size[0] + freeHeight/(rowsNumber+1) + rowGap
+		}
+	} else {
+		if alignContent.Intersects("baseline") {
+			// TODO: Support baseline value.
+			logger.WarningLogger.Println("Baseline alignment is not supported for grid layout")
+		}
+		for i, size := range rowsSizes {
+			rowsPositions[i] = y
+			y += size[0] + rowGap
+		}
+	}
 
-//         // TODO: Apply auto margins.
-//         if alignSelf & {"normal", "stretch"} {
-//             newChild.height = max(childHeight, newChild.height)
-//         } else {
-//             diff = childHeight - newChild.height
-//             if alignSelf & {"center"} {
-//                 newChild.translate(0, diff / 2)
-//             } else if alignSelf & {"end", "flex-end", "self-end"} {
-//                 newChild.translate(0, diff)
-//             }
-//         }
+	// 4. Lay out the grid items into their respective containing blocks.
+	// Find resumeAt row.
+	var (
+		thisPageChildren    []Box
+		resumeRow           = -1
+		skipRow, skipHeight = 0, pr.Float(0)
+		resumeAt            tree.ResumeStack
+	)
+	if skipStack != nil {
+		skipRow, _ := skipStack.Unpack()
+		skipHeight = (sum0(rowsSizes[:skipRow]) + pr.Float(len(rowsSizes[:skipRow])-1)*rowGap)
+	}
+	hasBroken := false
+	for i := skipRow; i < len(rowsPositions); i++ {
+		rowY := rowsPositions[i]
+		// TODO: Check that page is not empty.
+		if context.overflowsPage(bottomSpace, rowY-skipHeight) {
+			if i == 0 {
+				return nil, blockLayout{nil, nil, tree.PageBreak{Break: "any"}, false}
+			}
+			resumeRow = i - 1
+			resumeAt = tree.ResumeStack{i - 1: nil}
+			for _, child := range children {
+				_, y, _, _ := childrenPositions[child].unpack()
+				if skipRow <= y && y <= i-2 {
+					thisPageChildren = append(thisPageChildren, child)
+				}
+			}
+			hasBroken = true
+			break
+		}
+	}
+	if !hasBroken {
+		for _, child := range children {
+			_, y, _, _ := childrenPositions[child].unpack()
+			if skipRow <= y {
+				thisPageChildren = append(thisPageChildren, child)
+			}
+		}
+	}
+	if box.Height == pr.AutoF {
+		box.Height = sum0(rowsSizes[skipRow:resumeRow]) + pr.Float(len(rowsSizes[skipRow:resumeRow])-1)*rowGap
+	}
+	// Lay out grid items.
+	justifyItems := box.Style.GetJustifyItems()
+	alignItems := box.Style.GetAlignItems()
+	var (
+		newChildren []Box
+		baseline    pr.MaybeFloat
+	)
+	for _, child := range thisPageChildren {
+		x, y, width, height := childrenPositions[child].unpack()
+		index := findBoxIndex(box.Children, child)
+		var childSkipStack tree.ResumeStack
+		if v, has := skipStack[y][index]; has {
+			childSkipStack = v
+		}
+		child = bo.Deepcopy(child)
+		childB := child.Box()
+		childB.PositionX = columnsPositions[x]
+		childB.PositionY = rowsPositions[y] - skipHeight
+		cbH, cbW := box.ContainingBlock()
+		resolvePercentages(child, bo.MaybePoint{cbH, cbW}, 0)
+		widthF := (sum0(columnsSizes[x:x+width]) + pr.Float(width-1)*columnGap)
+		heightF := (sum0(rowsSizes[y:y+height]) + pr.Float(height-1)*rowGap)
+		childWidth := widthF - (childB.MarginLeft.V() + childB.BorderLeftWidth + childB.PaddingLeft.V() +
+			childB.MarginRight.V() + childB.BorderRightWidth + childB.PaddingRight.V())
+		childHeight := heightF - (childB.MarginTop.V() + childB.BorderTopWidth + childB.PaddingTop.V() +
+			childB.MarginBottom.V() + childB.BorderBottomWidth + childB.PaddingBottom.V())
 
-//         // TODO: Take care of page fragmentation.
-//         newChildren.append(newChild)
-//         if baseline  == nil  && y == implicitY1 {
-//             baseline = findInFlowBaseline(newChild)
-//         }
+		justifySelf := childB.Style.GetJustifySelf()
+		if justifySelf.Intersects("auto") {
+			justifySelf = justifyItems
+		}
+		if justifySelf.Intersects("normal", "stretch") {
+			if childB.Style.GetWidth().S == "auto" {
+				childB.Style.SetWidth(pr.FToPx(childWidth))
+			}
+		}
+		alignSelf := childB.Style.GetAlignSelf()
+		if alignSelf.Intersects("auto") {
+			alignSelf = alignItems
+		}
+		if alignSelf.Intersects("normal", "stretch") {
+			if childB.Style.GetHeight().S == "auto" {
+				childB.Style.SetHeight(pr.FToPx(childHeight))
+			}
+		}
 
-//     box = box.copyWithChildren(newChildren)
-//     if isinstance(box, boxes.InlineGridBox) {
-//         // TODO: Synthetize a real baseline value.
-//         LOGGER.warning("Inline grids are ! supported")
-//         box.baseline = baseline || 0
-//     }
+		// TODO: Find a better solution for the layout.
+		parent := bo.BlockContainerT.AnonymousFrom(box_, nil)
+		cbW, cbH = containingBlock.ContainingBlock()
+		resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
+		parent.Box().PositionX = childB.PositionX
+		parent.Box().PositionY = childB.PositionY
+		parent.Box().Width = widthF
+		parent.Box().Height = heightF
+		newChild, _, _ := blockLevelLayout(context, child.(bo.BlockBoxITF), bottomSpace, childSkipStack, parent.Box(),
+			pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
+		if newChild != nil {
+			pageIsEmpty = false
+			// TODO: Support fragmentation in grid items.
+		} else {
+			// TODO: Support fragmentation in grid rows.
+			continue
+		}
 
-//     context.finishBlockFormattingContext(box)
+		// TODO: Apply auto margins.
+		if justifySelf.Intersects("normal", "stretch") {
+			newChild.Box().Width = pr.Max(childWidth, newChild.Box().Width.V())
+		} else {
+			newChild.Box().Width = maxContentWidth(context, newChild, true)
+			diff := childWidth - newChild.Box().Width.V()
+			if justifySelf.Intersects("center") {
+				newChild.Translate(newChild, diff/2, 0, false)
+			} else if justifySelf.Intersects("right", "end", "flex-end", "self-end") {
+				newChild.Translate(newChild, diff, 0, false)
+			}
+		}
 
-//     return box, resumeAt, nextPage, [], false
-// }
+		// TODO: Apply auto margins.
+		if alignSelf.Intersects("normal", "stretch") {
+			newChild.Box().Height = pr.Max(childHeight, newChild.Box().Height.V())
+		} else {
+			diff := childHeight - newChild.Box().Height.V()
+			if alignSelf.Intersects("center") {
+				newChild.Translate(newChild, 0, diff/2, false)
+			} else if alignSelf.Intersects("end", "flex-end", "self-end") {
+				newChild.Translate(newChild, 0, diff, false)
+			}
+		}
+
+		// TODO: Take care of page fragmentation.
+		newChildren = append(newChildren, newChild)
+		if baseline == nil && y == implicitY1 {
+			baseline = findInFlowBaseline(newChild, false)
+		}
+	}
+
+	box_ = bo.CopyWithChildren(box_, newChildren)
+	if bo.InlineGridT.IsInstance(box_) {
+		// TODO: Synthetize a real baseline value.
+		logger.WarningLogger.Println("Inline grids are not supported")
+		if !pr.Is(baseline) {
+			baseline = pr.Float(0)
+		}
+		box_.Box().Baseline = baseline
+	}
+
+	context.finishBlockFormattingContext(box_)
+
+	return box_, blockLayout{resumeAt, nil, tree.PageBreak{Break: "any"}, false}
+}

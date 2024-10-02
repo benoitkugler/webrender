@@ -18,15 +18,11 @@ type MaybeFloat interface {
 	V() Float
 }
 
-func (f Float) V() Float {
-	return f
-}
+func (f Float) V() Float { return f }
 
 type special bool
 
-func (f special) V() Float {
-	return 0
-}
+func (f special) V() Float { return 0 }
 
 func (f special) String() string {
 	if f {
@@ -114,10 +110,10 @@ func Abs(x Float) Float {
 	return x
 }
 
-// Return the percentage of the reference value, or the value unchanged.
+// ResolvePercentage returns the percentage of the reference value, or the value unchanged.
 // “referTo“ is the length for 100%. If “referTo“ is not a number, it
 // just replaces percentages.
-func ResoudPercentage(value DimOrS, referTo Float) MaybeFloat {
+func ResolvePercentage(value DimOrS, referTo Float) MaybeFloat {
 	if value.IsNone() {
 		return nil
 	} else if value.S == "auto" {

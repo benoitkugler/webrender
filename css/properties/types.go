@@ -215,12 +215,27 @@ func (size GridDims) SizingFunctions() [2]DimOrS {
 
 type GridAuto []GridDims
 
+func (ga GridAuto) Cycle() *GridAutoIter {
+	return &GridAutoIter{ga, 0}
+}
+
 // Reverse returns a new, reversed slice
 func (ga GridAuto) Reverse() GridAuto {
 	out := make(GridAuto, len(ga))
 	for i, v := range ga {
 		out[len(ga)-1-i] = v
 	}
+	return out
+}
+
+type GridAutoIter struct {
+	src GridAuto
+	pos int
+}
+
+func (gai *GridAutoIter) Next() GridDims {
+	out := gai.src[gai.pos%len(gai.src)]
+	gai.pos++
 	return out
 }
 
@@ -233,7 +248,10 @@ type GridLine struct {
 
 func (gl GridLine) IsCustomIdent() bool { return gl.Val == 0 && gl.Tag == 0 }
 
-func (gl GridLine) IsSpan() bool { return gl.Tag == Span }
+// Span returns true for "span" attributes. In this case, the [Val] field is valid.
+func (gl *GridLine) IsSpan() bool { return gl.Tag == Span }
+
+func (gl *GridLine) IsAuto() bool { return gl.Tag == Auto }
 
 // An empty list means 'none'
 type GridTemplateAreas [][]string

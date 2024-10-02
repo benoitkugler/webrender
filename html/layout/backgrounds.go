@@ -241,14 +241,14 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 		sizeWidth, sizeHeight := size.Width, size.Height
 		iwidth, iheight, iratio := image.GetIntrinsicSize(resolution.Value, box.Style.GetFontSize().Value)
 		imageWidth, imageHeight = defaultImageSizing(iwidth, iheight, iratio,
-			pr.ResoudPercentage(sizeWidth, positioningWidth), pr.ResoudPercentage(sizeHeight, positioningHeight), positioningWidth, positioningHeight)
+			pr.ResolvePercentage(sizeWidth, positioningWidth), pr.ResolvePercentage(sizeHeight, positioningHeight), positioningWidth, positioningHeight)
 	}
 
 	originX, positionX_, originY, positionY_ := position.OriginX, position.Pos[0], position.OriginY, position.Pos[1]
 	refX := positioningWidth - imageWidth
 	refY := positioningHeight - imageHeight
-	positionX := pr.ResoudPercentage(positionX_.ToValue(), refX)
-	positionY := pr.ResoudPercentage(positionY_.ToValue(), refY)
+	positionX := pr.ResolvePercentage(positionX_.ToValue(), refX)
+	positionY := pr.ResolvePercentage(positionY_.ToValue(), refY)
 	if originX == "right" {
 		positionX = refX - positionX.V()
 	}

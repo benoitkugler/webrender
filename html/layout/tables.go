@@ -1039,7 +1039,7 @@ func cellBaseline(cell Box) pr.Float {
 
 // Return the absolute Y position for the first (or last) in-flow baseline
 // if any or nil. Can't return "auto".
-// last=false, baselinesT=(boxes.LineBox,)
+// [last] defaults to false, baselinesT to nothing
 func findInFlowBaseline(box Box, last bool, baselinesT ...bo.BoxType) pr.MaybeFloat {
 	if len(baselinesT) == 0 {
 		baselinesT = []bo.BoxType{bo.LineT}

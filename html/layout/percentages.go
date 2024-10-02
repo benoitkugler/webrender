@@ -16,7 +16,7 @@ import (
 // mainFlexDirection is either 0, Width or Height
 func resolveOnePercentage(value pr.DimOrS, propertyName pr.KnownProp, referTo pr.Float, mainFlexDirection pr.KnownProp) pr.MaybeFloat {
 	// box attributes are used values
-	percent := pr.ResoudPercentage(value, referTo)
+	percent := pr.ResolvePercentage(value, referTo)
 
 	if (propertyName == pr.PMinWidth || propertyName == pr.PMinHeight) && percent == pr.AutoF {
 		if mainFlexDirection == 0 || propertyName != mainFlexDirection+2 {
@@ -48,7 +48,7 @@ func resolvePercentagesBox(box Box, containingBlock containingBlock, mainFlexDir
 }
 
 // Set used values as attributes of the box object.
-// mainFlexDirection is either 0, Width or Height
+// mainFlexDirection is either 0 (for nil), Width or Height
 func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirection pr.KnownProp) {
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
 
@@ -152,8 +152,8 @@ func resoudRadius(box *bo.BoxFields, v pr.Point, side1, side2 bo.Side) bo.MaybeP
 	if box.RemoveDecorationSides[side1] || box.RemoveDecorationSides[side2] {
 		return bo.MaybePoint{pr.Float(0), pr.Float(0)}
 	}
-	rx := pr.ResoudPercentage(v[0].ToValue(), box.BorderWidth())
-	ry := pr.ResoudPercentage(v[1].ToValue(), box.BorderHeight())
+	rx := pr.ResolvePercentage(v[0].ToValue(), box.BorderWidth())
+	ry := pr.ResolvePercentage(v[1].ToValue(), box.BorderHeight())
 	return bo.MaybePoint{rx, ry}
 }
 
