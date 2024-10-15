@@ -1077,7 +1077,7 @@ func TestPageAndLineboxBreaking(t *testing.T) {
 		}
 	}
 	tu.AssertEqual(t, len(pages), 4)
-	tu.AssertEqual(t, strings.Join(texts, "a"), "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15")
+	tu.AssertEqual(t, strings.Join(texts, ""), "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15")
 }
 
 func TestMarginBoxesFixedDimension1(t *testing.T) {

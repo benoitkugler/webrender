@@ -422,7 +422,7 @@ func (tc *TargetCollector) CacheTargetPageCounters(anchorName string, pageCounte
 			continue
 		}
 
-		// TODO: Is the item at all interested inthe new
+		// TODO: Is the item at all interested in the new
 		// pageCounterValues? It probably is and this check is a
 		// brake.
 		for counterName := range missingCounters {

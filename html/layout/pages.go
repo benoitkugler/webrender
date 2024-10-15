@@ -694,8 +694,8 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	// TODO: handle cases where the root element is something else.
 	// See https://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
-	if !(bo.BlockT.IsInstance(rootBox) || bo.FlexContainerT.IsInstance(rootBox)) {
-		panic(fmt.Sprintf("expected Block or FlexContainer, got %s", rootBox))
+	if !(bo.BlockT.IsInstance(rootBox) || bo.FlexContainerT.IsInstance(rootBox) || bo.GridContainerT.IsInstance(rootBox)) {
+		panic(fmt.Sprintf("expected Block, FlexContainer or GridContainer, got %s", rootBox))
 	}
 	context.createBlockFormattingContext()
 	context.currentPage = pageNumber
@@ -774,10 +774,6 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	context.finishBlockFormattingContext(rootBox)
 
 	page.Children = []Box{rootBox, footnoteArea}
-	descendants := bo.Descendants(page)
-	for _, child := range positionedBoxes {
-		descendants = append(descendants, bo.Descendants(child)...)
-	}
 
 	// Update page counter values
 	standardizePageBasedCounters(style, "")
@@ -805,7 +801,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		}
 	}
 
-	for _, child := range descendants {
+	for _, child := range bo.DescendantsPlaceholders(page, true) {
 		// Cache target's page counters
 		anchor := string(child.Box().Style.GetAnchor())
 		if anchor != "" && !cachedAnchors.Has(anchor) {
@@ -893,10 +889,12 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	if pageType.Blank {
 		resumeAt = previousResumeAt
+		tmp.nextPage = pageMaker[pageNumber-1].InitialNextPage
 	}
 
 	if traceMode {
 		traceLogger.DumpTree(page, "makePage done")
+		traceLogger.Dump(fmt.Sprintf("makePage: resume at %s, nextPage %s", resumeAt, tmp.nextPage))
 	}
 
 	return page, resumeAt, tmp.nextPage
@@ -915,7 +913,6 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	// PageType for current page, values for pageMaker[index + 1].
 	// Don't modify actual pageMaker[index] values!
 	pageState := tmp.InitialPageState.Copy()
-	nextPageName := string(tmp.InitialNextPage.Page)
 	first := index == 0
 	var nextPageSide string
 	switch tmp.InitialNextPage.Break {
@@ -932,6 +929,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	blank := (nextPageSide == "left" && tmp.RightPage) || (nextPageSide == "right" && !tmp.RightPage) ||
 		(len(context.reportedFootnotes) != 0 && tmp.InitialResumeAt == nil)
 
+	nextPageName := string(tmp.InitialNextPage.Page)
 	if blank {
 		nextPageName = ""
 	}
@@ -953,9 +951,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	if (nextPage == tree.PageBreak{}) {
 		panic("expected nextPage")
 	}
-	if blank {
-		nextPage.Page = tmp.InitialNextPage.Page
-	}
+
 	tmp.RightPage = !tmp.RightPage
 
 	// Check whether we need to append or update the next pageMaker item
@@ -979,7 +975,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 		remakeState := tree.RemakeState{}
 		// Setting contentChanged to true ensures remake.
 		// If resumeAt  == nil  (last page) it must be false to prevent endless
-		// loops && list index out of range (see #794).
+		// loops and list index out of range (see #794).
 		remakeState.ContentChanged = resumeAt != nil
 		// pageState is already a deepcopy
 		item := tree.PageMaker{

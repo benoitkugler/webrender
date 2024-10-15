@@ -5,6 +5,7 @@ import (
 	"math"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
+	"github.com/benoitkugler/webrender/utils/testutils/tracer"
 
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
@@ -25,7 +26,7 @@ func NewAbsolutePlaceholder(box Box) *AbsolutePlaceholder {
 	return &out
 }
 
-func (AbsolutePlaceholder) IsClassicalBox() bool { return false }
+func (AbsolutePlaceholder) Type() bo.BoxType { return bo.AbsolutePlaceholderT }
 
 func (abs *AbsolutePlaceholder) setLaidOutBox(newBox Box) {
 	abs.AliasBox = newBox
@@ -226,6 +227,10 @@ func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixe
 	translateBoxHeight, translateY := false, pr.Float(0)
 	if len(skipStack) == 0 {
 		translateBoxHeight, translateY = absoluteHeight(box_, containingBlock)
+	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("after absolute{Width, Height}: %s %s", tracer.FormatMaybeFloat(box.Width), tracer.FormatMaybeFloat(box.Height)))
 	}
 
 	if translateBoxHeight {

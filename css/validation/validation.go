@@ -861,10 +861,8 @@ func _backgroundImage(tokens []Token, baseUrl string) (pr.Image, error) {
 	}
 	token := tokens[0]
 
-	if _, ok := token.(pa.FunctionBlock); !ok {
-		if getKeyword(token) == "none" {
-			return pr.NoneImage{}, nil
-		}
+	if getKeyword(token) == "none" {
+		return pr.NoneImage{}, nil
 	}
 	return getImage(token, baseUrl)
 }
@@ -1728,7 +1726,7 @@ func display(tokens []Token, _ string) pr.CssProperty {
 		"table-header-group", "table-footer-group", "table-row",
 		"table-column-group", "table-column":
 		return pr.Display{keyword}
-	case "inline-table", "inline-flex":
+	case "inline-table", "inline-flex", "inline-grid":
 		return pr.Display{"inline", keyword[7:]}
 	case "inline-block":
 		return pr.Display{"inline", "flow-root"}
@@ -1747,7 +1745,7 @@ func display(tokens []Token, _ string) pr.CssProperty {
 				return nil
 			}
 			outside = value
-		case "flow", "flow-root", "table", "flex":
+		case "flow", "flow-root", "table", "flex", "grid":
 			if inside != "" {
 				return nil
 			}
@@ -2369,7 +2367,10 @@ func opacity(tokens []Token, _ string) pr.CssProperty {
 	token := tokens[0]
 	if number, ok := token.(pa.Number); ok {
 		return pr.Float(utils.MinF(1, utils.MaxF(0, number.ValueF)))
+	} else if perc, ok := token.(pa.Percentage); ok {
+		return pr.Float(utils.MinF(1, utils.MaxF(0, perc.ValueF/100)))
 	}
+
 	return nil
 }
 

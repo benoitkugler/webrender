@@ -91,10 +91,6 @@ type BoxITF = Box
 
 // Box is the common interface grouping all possible boxes
 type Box interface {
-	// IsClassicalBox returns true for all standard boxes defined in this package, but false
-	// for the special ones, defined in other packages, like AbsolutePlaceholder or StackingContext.
-	IsClassicalBox() bool
-
 	tree.Box
 
 	Type() BoxType
@@ -106,6 +102,20 @@ type Box interface {
 	RemoveDecoration(box *BoxFields, isStart, isEnd bool)
 	PageValues() (pr.Page, pr.Page)
 }
+
+// BoxType represents a box type.
+type BoxType uint8
+
+// IsClassical returns true for all standard boxes defined in this package, but false
+// for the special ones, defined in other packages, like AbsolutePlaceholder or StackingContext.
+func (bt BoxType) IsClassical() bool {
+	return bt != AbsolutePlaceholderT && bt != StackingContextT
+}
+
+const (
+	AbsolutePlaceholderT = BoxType(0xFF - 2)
+	StackingContextT     = BoxType(0xFF - 1)
+)
 
 type Background struct {
 	ImageRendering pr.String
@@ -282,7 +292,7 @@ func (box *BoxFields) SetMissingLink(b tree.Box) {
 
 func (box *BoxFields) GetBookmarkLabel() string { return box.BookmarkLabel }
 
-// Create a new equivalent box with given “newChildren“."""
+// Create a new equivalent box (preserving the concrete type) with given [newChildren].
 func CopyWithChildren(box Box, newChildren []Box) Box {
 	newBox := box.Copy()
 	newBox.Box().Children = newChildren
@@ -310,8 +320,8 @@ func Descendants(b Box) []Box { return DescendantsPlaceholders(b, false) }
 func DescendantsPlaceholders(b Box, placeholders bool) []Box {
 	out := []Box{b}
 	for _, child := range b.Box().Children {
-		if placeholders || child.IsClassicalBox() {
-			out = append(out, Descendants(child)...)
+		if placeholders || child.Type().IsClassical() {
+			out = append(out, DescendantsPlaceholders(child, placeholders)...)
 		} else {
 			out = append(out, child)
 		}

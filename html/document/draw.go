@@ -987,7 +987,7 @@ func (ctx drawContext) drawOutlines(box_ Box) {
 
 	if bo.ParentT.IsInstance(box_) {
 		for _, child := range box.Children {
-			if child.IsClassicalBox() {
+			if child.Type().IsClassical() {
 				ctx.drawOutlines(child)
 			}
 		}

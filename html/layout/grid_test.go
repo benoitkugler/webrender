@@ -267,7 +267,7 @@ func TestGridTemplateAreasMultipleRows(t *testing.T) {
 	tu.AssertEqual(t, div_b.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div_c.Box().PositionY, Fl(4))
 	tu.AssertEqual(t, div_d.Box().PositionY, Fl(2))
-	tu.AssertEqual(t, div_a.Box().Height, Fl(2))
+	tu.AssertEqual(t, div_a.Box().Height, Fl(4))
 	tu.AssertEqual(t, div_b.Box().Height, Fl(2))
 	tu.AssertEqual(t, div_c.Box().Height, Fl(2))
 	tu.AssertEqual(t, div_d.Box().Height, Fl(2))
@@ -402,8 +402,9 @@ func TestGridTemplateAreasExtraSpan(t *testing.T) {
 	tu.AssertEqual(t, div_d.Box().Width, Fl(6))
 	tu.AssertEqual(t, div_e.Box().Width, Fl(6))
 
-	tu.AssertEqual(t, len(article.Box().Children), 1)
-	tu.AssertEqual(t, unpack1(article).Box().Height, Fl(2))
+	for _, child := range article.Box().Children {
+		tu.AssertEqual(t, child.Box().Height, Fl(2))
+	}
 	tu.AssertEqual(t, article.Box().Width, Fl(10))
 }
 
@@ -454,8 +455,9 @@ func TestGridTemplateAreasExtraSpanDense(t *testing.T) {
 	tu.AssertEqual(t, div_d.Box().Width, Fl(6))
 	tu.AssertEqual(t, div_e.Box().Width, Fl(6))
 
-	tu.AssertEqual(t, len(article.Box().Children), 1)
-	tu.AssertEqual(t, unpack1(article).Box().Height, Fl(2))
+	for _, child := range article.Box().Children {
+		tu.AssertEqual(t, child.Box().Height, Fl(2))
+	}
 	tu.AssertEqual(t, article.Box().Width, Fl(9))
 }
 
@@ -513,8 +515,9 @@ func TestGridTemplateRepeatFr(t *testing.T) {
 	tu.AssertEqual(t, div_f.Box().Width, Fl(4))
 	tu.AssertEqual(t, div_h.Box().Width, Fl(4))
 
-	tu.AssertEqual(t, len(article.Box().Children), 1)
-	tu.AssertEqual(t, unpack1(article).Box().Height, Fl(2))
+	for _, child := range article.Box().Children {
+		tu.AssertEqual(t, child.Box().Height, Fl(2))
+	}
 	tu.AssertEqual(t, article.Box().Width, Fl(12))
 }
 
@@ -565,8 +568,9 @@ func TestGridTemplateShorthandFr(t *testing.T) {
 	tu.AssertEqual(t, div_b.Box().Width, Fl(6))
 	tu.AssertEqual(t, div_e.Box().Width, Fl(6))
 
-	tu.AssertEqual(t, len(article.Box().Children), 1)
-	tu.AssertEqual(t, unpack1(article).Box().Height, Fl(2))
+	for _, child := range article.Box().Children {
+		tu.AssertEqual(t, child.Box().Height, Fl(2))
+	}
 	tu.AssertEqual(t, article.Box().Width, Fl(10))
 }
 
@@ -605,8 +609,9 @@ func TestGridShorthandAutoFlowRowsFrSize(t *testing.T) {
 	tu.AssertEqual(t, div_b.Box().Width, Fl(6))
 	tu.AssertEqual(t, div_c.Box().Width, Fl(6))
 
-	tu.AssertEqual(t, len(article.Box().Children), 1)
-	tu.AssertEqual(t, unpack1(article).Box().Height, Fl(2))
+	for _, child := range article.Box().Children {
+		tu.AssertEqual(t, child.Box().Height, Fl(2))
+	}
 	tu.AssertEqual(t, article.Box().Width, Fl(10))
 }
 
@@ -643,8 +648,9 @@ func TestGridShorthandAutoFlowColumnsNoneDense(t *testing.T) {
 	tu.AssertEqual(t, div_b.Box().Width, Fl(10))
 	tu.AssertEqual(t, div_c.Box().Width, Fl(10))
 
-	tu.AssertEqual(t, len(article.Box().Children), 1)
-	tu.AssertEqual(t, unpack1(article).Box().Height, Fl(2))
+	for _, child := range article.Box().Children {
+		tu.AssertEqual(t, child.Box().Height, Fl(2))
+	}
 	tu.AssertEqual(t, article.Box().Width, Fl(10))
 }
 

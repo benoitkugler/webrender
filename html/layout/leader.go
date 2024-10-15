@@ -46,7 +46,7 @@ func handleLeader(context *layoutContext, line *bo.LineBox, containingBlock cont
 		var sum pr.Float
 		for _, child := range line.Children {
 			if child.Box().IsInNormalFlow() {
-				sum += child.Box().Width.V()
+				sum += child.Box().MarginWidth()
 			}
 		}
 		cbWidth, _ := containingBlock.ContainingBlock()

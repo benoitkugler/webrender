@@ -53,7 +53,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
 
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("resolvePercentages: %s %s",
+		traceLogger.Dump(fmt.Sprintf("resolvePercentages: %s x %s",
 			tracer.FormatMaybeFloat(cbWidth), tracer.FormatMaybeFloat(cbHeight)))
 	}
 
@@ -96,11 +96,20 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		box.MaxHeight = resolveOnePercentage(box.Style.GetMaxHeight(), pr.PMaxHeight, cbHeight.V(), mainFlexDirection)
 	}
 
+	collapse := box.Style.GetBorderCollapse() == "collapse"
 	// Used value == computed value
-	box.BorderTopWidth = box.Style.GetBorderTopWidth().Value
-	box.BorderRightWidth = box.Style.GetBorderRightWidth().Value
-	box.BorderBottomWidth = box.Style.GetBorderBottomWidth().Value
-	box.BorderLeftWidth = box.Style.GetBorderLeftWidth().Value
+	if !collapse || box.BorderTopWidth == 0 {
+		box.BorderTopWidth = box.Style.GetBorderTopWidth().Value
+	}
+	if !collapse || box.BorderRightWidth == 0 {
+		box.BorderRightWidth = box.Style.GetBorderRightWidth().Value
+	}
+	if !collapse || box.BorderBottomWidth == 0 {
+		box.BorderBottomWidth = box.Style.GetBorderBottomWidth().Value
+	}
+	if !collapse || box.BorderLeftWidth == 0 {
+		box.BorderLeftWidth = box.Style.GetBorderLeftWidth().Value
+	}
 
 	// Shrink *content* widths and heights according to box-sizing
 	// Thanks heavens and the spec: Our validator rejects negative values
@@ -140,6 +149,10 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		if box.MinHeight != pr.AutoF {
 			box.MinHeight = pr.Max(0, box.MinHeight.V()-verticalDelta)
 		}
+	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("after resolvePercentages: %s %s", tracer.FormatMaybeFloat(box.Width), tracer.FormatMaybeFloat(box.Height)))
 	}
 }
 

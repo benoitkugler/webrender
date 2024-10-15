@@ -36,7 +36,7 @@ func init() {
 
 func TestStacking(t *testing.T) {
 	var s StackingContext
-	if s.IsClassicalBox() {
+	if s.Type().IsClassical() {
 		t.Fatal("should not be a classical box")
 	}
 }

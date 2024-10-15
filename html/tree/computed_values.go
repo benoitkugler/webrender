@@ -115,7 +115,8 @@ var (
 		pr.PColumnRuleWidth:   borderWidth,
 		pr.POutlineWidth:      borderWidth,
 		pr.PColumnWidth:       columnWidth,
-		pr.PColumnGap:         columnGap,
+		pr.PColumnGap:         gap,
+		pr.PRowGap:            gap,
 		pr.PContent:           content,
 		pr.PDisplay:           display,
 		pr.PFloat:             floating,
@@ -455,10 +456,10 @@ func columnWidth(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProper
 }
 
 // Compute the “column-gap“ property.
-func columnGap(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
+func gap(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	value := _value.(pr.DimOrS)
 	if value.S == "normal" {
-		value = pr.DimOrS{Dimension: pr.Dimension{Value: 1, Unit: pr.Em}}
+		return value
 	}
 	return length(computer, name, value)
 }
@@ -785,20 +786,18 @@ func link(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.Css
 
 // Compute the “lang“ property.
 func lang(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
-	value := _value.(pr.NamedString)
-	if value.String == "none" {
-		return pr.NamedString{}
+	value := _value.(pr.TaggedString)
+	if value.Tag == pr.None {
+		return pr.TaggedString{}
 	}
-	if node, ok := computer.element.(*utils.HTMLNode); ok && value.Name == "attr()" {
-		s := node.Get(value.String)
+	if node, ok := computer.element.(*utils.HTMLNode); ok && value.Tag == pr.Attr {
+		s := node.Get(value.S)
 		if s == "" {
-			return pr.NamedString{}
+			return pr.TaggedString{}
 		}
-		return pr.NamedString{String: s}
-	} else if value.Name == "string" {
-		return pr.NamedString{String: value.String}
+		return pr.TaggedString{S: s}
 	}
-	return pr.NamedString{}
+	return pr.TaggedString{S: value.S}
 }
 
 // Compute the “tab-size“ property.

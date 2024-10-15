@@ -308,7 +308,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				} else {
 					var m pr.Float
 					for _, rowCell := range endingCells {
-						if v := rowCell.Box().Height.V(); v > m {
+						if v := rowCell.Box().BorderHeight(); v > m {
 							m = v
 						}
 					}
@@ -385,6 +385,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			// Break if this row overflows the page, unless there is no
 			// other content on the page.
 			if !pageIsEmpty && context.overflowsPage(bottomSpace, nextPositionY) {
+				for _, descendant := range bo.Descendants(row_) {
+					if footnote := descendant.Box().Footnote; footnote != nil {
+						context.unlayoutFootnote(footnote)
+					}
+				}
 				if len(newGroupChildren) != 0 {
 					previousRow := newGroupChildren[len(newGroupChildren)-1]
 					pageBreak := blockLevelPageBreak(previousRow, row_)
@@ -426,6 +431,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 		// Do not keep the row group if we made a page break
 		// before any of its rows or with "avoid"
 		if bi := group.Style.GetBreakInside(); resumeAt != nil && !originalPageIsEmpty && (avoidPageBreak(string(bi), context) || len(newGroupChildren) == 0) {
+			for _, descendant := range bo.Descendants(group_) {
+				if footnote := descendant.Box().Footnote; footnote != nil {
+					context.unlayoutFootnote(footnote)
+				}
+			}
 			return nil, nil, nextPage
 		}
 
@@ -924,6 +934,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 		&minContentGuess, &minContentPercentageGuess,
 		&minContentSpecifiedGuess, &maxContentGuess,
 	}
+	// https://www.w3.org/TR/css-tables-3/#width-distribution-algorithm
 	for i := range tmp.grid {
 		if tmp.columnIntrinsicPercentages[i] != 0 {
 			minContentPercentageGuess[i] = pr.Max(
@@ -932,7 +943,9 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 			minContentSpecifiedGuess[i] = minContentPercentageGuess[i]
 			maxContentGuess[i] = minContentPercentageGuess[i]
 		} else if tmp.constrainedness[i] {
-			minContentSpecifiedGuess[i] = tmp.columnMinContentWidths[i]
+			// any other column that is constrained is assigned
+			// its max-content width
+			minContentSpecifiedGuess[i] = tmp.columnMaxContentWidths[i]
 		}
 	}
 
@@ -1051,17 +1064,19 @@ func findInFlowBaseline(box Box, last bool, baselinesT ...bo.BoxType) pr.MaybeFl
 			return box.Box().PositionY + box.Box().Baseline.V()
 		}
 	}
-	if bo.ParentT.IsInstance(box) && !bo.TableCaptionT.IsInstance(box) {
-		children := box.Box().Children
-		if last {
-			children = reversedBoxes(children)
-		}
-		for _, child := range children {
-			if child.Box().IsInNormalFlow() {
-				result := findInFlowBaseline(child, last, baselinesT...)
-				if result != nil {
-					return result
-				}
+	if bo.TableCaptionT.IsInstance(box) {
+		return nil
+	}
+
+	children := box.Box().Children
+	if last {
+		children = reversedBoxes(children)
+	}
+	for _, child := range children {
+		if child.Box().IsInNormalFlow() {
+			result := findInFlowBaseline(child, last, baselinesT...)
+			if result != nil {
+				return result
 			}
 		}
 	}

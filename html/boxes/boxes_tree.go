@@ -49,7 +49,7 @@ type TextBox struct {
 func TextBoxAnonymousFrom(parent Box, text string) *TextBox {
 	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
 	out := NewTextBox(style, parent.Box().Element, parent.Box().PseudoType, text)
-	return &out
+	return out
 }
 
 type InlineBlockBox struct {
@@ -210,13 +210,13 @@ func NewInlineBox(style pr.ElementStyle, element *html.Node, pseudoType string, 
 	return &out
 }
 
-func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, text string) TextBox {
+func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, text string) *TextBox {
 	if len(text) == 0 {
 		panic("NewTextBox called with empty text")
 	}
 	box := newBoxFields(style, element, pseudoType, nil)
 	out := TextBox{BoxFields: box, Text: text}
-	return out
+	return &out
 }
 
 // Return a new TextBox identical to this one except for the text.

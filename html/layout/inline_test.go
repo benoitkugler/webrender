@@ -537,7 +537,7 @@ func TestBreakingLineboxRegression_16(t *testing.T) {
 	p, pre := unpack2(body)
 	line1 := unpack1(p)
 	assertText(t, unpack1(line1), "tést")
-	tu.AssertEqual(t, p.Box().Width, 4*4)
+	tu.AssertEqual(t, p.Box().Width, pr.Float(4*4))
 	line1, line2, line3, line4 := unpack4(pre)
 	assertText(t, unpack1(line1), "ab©")
 	assertText(t, unpack1(line2), "déf")

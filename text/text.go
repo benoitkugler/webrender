@@ -85,7 +85,8 @@ type HyphenDictKey struct {
 func SplitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) Splitted {
-	return splitFirstLine(text_, style_, context, maxWidth, minimum, isLineStart)
+	out := splitFirstLine(text_, style_, context, maxWidth, minimum, isLineStart)
+	return out
 }
 
 func CanBreakText(fc FontConfiguration, t []rune) pr.MaybeBool {

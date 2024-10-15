@@ -29,7 +29,7 @@ import (
 )
 
 // if true, save a structured trace in an external file
-const traceMode = false
+const traceMode = true
 
 var traceLogger tracer.Tracer // used only when traceMode is true
 
@@ -162,11 +162,10 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 			// Update pages
 			pageCounterValues := pageData.InitialPageState.CounterValues
 			pageCounterValues["pages"] = []int{actualTotalPages}
-			remakeState := pageData.RemakeState
-			if remakeState.ContentChanged {
+			if pageData.RemakeState.ContentChanged {
 				reloopContent = true
 			}
-			if remakeState.PagesWanted {
+			if pageData.RemakeState.PagesWanted {
 				reloopPages = initialTotalPages != actualTotalPages
 			}
 		}

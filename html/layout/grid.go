@@ -13,7 +13,7 @@ import (
 
 // Layout for grid containers and grid-items.
 
-func isLength(sizing pr.DimOrS) bool { return sizing.Unit != pr.Fr }
+func isLength(sizing pr.DimOrS) bool { return sizing.Unit != 0 && sizing.Unit != pr.Fr }
 
 func isFr(sizing pr.DimOrS) bool { return sizing.Unit == pr.Fr }
 
@@ -46,15 +46,15 @@ func getTemplateTracks(tracks pr.GridTemplate) []pr.GridSpec {
 	for i, track := range tracks.Names {
 		if i%2 != 0 {
 			// Track size.
-			if track, isRepeat := track.(pr.GridRepeat); isRepeat {
-				repeatNumber, repeatTrackList := track.Repeat, track.Names
+			if trackR, isRepeat := track.(pr.GridRepeat); isRepeat {
+				repeatNumber := trackR.Repeat
 				if repeatNumber == pr.RepeatAutoFill || repeatNumber == pr.RepeatAutoFit {
 					// TODO: Respect auto-fit && auto-fill.
 					logger.WarningLogger.Println(`"auto-fit" and "auto-fill" are unsupported in repeat()`)
 					repeatNumber = 1
 				}
 				for _c := 0; _c < repeatNumber; _c++ {
-					for j, repeatTrack := range repeatTrackList {
+					for j, repeatTrack := range trackR.Names {
 						if j%2 != 0 {
 							// Track size in repeat.
 							tracksList = append(tracksList, repeatTrack)
@@ -83,15 +83,21 @@ func getTemplateTracks(tracks pr.GridTemplate) []pr.GridSpec {
 	return tracksList
 }
 
-func getLine(line pr.GridLine, lines []pr.GridNames, side string) (isSpan bool, _ int, _ string, coord int) {
+type maybeInt struct {
+	valid bool
+	i     int
+}
+
+func getLine(line pr.GridLine, lines []pr.GridNames, side string) (isSpan bool, _ int, _ string, coord maybeInt) {
 	isSpan, number, ident := line.IsSpan(), line.Val, line.Ident
 	if ident != "" && line.IsCustomIdent() {
+		coord.valid = true
 		hasBroken := false
 		var (
 			line pr.GridNames
-			tag  = fmt.Sprintf("{%s}-{%s}", ident, side)
+			tag  = fmt.Sprintf("%s-%s", ident, side)
 		)
-		for coord, line = range lines {
+		for coord.i, line = range lines {
 			if utils.IsIn(line, tag) {
 				hasBroken = true
 				break
@@ -102,8 +108,9 @@ func getLine(line pr.GridLine, lines []pr.GridNames, side string) (isSpan bool, 
 		}
 	}
 	if number != 0 && !isSpan {
+		coord.valid = true
 		if ident == "" {
-			coord = number - 1
+			coord.i = number - 1
 		} else {
 			step := -1
 			if number > 0 {
@@ -111,8 +118,8 @@ func getLine(line pr.GridLine, lines []pr.GridNames, side string) (isSpan bool, 
 			}
 			L := len(lines) / step
 			hasBroken := false
-			for coord := 0; coord < L; coord++ {
-				line := lines[coord*step]
+			for coord.i = 0; coord.i < L; coord.i++ {
+				line := lines[coord.i*step]
 				if utils.IsIn(line, ident) {
 					number -= step
 					hasBroken = true
@@ -124,16 +131,16 @@ func getLine(line pr.GridLine, lines []pr.GridNames, side string) (isSpan bool, 
 				}
 			}
 			if !hasBroken {
-				coord += utils.Abs(number)
+				coord.i += utils.Abs(number)
 			}
 
 			if step == -1 {
-				coord = len(lines) - 1 - coord
+				coord.i = len(lines) - 1 - coord.i
 			}
 		}
 	}
 	if isSpan {
-		coord = 0
+		coord.valid = false
 	}
 	return isSpan, number, ident, coord
 }
@@ -152,7 +159,8 @@ func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
 		}
 	}
 	var (
-		coord, size      int
+		coord            maybeInt
+		size             int
 		isSpan           bool
 		number           int
 		spanIdent, ident string
@@ -169,10 +177,9 @@ func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
 	} else {
 		size = 1
 		spanIdent = ""
-		coord = 0
 	}
 	if end.Tag != pr.Auto {
-		var coordEnd int
+		var coordEnd maybeInt
 		isSpan, number, ident, coordEnd = getLine(end, lines, "end")
 		if isSpan {
 			size = 1
@@ -183,7 +190,7 @@ func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
 			spanIdent = ident
 			if spanIdent != "" {
 				hasBroken := false
-				for index, line := range lines[coord+1:] {
+				for index, line := range lines[coord.i+1:] {
 					size = index + 1
 					if utils.IsIn(line, spanIdent) {
 						spanNumber -= 1
@@ -197,50 +204,51 @@ func getPlacement(start, end pr.GridLine, lines []pr.GridNames) placement {
 					size += spanNumber
 				}
 			}
-		} else if coord != 0 {
-			size = coordEnd - coord
+		} else if coord.valid {
+			size = coordEnd.i - coord.i
 		}
-		if coord == 0 {
+		if !coord.valid {
 			if spanIdent == "" {
-				coord = coordEnd - size
+				coord = maybeInt{valid: true, i: coordEnd.i - size}
 			} else {
 				if number == 0 {
 					number = 1
 				}
-				if coordEnd > 0 {
-					slice := lines[coordEnd-1:]
+				if coordEnd.i > 0 {
+					slice := lines[coordEnd.i-1:]
 					hasBroken := false
-					for coord := range slice {
-						line := slice[len(slice)-1-coord]
+					for coord.i = range slice {
+						line := slice[len(slice)-1-coord.i] // reverse
 						if utils.IsIn(line, spanIdent) {
 							number -= 1
 						}
 						if number == 0 {
-							coord = coordEnd - 1 - coord
+							coord.i = coordEnd.i - 1 - coord.i
 							hasBroken = true
 							break
 						}
 					}
 					if !hasBroken {
-						coord = -number
+						coord.i = -number
 					}
 				} else {
-					coord = -number
+					coord = maybeInt{valid: true, i: -number}
 				}
 			}
-			size = coordEnd - coord
+			size = coordEnd.i - coord.i
 		}
 	} else {
 		size = 1
 	}
+
 	if size < 0 {
 		size = -size
-		coord -= size
+		coord.i -= size
 	}
 	if size == 0 {
 		size = 1
 	}
-	return placement{coord, size}
+	return placement{coord.i, size}
 }
 
 func getSpan(place pr.GridLine) int {
@@ -270,9 +278,9 @@ func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
 			if occupiedColumns[x] {
 				continue
 			}
-			var placement placement
+			var pl placement
 			if columnStart.IsAuto() {
-				placement = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, columns)
+				pl = getPlacement(pr.GridLine{Val: x + 1}, columnEnd, columns)
 			} else {
 				if columnStart.Tag == pr.Span {
 					panic("expected span")
@@ -281,17 +289,17 @@ func getColumnPlacement(rowPlacement [2]int, columnStart, columnEnd pr.GridLine,
 				// contributed by the end grid-placement property.
 				// https://drafts.csswg.org/css-grid/#grid-placement-errors
 				span := getSpan(columnStart)
-				placement = getPlacement(columnStart, pr.GridLine{Val: x + 1 + span}, columns)
+				pl = getPlacement(columnStart, pr.GridLine{Val: x + 1 + span}, columns)
 			}
 			hasIntersection := false
-			for col := placement[0]; col < placement[0]+placement[1]; col++ {
+			for col := pl[0]; col < pl[0]+pl[1]; col++ {
 				if occupiedColumns[col] {
 					hasIntersection = true
 					break
 				}
 			}
 			if !hasIntersection {
-				return placement
+				return pl
 			}
 		}
 	} else {
@@ -374,13 +382,13 @@ func distributeExtraSpace(context *layoutContext, affectedSizes, affectedTracksT
 					containingBlock, true, nil, nil, nil, false, -1)
 				space = item.Box().MarginHeight()
 			}
-			for _, sizes := range tracksSizes[i : i+span] {
+			for _, sizes := range tracksSizes[utils.MinInt(i, len(tracksSizes)):utils.MinInt(i+span, len(tracksSizes))] {
 				space -= sizes[affectedSizes].V()
 			}
 			space = pr.Max(0, space)
 			// 2.2 Distribute space up to limits.
 			var affectedTracksNumbers, unaffectedTracksNumbers []int
-			for j := i; j < i+span; j++ {
+			for j := i; j < i+span && j < len(affectedTracks); j++ {
 				if affectedTracks[j] {
 					affectedTracksNumbers = append(affectedTracksNumbers, j)
 				} else {
@@ -482,6 +490,10 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		tracksSizes[i] = [2]pr.MaybeFloat{baseSize, growthLimit}
 	}
 
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("resolveTracksSizes(1): %v", tracksSizes))
+	}
+
 	// 1.2 Resolve intrinsic track sizes.
 	// 1.2.1 Shim baseline-aligned items.
 	// TODO: Shim items.
@@ -515,7 +527,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				child = bo.Deepcopy(child)
 				child.Box().PositionX = 0
 				child.Box().PositionY = 0
-				parent := bo.BlockContainerT.AnonymousFrom(containingBlock, nil)
+				parent := bo.BlockT.AnonymousFrom(containingBlock, nil)
 				cbW, cbH := containingBlock.Box().ContainingBlock()
 				resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
 				parent.Box().PositionX = child.Box().PositionX
@@ -587,6 +599,10 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 		}
 	}
 
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("resolveTracksSizes(2): %v", tracksSizes))
+	}
+
 	// 1.2.3 Increase sizes to accommodate items spanning content-sized tracks.
 	var spans []int
 	for _, rect := range childrenPositions {
@@ -614,7 +630,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 				continue
 			}
 			hasFr := false
-			for _, functions := range sizingFunctions[i : i+span+1] {
+			for _, functions := range sizingFunctions[utils.MinInt(i, len(sizingFunctions)):utils.MinInt(len(sizingFunctions), i+span+1)] {
 				if isFr(functions[1]) {
 					hasFr = true
 					break
@@ -651,7 +667,7 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 			}
 
 			hasFr := false
-			for _, functions := range sizingFunctions[i : i+span+1] {
+			for _, functions := range sizingFunctions[utils.MinInt(i, len(sizingFunctions)):utils.MinInt(len(sizingFunctions), i+span+1)] {
 				if isFr(functions[1]) {
 					hasFr = true
 					break
@@ -935,14 +951,14 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				names = append(names, row...)
 			}
 			if !utils.IsIn(names, endName) {
-				rows[-2*y-1] = append(rows[-2*y-1].(pr.GridNames), endName)
+				rows[len(rows)-2*y-1] = append(rows[len(rows)-2*y-1].(pr.GridNames), endName)
 			}
 			names = names[:0]
 			for _, column := range extractNames(columns) {
 				names = append(names, column...)
 			}
 			if !utils.IsIn(names, endName) {
-				columns[-2*x-1] = append(columns[-2*x-1].(pr.GridNames), endName)
+				columns[len(columns)-2*x-1] = append(columns[len(columns)-2*x-1].(pr.GridNames), endName)
 			}
 		}
 	}
@@ -959,10 +975,9 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 		columnPlacement := getPlacement(columnStart, columnEnd, extractNames(columns))
 		rowPlacement := getPlacement(rowStart, rowEnd, extractNames(rows))
-
 		if columnPlacement.isNotNone() && rowPlacement.isNotNone() {
-			x, width := columnPlacement[0], columnPlacement[1]
-			y, height := rowPlacement[0], rowPlacement[1]
+			x, width := columnPlacement.unpack()
+			y, height := rowPlacement.unpack()
 			childrenPositions[child] = rect{x, y, width, height}
 		}
 	}
@@ -1170,15 +1185,14 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				rowStart := child.Box().Style.GetGridRowStart()
 				rowEnd := child.Box().Style.GetGridRowEnd()
 				var y, height int
-				for {
+				for ; ; cursorY++ {
 					if rowStart.IsAuto() {
 						y, height = getPlacement(pr.GridLine{Val: cursorY + 1}, rowEnd, extractNames(rows)).unpack()
 					} else {
 						// assert rowStart[0] == "span"
 						// assert rowStart.IsAuto() || rowStart[0] == "span"
 						span := getSpan(rowStart)
-						y, height = getPlacement(rowStart, pr.GridLine{Val: cursorY + 1 + span},
-							extractNames(rows)).unpack()
+						y, height = getPlacement(rowStart, pr.GridLine{Val: cursorY + 1 + span}, extractNames(rows)).unpack()
 					}
 					if y < cursorY {
 						continue
@@ -1262,6 +1276,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				}
 			}
 		}
+	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("gridLayout: childrenPositions=%v", childrenPositions))
 	}
 
 	for c := 0; c < -implicitX1; c++ {
@@ -1421,7 +1439,7 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		resumeAt            tree.ResumeStack
 	)
 	if skipStack != nil {
-		skipRow, _ := skipStack.Unpack()
+		skipRow, _ = skipStack.Unpack()
 		skipHeight = (sum0(rowsSizes[:skipRow]) + pr.Float(len(rowsSizes[:skipRow])-1)*rowGap)
 	}
 	hasBroken := false
@@ -1453,7 +1471,11 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 	}
 	if box.Height == pr.AutoF {
-		box.Height = sum0(rowsSizes[skipRow:resumeRow]) + pr.Float(len(rowsSizes[skipRow:resumeRow])-1)*rowGap
+		slice := resumeRow
+		if resumeRow == -1 {
+			slice = len(rowsSizes)
+		}
+		box.Height = sum0(rowsSizes[skipRow:slice]) + pr.Float(len(rowsSizes[skipRow:slice])-1)*rowGap
 	}
 	// Lay out grid items.
 	justifyItems := box.Style.GetJustifyItems()
@@ -1473,10 +1495,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		childB := child.Box()
 		childB.PositionX = columnsPositions[x]
 		childB.PositionY = rowsPositions[y] - skipHeight
-		cbH, cbW := box.ContainingBlock()
-		resolvePercentages(child, bo.MaybePoint{cbH, cbW}, 0)
+		cbW, cbH := box.ContainingBlock()
+		resolvePercentages(child, bo.MaybePoint{cbW, cbH}, 0)
 		widthF := (sum0(columnsSizes[x:x+width]) + pr.Float(width-1)*columnGap)
-		heightF := (sum0(rowsSizes[y:y+height]) + pr.Float(height-1)*rowGap)
+		heightF := (sum0(rowsSizes[y:utils.MinInt(y+height, len(rowsSizes))]) + pr.Float(height-1)*rowGap)
 		childWidth := widthF - (childB.MarginLeft.V() + childB.BorderLeftWidth + childB.PaddingLeft.V() +
 			childB.MarginRight.V() + childB.BorderRightWidth + childB.PaddingRight.V())
 		childHeight := heightF - (childB.MarginTop.V() + childB.BorderTopWidth + childB.PaddingTop.V() +
@@ -1502,14 +1524,14 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		// TODO: Find a better solution for the layout.
-		parent := bo.BlockContainerT.AnonymousFrom(box_, nil)
+		parent := bo.BlockT.AnonymousFrom(box_, nil)
 		cbW, cbH = containingBlock.ContainingBlock()
 		resolvePercentages(parent, bo.MaybePoint{cbW, cbH}, 0)
 		parent.Box().PositionX = childB.PositionX
 		parent.Box().PositionY = childB.PositionY
 		parent.Box().Width = widthF
 		parent.Box().Height = heightF
-		newChild, _, _ := blockLevelLayout(context, child.(bo.BlockBoxITF), bottomSpace, childSkipStack, parent.Box(),
+		newChild, _, _ := blockLevelLayout(context, child.(bo.BlockLevelBoxITF), bottomSpace, childSkipStack, parent.Box(),
 			pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
 		if newChild != nil {
 			pageIsEmpty = false
@@ -1562,6 +1584,10 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	context.finishBlockFormattingContext(box_)
+
+	if traceMode {
+		traceLogger.DumpTree(box_, "after gridLayout")
+	}
 
 	return box_, blockLayout{resumeAt, nil, tree.PageBreak{Break: "any"}, false}
 }

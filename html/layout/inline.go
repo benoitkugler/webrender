@@ -419,18 +419,19 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 				// otherwise it is similar to a floated element."
 				if firstLetterStyle.GetFloat() == "none" {
 					letterBox := bo.NewInlineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
-					textBox_ := bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
-					letterBox.Children = []Box{&textBox_}
+					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
+					letterBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				} else {
 					letterBox := bo.NewBlockBox(firstLetterStyle, textBox.Element, "first-letter", nil)
 					letterBox.FirstLetterStyle = nil
 					lineBox := bo.NewLineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
 					letterBox.Children = []Box{&lineBox}
-					textBox_ := bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
-					lineBox.Children = []Box{&textBox_}
+					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
+					lineBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				}
+				bo.ProcessTextTransform(textBox)
 				if skipStack != nil && childSkipStack != nil {
 					index, _ := skipStack.Unpack()
 					childIndex, grandChildSkipStack := childSkipStack.Unpack()
@@ -658,6 +659,16 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 		resolveMarginAuto(box)
 		var v blockLayout
 		newBox, v = flexLayout(context, box_, -pr.Inf, skipStack, containingBlock.Box(), false, absoluteBoxes, fixedBoxes)
+		resumeAt = v.resumeAt
+		preservedLineBreak = false
+		firstLetter = '\u2e80'
+		lastLetter = '\u2e80'
+	} else if bo.InlineGridT.IsInstance(box_) {
+		box.PositionX = positionX
+		box.PositionY = 0
+		resolveMarginAuto(box)
+		var v blockLayout
+		newBox, v = gridLayout(context, box_, -pr.Inf, skipStack, containingBlock.Box(), false, absoluteBoxes, fixedBoxes)
 		resumeAt = v.resumeAt
 		preservedLineBreak = false
 		firstLetter = '\u2e80'
@@ -1057,6 +1068,7 @@ func inlineOutOfFlowLayout(context *layoutContext, box Box, containingBlock Box,
 ) {
 	if traceMode {
 		traceLogger.DumpTree(box, "inlineOutOfFlowLayout")
+		traceLogger.Dump(fmt.Sprintf("is absolute: %v", child_.Box().IsAbsolutelyPositioned()))
 	}
 
 	child := child_.Box()
@@ -1333,7 +1345,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 
 		// the child’s `top` is `child.Baseline` above (lower y) its baseline.
 		top := childBaselineY - child.Baseline.V()
-		if bo.InlineBlockT.IsInstance(child_) || bo.InlineFlexT.IsInstance(child_) {
+		if bo.InlineBlockT.IsInstance(child_) || bo.InlineFlexT.IsInstance(child_) || bo.InlineGridT.IsInstance(child_) {
 			// This also includes table wrappers for inline tables.
 			child_.Translate(child_, 0, top-child.PositionY, false)
 		} else {
