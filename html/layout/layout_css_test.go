@@ -184,7 +184,9 @@ func TestMediaQueries(t *testing.T) {
 		page := pages[0]
 		html := unpack1(page)
 		tu.AssertEqual(t, html.Box().Width, data.width)
-		logs.AssertNoLogs(t)
+		if !data.warning {
+			logs.AssertNoLogs(t)
+		}
 	}
 }
 

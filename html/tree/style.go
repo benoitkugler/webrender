@@ -89,7 +89,8 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 		for _, sh := range sheets {
 			// sheet, origin, sheetSpecificity
 			// Add declarations for matched elements
-			matchedSelectors := sh.sheet.matcher.Match(element.AsHtmlNode())
+			matchedSelectors := sh.sheet.matcher.match(element.AsHtmlNode())
+
 			for _, sel := range matchedSelectors {
 				// specificity, order, pseudoType, declarations = selector
 				specificity := sel.specificity

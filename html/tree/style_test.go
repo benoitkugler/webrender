@@ -11,6 +11,7 @@ import (
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"golang.org/x/net/html/atom"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/selector"
@@ -595,4 +596,25 @@ func TestCounterStyleInvalid(t *testing.T) {
 			t.Fatal("expected logs")
 		}
 	}
+}
+
+func TestNestingCSS(t *testing.T) {
+	const input = `<style>
+		div { p { width: 10px } }
+	</style>
+	<div><p id="inner"></p></div><p id="outer"></p>`
+
+	html, err := newHtml(utils.InputString(input))
+	tu.AssertNoErr(t, err)
+	styleFor := GetAllComputedStyles(html, nil, false, nil, nil, nil, nil, false, nil)
+	iter := html.Root.Iter(atom.P)
+	_, p1 := iter.HasNext(), iter.Next()
+	_, p2 := iter.HasNext(), iter.Next()
+	tu.AssertEqual(t, p1.Get("id"), "inner")
+	tu.AssertEqual(t, p2.Get("id"), "outer")
+	s1 := styleFor.Get(p1, "") // outside
+	s2 := styleFor.Get(p2, "")
+
+	tu.AssertEqual(t, s1.GetWidth(), pr.FToPx(10))
+	tu.AssertEqual(t, s2.GetWidth(), pr.SToV("auto"))
 }

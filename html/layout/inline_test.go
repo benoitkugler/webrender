@@ -361,8 +361,8 @@ func TestBreakingLineboxRegression8(t *testing.T) {
 	body := unpack1(html)
 	p := unpack1(body)
 	line1, line2 := unpack2(p)
-	assertText(t, unpack1(line1), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbb")
-	assertText(t, unpack1(unpack1(line2)), "cccc")
+	assertText(t, unpack1(unpack1(line1)), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbb")
+	assertText(t, unpack1(unpack1(unpack1(line2))), "cccc")
 	assertText(t, line2.Box().Children[1], "ddd")
 }
 

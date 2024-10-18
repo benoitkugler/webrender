@@ -215,7 +215,7 @@ type matchResult struct {
 	specificity selector.Specificity
 }
 
-func (m matcher) Match(element *html.Node) (out []matchResult) {
+func (m matcher) match(element *html.Node) (out []matchResult) {
 	for _, mat := range m {
 		for _, sel := range mat.selector {
 			if sel.Match(element) {
