@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
 )
 
@@ -9,9 +10,19 @@ import (
 type TextDrawing struct {
 	Runs []TextRun
 
-	FontSize Fl
-	X, Y     Fl // origin of the text
-	Angle    Fl // optional rotation angle for the text, in radians
+	FontSize, ScaleX Fl
+	X, Y             Fl // origin
+	Angle            Fl // (optional) rotation
+}
+
+// Matrix return the transformation scaling the text by [FontSize],
+// translating if to (X, Y)  and applying the [Angle] rotation
+func (td TextDrawing) Matrix() matrix.Transform {
+	mat := matrix.New(td.FontSize*td.ScaleX, 0, 0, -td.FontSize, td.X, td.Y)
+	if td.Angle != 0 { // avoid useless multiplication if angle == 0
+		mat.RightMultBy(matrix.Rotation(td.Angle))
+	}
+	return mat
 }
 
 // TextRun is a serie of glyphs with constant font.

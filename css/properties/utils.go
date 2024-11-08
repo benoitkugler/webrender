@@ -179,6 +179,14 @@ func (c ContentProperty) AsQuote() Quote {
 
 // ------------------------- Usefull for test ---------------------------
 
+func (bs Values) Repeat(n int) Values {
+	var out Values
+	for i := 0; i < n; i++ {
+		out = append(out, bs...)
+	}
+	return out
+}
+
 func (bs Images) Repeat(n int) CssProperty {
 	var out Images
 	for i := 0; i < n; i++ {

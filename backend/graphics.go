@@ -238,7 +238,10 @@ type GraphicState interface {
 // or as intermediate container (see for instance DrawWithOpacity or SetAlphaMask)
 type Canvas interface {
 	// Returns the current canvas rectangle
-	GetRectangle() (left, top, right, bottom Fl)
+	GetBoundingBox() (left, top, right, bottom Fl)
+
+	// Updates the current canvas rectangle
+	SetBoundingBox(left, top, right, bottom Fl)
 
 	// OnNewStack save the current graphic state,
 	// execute the given closure, and restore the state.

@@ -133,7 +133,7 @@ var langQuotes = map[string][2]pr.Strings{
 }
 
 func GetLangQuotes(lang string) (open, close pr.Strings) {
-	// TODO: use lang package
+	// TODO: maybe use lang package
 	if quotes, ok := langQuotes[lang]; ok {
 		return quotes[0], quotes[1]
 	}

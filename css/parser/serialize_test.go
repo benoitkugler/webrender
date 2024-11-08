@@ -14,7 +14,7 @@ func (c Color) dump() interface{} {
 	case ColorCurrentColor:
 		return "currentColor"
 	default:
-		return []utils.Fl{utils.Round(c.RGBA.R), utils.Round(c.RGBA.G), utils.Round(c.RGBA.B), utils.Round(c.RGBA.A)}
+		return []utils.Fl{utils.Round6(c.RGBA.R), utils.Round6(c.RGBA.G), utils.Round6(c.RGBA.B), utils.Round6(c.RGBA.A)}
 	}
 }
 

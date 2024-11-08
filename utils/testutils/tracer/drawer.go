@@ -98,9 +98,13 @@ func (dr Drawer) AddFileAnnotation(x, y, w, h fl, id string) {
 	fmt.Fprintln(dr.out, "AddFileAnnotation :")
 }
 
-func (dr Drawer) GetRectangle() (left, top, right, bottom fl) {
-	fmt.Fprintln(dr.out, "GetRectangle :")
+func (dr Drawer) GetBoundingBox() (left, top, right, bottom fl) {
+	fmt.Fprintln(dr.out, "GetBoundingBox :")
 	return 0, 0, 10, 10
+}
+
+func (dr Drawer) SetBoundingBox(left, top, right, bottom fl) {
+	fmt.Fprintln(dr.out, "SetBoundingBox :")
 }
 
 func (dr Drawer) SetMediaBox(left, top, right, bottom fl) {

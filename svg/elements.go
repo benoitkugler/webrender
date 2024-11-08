@@ -120,8 +120,8 @@ func (r rect) draw(dst backend.Canvas, attrs *attributes, _ *SVGImage, dims draw
 
 	// Inspired by Cairo Cookbook
 	// http://cairographics.org/cookbook/roundedrectangles/
-	const ARC_TO_BEZIER = 4 * (math.Sqrt2 - 1) / 3
-	c1, c2 := ARC_TO_BEZIER*rx, ARC_TO_BEZIER*ry
+	const arcToBezier = 4 * (math.Sqrt2 - 1) / 3
+	c1, c2 := arcToBezier*rx, arcToBezier*ry
 
 	dst.MoveTo(x+rx, y)
 	dst.LineTo(x+width-rx, y)

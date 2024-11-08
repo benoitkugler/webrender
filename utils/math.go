@@ -62,9 +62,11 @@ func modLikePython(d, m int) int {
 	return res
 }
 
-func Floor(x Fl) Fl {
-	return Fl(math.Floor(float64(x)))
-}
+func Round(x Fl) Fl { return Fl(math.Round(float64(x))) }
+
+func Floor(x Fl) Fl { return Fl(math.Floor(float64(x))) }
+
+func Ceil(x Fl) Fl { return Fl(math.Ceil(float64(x))) }
 
 // FloatModulo implements Python modulo for float numbers, like
 //
@@ -81,15 +83,11 @@ func RoundPrec(f Fl, n int) Fl {
 	return Fl(math.Round(float64(f)*n10) / n10)
 }
 
-// Round rounds f with 6 digits precision
-func Round(f Fl) Fl {
-	return RoundPrec(f, 6)
-}
+// Round6 rounds f with 6 digits precision
+func Round6(f Fl) Fl { return RoundPrec(f, 6) }
 
 // Hypot returns SQRT(a^2 + b^2)
-func Hypot(a, b Fl) Fl {
-	return Fl(math.Hypot(float64(a), float64(b)))
-}
+func Hypot(a, b Fl) Fl { return Fl(math.Hypot(float64(a), float64(b))) }
 
 func Abs(v int) int {
 	if v < 0 {

@@ -16,10 +16,10 @@ type Context struct {
 
 // CreateFirstLine create the text for the first line of [layout], starting at position `(x,y)`.
 // It also register the fonts used with [backend.Canvas.AddFont].
-func (ctx Context) CreateFirstLine(layout text.EngineLayout, textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
+func (ctx Context) CreateFirstLine(layout text.EngineLayout, textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
 	if layout, ok := layout.(*text.TextLayoutPango); ok {
-		return ctx.createFirstLinePango(layout, textOverflow, blockEllipsis, x, y, angle)
+		return ctx.createFirstLinePango(layout, textOverflow, blockEllipsis, scaleX, x, y, angle)
 	}
 	return backend.TextDrawing{}
 }

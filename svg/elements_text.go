@@ -11,22 +11,23 @@ import (
 )
 
 // text tags
-type span struct {
+type textSpan struct {
 	style  pr.Properties
 	text   string
 	rotate []Fl // angles in degrees
 
 	x, y, dx, dy []Value
 
-	letterSpacing Value
+	letterSpacing, textLength Value
+	lengthAdjust              bool // true for spacingAndGlyphs
 
 	textAnchor, displayAnchor anchor
 
 	baseline baseline
 }
 
-func newText(node *cascadedNode, tree *svgContext) (drawable, error) {
-	var out span
+func newTextSpan(node *cascadedNode, tree *svgContext) (drawable, error) {
+	var out textSpan
 
 	out.text = string(node.text)
 	out.style = pr.InitialValues.Copy()
@@ -74,6 +75,10 @@ func newText(node *cascadedNode, tree *svgContext) (drawable, error) {
 	if err != nil {
 		return nil, err
 	}
+	out.textLength, err = parseValue(node.attrs["textLength"])
+	if err != nil {
+		return nil, err
+	}
 
 	out.textAnchor = parseAnchor(node.attrs["text-anchor"])
 	out.displayAnchor = parseAnchor(node.attrs["display-anchor"])
@@ -84,78 +89,64 @@ func newText(node *cascadedNode, tree *svgContext) (drawable, error) {
 	}
 	out.baseline = parseBaseline(baseline)
 
+	out.lengthAdjust = node.attrs["lengthAdjust"] == "spacingAndGlyphs"
+
 	return out, nil
 }
 
-func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
+func (t textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
 	t.style.SetFontSize(pr.FToV(dims.fontSize))
 
 	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, false, true)
+	width, height := Fl(splitted.Width), Fl(splitted.Height)
 
-	var x, y, dx, dy []Fl
+	// Get rotations and translations
+	var xs, ys, dxs, dys []Fl
 	for _, v := range t.x {
-		x = append(x, v.Resolve(dims.fontSize, dims.innerWidth))
+		xs = append(xs, v.Resolve(dims.fontSize, dims.innerWidth))
 	}
 	for _, v := range t.y {
-		y = append(y, v.Resolve(dims.fontSize, dims.innerHeight))
+		ys = append(ys, v.Resolve(dims.fontSize, dims.innerHeight))
 	}
 	for _, v := range t.dx {
-		dx = append(dx, v.Resolve(dims.fontSize, dims.innerWidth))
+		dxs = append(dxs, v.Resolve(dims.fontSize, dims.innerWidth))
 	}
 	for _, v := range t.dy {
-		dy = append(dy, v.Resolve(dims.fontSize, dims.innerHeight))
+		dys = append(dys, v.Resolve(dims.fontSize, dims.innerHeight))
 	}
 
-	// return early when there’s no text,
-	// update the cursor position though
-	if t.text == "" {
-		x0 := svg.cursorPosition.x
-		if len(x) != 0 {
-			x0 = x[0]
-		}
-		y0 := svg.cursorPosition.y
-		if len(y) != 0 {
-			y0 = y[0]
-		}
-		var dx0, dy0 Fl
-		if len(dx) != 0 {
-			dx0 = dx[0]
-		}
-		if len(dy) != 0 {
-			dy0 = dy[0]
-		}
-		svg.cursorPosition = point{x0 + dx0, y0 + dy0}
-		return nil
-	}
+	var yAlign Fl
 
-	var xAlign, yAlign, xBearing, yBearing Fl
-
-	// align text box horizontally
 	letterSpacing := dims.length(t.letterSpacing)
-	ascentL, descentL := dims.fontSize*.8, dims.fontSize*.2
-
-	width, height := Fl(splitted.Width), Fl(splitted.Height)
-	switch t.textAnchor {
-	case middle:
-		xAlign = -(width/2. + xBearing)
-		if letterSpacing != 0 && t.text != "" {
-			xAlign -= Fl(len(splitted.Layout.Text())-1) * letterSpacing / 2
+	textLength := dims.length(t.textLength)
+	scaleX := Fl(1.)
+	if textLength != 0 && t.text == "" {
+		// calculate the number of spaces to be considered for the text
+		spacesCount := Fl(len(t.text) - 1)
+		if t.lengthAdjust {
+			// scale letterSpacing up/down to textLength
+			widthWithSpacing := width + spacesCount*letterSpacing
+			letterSpacing *= textLength / widthWithSpacing
+			// calculate the glyphs scaling factor by:
+			// - deducting the scaled letterSpacing from textLength
+			// - dividing the calculated value by the original width
+			spacelessTextLength := textLength - spacesCount*letterSpacing
+			scaleX = spacelessTextLength / width
+		} else if spacesCount != 0 {
+			// adjust letter spacing to fit textLength
+			letterSpacing = (textLength - width) / spacesCount
 		}
-	case end:
-		xAlign = -(width + xBearing)
-		if letterSpacing != 0 && t.text != "" {
-			xAlign -= Fl(len(splitted.Layout.Text())-1) * letterSpacing
-		}
-
+		width = textLength
 	}
+	ascentL, descentL := dims.fontSize*.8, dims.fontSize*.2
 
 	// align text box vertically
 	if t.displayAnchor == middle {
-		yAlign = -height/2 - yBearing
+		yAlign = -height / 2
 	} else if t.displayAnchor == top {
-		yAlign = -yBearing
+		// pass
 	} else if t.displayAnchor == bottom {
-		yAlign = -height - yBearing
+		yAlign = -height
 	} else if t.baseline == central {
 		yAlign = (ascentL+descentL)/2 - descentL
 	} else if t.baseline == ascent {
@@ -164,6 +155,29 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 		yAlign = -descentL
 	}
 
+	// return early when there’s no text,
+	// update the cursor position though
+	if t.text == "" {
+		x0 := svg.cursorPosition.x
+		if len(xs) != 0 {
+			x0 = xs[0]
+		}
+		y0 := svg.cursorPosition.y
+		if len(ys) != 0 {
+			y0 = ys[0]
+		}
+		var dx0, dy0 Fl
+		if len(dxs) != 0 {
+			dx0 = dxs[0]
+		}
+		if len(dys) != 0 {
+			dy0 = dys[0]
+		}
+		svg.cursorPosition = point{x0 + dx0, y0 + dy0}
+		return nil
+	}
+
+	// Draw letters
 	chars := []rune(t.text)
 	var (
 		bbox   Rectangle
@@ -171,7 +185,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 		drawer = drawText.Context{Output: dst, Fonts: svg.textContext.Fonts()}
 	)
 	for i, r := range chars {
-		hasX, hasY := i < len(x), i < len(y)
+		hasX, hasY := i < len(xs), i < len(ys)
 
 		var angle Fl // en radians
 		if i < len(t.rotate) {
@@ -180,50 +194,48 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 			angle = t.rotate[L-1] * math.Pi / 180
 		}
 
-		if hasX && x[i] != 0 { // x specified
+		if hasX && xs[i] != 0 { // x specified
 			svg.cursorDPosition.x = 0
 		}
-		if hasY && y[i] != 0 { // y specified
+		if hasY && ys[i] != 0 { // y specified
 			svg.cursorDPosition.y = 0
 		}
-		if i < len(dx) {
-			svg.cursorDPosition.x += dx[i]
+		if i < len(dxs) {
+			svg.cursorDPosition.x += dxs[i]
 		}
-		if i < len(dy) {
-			svg.cursorDPosition.y += dy[i]
+		if i < len(dys) {
+			svg.cursorDPosition.y += dys[i]
 		}
 
 		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, false, true)
 		layout := splitted.Layout
 		width, height = Fl(splitted.Width), Fl(splitted.Height)
 
-		letterX, letterY := svg.cursorPosition.x, svg.cursorPosition.y
+		x, y := svg.cursorPosition.x, svg.cursorPosition.y
 		if hasX {
-			letterX = x[i]
+			x = xs[i]
 		}
 		if hasY {
-			letterY = y[i]
+			y = ys[i]
 		}
 
+		width *= scaleX
 		if i != 0 {
-			letterX += letterSpacing
+			x += letterSpacing
 		}
+		svg.cursorPosition = point{x + width, y}
 
-		xPosition := letterX + svg.cursorDPosition.x + xAlign
-		yPosition := letterY + svg.cursorDPosition.y + yAlign
+		xPosition := x + svg.cursorDPosition.x
+		yPosition := y + svg.cursorDPosition.y + yAlign
 
-		cursorPosition := point{letterX + width, letterY}
-
-		bb := Rectangle{
-			cursorPosition.x + xAlign + svg.cursorDPosition.x,
-			cursorPosition.y + yAlign + svg.cursorDPosition.y,
-			width,
-			height,
+		pointsBb := Rectangle{
+			xPosition, yPosition,
+			width, -height,
 		}
 		if i == 0 {
-			bbox = bb
+			bbox = pointsBb
 		} else {
-			bbox.union(bb)
+			bbox.union(pointsBb)
 		}
 
 		layout.ApplyJustification()
@@ -231,9 +243,7 @@ func (t span) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims dr
 		doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
 		dst.State().SetTextPaint(newPaintOp(doFill, doStroke, false))
 		texts = append(texts,
-			drawer.CreateFirstLine(layout, "none", pr.TaggedString{Tag: pr.None}, xPosition, yPosition, angle))
-
-		svg.cursorPosition = cursorPosition
+			drawer.CreateFirstLine(layout, "none", pr.TaggedString{Tag: pr.None}, scaleX, xPosition, yPosition, angle))
 	}
 
 	dst.OnNewStack(func() {

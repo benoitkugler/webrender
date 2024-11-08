@@ -225,6 +225,8 @@ type BoxFields struct {
 	Background *Background
 
 	RemoveDecorationSides [4]bool
+
+	BorderImage images.Image
 }
 
 func newBoxFields(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) BoxFields {

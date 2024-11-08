@@ -88,7 +88,7 @@ type declaration struct {
 
 // Parse declarations in a given rule content.
 func parseDeclarations(input []pa.Token) (normalDeclarations, importantDeclarations []declaration) {
-	for _, decl := range pa.ParseDeclarationList(input, false, false) {
+	for _, decl := range pa.ParseBlocksContents(input, false) {
 		if decl, ok := decl.(pa.Declaration); ok {
 			if strings.HasPrefix(string(decl.Name), "-") {
 				continue

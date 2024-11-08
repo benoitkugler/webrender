@@ -206,7 +206,7 @@ func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 
 	// Round dx and dy to avoid floating points errors caused by
 	// trigonometry and angle units conversions
-	dx, dy = utils.Round(dx), utils.Round(dy)
+	dx, dy = utils.Round6(dx), utils.Round6(dy)
 
 	// Distance between center && ending point,
 	// ie. half of between the starting point && ending point :

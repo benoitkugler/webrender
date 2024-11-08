@@ -17,9 +17,13 @@ var _ backend.Canvas = outputPage{}
 
 type outputPage struct{}
 
-func (outputPage) GetRectangle() (left, top, right, bottom fl) {
-	outputLog.Println("GetRectangle")
+func (outputPage) GetBoundingBox() (left, top, right, bottom fl) {
+	outputLog.Println("GetBoundingBox")
 	return 0, 0, 10, 10
+}
+
+func (outputPage) SetBoundingBox(left, top, right, bottom fl) {
+	outputLog.Println("SetBoundingBox")
 }
 
 func (outputPage) OnNewStack(f func()) {

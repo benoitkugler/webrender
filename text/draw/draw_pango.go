@@ -51,7 +51,7 @@ func (f *pangoFont) Description() backend.FontDescription {
 }
 
 func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
-	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
+	textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
 	style := layout.Style
 	pl := &layout.Layout
@@ -104,6 +104,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 	fontSize := style.FontSize
 
 	output.FontSize = fontSize
+	output.ScaleX = scaleX
 	output.X, output.Y = x, y
 	output.Angle = angle
 

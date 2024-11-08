@@ -103,24 +103,40 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			applyFilters(dst, filters, node, dims)
 		}
 
+		// apply transform attribute
+		applyTransform(dst, node.attributes.transforms, dims)
+
 		// create sub group for opacity
 		opacity := node.attributes.opacity
-		var originalDst backend.Canvas
+		var originalDst1, originalDst2 backend.Canvas
 		if paint && 0 <= opacity && opacity < 1 {
-			originalDst = dst
 			var x, y, width, height Fl = 0, 0, dims.innerWidth, dims.innerHeight
 			if box, ok := node.resolveBoundingBox(dims, true); ok {
 				x, y, width, height = box.X, box.Y, box.Width, box.Height
 			}
+			originalDst1 = dst
 			dst = dst.NewGroup(x, y, width, height)
 		}
-
-		// apply transform attribute
-		applyTransform(dst, node.attributes.transforms, dims)
 
 		// clip
 		if cp, has := svg.definitions.clipPaths[node.clipPathID]; has {
 			svg.applyClipPath(dst, cp, node, dims)
+		}
+
+		// Handle text anchor
+		text, isText := node.graphicContent.(textSpan)
+		var textAnchor anchor
+		if isText {
+			textAnchor = text.textAnchor
+			if len(node.children) != 0 && text.text == "" {
+				child, _ := node.children[0].graphicContent.(textSpan)
+				textAnchor = child.textAnchor
+			}
+
+			if textAnchor == middle || textAnchor == end {
+				originalDst2 = dst
+				dst = dst.NewGroup(0, 0, 0, 0) // BBox set after drawing
+			}
 		}
 
 		// manage display and visibility
@@ -144,6 +160,27 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			svg.drawMarkers(dst, vertices, node, dims, paint)
 		}
 
+		// Handle text anchor
+		if isText && (textAnchor == middle || textAnchor == end) {
+			// pop stream
+			group := dst
+			dst = originalDst2
+
+			dst.OnNewStack(func() {
+				if bbox := node.textBoundingBox; bbox != (Rectangle{}) {
+					x, y, width, height := bbox.X, bbox.Y, bbox.Width, bbox.Height
+					// Add extra space to include ink extents
+					group.SetBoundingBox(x-dims.fontSize, y-dims.fontSize, x+width+dims.fontSize, y+height+dims.fontSize)
+					xAlign := width
+					if textAnchor == middle {
+						xAlign = width / 2
+					}
+					dst.State().Transform(matrix.Translation(-xAlign, 0))
+				}
+				dst.DrawWithOpacity(1, group)
+			})
+		}
+
 		// apply mask
 		if ma, has := svg.definitions.masks[node.maskID]; has {
 			svg.applyMask(dst, ma, node, dims)
@@ -151,7 +188,7 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// do the actual painting :
 		// paint by filling and stroking the given node onto the graphic target
-		if _, isText := node.graphicContent.(span); paint && !isText {
+		if _, isText := node.graphicContent.(textSpan); paint && !isText {
 			dst.Paint(newPaintOp(doFill, doStroke, node.isFillEvenOdd))
 		}
 
@@ -164,8 +201,8 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// apply opacity group and restore original target
 		if paint && 0 <= opacity && opacity < 1 {
-			originalDst.DrawWithOpacity(opacity, dst)
-			dst = originalDst // actually not used
+			originalDst1.DrawWithOpacity(opacity, dst)
+			dst = originalDst1 // actually not used
 		}
 	}
 
@@ -216,8 +253,8 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 			clipBox        Rectangle
 			scaleX, scaleY Fl
 		)
-		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
 		translateX, translateY := dims.point(marker.refX, marker.refY)
+		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
 		if vb := marker.viewbox; vb != nil {
 			scaleX, scaleY, _, _ = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
 
@@ -540,6 +577,8 @@ type attributes struct {
 
 	isFillEvenOdd    bool
 	display, visible bool
+
+	textBoundingBox Rectangle
 }
 
 func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgNode, error) {
@@ -647,7 +686,7 @@ func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNo
 	case "svg":
 		out.graphicContent, err = newSvg(node, tree)
 	case "a", "text", "textPath", "tspan":
-		out.graphicContent, err = newText(node, tree)
+		out.graphicContent, err = newTextSpan(node, tree)
 		isText = true
 	}
 

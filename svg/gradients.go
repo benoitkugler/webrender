@@ -2,7 +2,6 @@ package svg
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/css/parser"
@@ -208,7 +207,7 @@ func (spread GradientSpread) repeatRadial(width, height Fl, points [6]Fl, positi
 		utils.Hypot(-points[0], height-points[1]),
 		utils.Hypot(-points[0], -points[1]),
 	)
-	repeatAfter := int(math.Ceil(float64((maxDistance - points[5]) / gradientLength)))
+	repeatAfter := int(utils.Ceil((maxDistance - points[5]) / gradientLength))
 	if repeatAfter > 0 {
 		// Repeat colors and extrapolate positions
 		repeat := 1 + repeatAfter

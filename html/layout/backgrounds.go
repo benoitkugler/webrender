@@ -45,7 +45,7 @@ func boxRectangle(box bo.BoxFields, whichRectangle string) [4]pr.Float {
 // i is the current iteration index, N the length of the target slice.
 func cycle(i, N int) int { return i % N }
 
-func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.Gifu) images.Image {
+func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.ImageFetcher) images.Image {
 	switch img := image.(type) {
 	case nil, pr.NoneImage:
 		return nil
@@ -61,7 +61,7 @@ func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.
 }
 
 // Fetch and position background images.
-func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, layoutChildren bool, style pr.ElementStyle) {
+func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.ImageFetcher, layoutChildren bool, style pr.ElementStyle) {
 	// Resolve percentages in border-radius properties
 	box := box_.Box()
 	resolveRadiiPercentages(box)
@@ -75,6 +75,10 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 	if style == nil {
 		style = box.Style
 	}
+
+	// This is for the border image, not the background, but this is a
+	// convenient place to get the image.
+	box.BorderImage = resolveImage(style.GetBorderImageSource(), pr.SBoolFloat{}, getImageFromUri)
 
 	var (
 		color     parser.RGBA // transparent
@@ -139,8 +143,10 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 	)
 	box := box_.Box()
 	if box_ == page {
+		// [The page’s] background painting area is the bleed area […]
+		// regardless of background-clip.
+		// https://drafts.csswg.org/css-page-3/#painting
 		paintingArea = [4]pr.Float{0, 0, page.MarginWidth(), page.MarginHeight()}
-		clippedBoxes = []bo.RoundedBox{box.RoundedBorderBox()}
 	} else if bo.TableRowGroupT.IsInstance(box_) {
 		clippedBoxes = nil
 		var totalHeight pr.Float
@@ -226,7 +232,14 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 	var positioningArea [4]pr.Float
 	if attachment == "fixed" {
 		// Initial containing block
-		positioningArea = boxRectangle(page.BoxFields, "content-box")
+		if bo.PageT.IsInstance(box_) {
+			// […] if background-attachment is fixed then the image is
+			// positioned relative to the page box including its margins […].
+			// https://drafts.csswg.org/css-page/#painting
+			positioningArea = [4]pr.Float{0, 0, box.MarginWidth(), box.MarginHeight()}
+		} else {
+			positioningArea = boxRectangle(page.BoxFields, "content-box")
+		}
 	} else {
 		positioningArea = boxRectangle(*box, origin)
 	}
@@ -240,7 +253,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 	} else {
 		sizeWidth, sizeHeight := size.Width, size.Height
 		iwidth, iheight, iratio := image.GetIntrinsicSize(resolution.Value, box.Style.GetFontSize().Value)
-		imageWidth, imageHeight = defaultImageSizing(iwidth, iheight, iratio,
+		imageWidth, imageHeight = DefaultImageSizing(iwidth, iheight, iratio,
 			pr.ResolvePercentage(sizeWidth, positioningWidth), pr.ResolvePercentage(sizeHeight, positioningHeight), positioningWidth, positioningHeight)
 	}
 
@@ -295,7 +308,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 // elememt or a <body> child of the root element.
 //
 // See https://www.w3.org/TR/CSS21/colors.html#background
-func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.Gifu) {
+func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.ImageFetcher) {
 	layoutBoxBackgrounds(page, page, getImageFromUri, true, nil)
 
 	rootBox_ := page.Children[0]
@@ -314,7 +327,7 @@ func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.Gifu) {
 	}
 	chosenBox := chosenBox_.Box()
 	if chosenBox.Background != nil {
-		paintingArea := boxRectangle(page.BoxFields, "padding-box")
+		paintingArea := boxRectangle(page.BoxFields, "border-box")
 		originalBackground := page.Background
 		layoutBoxBackgrounds(page, page, getImageFromUri, false, chosenBox.Style)
 		canvasBg := *page.Background

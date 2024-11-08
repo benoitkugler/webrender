@@ -13,7 +13,7 @@ import (
 
 // Default sizing algorithm for the concrete object size.
 // https://drafts.csswg.org/csswg/css-images-3/#default-sizing
-func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
+func DefaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 	specifiedWidth, specifiedHeight pr.MaybeFloat, defaultWidth, defaultHeight pr.Float,
 ) (concreteWidth, concreteHeight pr.Float) {
 	if specifiedWidth == pr.AutoF {
@@ -45,7 +45,7 @@ func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 		return concreteWidth, specifiedHeight.V()
 	} else {
 		if intrinsicWidth != nil || intrinsicHeight != nil {
-			return defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
+			return DefaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 				intrinsicWidth, intrinsicHeight, defaultWidth, defaultHeight)
 		} else {
 			return containConstraintImageSizing(defaultWidth, defaultHeight, intrinsicRatio)

@@ -82,6 +82,11 @@ type SDimensions struct {
 
 type IntStrings []IntString
 
+type (
+	DimOrS4 [4]DimOrS
+	DimOrS5 [5]DimOrS
+)
+
 type Quotes struct {
 	Open  Strings
 	Close Strings
@@ -183,27 +188,27 @@ type OptionalRanges struct {
 
 // GridDims is a compact form for a grid template
 // dimension. It is either :
-//   - a single value V1
-//   - minmax(V1, V2)
-//   - fit-content(V1)
+//   - a single value V
+//   - minmax(V, V2)
+//   - fit-content(V)
 type GridDims struct {
-	v1, v2 DimOrS
-	tag    byte // '', 'm' for minmax()' or 'f' for fit-content()
+	V, v2 DimOrS
+	tag   byte // 0, 'm' for minmax()' or 'f' for fit-content()
 }
 
 // NewGridDimsValue returns a non tagged value.
-func NewGridDimsValue(v DimOrS) GridDims { return GridDims{v1: v} }
+func NewGridDimsValue(v DimOrS) GridDims { return GridDims{V: v} }
 
 // NewGridDimsMinmax returns minmax(...)
-func NewGridDimsMinmax(v1, v2 DimOrS) GridDims { return GridDims{tag: 'm', v1: v1, v2: v2} }
+func NewGridDimsMinmax(v1, v2 DimOrS) GridDims { return GridDims{tag: 'm', V: v1, v2: v2} }
 
 // NewGridDimsFitcontent returns fit-content(...)
-func NewGridDimsFitcontent(v Dimension) GridDims { return GridDims{tag: 'f', v1: v.ToValue()} }
+func NewGridDimsFitcontent(v Dimension) GridDims { return GridDims{tag: 'f', V: v.ToValue()} }
 
 func (size GridDims) SizingFunctions() [2]DimOrS {
-	minSizing, maxSizing := size.v1, size.v1
+	minSizing, maxSizing := size.V, size.V
 	if size.tag == 'm' {
-		minSizing, maxSizing = size.v1, size.v2
+		minSizing, maxSizing = size.V, size.v2
 	}
 	if size.tag == 'f' {
 		minSizing, maxSizing = SToV("auto"), SToV("auto")
@@ -211,6 +216,14 @@ func (size GridDims) SizingFunctions() [2]DimOrS {
 		minSizing = SToV("auto")
 	}
 	return [2]DimOrS{minSizing, maxSizing}
+}
+
+func (size GridDims) IsMinmax() (min, max DimOrS, ok bool) {
+	return size.V, size.v2, size.tag == 'm'
+}
+
+func (size GridDims) IsFitcontent() (v DimOrS, ok bool) {
+	return size.V, size.tag == 'f'
 }
 
 type GridAuto []GridDims
@@ -283,9 +296,9 @@ type (
 )
 
 func (GridNames) isGridSpec()      {}
-func (GridNameRepeat) isGridSpec() {}
 func (GridDims) isGridSpec()       {}
 func (GridRepeat) isGridSpec()     {}
+func (GridNameRepeat) isGridSpec() {}
 
 const (
 	RepeatAutoFill = -1
@@ -558,7 +571,7 @@ func (v Counters) IsNone() bool {
 }
 
 func (v GridDims) IsNone() bool {
-	return v.tag == 0 && v.v1.IsNone() && v.v2.IsNone()
+	return v.tag == 0 && v.V.IsNone() && v.v2.IsNone()
 }
 
 // method tags
@@ -596,6 +609,8 @@ func (Strings) isCssProperty()           {}
 func (Transforms) isCssProperty()        {}
 func (DimOrS) isCssProperty()            {}
 func (Values) isCssProperty()            {}
+func (DimOrS4) isCssProperty()           {}
+func (DimOrS5) isCssProperty()           {}
 func (AttrData) isCssProperty()          {}
 func (NoneImage) isCssProperty()         {}
 func (UrlImage) isCssProperty()          {}
@@ -639,6 +654,8 @@ func (Strings) isDeclaredValue()           {}
 func (Transforms) isDeclaredValue()        {}
 func (DimOrS) isDeclaredValue()            {}
 func (Values) isDeclaredValue()            {}
+func (DimOrS4) isDeclaredValue()           {}
+func (DimOrS5) isDeclaredValue()           {}
 func (AttrData) isDeclaredValue()          {}
 func (NoneImage) isDeclaredValue()         {}
 func (UrlImage) isDeclaredValue()          {}

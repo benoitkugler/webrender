@@ -107,6 +107,15 @@ type Bleed struct {
 	Top, Bottom, Left, Right fl
 }
 
+func newBleed(page *bo.PageBox) Bleed {
+	return Bleed{
+		Top:    fl(page.Style.GetBleedTop().Value),
+		Bottom: fl(page.Style.GetBleedBottom().Value),
+		Left:   fl(page.Style.GetBleedLeft().Value),
+		Right:  fl(page.Style.GetBleedRight().Value),
+	}
+}
+
 // FIXME: check gofpdf support for SVG
 type svgArgs struct {
 	Width, Height    fl
@@ -202,30 +211,24 @@ func (ctx drawContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float {
 
 // Draw the given PageBox.
 func (ctx drawContext) drawPage(page *bo.PageBox) {
-	bleed := Bleed{
-		Top:    fl(page.Style.GetBleedTop().Value),
-		Bottom: fl(page.Style.GetBleedBottom().Value),
-		Left:   fl(page.Style.GetBleedLeft().Value),
-		Right:  fl(page.Style.GetBleedRight().Value),
-	}
 	marks := page.Style.GetMarks()
 	stackingContext := NewStackingContextFromPage(page)
-	ctx.drawBackground(stackingContext.box.Box().Background, false, bleed, marks)
+	ctx.drawBackground(stackingContext.box.Box().Background, false, newBleed(page), marks)
 	ctx.drawBackground(page.CanvasBackground, false, Bleed{}, pr.Marks{})
 	ctx.drawBorder(page)
 	ctx.drawStackingContext(stackingContext)
 }
 
-func (ctx drawContext) drawBoxBackgroundAndBorder(box Box) error {
-	if box_, ok := box.(bo.TableBoxITF); ok {
-		ctx.drawTable(box_.Table())
-	} else {
-		ctx.drawBackgroundDefaut(box.Box().Background)
-		ctx.drawBorder(box)
-	}
+// func (ctx drawContext) drawBoxBackgroundAndBorder(box Box) error {
+// 	if box_, ok := box.(bo.TableBoxITF); ok {
+// 		ctx.drawTable(box_.Table())
+// 	} else {
+// 		ctx.drawBackgroundDefaut(box.Box().Background)
+// 		ctx.drawBorder(box)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // Draw a “stackingContext“ on “context“.
 func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
@@ -285,9 +288,10 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		// Point 2
 		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
 			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
-			bo.FlexContainerT.IsInstance(box_) {
-			// The canvas background was removed by layoutBackground
-			ctx.drawBoxBackgroundAndBorder(box_)
+			bo.FlexContainerT.IsInstance(box_) || bo.ReplacedT.IsInstance(box_) {
+			// The canvas background was removed by layoutBackgrounds
+			ctx.drawBackgroundDefaut(box_.Box().Background)
+			ctx.drawBorder(box_)
 		}
 
 		ctx.dst.OnNewStack(func() {
@@ -307,7 +311,12 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 			// Point 4
 			for _, block := range stackingContext.blockLevelBoxes {
-				ctx.drawBoxBackgroundAndBorder(block)
+				if box_, ok := block.(bo.TableBoxITF); ok {
+					ctx.drawTable(box_.Table())
+				} else {
+					ctx.drawBackgroundDefaut(block.Box().Background)
+					ctx.drawBorder(block)
+				}
 			}
 
 			// Point 5
@@ -323,7 +332,6 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			// Point 7
 			for _, block := range append([]Box{box_}, stackingContext.blocksAndCells...) {
 				if blockRep, ok := block.(bo.ReplacedBoxITF); ok {
-					ctx.drawBorder(blockRep)
 					ctx.drawReplacedbox(blockRep)
 				} else if children := block.Box().Children; len(children) != 0 {
 					if bo.LineT.IsInstance(children[len(children)-1]) {
@@ -436,20 +444,8 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 			ctx.dst.OnNewStack(func() {
 				ctx.dst.State().SetColorRgba(bg.Color, false)
 				paintingArea := bg.Layers[len(bg.Layers)-1].PaintingArea
-				if !paintingArea.IsNone() {
-					if (bleed != Bleed{}) {
-						// Painting area is the PDF BleedBox
-						ptx, pty, ptw, pth := paintingArea.Unpack()
-						paintingArea = pr.Rectangle{
-							pr.Float(ptx - bleed.Left),
-							pr.Float(pty - bleed.Top),
-							pr.Float(ptw + bleed.Left + bleed.Right),
-							pr.Float(pth + bleed.Top + bleed.Bottom),
-						}
-					}
-					ctx.dst.Rectangle(paintingArea.Unpack())
-					ctx.dst.State().Clip(false)
-				}
+				ctx.dst.Rectangle(paintingArea.Unpack())
+				ctx.dst.State().Clip(false)
 				ctx.dst.Rectangle(paintingArea.Unpack())
 				ctx.dst.Paint(backend.FillNonZero)
 			})
@@ -457,10 +453,6 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 
 		if (bleed != Bleed{}) && !marks.IsNone() {
 			x, y, width, height := bg.Layers[len(bg.Layers)-1].PaintingArea.Unpack()
-			x -= bleed.Left
-			y -= bleed.Top
-			width += bleed.Left + bleed.Right
-			height += bleed.Top + bleed.Bottom
 			svg := headerSVG
 			if marks.Crop {
 				svg += crop
@@ -573,7 +565,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 		mat := matrix.New(1, 0, 0, 1, X, Y) // translate
 		ctx.dst.State().SetColorPattern(patttern, imageWidth, imageHeight, mat, false)
 		if layer.Unbounded {
-			x1, y1, x2, y2 := ctx.dst.GetRectangle()
+			x1, y1, x2, y2 := ctx.dst.GetBoundingBox()
 			ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
 		} else {
 			ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
@@ -649,6 +641,13 @@ func (ctx drawContext) drawBorder(box_ Box) {
 		return
 	}
 
+	// If there's a border image, that takes precedence.
+	if box.BorderImage != nil {
+		ctx.drawBorderImage(box)
+		drawColumnBorder()
+		return
+	}
+
 	widths := pr.Rectangle{box.BorderTopWidth.V(), box.BorderRightWidth.V(), box.BorderBottomWidth.V(), box.BorderLeftWidth.V()}
 
 	// No border, return early.
@@ -697,6 +696,233 @@ func (ctx drawContext) drawBorder(box_ Box) {
 	}
 
 	drawColumnBorder()
+}
+
+// Draw [box] border image on stream
+func (ctx drawContext) drawBorderImage(box *bo.BoxFields) {
+	// See https://drafts.csswg.org/css-backgrounds-3/#border-images
+	image := box.BorderImage
+	width, height, ratio := image.GetIntrinsicSize(
+		box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
+	intrinsicWidth_, intrinsicHeight_ := layout.DefaultImageSizing(width, height, ratio, nil, nil,
+		box.BorderWidth(), box.BorderHeight())
+	intrinsicWidth, intrinsicHeight := fl(intrinsicWidth_), fl(intrinsicHeight_)
+
+	imageSlice := box.Style.GetBorderImageSlice()[:4]
+	shouldFill := box.Style.GetBorderImageSlice()[4]
+
+	computeSliceDimension := func(dimension pr.DimOrS, intrinsic pr.Float) fl {
+		if dimension.Unit == pr.Scalar {
+			return fl(pr.Min(dimension.Value, intrinsic))
+		} else {
+			// assert dimension.unit == "%"
+			return fl(pr.Min(100, dimension.Value) / 100 * intrinsic)
+		}
+	}
+
+	sliceTop := computeSliceDimension(imageSlice[0], intrinsicHeight_)
+	sliceRight := computeSliceDimension(imageSlice[1], intrinsicWidth_)
+	sliceBottom := computeSliceDimension(imageSlice[2], intrinsicHeight_)
+	sliceLeft := computeSliceDimension(imageSlice[3], intrinsicWidth_)
+
+	styleRepeat := box.Style.GetBorderImageRepeat()
+
+	bBox := box.RoundedBorderBox()
+	x, y, w, h := fl(bBox.X), fl(bBox.Y), fl(bBox.Width), fl(bBox.Height)
+	paddingBox := box.RoundedPaddingBox()
+	borderLeft := fl(paddingBox.X) - x
+	borderTop := fl(paddingBox.Y) - y
+	borderRight := w - fl(paddingBox.Width) - borderLeft
+	borderBottom := h - fl(paddingBox.Height) - borderTop
+
+	computeOutsetDimension := func(dimension pr.DimOrS, fromBorder fl) fl {
+		if dimension.Unit == pr.Scalar {
+			return fl(dimension.Value) * fromBorder
+		} else {
+			// assert dimension.unit == "px"
+			return fl(dimension.Value)
+		}
+	}
+
+	outsets := box.Style.GetBorderImageOutset()
+	outsetTop := computeOutsetDimension(outsets[0], borderTop)
+	outsetRight := computeOutsetDimension(outsets[1], borderRight)
+	outsetBottom := computeOutsetDimension(outsets[2], borderBottom)
+	outsetLeft := computeOutsetDimension(outsets[3], borderLeft)
+
+	x -= outsetLeft
+	y -= outsetTop
+	w += outsetLeft + outsetRight
+	h += outsetTop + outsetBottom
+
+	computeWidthAdjustment := func(dimension pr.DimOrS, original, intrinsic, areaDimension fl) fl {
+		if dimension.S == "auto" {
+			return fl(intrinsic)
+		} else if dimension.Unit == pr.Scalar {
+			return fl(dimension.Value) * original
+		} else if dimension.Unit == pr.Perc {
+			return fl(dimension.Value) / 100 * areaDimension
+		} else {
+			// assert dimension.unit == "px"
+			return fl(dimension.Value)
+		}
+	}
+
+	// We make adjustments to the border* variables after handling outsets
+	// because numerical outsets are relative to border-width, not
+	// border-image-width. Also, the border image area that is used
+	// for percentage-based border-image-width values includes any expanded
+	// area due to border-image-outset.
+	widths := box.Style.GetBorderImageWidth()
+	borderTop = computeWidthAdjustment(widths[0], borderTop, sliceTop, h)
+	borderRight = computeWidthAdjustment(widths[1], borderRight, sliceRight, w)
+	borderBottom = computeWidthAdjustment(widths[2], borderBottom, sliceBottom, h)
+	borderLeft = computeWidthAdjustment(widths[3], borderLeft, sliceLeft, w)
+
+	// repeatX="stretch", repeatY="stretch",
+	// scaleX=None, scaleY=None
+	drawBorderImage := func(x, y, width, height, sliceX, sliceY,
+		sliceWidth, sliceHeight fl,
+		repeatX, repeatY string,
+		scaleX, scaleY fl,
+	) (_, _ fl) {
+		var (
+			nRepeatsX, nRepeatsY int
+			extraDx, extraDy     fl
+		)
+		if intrinsicWidth == 0 || width == 0 || sliceWidth == 0 {
+			scaleX = 0
+		} else {
+			extraDx = 0
+			if scaleX == 0 {
+				scaleX = 1
+				if height != 0 && sliceHeight != 0 {
+					scaleX = (height / sliceHeight)
+				}
+			}
+			switch repeatX {
+			case "repeat":
+				nRepeatsX = int(utils.Ceil(width / sliceWidth / scaleX))
+			case "space":
+				nRepeatsX = int(utils.Floor(width / sliceWidth / scaleX))
+				// Space is before the first repeat && after the last,
+				// so there"s one more space than repeat.
+				extraDx = ((width/scaleX - fl(nRepeatsX)*sliceWidth) / (fl(nRepeatsX) + 1))
+			case "round":
+				nRepeatsX = utils.MaxInt(1, int(utils.Round(width/sliceWidth/scaleX)))
+				scaleX = width / (fl(nRepeatsX) * sliceWidth)
+			default:
+				nRepeatsX = 1
+				scaleX = width / sliceWidth
+			}
+		}
+
+		if intrinsicHeight == 0 || height == 0 || sliceHeight == 0 {
+			scaleY = 0
+		} else {
+			extraDy = 0
+			if scaleY == 0 {
+				scaleY = 1
+				if width != 0 && sliceWidth != 0 {
+					scaleY = (width / sliceWidth)
+				}
+			}
+
+			switch repeatY {
+			case "repeat":
+				nRepeatsY = int(utils.Ceil(height / sliceHeight / scaleY))
+			case "space":
+				nRepeatsY = int(utils.Floor(height / sliceHeight / scaleY))
+				// Space is before the first repeat and after the last,
+				// so there"s one more space than repeat.
+				extraDy = ((height/scaleY - fl(nRepeatsY)*sliceHeight) / (fl(nRepeatsY) + 1))
+			case "round":
+				nRepeatsY = utils.MaxInt(1, int(utils.Round(height/sliceHeight/scaleY)))
+				scaleY = height / (fl(nRepeatsY) * sliceHeight)
+			default:
+				nRepeatsY = 1
+				scaleY = height / sliceHeight
+			}
+		}
+
+		if scaleX == 0 || scaleY == 0 {
+			return scaleX, scaleY
+		}
+
+		renderedWidth := intrinsicWidth * scaleX
+		renderedHeight := intrinsicHeight * scaleY
+		offsetX := renderedWidth * sliceX / intrinsicWidth
+		offsetY := renderedHeight * sliceY / intrinsicHeight
+
+		ctx.dst.OnNewStack(func() {
+			ctx.dst.Rectangle(x, y, width, height)
+			ctx.dst.State().Clip(false)
+			ctx.dst.State().Transform(matrix.Translation(x-offsetX+extraDx, y-offsetY+extraDy))
+			ctx.dst.State().Transform(matrix.Scaling(scaleX, scaleY))
+			for i := 0; i < nRepeatsX; i++ {
+				for j := 0; j < nRepeatsY; j++ {
+					ctx.dst.OnNewStack(func() {
+						translateX := fl(i) * (sliceWidth + extraDx)
+						translateY := fl(j) * (sliceHeight + extraDy)
+						ctx.dst.State().Transform(matrix.Translation(translateX, translateY))
+						ctx.dst.Rectangle(offsetX/scaleX, offsetY/scaleY, sliceWidth, sliceHeight)
+						ctx.dst.State().Clip(false)
+						image.Draw(ctx.dst, ctx, intrinsicWidth, intrinsicHeight,
+							string(box.Style.GetImageRendering()))
+					})
+				}
+			}
+		})
+
+		return scaleX, scaleY
+	}
+
+	// Top left.
+	scaleLeft, scaleTop := drawBorderImage(x, y, borderLeft, borderTop, 0, 0, sliceLeft, sliceTop, "", "", 0, 0)
+	// Top right.
+	drawBorderImage(x+w-borderRight, y, borderRight, borderTop, intrinsicWidth-sliceRight, 0, sliceRight, sliceTop, "", "", 0, 0)
+	// Bottom right.
+	scaleRight, scaleBottom := drawBorderImage(x+w-borderRight, y+h-borderBottom, borderRight, borderBottom,
+		intrinsicWidth-sliceRight, intrinsicHeight-sliceBottom, sliceRight, sliceBottom, "", "", 0, 0)
+	// Bottom left.
+	drawBorderImage(x, y+h-borderBottom, borderLeft, borderBottom,
+		0, intrinsicHeight-sliceBottom, sliceLeft, sliceBottom, "", "", 0, 0)
+	if sliceLeft+sliceRight < intrinsicWidth {
+		// Top middle.
+		drawBorderImage(
+			x+borderLeft, y, w-borderLeft-borderRight, borderTop,
+			sliceLeft, 0, intrinsicWidth-sliceLeft-sliceRight,
+			sliceTop, styleRepeat[0], "", 0, 0)
+		// Bottom middle.
+		drawBorderImage(
+			x+borderLeft, y+h-borderBottom,
+			w-borderLeft-borderRight, borderBottom,
+			sliceLeft, intrinsicHeight-sliceBottom,
+			intrinsicWidth-sliceLeft-sliceRight, sliceBottom,
+			styleRepeat[0], "", 0, 0)
+	}
+	if sliceTop+sliceBottom < intrinsicHeight {
+		// Right middle.
+		drawBorderImage(x+w-borderRight, y+borderTop, borderRight, h-borderTop-borderBottom,
+			intrinsicWidth-sliceRight, sliceTop, sliceRight, intrinsicHeight-sliceTop-sliceBottom,
+			"", styleRepeat[1], 0, 0)
+		// Left middle.
+		drawBorderImage(x, y+borderTop, borderLeft, h-borderTop-borderBottom, 0, sliceTop, sliceLeft,
+			intrinsicHeight-sliceTop-sliceBottom,
+			"", styleRepeat[1], 0, 0)
+	}
+	if !shouldFill.IsNone() && sliceLeft+sliceRight < intrinsicWidth && sliceTop+sliceBottom < intrinsicHeight {
+		// Fill middle.
+		if scaleLeft == 0 {
+			scaleLeft = scaleRight
+		}
+		if sliceTop == 0 {
+			sliceTop = scaleBottom
+		}
+		drawBorderImage(x+borderLeft, y+borderTop, w-borderLeft-borderRight, h-borderTop-borderBottom, sliceLeft, sliceTop,
+			intrinsicWidth-sliceLeft-sliceRight, intrinsicHeight-sliceTop-sliceBottom,
+			styleRepeat[0], styleRepeat[1], scaleLeft, scaleTop)
+	}
 }
 
 // Clip one segment of box border (border_widths=nil, radii=nil).
@@ -816,9 +1042,9 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side p
 				// 2x - 1/2 dashes
 				dash = length / (dashLength + utils.FloatModulo(dashLength, 2) - 0.5)
 			}
-			dashes1 := int(math.Ceil(float64((chl1 - dash/2) / dash)))
-			dashes2 := int(math.Ceil(float64((chl2 - dash/2) / dash)))
-			line := int(math.Floor(float64(lineLength / dash)))
+			dashes1 := int(utils.Ceil((chl1 - dash/2) / dash))
+			dashes2 := int(utils.Ceil((chl2 - dash/2) / dash))
+			line := int(utils.Floor(lineLength / dash))
 
 			drawDots := func(dashes, line int, way, x, y, px, py, chl fl) (int, fl) {
 				if dashes == 0 {
@@ -1334,7 +1560,7 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 	}
 
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
-	text := textContext.CreateFirstLine(textbox.TextLayout, textOverflow, blockEllipsis, x, y, 0)
+	text := textContext.CreateFirstLine(textbox.TextLayout, textOverflow, blockEllipsis, 1, x, y, 0)
 	ctx.dst.DrawText([]backend.TextDrawing{text})
 }
 

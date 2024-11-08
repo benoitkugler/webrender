@@ -56,10 +56,10 @@ type Context interface {
 
 type URLResolver struct {
 	Fetch      utils.UrlFetcher
-	FetchImage Gifu
+	FetchImage ImageFetcher
 }
 
-type Gifu = func(url, forcedMimeType string, orientation pr.SBoolFloat) images.Image
+type ImageFetcher = func(url, forcedMimeType string, orientation pr.SBoolFloat) images.Image
 
 type styleForI interface {
 	Get(element tree.Element, pseudoType string) pr.ElementStyle

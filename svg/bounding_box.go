@@ -117,7 +117,7 @@ func (svg) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
 }
 
-func (span) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
+func (textSpan) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
 }
 

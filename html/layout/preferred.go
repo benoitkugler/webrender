@@ -798,7 +798,7 @@ func replacedMinContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		} else {
 			image := box.Replacement
 			iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-			w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
+			w, _ = DefaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
 		}
 	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
@@ -830,7 +830,7 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 
 		image := box.Replacement
 		iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-		w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
+		w, _ = DefaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
 
 	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution

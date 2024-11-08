@@ -197,11 +197,17 @@ func parseValues(dataPoints string) (points []Value, err error) {
 // parses opacity, stroke-opacity, fill-opacity attributes,
 // returning 1 as a default value
 func parseOpacity(op string) (Fl, error) {
+	op = strings.TrimSpace(op)
 	if op == "" {
 		return 1, nil
 	}
+	ratio := 1.
+	if strings.HasSuffix(op, "%") {
+		ratio = 100
+		op = strings.TrimSpace(op[:len(op)-2])
+	}
 	out, err := strconv.ParseFloat(op, 32)
-	return Fl(out), err
+	return Fl(out / ratio), err
 }
 
 // if the URL is invalid, the empty string is returned
