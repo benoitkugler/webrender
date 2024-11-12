@@ -419,9 +419,9 @@ func borderWidth(computer *ComputedStyle, name pr.KnownProp, _value pr.CssProper
 // Compute the “border-image-slice“ property.
 func borderImageSlice(_ *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) pr.CssProperty {
 	var (
-		values          = _value.(pr.Values)
-		computed_values []pr.DimOrS
-		fill            pr.DimOrS
+		values         = _value.(pr.Values)
+		computedValues pr.Values
+		fill           pr.DimOrS
 	)
 	for _, value := range values {
 		if value.S == "fill" {
@@ -430,19 +430,19 @@ func borderImageSlice(_ *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) p
 			if value.Unit != pr.Scalar {
 				value.Unit = pr.Perc
 			}
-			computed_values = append(computed_values, value)
+			computedValues = append(computedValues, value)
 		}
 	}
 
-	switch len(values) {
+	switch len(computedValues) {
 	case 1:
-		values = values.Repeat(4)
+		computedValues = computedValues.Repeat(4)
 	case 2:
-		values = values.Repeat(2)
+		computedValues = computedValues.Repeat(2)
 	case 3:
-		values = append(values, values[1])
+		computedValues = append(computedValues, computedValues[1])
 	}
-	return append(values, fill)
+	return append(computedValues, fill)
 }
 
 // Compute the “border-image-width“ property.
@@ -769,7 +769,7 @@ func fontWeight(computer *ComputedStyle, _ pr.KnownProp, _value pr.CssProperty) 
 
 // Compute track breadth.
 func computeTrackBreadth(computer *ComputedStyle, value pr.DimOrS) pr.DimOrS {
-	if "auto" == value.S || "min-content" == value.S || "max-content" == value.S {
+	if value.S == "auto" || value.S == "min-content" || value.S == "max-content" {
 		return value
 	} else {
 		if value.Unit == pr.Fr {

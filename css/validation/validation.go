@@ -307,9 +307,6 @@ var (
 		"continue",
 		"max-lines",
 	)
-	multiValProperties = pr.NewSetK(
-		pr.PContent,
-	)
 )
 
 func init() {
@@ -376,7 +373,7 @@ func validateNonShorthand(baseUrl string, name string, tokens []pa.Token, requir
 		}, nil
 	}
 
-	prop, _ := pr.PropsFromNames[name]
+	prop := pr.PropsFromNames[name]
 	if !required && !pr.KnownProperties.Has(prop) {
 		return out, errors.New("unknown property")
 	}

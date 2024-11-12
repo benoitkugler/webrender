@@ -253,16 +253,16 @@ func (tk numberVal) Int() int { return int(tk.ValueF) }
 
 const (
 	errBadString     byte = 'b'
-	errBadURL             = 'u'
-	errP                  = ')'
-	errB                  = ']'
-	errC                  = '}'
-	errEofInString        = 's'
-	errEofInUrl           = 'e'
-	errInvalidNumber      = 'n'
-	errEmpty              = 'E'
-	errExtraInput         = 'x'
-	errInvalid            = 'i'
+	errBadURL        byte = 'u'
+	errP             byte = ')'
+	errB             byte = ']'
+	errC             byte = '}'
+	errEofInString   byte = 's'
+	errEofInUrl      byte = 'e'
+	errInvalidNumber byte = 'n'
+	errEmpty         byte = 'E'
+	errExtraInput    byte = 'x'
+	errInvalid       byte = 'i'
 )
 
 // -------------------------- tokenizer --------------------------

@@ -172,7 +172,7 @@ func TestLeaderCrash(t *testing.T) {
 		div::after {
 		color: blue;
 		/* RTL Mark used in second space */
-		content: ' ' leader(dotted) '‏ ' counter(count, lower-roman);
+		content: ' ' leader(dotted) '\u200f ' counter(count, lower-roman);
 		counter-increment: count;
 		}
   	</style>

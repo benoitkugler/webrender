@@ -8,7 +8,6 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
-	"github.com/benoitkugler/webrender/utils/testutils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -300,7 +299,7 @@ func TestLinks(t *testing.T) {
 	) {
 		t.Helper()
 
-		capt := testutils.CaptureLogs()
+		capt := tu.CaptureLogs()
 
 		document := renderHTML(t, html, baseUrl, round)
 		resolvedLinks, resolvedAnchors := document.resolveLinks()

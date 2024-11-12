@@ -20,7 +20,6 @@ import (
 	"unicode"
 
 	"github.com/benoitkugler/webrender/css/counters"
-	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
 
@@ -440,7 +439,7 @@ func (c *ComputedStyle) cascadeValue(key pr.PropKey) (value pr.DeclaredValue, sa
 		}
 		if err != nil {
 			logger.WarningLogger.Printf("Ignored `%s: %s`, %s",
-				key, parser.Serialize(solvedTokens), err)
+				key, pa.Serialize(solvedTokens), err)
 
 			if pr.Inherited.Has(key.KnownProp) {
 				// Values in parent_style are already computed.

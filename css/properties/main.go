@@ -40,13 +40,6 @@ type CssProperty interface {
 	isCssProperty()
 }
 
-type specialProperty interface {
-	isSpecialProperty()
-}
-
-func (v VarData) isSpecialProperty()   {}
-func (v RawTokens) isSpecialProperty() {}
-
 type DefaultValue uint8
 
 const (
