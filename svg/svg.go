@@ -344,7 +344,7 @@ func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Recta
 		if pr.slice {
 			scaleX = utils.MaxF(scaleX, scaleY)
 		} else {
-			scaleX = utils.MaxF(scaleX, scaleY)
+			scaleX = utils.MinF(scaleX, scaleY)
 		}
 		scaleY = scaleX
 	}
