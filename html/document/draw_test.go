@@ -1,6 +1,7 @@
 package document
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -189,12 +190,16 @@ func TestLeaderCrash(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	input := `
-	<style>
-         @page { size: 2px; background: red; bleed: 1px }
+	// baseUrl, _ := utils.PathToURL("../../resources_test/")
+
+	input := fmt.Sprintf(` 
+	 <style>
+        @page { size:  140px 110px }
+        table { width: 100px; height: 70px; margin: 10px; font-family: DejaVuSans;
+                border-collapse: collapse; border: 10px %s blue }
       </style>
-      <body>`
-	doc, err := tree.NewHTML(utils.InputString(input), ".", nil, "")
+      <table><td>abc</td>`, "inset")
+	doc, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

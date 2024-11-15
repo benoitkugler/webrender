@@ -131,6 +131,10 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.ImageFe
 		)
 	}
 
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("background: %v", layers))
+	}
+
 	box.Background = &bo.Background{Color: color, ImageRendering: style.GetImageRendering(), Layers: layers}
 }
 
@@ -146,7 +150,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, ima
 		// [The page’s] background painting area is the bleed area […]
 		// regardless of background-clip.
 		// https://drafts.csswg.org/css-page-3/#painting
-		paintingArea = [4]pr.Float{0, 0, page.MarginWidth(), page.MarginHeight()}
+		paintingArea = page.BleedArea()
 	} else if bo.TableRowGroupT.IsInstance(box_) {
 		clippedBoxes = nil
 		var totalHeight pr.Float

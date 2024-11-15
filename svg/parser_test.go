@@ -203,6 +203,11 @@ func Test_parseTransform(t *testing.T) {
 			false,
 		},
 		{
+			`scale(0.5)`,
+			[]transform{{scale, [6]Value{{0.5, Px}, {0.5, Px}}}},
+			false,
+		},
+		{
 			`rotate(50 100)`,
 			nil,
 			true,

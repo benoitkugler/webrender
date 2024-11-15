@@ -206,6 +206,10 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					}
 				}
 
+				if traceMode {
+					traceLogger.DumpTree(cell_, fmt.Sprintf("cell %d (before layout)", indexCell))
+				}
+
 				// First try to render content as if there was already something
 				// on the page to avoid hitting block_level_layout’s TODO. Then
 				// force to render something if the page is actually empty, or
@@ -222,6 +226,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				} else {
 					cell_ = newCell
 				}
+
+				if traceMode {
+					traceLogger.DumpTree(cell_, fmt.Sprintf("cell %d", indexCell))
+				}
+
 				cell = cell_.Box()
 				cell_.RemoveDecoration(cell, cellSkipStack != nil, cellResumeAt != nil)
 				if cellResumeAt != nil {
@@ -290,13 +299,19 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 			}
 
+			if traceMode {
+				traceLogger.DumpTree(row_, fmt.Sprintf("row %d (before height)", indexRow))
+			}
+
 			// row height
 			for _, cell := range row.Children {
 				endingCellsByRow[cell.Box().Rowspan-1] = append(endingCellsByRow[cell.Box().Rowspan-1], cell)
 			}
-			endingCells := endingCellsByRow[0]
-			endingCellsByRow = endingCellsByRow[1:]
-			var rowBottomY pr.Float
+			var (
+				rowBottomY  pr.Float
+				endingCells []Box
+			)
+			endingCells, endingCellsByRow = endingCellsByRow[0], endingCellsByRow[1:]
 			if len(endingCells) != 0 { // in this row
 				if row.Height == pr.AutoF {
 					for _, cell := range endingCells {
@@ -354,6 +369,10 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 						}
 					}
 				}
+			}
+
+			if traceMode {
+				traceLogger.DumpTree(row_, fmt.Sprintf("row %d", indexRow))
 			}
 
 			nextPositionY := row.PositionY + row.Height.V()

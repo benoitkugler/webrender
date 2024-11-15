@@ -122,6 +122,27 @@ type PageBox struct {
 	PageType         utils.PageElement
 }
 
+func (pb *PageBox) Bleed() Bleed {
+	return Bleed{
+		Top:    pb.Style.GetBleedTop().Value,
+		Bottom: pb.Style.GetBleedBottom().Value,
+		Left:   pb.Style.GetBleedLeft().Value,
+		Right:  pb.Style.GetBleedRight().Value,
+	}
+}
+
+func (pb *PageBox) BleedArea() pr.Rectangle {
+	bl := pb.Bleed()
+	return pr.Rectangle{
+		-bl.Left, -bl.Top,
+		pb.MarginWidth() + bl.Left + bl.Right, pb.MarginHeight() + bl.Top + bl.Bottom,
+	}
+}
+
+type Bleed struct {
+	Top, Bottom, Left, Right pr.Float
+}
+
 type MarginBox struct {
 	BoxFields
 	AtKeyword   string

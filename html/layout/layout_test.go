@@ -7,6 +7,7 @@ import (
 
 	fc "github.com/benoitkugler/textprocessing/fontconfig"
 	"github.com/benoitkugler/textprocessing/pango/fcfonts"
+	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
@@ -552,4 +553,15 @@ func TestPageCounters(t *testing.T) {
 		exp := fmt.Sprintf("Page %d of 3.", pageNumber)
 		assertText(t, unpack1(lineBox), exp)
 	}
+}
+
+func TestBackground(t *testing.T) {
+	page := renderOnePage(t, `
+	<style>
+	   @page { size: 4px; bleed: 1px; margin: 1px; marks: crop }
+	</style>
+	<body>`)
+	layers := page.Background.Layers
+	tu.AssertEqual(t, len(layers), 1)
+	tu.AssertEqual(t, layers[0].PaintingArea, pr.Rectangle{-1, -1, 6, 6})
 }

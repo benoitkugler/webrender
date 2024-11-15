@@ -306,7 +306,7 @@ func parseTransform(attr string) (out []transform, err error) {
 			}
 		case "scale":
 			if L == 1 {
-				tr.args[1] = Value{0, Px}
+				tr.args[1] = tr.args[0]
 				tr.kind = scale
 			} else if L == 2 {
 				tr.kind = scale

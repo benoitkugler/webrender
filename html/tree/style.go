@@ -600,9 +600,9 @@ func (a *AnonymousStyle) Get(key pr.PropKey) pr.CssProperty {
 
 // ResolveColor return the color for `key`, replacing
 // `currentColor` with p["color"]
-// It panics if the key has not concrete type `Color`
-// replace Python getColor function
+// It panics if the key has not concrete type `Color`.
 func ResolveColor(style pr.ElementStyle, key pr.KnownProp) pr.Color {
+	// replace Python getColor function
 	value := style.Get(key.Key()).(pr.Color)
 	if value.Type == pa.ColorCurrentColor {
 		return style.GetColor()

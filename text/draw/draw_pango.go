@@ -150,6 +150,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 			}
 
 			outGlyph.Offset = pr.Fl(glyphInfo.Geometry.XOffset) / fontSize
+			outGlyph.Rise = pr.Fl(glyphInfo.Geometry.YOffset)
 			outGlyph.Glyph = backend.GID(glyph.GID())
 
 			// Ink bounding box and logical widths in font

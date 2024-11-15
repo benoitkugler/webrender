@@ -679,7 +679,7 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 	}
 
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("end splitInlineLevel %s", resumeAt))
+		traceLogger.DumpTree(newBox, fmt.Sprintf("end splitInlineLevel %s", resumeAt))
 	}
 
 	return splitedInline{

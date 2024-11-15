@@ -132,6 +132,14 @@ func (dr Drawer) Clip(evenOdd bool) {
 	fmt.Fprintln(dr.out, "Clip :")
 }
 
+func (dr Drawer) SetAlpha(alpha fl, stroke bool) {
+	if stroke {
+		fmt.Fprintf(dr.out, "SetAlpha : stroke %.2f\n", alpha)
+	} else {
+		fmt.Fprintf(dr.out, "SetAlpha : fill %.2f\n", alpha)
+	}
+}
+
 func (dr Drawer) SetColorRgba(color parser.RGBA, stroke bool) {
 	if stroke {
 		fmt.Fprintf(dr.out, "SetColorRgba : stroke %.2f %.2f %.2f\n", color.R, color.G, color.B)
@@ -141,11 +149,11 @@ func (dr Drawer) SetColorRgba(color parser.RGBA, stroke bool) {
 }
 
 func (dr Drawer) SetLineWidth(width fl) {
-	fmt.Fprintln(dr.out, "SetLineWidth :")
+	fmt.Fprintln(dr.out, "SetLineWidth :", width)
 }
 
 func (dr Drawer) SetDash(dashes []fl, offset fl) {
-	fmt.Fprintln(dr.out, "SetDash :")
+	fmt.Fprintln(dr.out, "SetDash :", dashes, offset)
 }
 
 func (dr Drawer) Paint(op backend.PaintOp) {
@@ -158,7 +166,7 @@ func (dr Drawer) GetTransform() matrix.Transform {
 }
 
 func (dr Drawer) Transform(mt matrix.Transform) {
-	fmt.Fprintln(dr.out, "Transform :")
+	fmt.Fprintln(dr.out, "Transform :", mt)
 }
 
 func (dr Drawer) MoveTo(x fl, y fl) {
@@ -200,7 +208,7 @@ func (dr Drawer) AddFont(backend.Font, []byte) *backend.FontChars {
 }
 
 func (dr Drawer) NewGroup(x, y, width, height fl) backend.Canvas {
-	fmt.Fprintln(dr.out, "NewGroup :")
+	fmt.Fprintln(dr.out, "NewGroup :", x, y, width, height)
 	return dr
 }
 
@@ -216,8 +224,8 @@ func (dr Drawer) DrawWithOpacity(opacity fl, group backend.Canvas) {
 	fmt.Fprintln(dr.out, "DrawGroup :")
 }
 
-func (dr Drawer) SetStrokeOptions(backend.StrokeOptions) {
-	fmt.Fprintln(dr.out, "SetStrokeOptions :")
+func (dr Drawer) SetStrokeOptions(opt backend.StrokeOptions) {
+	fmt.Fprintln(dr.out, "SetStrokeOptions :", opt)
 }
 
 func (dr Drawer) SetColorPattern(backend.Canvas, fl, fl, matrix.Transform, bool) {

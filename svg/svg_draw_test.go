@@ -39,6 +39,10 @@ func (outputPage) Clip(evenOdd bool) {
 	outputLog.Println("Clip")
 }
 
+func (outputPage) SetAlpha(alpha fl, stroke bool) {
+	outputLog.Println("SetAlpha")
+}
+
 func (outputPage) SetColorRgba(color parser.RGBA, stroke bool) {
 	outputLog.Println("SetColorRgba")
 }
