@@ -169,6 +169,9 @@ type GraphicState interface {
 	// so that the original clip region is restored afterwards.
 	Clip(evenOdd bool)
 
+	// SetAlpha is the same as SetColorRgba, but only updates the alpha value.
+	SetAlpha(alpha Fl, stroke bool)
+
 	// Sets the color which will be used for any subsequent drawing operation.
 	//
 	// The color and alpha components are
