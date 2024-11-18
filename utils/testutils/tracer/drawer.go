@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/benoitkugler/webrender/backend"
@@ -13,227 +14,239 @@ import (
 
 // implements a logging backend, used for debugging
 
-var _ backend.Document = Drawer{}
+var _ backend.Document = &Drawer{}
 
 type Drawer struct {
-	out io.Writer
+	out    io.Writer
+	indent int
 }
 
-func NewDrawerNoOp() Drawer { return Drawer{out: io.Discard} }
+func NewDrawerNoOp() *Drawer { return &Drawer{out: io.Discard} }
 
 // NewDrawerFile panics if an error occurs.
-func NewDrawerFile(outFile string) Drawer {
+func NewDrawerFile(outFile string) *Drawer {
 	f, err := os.Create(outFile)
 	if err != nil {
 		panic(err)
 	}
 
-	return Drawer{out: f}
+	return &Drawer{out: f}
 }
 
 type fl = backend.Fl
 
-func (dr Drawer) AddPage(left, top, right, bottom fl) backend.Page {
-	fmt.Fprintln(dr.out, "AddPage :")
+func (dr Drawer) println(args ...interface{}) {
+	fmt.Fprint(dr.out, strings.Repeat("  ", dr.indent))
+	fmt.Fprintln(dr.out, args...)
+}
+
+func (dr Drawer) printf(f string, args ...interface{}) {
+	fmt.Fprintf(dr.out, strings.Repeat(" ", dr.indent)+f+"\n", args...)
+}
+
+func (dr *Drawer) AddPage(left, top, right, bottom fl) backend.Page {
+	dr.println("AddPage :")
 	return dr
 }
 
 func (dr Drawer) CreateAnchors(anchors [][]backend.Anchor) {
-	fmt.Fprintln(dr.out, "CreateAnchors :")
+	dr.println("CreateAnchors :")
 }
 
 func (dr Drawer) SetAttachments(as []backend.Attachment) {
-	fmt.Fprintln(dr.out, "SetAttachments :")
+	dr.println("SetAttachments :")
 }
 
 func (dr Drawer) EmbedFile(id string, a backend.Attachment) {
-	fmt.Fprintln(dr.out, "EmbedFile :")
+	dr.println("EmbedFile :")
 }
 
 func (dr Drawer) SetTitle(title string) {
-	fmt.Fprintln(dr.out, "SetTitle :")
+	dr.println("SetTitle :")
 }
 
 func (dr Drawer) SetDescription(description string) {
-	fmt.Fprintln(dr.out, "SetDescription :")
+	dr.println("SetDescription :")
 }
 
 func (dr Drawer) SetCreator(creator string) {
-	fmt.Fprintln(dr.out, "SetCreator :")
+	dr.println("SetCreator :")
 }
 
 func (dr Drawer) SetAuthors(authors []string) {
-	fmt.Fprintln(dr.out, "SetAuthors :")
+	dr.println("SetAuthors :")
 }
 
 func (dr Drawer) SetKeywords(keywords []string) {
-	fmt.Fprintln(dr.out, "SetKeywords :")
+	dr.println("SetKeywords :")
 }
 
 func (dr Drawer) SetProducer(producer string) {
-	fmt.Fprintln(dr.out, "SetProducer :")
+	dr.println("SetProducer :")
 }
 
 func (dr Drawer) SetDateCreation(d time.Time) {
-	fmt.Fprintln(dr.out, "SetDateCreation :")
+	dr.println("SetDateCreation :")
 }
 
 func (dr Drawer) SetDateModification(d time.Time) {
-	fmt.Fprintln(dr.out, "SetDateModification :")
+	dr.println("SetDateModification :")
 }
 
 func (dr Drawer) SetBookmarks([]backend.BookmarkNode) {
-	fmt.Fprintln(dr.out, "AddBookmark :")
+	dr.println("AddBookmark :")
 }
 
 func (dr Drawer) AddInternalLink(x, y, w, h fl, anchorName string) {
-	fmt.Fprintln(dr.out, "AddInternalLink :")
+	dr.println("AddInternalLink :")
 }
 
 func (dr Drawer) AddExternalLink(x, y, w, h fl, url string) {
-	fmt.Fprintln(dr.out, "AddExternalLink :")
+	dr.println("AddExternalLink :")
 }
 
 func (dr Drawer) AddFileAnnotation(x, y, w, h fl, id string) {
-	fmt.Fprintln(dr.out, "AddFileAnnotation :")
+	dr.println("AddFileAnnotation :")
 }
 
 func (dr Drawer) GetBoundingBox() (left, top, right, bottom fl) {
-	fmt.Fprintln(dr.out, "GetBoundingBox :")
+	dr.println("GetBoundingBox :")
 	return 0, 0, 10, 10
 }
 
 func (dr Drawer) SetBoundingBox(left, top, right, bottom fl) {
-	fmt.Fprintln(dr.out, "SetBoundingBox :")
+	dr.printf("SetBoundingBox : %.2f %.2f %.2f %.2f", left, top, right, bottom)
 }
 
 func (dr Drawer) SetMediaBox(left, top, right, bottom fl) {
-	fmt.Fprintf(dr.out, "SetMediaBox : %.2f %.2f %.2f %.2f\n", left, top, right, bottom)
+	dr.printf("SetMediaBox : %.2f %.2f %.2f %.2f", left, top, right, bottom)
 }
 
 func (dr Drawer) SetTrimBox(left, top, right, bottom fl) {
-	fmt.Fprintf(dr.out, "SetTrimBox : %.2f %.2f %.2f %.2f\n", left, top, right, bottom)
+	dr.printf("SetTrimBox : %.2f %.2f %.2f %.2f", left, top, right, bottom)
 }
 
 func (dr Drawer) SetBleedBox(left, top, right, bottom fl) {
-	fmt.Fprintf(dr.out, "SetBleedBox : %.2f %.2f %.2f %.2f\n", left, top, right, bottom)
+	dr.printf("SetBleedBox : %.2f %.2f %.2f %.2f", left, top, right, bottom)
 }
 
-func (dr Drawer) OnNewStack(f func()) {
-	fmt.Fprintln(dr.out, "OnNewStack :")
+func (dr *Drawer) OnNewStack(f func()) {
+	dr.println("OnNewStack :")
+	dr.indent++
 	f()
+	dr.indent--
 }
 
 func (dr Drawer) Rectangle(x fl, y fl, width fl, height fl) {
-	fmt.Fprintln(dr.out, "Rectangle :", x, y, width, height)
+	dr.println("Rectangle :", x, y, width, height)
 }
 
 func (dr Drawer) Clip(evenOdd bool) {
-	fmt.Fprintln(dr.out, "Clip :")
+	dr.println("Clip :")
 }
 
 func (dr Drawer) SetAlpha(alpha fl, stroke bool) {
 	if stroke {
-		fmt.Fprintf(dr.out, "SetAlpha : stroke %.2f\n", alpha)
+		dr.printf("SetAlpha : stroke %.2f", alpha)
 	} else {
-		fmt.Fprintf(dr.out, "SetAlpha : fill %.2f\n", alpha)
+		dr.printf("SetAlpha : fill %.2f", alpha)
 	}
 }
 
 func (dr Drawer) SetColorRgba(color parser.RGBA, stroke bool) {
 	if stroke {
-		fmt.Fprintf(dr.out, "SetColorRgba : stroke %.2f %.2f %.2f\n", color.R, color.G, color.B)
+		dr.printf("SetColorRgba : stroke %.2f %.2f %.2f %.2f", color.R, color.G, color.B, color.A)
 	} else {
-		fmt.Fprintf(dr.out, "SetColorRgba : fill %.2f %.2f %.2f\n", color.R, color.G, color.B)
+		dr.printf("SetColorRgba : fill %.2f %.2f %.2f %.2f", color.R, color.G, color.B, color.A)
 	}
 }
 
 func (dr Drawer) SetLineWidth(width fl) {
-	fmt.Fprintln(dr.out, "SetLineWidth :", width)
+	dr.println("SetLineWidth :", width)
 }
 
 func (dr Drawer) SetDash(dashes []fl, offset fl) {
-	fmt.Fprintln(dr.out, "SetDash :", dashes, offset)
+	dr.println("SetDash :", dashes, offset)
 }
 
 func (dr Drawer) Paint(op backend.PaintOp) {
-	fmt.Fprintln(dr.out, "Paint :", op)
+	dr.println("Paint :", op)
 }
 
 func (dr Drawer) GetTransform() matrix.Transform {
-	fmt.Fprintln(dr.out, "GetTransform :")
+	dr.println("GetTransform :")
 	return matrix.Identity()
 }
 
 func (dr Drawer) Transform(mt matrix.Transform) {
-	fmt.Fprintln(dr.out, "Transform :", mt)
+	dr.println("Transform :", mt)
 }
 
 func (dr Drawer) MoveTo(x fl, y fl) {
-	fmt.Fprintln(dr.out, "MoveTo :", x, y)
+	dr.println("MoveTo :", x, y)
 }
 
 func (dr Drawer) LineTo(x fl, y fl) {
-	fmt.Fprintln(dr.out, "LineTo :", x, y)
+	dr.println("LineTo :", x, y)
 }
 
 func (dr Drawer) CubicTo(x1, y1, x2, y2, x3, y3 fl) {
-	fmt.Fprintln(dr.out, "CubicTo :", x1, y1, x2, y2, x3, y3)
+	dr.println("CubicTo :", x1, y1, x2, y2, x3, y3)
 }
 
 func (dr Drawer) ClosePath() {
-	fmt.Fprintln(dr.out, "ClosePath :")
+	dr.println("ClosePath :")
 }
 
-func (dr Drawer) SetTextPaint(backend.PaintOp) {
-	fmt.Fprintln(dr.out, "SetTextPaint :")
+func (dr Drawer) SetTextPaint(p backend.PaintOp) {
+	dr.println("SetTextPaint :", p.String())
 }
 
 func (dr Drawer) SetBlendingMode(mode string) {
-	fmt.Fprintln(dr.out, "SetTextPaint :")
+	dr.println("SetTextPaint :")
 }
 
 func (dr Drawer) DrawText(text []backend.TextDrawing) {
 	for _, chunk := range text {
-		fmt.Fprintln(dr.out, "DrawText :")
+		dr.println("DrawText :", chunk.Matrix(), "font size:", chunk.FontSize)
 		for _, run := range chunk.Runs {
-			fmt.Fprintln(dr.out, "->", run.Font.Origin(), ":", run.Glyphs)
+			dr.println("->", run.Font.Origin(), ":", run.Glyphs)
 		}
 	}
 }
 
 func (dr Drawer) AddFont(backend.Font, []byte) *backend.FontChars {
-	fmt.Fprintln(dr.out, "AddFont :")
+	dr.println("AddFont :")
 	return &backend.FontChars{Cmap: make(map[backend.GID][]rune), Extents: make(map[backend.GID]backend.GlyphExtents)}
 }
 
-func (dr Drawer) NewGroup(x, y, width, height fl) backend.Canvas {
-	fmt.Fprintln(dr.out, "NewGroup :", x, y, width, height)
+func (dr *Drawer) NewGroup(x, y, width, height fl) backend.Canvas {
+	dr.println("NewGroup :", x, y, width, height)
 	return dr
 }
 
 func (dr Drawer) DrawRasterImage(img backend.RasterImage, width, height fl) {
-	fmt.Fprintln(dr.out, "DrawRasterImage :")
+	dr.println("DrawRasterImage :")
 }
 
 func (dr Drawer) DrawGradient(gradient backend.GradientLayout, width, height fl) {
-	fmt.Fprintln(dr.out, "DrawGradient :")
+	dr.println("DrawGradient :")
 }
 
 func (dr Drawer) DrawWithOpacity(opacity fl, group backend.Canvas) {
-	fmt.Fprintln(dr.out, "DrawGroup :")
+	dr.println("DrawWithOpacity :", opacity)
 }
 
 func (dr Drawer) SetStrokeOptions(opt backend.StrokeOptions) {
-	fmt.Fprintln(dr.out, "SetStrokeOptions :", opt)
+	dr.println("SetStrokeOptions :", opt)
 }
 
 func (dr Drawer) SetColorPattern(backend.Canvas, fl, fl, matrix.Transform, bool) {
-	fmt.Fprintln(dr.out, "SetColorPattern :")
+	dr.println("SetColorPattern :")
 }
 
 func (dr Drawer) SetAlphaMask(mask backend.Canvas) {
-	fmt.Fprintln(dr.out, "SetAlphaMask :")
+	dr.println("SetAlphaMask :")
 }
 
 func (dr Drawer) State() backend.GraphicState {
