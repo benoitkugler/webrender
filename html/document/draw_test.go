@@ -1,7 +1,6 @@
 package document
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -190,15 +189,25 @@ func TestLeaderCrash(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	// baseUrl, _ := utils.PathToURL("../../resources_test/")
-
-	input := fmt.Sprintf(` 
+	input := `
 	 <style>
-        @page { size:  140px 110px }
-        table { width: 100px; height: 70px; margin: 10px; font-family: DejaVuSans;
-                border-collapse: collapse; border: 10px %s blue }
+        @page {
+          size: 20px 6px;
+          margin: 1px;
+        }
+        @font-face {
+          src: url(../resources_test/weasyprint.otb_fixed);
+          font-family: weasyprint-otb;
+        }
+        body {
+          color: red;
+          font-family: weasyprint-otb;
+          font-size: 4px;
+          line-height: 0.8;
+        }
       </style>
-      <table><td>abc</td>`, "inset")
+      AaA`
+
 	doc, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
 	if err != nil {
 		t.Fatal(err)
