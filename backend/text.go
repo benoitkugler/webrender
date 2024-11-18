@@ -18,7 +18,7 @@ type TextDrawing struct {
 // Matrix return the transformation scaling the text by [FontSize],
 // translating if to (X, Y)  and applying the [Angle] rotation
 func (td TextDrawing) Matrix() matrix.Transform {
-	mat := matrix.New(td.FontSize*td.ScaleX, 0, 0, -td.FontSize, td.X, td.Y)
+	mat := matrix.New(td.ScaleX, 0, 0, -1, td.X, td.Y)
 	if td.Angle != 0 { // avoid useless multiplication if angle == 0
 		mat.RightMultBy(matrix.Rotation(td.Angle))
 	}

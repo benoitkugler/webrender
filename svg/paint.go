@@ -80,7 +80,8 @@ func (dims drawingDims) resolveDashes(dashArray []Value, dashOffset Value) ([]Fl
 	return dashes, offset
 }
 
-func (svg *SVGImage) setupPaint(dst backend.Canvas, node *svgNode, dims drawingDims) (doFill, doStroke bool) {
+// apply fill and stroke painters
+func (svg *SVGImage) applyPainters(dst backend.Canvas, node *svgNode, dims drawingDims) (doFill, doStroke bool) {
 	strokeWidth := dims.length(node.strokeWidth)
 	doFill = node.fill.valid
 	doStroke = node.stroke.valid && strokeWidth > 0

@@ -24,9 +24,12 @@ type textSpan struct {
 	textAnchor, displayAnchor anchor
 
 	baseline baseline
+
+	isText          bool // only true for tag 'text'
+	textBoundingBox Rectangle
 }
 
-func newTextSpan(node *cascadedNode, tree *svgContext) (drawable, error) {
+func newTextSpan(node *cascadedNode) (drawable, error) {
 	var out textSpan
 
 	out.text = string(node.text)
@@ -91,10 +94,14 @@ func newTextSpan(node *cascadedNode, tree *svgContext) (drawable, error) {
 
 	out.lengthAdjust = node.attrs["lengthAdjust"] == "spacingAndGlyphs"
 
-	return out, nil
+	out.isText = node.tag == "text"
+	out.textBoundingBox = emptyBbox
+
+	return &out, nil
 }
 
-func (t textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
+// returns the text bounding box
+func (t *textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
 	t.style.SetFontSize(pr.FToV(dims.fontSize))
 
 	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, false, true)
@@ -120,7 +127,7 @@ func (t textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dim
 	letterSpacing := dims.length(t.letterSpacing)
 	textLength := dims.length(t.textLength)
 	scaleX := Fl(1.)
-	if textLength != 0 && t.text == "" {
+	if textLength != 0 && t.text != "" {
 		// calculate the number of spaces to be considered for the text
 		spacesCount := Fl(len(t.text) - 1)
 		if t.lengthAdjust {
@@ -240,7 +247,7 @@ func (t textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dim
 
 		layout.ApplyJustification()
 
-		doFill, doStroke := svg.setupPaint(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
+		doFill, doStroke := svg.applyPainters(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
 		dst.State().SetTextPaint(newPaintOp(doFill, doStroke, false))
 		texts = append(texts,
 			drawer.CreateFirstLine(layout, "none", pr.TaggedString{Tag: pr.None}, scaleX, xPosition, yPosition, angle))
@@ -249,6 +256,8 @@ func (t textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dim
 	dst.OnNewStack(func() {
 		dst.DrawText(texts)
 	})
+
+	t.textBoundingBox = bbox
 
 	return nil
 }

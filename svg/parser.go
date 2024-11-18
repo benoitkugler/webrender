@@ -196,17 +196,17 @@ func parseValues(dataPoints string) (points []Value, err error) {
 
 // parses opacity, stroke-opacity, fill-opacity attributes,
 // returning 1 as a default value
-func parseOpacity(op string) (Fl, error) {
-	op = strings.TrimSpace(op)
-	if op == "" {
+func parseOpacity(value string) (Fl, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
 		return 1, nil
 	}
 	ratio := 1.
-	if strings.HasSuffix(op, "%") {
+	if strings.HasSuffix(value, "%") {
 		ratio = 100
-		op = strings.TrimSpace(op[:len(op)-2])
+		value = strings.TrimSpace(value[:len(value)-1])
 	}
-	out, err := strconv.ParseFloat(op, 32)
+	out, err := strconv.ParseFloat(value, 32)
 	return Fl(out / ratio), err
 }
 

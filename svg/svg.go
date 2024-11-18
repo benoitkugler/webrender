@@ -124,12 +124,12 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		}
 
 		// Handle text anchor
-		text, isText := node.graphicContent.(textSpan)
+		text, isText := node.graphicContent.(*textSpan)
 		var textAnchor anchor
-		if isText {
+		if isText && text.isText {
 			textAnchor = text.textAnchor
 			if len(node.children) != 0 && text.text == "" {
-				child, _ := node.children[0].graphicContent.(textSpan)
+				child, _ := node.children[0].graphicContent.(*textSpan)
 				textAnchor = child.textAnchor
 			}
 
@@ -148,26 +148,35 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		// 	2) apply the path operation
 		// 	3) conclude by calling Paint
 
-		doFill, doStroke := svg.setupPaint(dst, node, dims)
+		doFill, doStroke := svg.applyPainters(dst, node, dims)
 
 		var vertices []vertex
 		if visible && node.graphicContent != nil {
 			vertices = node.graphicContent.draw(dst, &node.attributes, svg, dims)
 		}
 
-		// draw markers
-		if len(vertices) != 0 {
-			svg.drawMarkers(dst, vertices, node, dims, paint)
+		// then recurse
+		if display {
+			for _, child := range node.children {
+				svg.drawNode(dst, child, dims, paint)
+
+				childText, isChildText := child.graphicContent.(*textSpan)
+				if visibleTextChild := (isText && isChildText && child.visible); visibleTextChild {
+					if bb := childText.textBoundingBox; bb != emptyBbox {
+						text.textBoundingBox.union(bb)
+					}
+				}
+			}
 		}
 
 		// Handle text anchor
-		if isText && (textAnchor == middle || textAnchor == end) {
+		if isText && text.isText && (textAnchor == middle || textAnchor == end) {
 			// pop stream
 			group := dst
 			dst = originalDst2
 
 			dst.OnNewStack(func() {
-				if bbox := node.textBoundingBox; bbox != (Rectangle{}) {
+				if bbox := text.textBoundingBox; bbox != emptyBbox {
 					x, y, width, height := bbox.X, bbox.Y, bbox.Width, bbox.Height
 					// Add extra space to include ink extents
 					group.SetBoundingBox(x-dims.fontSize, y-dims.fontSize, x+width+dims.fontSize, y+height+dims.fontSize)
@@ -188,15 +197,13 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// do the actual painting :
 		// paint by filling and stroking the given node onto the graphic target
-		if _, isText := node.graphicContent.(textSpan); paint && !isText {
+		if paint && !isText {
 			dst.Paint(newPaintOp(doFill, doStroke, node.isFillEvenOdd))
 		}
 
-		// then recurse
-		if display {
-			for _, child := range node.children {
-				svg.drawNode(dst, child, dims, paint)
-			}
+		// draw markers
+		if len(vertices) != 0 {
+			svg.drawMarkers(dst, vertices, node, dims, paint)
 		}
 
 		// apply opacity group and restore original target
@@ -302,11 +309,8 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 		// draw marker path
 		for _, child := range marker.children {
 			dst.OnNewStack(func() {
-				mat := matrix.Rotation(angle)
-				mat.LeftMultBy(matrix.Scaling(scaleX, scaleY))
-				mat.LeftMultBy(matrix.Translation(vertex.x, vertex.y))
-				mat.LeftMultBy(matrix.Translation(translateX, translateY))
-				dst.State().Transform(mat)
+				dst.State().Transform(matrix.Transform{A: scaleX, D: scaleY, E: vertex.x, F: vertex.y})
+				dst.State().Transform(matrix.Translation(-translateX, -translateY))
 
 				overflow := marker.overflow
 				if overflow == "hidden" || overflow == "scroll" {
@@ -321,10 +325,10 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 	}
 }
 
-// compute scale and translation needed to preserve ratio
-// translate is optional
-// for marker tags, translate should be the resolved refX and refY values
-// otherwise, it should be nil
+// compute scale and translation needed to preserve ratio.
+// [translate] is optional :
+// for marker tags, [translate] should be the resolved refX and refY values;
+// otherwise, it should be nil.
 func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Rectangle, translate *point) (scaleX, scaleY, translateX, translateY Fl) {
 	if viewbox == nil {
 		return 1, 1, 0, 0
@@ -577,8 +581,6 @@ type attributes struct {
 
 	isFillEvenOdd    bool
 	display, visible bool
-
-	textBoundingBox Rectangle
 }
 
 func (tree *svgContext) processNode(node *cascadedNode, defs definitions) (*svgNode, error) {
@@ -686,7 +688,7 @@ func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNo
 	case "svg":
 		out.graphicContent, err = newSvg(node, tree)
 	case "a", "text", "textPath", "tspan":
-		out.graphicContent, err = newTextSpan(node, tree)
+		out.graphicContent, err = newTextSpan(node)
 		isText = true
 	}
 
