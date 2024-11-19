@@ -593,7 +593,6 @@ func (Float) isCssProperty()             {}
 func (Images) isCssProperty()            {}
 func (Int) isCssProperty()               {}
 func (IntString) isCssProperty()         {}
-func (Ints3) isCssProperty()             {}
 func (Marks) isCssProperty()             {}
 func (Decorations) isCssProperty()       {}
 func (NamedString) isCssProperty()       {}
@@ -638,7 +637,7 @@ func (Float) isDeclaredValue()             {}
 func (Images) isDeclaredValue()            {}
 func (Int) isDeclaredValue()               {}
 func (IntString) isDeclaredValue()         {}
-func (Ints3) isDeclaredValue()             {}
+func (Limits) isDeclaredValue()            {}
 func (Marks) isDeclaredValue()             {}
 func (Decorations) isDeclaredValue()       {}
 func (NamedString) isDeclaredValue()       {}

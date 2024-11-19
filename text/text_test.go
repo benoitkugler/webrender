@@ -458,8 +458,8 @@ func TestWrap(t *testing.T) {
 				// no max width
 				line := fcG.wrap([]rune(text), style, pr.Inf)
 
-				tu.AssertEqual(t, line.Length, len([]rune(text)), "")
-				tu.AssertEqual(t, line.ResumeAt, -1, "")
+				tu.AssertEqual(t, line.Length, len([]rune(text)))
+				tu.AssertEqual(t, line.ResumeAt, -1)
 
 				ref := wrapPango(fcPango, text, style, nil)
 
@@ -471,8 +471,8 @@ func TestWrap(t *testing.T) {
 					line := fcG.wrap([]rune(text), style, maxWidth)
 					ref := wrapPango(fcPango, text, style, maxWidth)
 
-					tu.AssertEqual(t, line.Length, ref.Length, fmt.Sprintf("FirstLine.Length for %v", maxWidth))
-					tu.AssertEqual(t, line.ResumeAt, ref.ResumeAt, fmt.Sprintf("FirstLine.ResumeAt for %v", maxWidth))
+					tu.AssertEqual(t, line.Length, ref.Length)
+					tu.AssertEqual(t, line.ResumeAt, ref.ResumeAt)
 
 					assertApprox(t, line.Width, ref.Width, fmt.Sprintf("FirstLine.Width for %v", maxWidth))
 					assertApprox(t, line.Height, ref.Height, fmt.Sprintf("FirstLine.Height for %v", maxWidth))
@@ -546,7 +546,7 @@ func TestSplit(t *testing.T) {
 	gotext := tcGotext()
 	pango := tcPango()
 	style := pr.InitialValues.Copy()
-	style.SetLang(pr.NamedString{String: "fr"})
+	style.SetLang(pr.TaggedString{S: "fr"})
 	style.SetHyphens("auto")
 	style.SetWordBreak("break-word")
 	style.SetOverflowWrap("break-word")
@@ -555,9 +555,9 @@ func TestSplit(t *testing.T) {
 		lineP := SplitFirstLine("Une jolie phrase - hahaha", style, pango, maxWidth, false, true)
 		lineG := SplitFirstLine("Une jolie phrase - hahaha", style, gotext, maxWidth, false, true)
 
-		tu.AssertEqual(t, lineG.ResumeAt, lineP.ResumeAt, "")
-		tu.AssertEqual(t, lineG.FirstLineRTL, lineP.FirstLineRTL, "")
-		tu.AssertEqual(t, lineG.Length, lineP.Length, "")
+		tu.AssertEqual(t, lineG.ResumeAt, lineP.ResumeAt)
+		tu.AssertEqual(t, lineG.FirstLineRTL, lineP.FirstLineRTL)
+		tu.AssertEqual(t, lineG.Length, lineP.Length)
 
 	}
 }

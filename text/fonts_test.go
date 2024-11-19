@@ -92,14 +92,14 @@ func TestAddFontFace(t *testing.T) {
 
 	// Gotext
 	filename2 := fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
-	tu.AssertEqual(t, filename2, filename, "")
+	tu.AssertEqual(t, filename2, filename)
 	if !bytes.Equal(expected, fcG.FontContent(FontOrigin{File: filename})) {
 		t.Fatal()
 	}
 	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}})
-	tu.AssertEqual(t, face != nil, true, "")
-	tu.AssertEqual(t, len(fcG.fontsFeatures[face.Font]), 1, "")
-	tu.AssertEqual(t, fcG.fontsFeatures[face.Font][0].String(), "'kern'=1", "")
+	tu.AssertEqual(t, face != nil, true)
+	tu.AssertEqual(t, len(fcG.fontsFeatures[face.Font]), 1)
+	tu.AssertEqual(t, fcG.fontsFeatures[face.Font][0].String(), "'kern'=1")
 }
 
 func TestAddFontFaceAspect(t *testing.T) {
@@ -122,12 +122,12 @@ func TestAddFontFaceAspect(t *testing.T) {
 	_ = fcG.AddFontFace(desc, utils.DefaultUrlFetcher)
 	face := fcG.resolveFace('a', FontDescription{Family: []string{"weasyprint"}, Style: FSyItalic, Weight: 700, Stretch: FSeCondensed})
 	family, aspect := fcG.fm.FontMetadata(face.Font)
-	tu.AssertEqual(t, family, "weasyprint", "")
+	tu.AssertEqual(t, family, "weasyprint")
 	tu.AssertEqual(t, aspect, font.Aspect{
 		Style:   font.StyleItalic,
 		Weight:  font.WeightBold,
 		Stretch: font.StretchCondensed,
-	}, "")
+	})
 }
 
 func TestVariations(t *testing.T) {
@@ -211,7 +211,7 @@ func TestResolveFont(t *testing.T) {
 		fc.fm.SetQuery(fontscan.Query{Families: test.query})
 		face := fc.fm.ResolveFace('a')
 		family, _ := fc.fm.FontMetadata(face.Font)
-		tu.AssertEqual(t, family, font.NormalizeFamily(test.resolved), "")
+		tu.AssertEqual(t, family, font.NormalizeFamily(test.resolved))
 	}
 }
 
@@ -238,7 +238,7 @@ func TestMetricsLinuxFonts(t *testing.T) {
 				desc.Size = s * 10 // remove some pesky rounding errors
 				exp := newMetrics(fcPango, desc)
 				got := newMetrics(fcGotext, desc)
-				tu.AssertEqual(t, exp, got, "")
+				tu.AssertEqual(t, exp, got)
 			}
 		}
 	}

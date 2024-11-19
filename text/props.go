@@ -351,12 +351,11 @@ func getFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Featu
 	props.SetFontVariantEastAsian(pr.SStrings{})
 	props.SetFontFeatureSettings(pr.SIntStrings{})
 	for _, rules := range ruleDescriptors.FontVariant {
-		if rules.Property.SpecialProperty != nil {
+		prop, ok := rules.Value.(pr.CssProperty)
+		if !ok {
 			continue
 		}
-		if cascaded := rules.Property.ToCascaded(); cascaded.Default == 0 {
-			props[rules.Name.KnownProp] = cascaded.ToCSS()
-		}
+		props[rules.Name] = prop
 	}
 	if !ruleDescriptors.FontFeatureSettings.IsNone() {
 		props.SetFontFeatureSettings(ruleDescriptors.FontFeatureSettings)
