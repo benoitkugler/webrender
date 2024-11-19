@@ -15,6 +15,8 @@ github.com/go-text/typesetting v0.0.0-20231214135816-4b4ad9cda3a4 h1:om9WRQE5AND
 github.com/go-text/typesetting v0.0.0-20231214135816-4b4ad9cda3a4/go.mod h1:MrLApvxyzSW0MhQqLc484jkUWYX4wsEvEqDosB5Io80=
 github.com/go-text/typesetting v0.1.1-0.20240423171926-d3307102d2cf h1:VZFL3+yNEIYpSoV2TOEeVBks9xxBIIYox4sYbqFT0hI=
 github.com/go-text/typesetting v0.1.1-0.20240423171926-d3307102d2cf/go.mod h1:2+owI/sxa73XA581LAzVuEBZ3WEEV2pXeDswCH/3i1I=
+github.com/go-text/typesetting v0.2.0 h1:fbzsgbmk04KiWtE+c3ZD4W2nmCRzBqrqQOvYlwAOdho=
+github.com/go-text/typesetting v0.2.0/go.mod h1:2+owI/sxa73XA581LAzVuEBZ3WEEV2pXeDswCH/3i1I=
 github.com/go-text/typesetting-utils v0.0.0-20230616150549-2a7df14b6a22/go.mod h1:DDxDdQEnB70R8owOx3LVpEFvpMK9eeH1o2r0yZhFI9o=
 github.com/go-text/typesetting-utils v0.0.0-20231121125213-61dadda55b86/go.mod h1:DDxDdQEnB70R8owOx3LVpEFvpMK9eeH1o2r0yZhFI9o=
 github.com/go-text/typesetting-utils v0.0.0-20231204162240-fa4dc564ba79/go.mod h1:DDxDdQEnB70R8owOx3LVpEFvpMK9eeH1o2r0yZhFI9o=
