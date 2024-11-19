@@ -169,6 +169,9 @@ type GraphicState interface {
 	// so that the original clip region is restored afterwards.
 	Clip(evenOdd bool)
 
+	// SetAlpha is the same as SetColorRgba, but only updates the alpha value.
+	SetAlpha(alpha Fl, stroke bool)
+
 	// Sets the color which will be used for any subsequent drawing operation.
 	//
 	// The color and alpha components are
@@ -238,7 +241,10 @@ type GraphicState interface {
 // or as intermediate container (see for instance DrawWithOpacity or SetAlphaMask)
 type Canvas interface {
 	// Returns the current canvas rectangle
-	GetRectangle() (left, top, right, bottom Fl)
+	GetBoundingBox() (left, top, right, bottom Fl)
+
+	// Updates the current canvas rectangle
+	SetBoundingBox(left, top, right, bottom Fl)
 
 	// OnNewStack save the current graphic state,
 	// execute the given closure, and restore the state.

@@ -24,7 +24,7 @@ def export_attibutes(line: str) -> str:
 
 
 def unpack_children(line: str) -> str:
-    if not("=" in line and line.endswith(".children\n")):
+    if not ("=" in line and line.endswith(".children\n")):
         return line
 
     children, box = line.split("=")
@@ -63,7 +63,7 @@ def replace_assert(line: str) -> str:
     line = re.sub(r" ([0-9]+)(\.([0-9]+))?",
                   lambda x: "pr.Float(" + x.group(0) + ")", line)
 
-    line = line + ',"") ' + comment
+    line = line + ') ' + comment
     return line + "\n"
 
 

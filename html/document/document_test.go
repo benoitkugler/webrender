@@ -8,7 +8,7 @@ import (
 	"github.com/benoitkugler/webrender/backend"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/utils"
-	"github.com/benoitkugler/webrender/utils/testutils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
 func round(x fl) fl { return utils.RoundPrec(x, 4) }
@@ -35,9 +35,8 @@ func roundMeta(pages []Page) {
 	}
 }
 
-func TestBookmarks(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+func TestAssertBookmarks(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, data := range []struct {
 		html           string
@@ -47,7 +46,7 @@ func TestBookmarks(t *testing.T) {
 	}{
 		{
 			`
-		        <style>* { height: 10px }</style>
+		        <style>h1, h2, h3, h4 { height: 10px }</style>
 		        <h1>a</h1>
 		        <h4 style="page-break-after: always">b</h4>
 		        <h3 style="position: relative; top: 2px; left: 3px">c</h3>
@@ -71,7 +70,7 @@ func TestBookmarks(t *testing.T) {
 		{
 			`
 		        <style>
-		            * { height: 90px; margin: 0 0 10px 0 }
+		            h1, h2, h3, span { height: 90px; margin: 0 0 10px 0 }
 		        </style>
 		        <h1>Title 1</h1>
 		        <h1>Title 2</h1>
@@ -296,10 +295,11 @@ func TestLinks(t *testing.T) {
 	// baseUrl=resourceFilename("<inline HTML>"),
 	// warnings=(), round=false
 	assertLinks := func(html string, expectedLinksByPage [][]Link, expectedAnchorsByPage []anchors,
-		expectedResolvedLinks [][]Link, expectedResolvedAnchors [][]backend.Anchor, baseUrl string, warnings []string, round bool) {
+		expectedResolvedLinks [][]Link, expectedResolvedAnchors [][]backend.Anchor, baseUrl string, warnings []string, round bool,
+	) {
 		t.Helper()
 
-		capt := testutils.CaptureLogs()
+		capt := tu.CaptureLogs()
 
 		document := renderHTML(t, html, baseUrl, round)
 		resolvedLinks, resolvedAnchors := document.resolveLinks()

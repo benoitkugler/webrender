@@ -18,7 +18,7 @@ func processFontFace(css string, t *testing.T) FontFaceDescriptors {
 	if !ok || atRule.AtKeyword != "font-face" {
 		t.Fatalf("expected @font-face got %v", stylesheet[0])
 	}
-	tokens := parser.ParseDeclarationList(*atRule.Content, false, false)
+	tokens := parser.ParseDeclarationList(atRule.Content, false, false)
 	return PreprocessFontFaceDescriptors("https://weasyprint.org/foo/", tokens)
 }
 
@@ -75,8 +75,8 @@ func TestFontFace(t *testing.T) {
           src: local(Gentium Soft),
         }`, t)
 	logs := capt.Logs()
-	tu.AssertEqual(t, len(logs), 1, "")
-	tu.AssertEqual(t, strings.Contains(logs[0], "invalid or unsupported values"), true, logs[0])
+	tu.AssertEqual(t, len(logs), 1)
+	tu.AssertEqual(t, strings.Contains(logs[0], "invalid or unsupported values"), true)
 
 	checkNameDescriptor(pr.String("Gentium Hard"), l.FontFamily, t)
 	checkNameDescriptor([]pr.NamedString{{Name: "local", String: "Gentium Hard"}}, l.Src, t)

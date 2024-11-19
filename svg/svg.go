@@ -103,24 +103,40 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 			applyFilters(dst, filters, node, dims)
 		}
 
+		// apply transform attribute
+		applyTransform(dst, node.attributes.transforms, dims)
+
 		// create sub group for opacity
 		opacity := node.attributes.opacity
-		var originalDst backend.Canvas
+		var originalDst1, originalDst2 backend.Canvas
 		if paint && 0 <= opacity && opacity < 1 {
-			originalDst = dst
 			var x, y, width, height Fl = 0, 0, dims.innerWidth, dims.innerHeight
 			if box, ok := node.resolveBoundingBox(dims, true); ok {
 				x, y, width, height = box.X, box.Y, box.Width, box.Height
 			}
+			originalDst1 = dst
 			dst = dst.NewGroup(x, y, width, height)
 		}
-
-		// apply transform attribute
-		applyTransform(dst, node.attributes.transforms, dims)
 
 		// clip
 		if cp, has := svg.definitions.clipPaths[node.clipPathID]; has {
 			svg.applyClipPath(dst, cp, node, dims)
+		}
+
+		// Handle text anchor
+		text, isText := node.graphicContent.(*textSpan)
+		var textAnchor anchor
+		if isText && text.isText {
+			textAnchor = text.textAnchor
+			if len(node.children) != 0 && text.text == "" {
+				child, _ := node.children[0].graphicContent.(*textSpan)
+				textAnchor = child.textAnchor
+			}
+
+			if textAnchor == middle || textAnchor == end {
+				originalDst2 = dst
+				dst = dst.NewGroup(0, 0, 0, 0) // BBox set after drawing
+			}
 		}
 
 		// manage display and visibility
@@ -132,16 +148,46 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 		// 	2) apply the path operation
 		// 	3) conclude by calling Paint
 
-		doFill, doStroke := svg.setupPaint(dst, node, dims)
+		doFill, doStroke := svg.applyPainters(dst, node, dims)
 
 		var vertices []vertex
 		if visible && node.graphicContent != nil {
 			vertices = node.graphicContent.draw(dst, &node.attributes, svg, dims)
 		}
 
-		// draw markers
-		if len(vertices) != 0 {
-			svg.drawMarkers(dst, vertices, node, dims, paint)
+		// then recurse
+		if display {
+			for _, child := range node.children {
+				svg.drawNode(dst, child, dims, paint)
+
+				childText, isChildText := child.graphicContent.(*textSpan)
+				if visibleTextChild := (isText && isChildText && child.visible); visibleTextChild {
+					if bb := childText.textBoundingBox; bb != emptyBbox {
+						text.textBoundingBox.union(bb)
+					}
+				}
+			}
+		}
+
+		// Handle text anchor
+		if isText && text.isText && (textAnchor == middle || textAnchor == end) {
+			// pop stream
+			group := dst
+			dst = originalDst2
+
+			dst.OnNewStack(func() {
+				if bbox := text.textBoundingBox; bbox != emptyBbox {
+					x, y, width, height := bbox.X, bbox.Y, bbox.Width, bbox.Height
+					// Add extra space to include ink extents
+					group.SetBoundingBox(x-dims.fontSize, y-dims.fontSize, x+width+dims.fontSize, y+height+dims.fontSize)
+					xAlign := width
+					if textAnchor == middle {
+						xAlign = width / 2
+					}
+					dst.State().Transform(matrix.Translation(-xAlign, 0))
+				}
+				dst.DrawWithOpacity(1, group)
+			})
 		}
 
 		// apply mask
@@ -151,21 +197,19 @@ func (svg *SVGImage) drawNode(dst backend.Canvas, node *svgNode, dims drawingDim
 
 		// do the actual painting :
 		// paint by filling and stroking the given node onto the graphic target
-		if _, isText := node.graphicContent.(span); paint && !isText {
+		if paint && !isText {
 			dst.Paint(newPaintOp(doFill, doStroke, node.isFillEvenOdd))
 		}
 
-		// then recurse
-		if display {
-			for _, child := range node.children {
-				svg.drawNode(dst, child, dims, paint)
-			}
+		// draw markers
+		if len(vertices) != 0 {
+			svg.drawMarkers(dst, vertices, node, dims, paint)
 		}
 
 		// apply opacity group and restore original target
 		if paint && 0 <= opacity && opacity < 1 {
-			originalDst.DrawWithOpacity(opacity, dst)
-			dst = originalDst // actually not used
+			originalDst1.DrawWithOpacity(opacity, dst)
+			dst = originalDst1 // actually not used
 		}
 	}
 
@@ -213,13 +257,13 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 
 		// calculate position, scale and clipping
 		var (
-			clipBox        *Rectangle
+			clipBox        Rectangle
 			scaleX, scaleY Fl
 		)
-		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
 		translateX, translateY := dims.point(marker.refX, marker.refY)
+		markerWidth, markerHeight := dims.point(marker.markerWidth, marker.markerHeight)
 		if vb := marker.viewbox; vb != nil {
-			scaleX, scaleY, translateX, translateY = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
+			scaleX, scaleY, _, _ = marker.preserveAspectRatio.resolveTransforms(markerWidth, markerHeight, marker.viewbox, &point{translateX, translateY})
 
 			clipViewbox := *vb
 			if marker.viewbox != nil {
@@ -240,15 +284,10 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 				clipViewbox.Y += clipViewbox.Height - markerHeight/scaleY
 			}
 
-			clipBox = &Rectangle{clipViewbox.X, clipViewbox.Y, markerWidth / scaleX, markerHeight / scaleY}
+			clipBox = Rectangle{clipViewbox.X, clipViewbox.Y, markerWidth / scaleX, markerHeight / scaleY}
 		} else {
-			if box, ok := boundingBoxUnion(marker.children, dims); ok {
-				scaleX = utils.MinF(markerWidth/box.Width, markerHeight/box.Height)
-				scaleY = scaleX
-			} else {
-				scaleX, scaleY = 1, 1
-			}
-			clipBox = nil
+			scaleX, scaleY = 1, 1
+			clipBox = Rectangle{0, 0, markerWidth, markerHeight}
 		}
 
 		// scale
@@ -270,17 +309,12 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 		// draw marker path
 		for _, child := range marker.children {
 			dst.OnNewStack(func() {
-				mat := matrix.Rotation(angle)
-				mat.LeftMultBy(matrix.Scaling(scaleX, scaleY))
-				mat.LeftMultBy(matrix.Translation(vertex.x, vertex.y))
-				mat.LeftMultBy(matrix.Translation(translateX, translateY))
-				dst.State().Transform(mat)
+				dst.State().Transform(matrix.Transform{A: scaleX, D: scaleY, E: vertex.x, F: vertex.y})
+				dst.State().Transform(matrix.Translation(-translateX, -translateY))
 
 				overflow := marker.overflow
-				if clipBox != nil && (overflow == "hidden" || overflow == "scroll") {
-					dst.OnNewStack(func() {
-						dst.Rectangle(clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height)
-					})
+				if overflow == "hidden" || overflow == "scroll" {
+					dst.Rectangle(clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height)
 					dst.State().Clip(false)
 				}
 
@@ -291,10 +325,10 @@ func (svg *SVGImage) drawMarkers(dst backend.Canvas, vertices []vertex, node *sv
 	}
 }
 
-// compute scale and translation needed to preserve ratio
-// translate is optional
-// for marker tags, translate should be the resolved refX and refY values
-// otherwise, it should be nil
+// compute scale and translation needed to preserve ratio.
+// [translate] is optional :
+// for marker tags, [translate] should be the resolved refX and refY values;
+// otherwise, it should be nil.
 func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Rectangle, translate *point) (scaleX, scaleY, translateX, translateY Fl) {
 	if viewbox == nil {
 		return 1, 1, 0, 0
@@ -314,7 +348,7 @@ func (pr preserveAspectRatio) resolveTransforms(width, height Fl, viewbox *Recta
 		if pr.slice {
 			scaleX = utils.MaxF(scaleX, scaleY)
 		} else {
-			scaleX = utils.MaxF(scaleX, scaleY)
+			scaleX = utils.MinF(scaleX, scaleY)
 		}
 		scaleY = scaleX
 	}
@@ -654,7 +688,7 @@ func (tree *svgContext) processGraphicNode(node *cascadedNode, children []*svgNo
 	case "svg":
 		out.graphicContent, err = newSvg(node, tree)
 	case "a", "text", "textPath", "tspan":
-		out.graphicContent, err = newText(node, tree)
+		out.graphicContent, err = newTextSpan(node)
 		isText = true
 	}
 

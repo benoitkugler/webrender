@@ -91,10 +91,6 @@ type BoxITF = Box
 
 // Box is the common interface grouping all possible boxes
 type Box interface {
-	// IsClassicalBox returns true for all standard boxes defined in this package, but false
-	// for the special ones, defined in other packages, like AbsolutePlaceholder or StackingContext.
-	IsClassicalBox() bool
-
 	tree.Box
 
 	Type() BoxType
@@ -106,6 +102,20 @@ type Box interface {
 	RemoveDecoration(box *BoxFields, isStart, isEnd bool)
 	PageValues() (pr.Page, pr.Page)
 }
+
+// BoxType represents a box type.
+type BoxType uint8
+
+// IsClassical returns true for all standard boxes defined in this package, but false
+// for the special ones, defined in other packages, like AbsolutePlaceholder or StackingContext.
+func (bt BoxType) IsClassical() bool {
+	return bt != AbsolutePlaceholderT && bt != StackingContextT
+}
+
+const (
+	AbsolutePlaceholderT = BoxType(0xFF - 2)
+	StackingContextT     = BoxType(0xFF - 1)
+)
 
 type Background struct {
 	ImageRendering pr.String
@@ -153,6 +163,7 @@ type BoxFields struct {
 	// Default, may be overriden on instances.
 	IsTableWrapper   bool
 	IsFlexItem       bool
+	IsGridItem       bool
 	IsForRootElement bool
 	IsColumn         bool
 	IsLeader         bool
@@ -204,7 +215,7 @@ type BoxFields struct {
 	GridX int
 	Index int
 
-	FlexBasis                                                      pr.Value
+	FlexBasis                                                      pr.DimOrS
 	FlexBaseSize, TargetMainSize, Adjustment, HypotheticalMainSize pr.Float
 	FlexFactor, ScaledFlexShrinkFactor                             pr.Float
 	Frozen                                                         bool
@@ -214,6 +225,8 @@ type BoxFields struct {
 	Background *Background
 
 	RemoveDecorationSides [4]bool
+
+	BorderImage images.Image
 }
 
 func newBoxFields(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) BoxFields {
@@ -281,7 +294,7 @@ func (box *BoxFields) SetMissingLink(b tree.Box) {
 
 func (box *BoxFields) GetBookmarkLabel() string { return box.BookmarkLabel }
 
-// Create a new equivalent box with given “newChildren“."""
+// Create a new equivalent box (preserving the concrete type) with given [newChildren].
 func CopyWithChildren(box Box, newChildren []Box) Box {
 	newBox := box.Copy()
 	newBox.Box().Children = newChildren
@@ -304,10 +317,16 @@ func Deepcopy(b Box) Box {
 
 // Descendants returns `b` and its children,
 // and their children, etc...
-func Descendants(b Box) []Box {
+func Descendants(b Box) []Box { return DescendantsPlaceholders(b, false) }
+
+func DescendantsPlaceholders(b Box, placeholders bool) []Box {
 	out := []Box{b}
 	for _, child := range b.Box().Children {
-		out = append(out, Descendants(child)...)
+		if placeholders || child.Type().IsClassical() {
+			out = append(out, DescendantsPlaceholders(child, placeholders)...)
+		} else {
+			out = append(out, child)
+		}
 	}
 	return out
 }
@@ -521,21 +540,33 @@ func (b *BoxFields) IsInNormalFlow() bool {
 	return !(b.IsFloated() || b.IsAbsolutelyPositioned() || b.IsRunning() || b.IsFootnote())
 }
 
+// Return whether this box is monolithic.
+// See https://www.w3.org/TR/css-break-3/#monolithic
+func IsMonolithic(box Box) bool {
+	style := box.Box().Style
+	overflow, height := style.GetOverflow(), style.GetHeight()
+	return AtomicInlineLevelT.IsInstance(box) || ReplacedT.IsInstance(box) ||
+		overflow == "auto" || overflow == "scroll" || (overflow == "hidden" && height.S != "auto")
+}
+
 // Start and end page values for named pages
 
 // Return start and end page values.
 func (b *BoxFields) PageValues() (pr.Page, pr.Page) {
 	start := b.Style.GetPage()
 	end := start
-	children := b.Children
+	var children []Box
+	for _, child := range b.Children {
+		if child.Box().IsInNormalFlow() {
+			children = append(children, child)
+		}
+	}
 	if len(children) > 0 {
 		startBox, endBox := children[0], children[len(children)-1]
-		childStart, _ := startBox.PageValues()
-		_, childEnd := endBox.PageValues()
-		if !childStart.IsNone() {
+		if childStart, _ := startBox.PageValues(); childStart != "" {
 			start = childStart
 		}
-		if !childEnd.IsNone() {
+		if _, childEnd := endBox.PageValues(); childEnd != "" {
 			end = childEnd
 		}
 	}

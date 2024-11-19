@@ -10,7 +10,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/utils"
 
-	"github.com/benoitkugler/webrender/css/parser"
+	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 )
 
@@ -44,6 +44,11 @@ var (
 	}
 )
 
+type NamedProp struct {
+	Name  pr.KnownProp
+	Value pr.DeclaredValue
+}
+
 type FontFaceDescriptors struct {
 	Src                 []pr.NamedString
 	FontFamily          pr.String
@@ -51,7 +56,7 @@ type FontFaceDescriptors struct {
 	FontWeight          pr.IntString
 	FontStretch         pr.String
 	FontFeatureSettings pr.SIntStrings
-	FontVariant         pr.NamedProperties
+	FontVariant         []NamedProp
 }
 
 type fontFaceDescriptorParser = func(tokens []Token, baseUrl string, out *FontFaceDescriptors) error
@@ -60,12 +65,12 @@ type fontFaceDescriptorParser = func(tokens []Token, baseUrl string, out *FontFa
 // “font-family“ descriptor validation.
 // allowSpaces = false
 func _fontFamilyDesc(tokens []Token, allowSpaces bool) string {
-	allowedsT := utils.Set{string(parser.IdentTokenT): utils.Has}
+	allowedsT := utils.Set{string(pa.KIdent): utils.Has}
 	if allowSpaces {
-		allowedsT.Add(string(parser.WhitespaceTokenT))
+		allowedsT.Add(string(pa.KWhitespace))
 	}
 	if len(tokens) == 1 {
-		if str, ok := tokens[0].(parser.StringToken); ok {
+		if str, ok := tokens[0].(pa.String); ok {
 			return str.Value
 		}
 	}
@@ -73,8 +78,8 @@ func _fontFamilyDesc(tokens []Token, allowSpaces bool) string {
 	var values []string
 	ok := true
 	for _, token := range tokens {
-		ok = ok && allowedsT.Has(string(token.Type()))
-		if ident, isToken := token.(parser.IdentToken); isToken {
+		ok = ok && allowedsT.Has(string(token.Kind()))
+		if ident, isToken := token.(pa.Ident); isToken {
 			values = append(values, string(ident.Value))
 		}
 	}
@@ -100,11 +105,11 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 	if L := len(tokens); L == 1 || L == 2 {
 		token := tokens[len(tokens)-1]
 		tokens = tokens[:len(tokens)-1]
-		if fn, ok := token.(parser.FunctionBlock); ok && fn.Name.Lower() == "format" {
+		if fn, ok := token.(pa.FunctionBlock); ok && utils.AsciiLower(fn.Name) == "format" {
 			token = tokens[len(tokens)-1]
 		}
-		if fn, ok := token.(parser.FunctionBlock); ok && fn.Name.Lower() == "local" {
-			return pr.NamedString{Name: "local", String: _fontFamilyDesc(*fn.Arguments, true)}, nil
+		if fn, ok := token.(pa.FunctionBlock); ok && utils.AsciiLower(fn.Name) == "local" {
+			return pr.NamedString{Name: "local", String: _fontFamilyDesc(fn.Arguments, true)}, nil
 		}
 		url, _, err := getUrl(token, baseUrl)
 		if err != nil {
@@ -119,8 +124,8 @@ func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 
 func src(tokens []Token, baseUrl string, out *FontFaceDescriptors) error {
 	var l []pr.NamedString
-	for _, part := range SplitOnComma(tokens) {
-		result, err := _src(RemoveWhitespace(part), baseUrl)
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := _src(pa.RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return err
 		}
@@ -161,8 +166,8 @@ func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 		out.FontWeight = pr.IntString{String: keyword}
 		return nil
 	}
-	if number, ok := token.(parser.NumberToken); ok && number.IsInteger {
-		v := number.IntValue()
+	if number, ok := token.(pa.Number); ok && number.IsInt() {
+		v := number.Int()
 		switch v {
 		case 100, 200, 300, 400, 500, 600, 700, 800, 900:
 			out.FontWeight = pr.IntString{Int: v}
@@ -208,23 +213,23 @@ func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 			return nil
 		}
 	}
-	var values pr.NamedProperties
+	var values []NamedProp
 	expanded, err := expandFontVariant(tokens)
 	if err != nil {
 		return err
 	}
 	for _, subTokens := range expanded {
-		prop, err := validateNonShorthand("", "font-variant"+subTokens.Name, subTokens.Tokens, true)
+		prop, err := validateNonShorthand("", subTokens.name.String(), subTokens.tokens, true)
 		if err != nil {
 			return ErrInvalidValue
 		}
-		values = append(values, prop)
+		values = append(values, NamedProp{prop.name.KnownProp, prop.property})
 	}
 	out.FontVariant = values
 	return nil
 }
 
-func PreprocessFontFaceDescriptors(baseUrl string, descriptors []Token) FontFaceDescriptors {
+func PreprocessFontFaceDescriptors(baseUrl string, descriptors []pa.Compound) FontFaceDescriptors {
 	var out FontFaceDescriptors
 	preprocessDescriptors(baseUrl, descriptors, &out)
 	return out
@@ -255,8 +260,8 @@ func system(tokens []Token, _ string, out *csDescriptors) error {
 		if len(tokens) == 1 {
 			out.System = counters.CounterStyleSystem{Extends: "", System: "fixed", Number: 1}
 			return nil
-		} else if numb, ok := tokens[1].(parser.NumberToken); ok && numb.IsInteger {
-			out.System = counters.CounterStyleSystem{Extends: "", System: "fixed", Number: numb.IntValue()}
+		} else if numb, ok := tokens[1].(pa.Number); ok && numb.IsInt() {
+			out.System = counters.CounterStyleSystem{Extends: "", System: "fixed", Number: numb.Int()}
 			return nil
 		}
 	case "cyclic", "numeric", "alphabetic", "symbolic", "additive":
@@ -269,12 +274,12 @@ func system(tokens []Token, _ string, out *csDescriptors) error {
 	return ErrInvalidValue
 }
 
-// match a StringToken, IdentToken, or a valid url
+// match a String, Ident, or a valid url
 func stringIdentOrUrl(token Token, baseUrl string) (pr.NamedString, bool) {
 	switch token := token.(type) {
-	case parser.StringToken:
+	case pa.String:
 		return pr.NamedString{Name: "string", String: token.Value}, true
-	case parser.IdentToken:
+	case pa.Ident:
 		return pr.NamedString{Name: "string", String: string(token.Value)}, true
 	default:
 		url, _, _ := getUrl(token, baseUrl)
@@ -349,8 +354,8 @@ func rangeD(tokens []Token, _ string, out *csDescriptors) error {
 		}
 	}
 
-	for _, part := range SplitOnComma(tokens) {
-		result, err := range_(RemoveWhitespace(part))
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := range_(pa.RemoveWhitespace(part))
 		if err != nil {
 			return err
 		}
@@ -364,14 +369,14 @@ func range_(tokens []Token) ([2]int, error) {
 		var values [2]int
 		for i, token := range tokens {
 			switch token := token.(type) {
-			case parser.IdentToken:
+			case pa.Ident:
 				if token.Value == "infinite" {
 					values[i] = math.MaxInt32
 					continue
 				}
-			case parser.NumberToken:
-				if token.IsInteger {
-					values[i] = token.IntValue()
+			case pa.Number:
+				if token.IsInt() {
+					values[i] = token.Int()
 					continue
 				}
 			}
@@ -404,9 +409,9 @@ func pad_(tokens []Token, baseUrl string) (out pr.IntNamedString, err error) {
 
 	for _, token := range tokens {
 		switch token := token.(type) {
-		case parser.NumberToken:
-			if token.IsInteger && token.Value >= 0 && !hasLength {
-				out.Int = token.IntValue()
+		case pa.Number:
+			if token.IsInt() && token.ValueF >= 0 && !hasLength {
+				out.Int = token.Int()
 				hasLength = true
 			}
 		default:
@@ -456,8 +461,8 @@ func symbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 // @descriptor("counter-style", wantsBaseUrl=true)
 // “additive-symbols“ descriptor validation.
 func additiveSymbols(tokens []Token, baseUrl string, out *csDescriptors) error {
-	for _, part := range SplitOnComma(tokens) {
-		result, err := pad_(RemoveWhitespace(part), baseUrl)
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := pad_(pa.RemoveWhitespace(part), baseUrl)
 		if err != nil {
 			return err
 		}
@@ -469,7 +474,7 @@ func additiveSymbols(tokens []Token, baseUrl string, out *csDescriptors) error {
 	return nil
 }
 
-func PreprocessCounterStyleDescriptors(baseUrl string, descriptors []Token) counters.CounterStyleDescriptors {
+func PreprocessCounterStyleDescriptors(baseUrl string, descriptors []pa.Compound) counters.CounterStyleDescriptors {
 	var out counters.CounterStyleDescriptors
 	preprocessDescriptors(baseUrl, descriptors, (*csDescriptors)(&out))
 	return out
@@ -502,18 +507,22 @@ func (d *csDescriptors) validateDescriptor(baseUrl, name string, tokens []Token)
 
 // Filter unsupported names and values for descriptors.
 // Log a warning for every ignored descriptor.
-func preprocessDescriptors(baseUrl string, descriptors []Token, out parsedDescriptor) {
+func preprocessDescriptors(baseUrl string, descriptors []pa.Compound, out parsedDescriptor) {
 	for _, descriptor := range descriptors {
-		decl, ok := descriptor.(parser.Declaration)
+		decl, ok := descriptor.(pa.Declaration)
 		if !ok || decl.Important {
 			continue
 		}
-		tokens := RemoveWhitespace(decl.Value)
+		if decl.Name == "font-display" {
+			continue
+		}
+
+		tokens := pa.RemoveWhitespace(decl.Value)
 		name := string(decl.Name)
 		err := out.validateDescriptor(baseUrl, name, tokens)
 		if err != nil {
 			logger.WarningLogger.Printf("Ignored `%s:%s` at %d:%d, %s.\n",
-				name, parser.Serialize(decl.Value), decl.Position().Line, decl.Position().Column, err)
+				name, pa.Serialize(decl.Value), decl.Pos().Line, decl.Pos().Column, err)
 			continue
 		}
 	}

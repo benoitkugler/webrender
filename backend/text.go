@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/text"
 )
 
@@ -9,9 +10,19 @@ import (
 type TextDrawing struct {
 	Runs []TextRun
 
-	FontSize Fl
-	X, Y     Fl // origin of the text
-	Angle    Fl // optional rotation angle for the text, in radians
+	FontSize, ScaleX Fl
+	X, Y             Fl // origin
+	Angle            Fl // (optional) rotation
+}
+
+// Matrix return the transformation scaling the text by [FontSize],
+// translating if to (X, Y)  and applying the [Angle] rotation
+func (td TextDrawing) Matrix() matrix.Transform {
+	mat := matrix.New(td.ScaleX, 0, 0, -1, td.X, td.Y)
+	if td.Angle != 0 { // avoid useless multiplication if angle == 0
+		mat.RightMultBy(matrix.Rotation(td.Angle))
+	}
+	return mat
 }
 
 // TextRun is a serie of glyphs with constant font.
@@ -24,10 +35,11 @@ type GID = uint32
 
 // TextGlyph stores a glyph and it's position
 type TextGlyph struct {
-	Glyph    GID
-	Offset   Fl  // normalized by FontSize
 	Kerning  int // normalized by FontSize
-	XAdvance Fl  // how much to move before drawing, used for emojis
+	Glyph    GID
+	Offset   Fl // normalized by FontSize
+	Rise     Fl
+	XAdvance Fl // how much to move before drawing, used for emojis
 }
 
 // GlyphExtents exposes glyph metrics, normalized by the font size.

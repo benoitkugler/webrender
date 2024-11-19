@@ -196,12 +196,18 @@ func parseValues(dataPoints string) (points []Value, err error) {
 
 // parses opacity, stroke-opacity, fill-opacity attributes,
 // returning 1 as a default value
-func parseOpacity(op string) (Fl, error) {
-	if op == "" {
+func parseOpacity(value string) (Fl, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
 		return 1, nil
 	}
-	out, err := strconv.ParseFloat(op, 32)
-	return Fl(out), err
+	ratio := 1.
+	if strings.HasSuffix(value, "%") {
+		ratio = 100
+		value = strings.TrimSpace(value[:len(value)-1])
+	}
+	out, err := strconv.ParseFloat(value, 32)
+	return Fl(out / ratio), err
 }
 
 // if the URL is invalid, the empty string is returned
@@ -300,7 +306,7 @@ func parseTransform(attr string) (out []transform, err error) {
 			}
 		case "scale":
 			if L == 1 {
-				tr.args[1] = Value{0, Px}
+				tr.args[1] = tr.args[0]
 				tr.kind = scale
 			} else if L == 2 {
 				tr.kind = scale

@@ -4,45 +4,45 @@ package tree
 
 import pr "github.com/benoitkugler/webrender/css/properties"
 
-func (s *ComputedStyle) GetAlignContent() pr.String {
-	return s.Get(pr.PAlignContent.Key()).(pr.String)
+func (s *ComputedStyle) GetAlignContent() pr.Strings {
+	return s.Get(pr.PAlignContent.Key()).(pr.Strings)
 }
-func (s *ComputedStyle) SetAlignContent(v pr.String) {
+func (s *ComputedStyle) SetAlignContent(v pr.Strings) {
 	s.propsCache.known[pr.PAlignContent] = v
 }
 
-func (s *AnonymousStyle) GetAlignContent() pr.String {
-	return s.Get(pr.PAlignContent.Key()).(pr.String)
+func (s *AnonymousStyle) GetAlignContent() pr.Strings {
+	return s.Get(pr.PAlignContent.Key()).(pr.Strings)
 }
-func (s *AnonymousStyle) SetAlignContent(v pr.String) {
+func (s *AnonymousStyle) SetAlignContent(v pr.Strings) {
 	s.propsCache.known[pr.PAlignContent] = v
 }
 
-func (s *ComputedStyle) GetAlignItems() pr.String {
-	return s.Get(pr.PAlignItems.Key()).(pr.String)
+func (s *ComputedStyle) GetAlignItems() pr.Strings {
+	return s.Get(pr.PAlignItems.Key()).(pr.Strings)
 }
-func (s *ComputedStyle) SetAlignItems(v pr.String) {
+func (s *ComputedStyle) SetAlignItems(v pr.Strings) {
 	s.propsCache.known[pr.PAlignItems] = v
 }
 
-func (s *AnonymousStyle) GetAlignItems() pr.String {
-	return s.Get(pr.PAlignItems.Key()).(pr.String)
+func (s *AnonymousStyle) GetAlignItems() pr.Strings {
+	return s.Get(pr.PAlignItems.Key()).(pr.Strings)
 }
-func (s *AnonymousStyle) SetAlignItems(v pr.String) {
+func (s *AnonymousStyle) SetAlignItems(v pr.Strings) {
 	s.propsCache.known[pr.PAlignItems] = v
 }
 
-func (s *ComputedStyle) GetAlignSelf() pr.String {
-	return s.Get(pr.PAlignSelf.Key()).(pr.String)
+func (s *ComputedStyle) GetAlignSelf() pr.Strings {
+	return s.Get(pr.PAlignSelf.Key()).(pr.Strings)
 }
-func (s *ComputedStyle) SetAlignSelf(v pr.String) {
+func (s *ComputedStyle) SetAlignSelf(v pr.Strings) {
 	s.propsCache.known[pr.PAlignSelf] = v
 }
 
-func (s *AnonymousStyle) GetAlignSelf() pr.String {
-	return s.Get(pr.PAlignSelf.Key()).(pr.String)
+func (s *AnonymousStyle) GetAlignSelf() pr.Strings {
+	return s.Get(pr.PAlignSelf.Key()).(pr.Strings)
 }
-func (s *AnonymousStyle) SetAlignSelf(v pr.String) {
+func (s *AnonymousStyle) SetAlignSelf(v pr.Strings) {
 	s.propsCache.known[pr.PAlignSelf] = v
 }
 
@@ -186,59 +186,59 @@ func (s *AnonymousStyle) SetBackgroundSize(v pr.Sizes) {
 	s.propsCache.known[pr.PBackgroundSize] = v
 }
 
-func (s *ComputedStyle) GetBleedBottom() pr.Value {
-	return s.Get(pr.PBleedBottom.Key()).(pr.Value)
+func (s *ComputedStyle) GetBleedBottom() pr.DimOrS {
+	return s.Get(pr.PBleedBottom.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBleedBottom(v pr.Value) {
+func (s *ComputedStyle) SetBleedBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedBottom] = v
 }
 
-func (s *AnonymousStyle) GetBleedBottom() pr.Value {
-	return s.Get(pr.PBleedBottom.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBleedBottom() pr.DimOrS {
+	return s.Get(pr.PBleedBottom.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBleedBottom(v pr.Value) {
+func (s *AnonymousStyle) SetBleedBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedBottom] = v
 }
 
-func (s *ComputedStyle) GetBleedLeft() pr.Value {
-	return s.Get(pr.PBleedLeft.Key()).(pr.Value)
+func (s *ComputedStyle) GetBleedLeft() pr.DimOrS {
+	return s.Get(pr.PBleedLeft.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBleedLeft(v pr.Value) {
+func (s *ComputedStyle) SetBleedLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedLeft] = v
 }
 
-func (s *AnonymousStyle) GetBleedLeft() pr.Value {
-	return s.Get(pr.PBleedLeft.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBleedLeft() pr.DimOrS {
+	return s.Get(pr.PBleedLeft.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBleedLeft(v pr.Value) {
+func (s *AnonymousStyle) SetBleedLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedLeft] = v
 }
 
-func (s *ComputedStyle) GetBleedRight() pr.Value {
-	return s.Get(pr.PBleedRight.Key()).(pr.Value)
+func (s *ComputedStyle) GetBleedRight() pr.DimOrS {
+	return s.Get(pr.PBleedRight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBleedRight(v pr.Value) {
+func (s *ComputedStyle) SetBleedRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedRight] = v
 }
 
-func (s *AnonymousStyle) GetBleedRight() pr.Value {
-	return s.Get(pr.PBleedRight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBleedRight() pr.DimOrS {
+	return s.Get(pr.PBleedRight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBleedRight(v pr.Value) {
+func (s *AnonymousStyle) SetBleedRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedRight] = v
 }
 
-func (s *ComputedStyle) GetBleedTop() pr.Value {
-	return s.Get(pr.PBleedTop.Key()).(pr.Value)
+func (s *ComputedStyle) GetBleedTop() pr.DimOrS {
+	return s.Get(pr.PBleedTop.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBleedTop(v pr.Value) {
+func (s *ComputedStyle) SetBleedTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedTop] = v
 }
 
-func (s *AnonymousStyle) GetBleedTop() pr.Value {
-	return s.Get(pr.PBleedTop.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBleedTop() pr.DimOrS {
+	return s.Get(pr.PBleedTop.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBleedTop(v pr.Value) {
+func (s *AnonymousStyle) SetBleedTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PBleedTop] = v
 }
 
@@ -270,17 +270,17 @@ func (s *AnonymousStyle) SetBookmarkLabel(v pr.ContentProperties) {
 	s.propsCache.known[pr.PBookmarkLabel] = v
 }
 
-func (s *ComputedStyle) GetBookmarkLevel() pr.IntString {
-	return s.Get(pr.PBookmarkLevel.Key()).(pr.IntString)
+func (s *ComputedStyle) GetBookmarkLevel() pr.TaggedInt {
+	return s.Get(pr.PBookmarkLevel.Key()).(pr.TaggedInt)
 }
-func (s *ComputedStyle) SetBookmarkLevel(v pr.IntString) {
+func (s *ComputedStyle) SetBookmarkLevel(v pr.TaggedInt) {
 	s.propsCache.known[pr.PBookmarkLevel] = v
 }
 
-func (s *AnonymousStyle) GetBookmarkLevel() pr.IntString {
-	return s.Get(pr.PBookmarkLevel.Key()).(pr.IntString)
+func (s *AnonymousStyle) GetBookmarkLevel() pr.TaggedInt {
+	return s.Get(pr.PBookmarkLevel.Key()).(pr.TaggedInt)
 }
-func (s *AnonymousStyle) SetBookmarkLevel(v pr.IntString) {
+func (s *AnonymousStyle) SetBookmarkLevel(v pr.TaggedInt) {
 	s.propsCache.known[pr.PBookmarkLevel] = v
 }
 
@@ -354,17 +354,17 @@ func (s *AnonymousStyle) SetBorderBottomStyle(v pr.String) {
 	s.propsCache.known[pr.PBorderBottomStyle] = v
 }
 
-func (s *ComputedStyle) GetBorderBottomWidth() pr.Value {
-	return s.Get(pr.PBorderBottomWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetBorderBottomWidth() pr.DimOrS {
+	return s.Get(pr.PBorderBottomWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBorderBottomWidth(v pr.Value) {
+func (s *ComputedStyle) SetBorderBottomWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderBottomWidth] = v
 }
 
-func (s *AnonymousStyle) GetBorderBottomWidth() pr.Value {
-	return s.Get(pr.PBorderBottomWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBorderBottomWidth() pr.DimOrS {
+	return s.Get(pr.PBorderBottomWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBorderBottomWidth(v pr.Value) {
+func (s *AnonymousStyle) SetBorderBottomWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderBottomWidth] = v
 }
 
@@ -380,6 +380,76 @@ func (s *AnonymousStyle) GetBorderCollapse() pr.String {
 }
 func (s *AnonymousStyle) SetBorderCollapse(v pr.String) {
 	s.propsCache.known[pr.PBorderCollapse] = v
+}
+
+func (s *ComputedStyle) GetBorderImageOutset() pr.Values {
+	return s.Get(pr.PBorderImageOutset.Key()).(pr.Values)
+}
+func (s *ComputedStyle) SetBorderImageOutset(v pr.Values) {
+	s.propsCache.known[pr.PBorderImageOutset] = v
+}
+
+func (s *AnonymousStyle) GetBorderImageOutset() pr.Values {
+	return s.Get(pr.PBorderImageOutset.Key()).(pr.Values)
+}
+func (s *AnonymousStyle) SetBorderImageOutset(v pr.Values) {
+	s.propsCache.known[pr.PBorderImageOutset] = v
+}
+
+func (s *ComputedStyle) GetBorderImageRepeat() pr.Strings {
+	return s.Get(pr.PBorderImageRepeat.Key()).(pr.Strings)
+}
+func (s *ComputedStyle) SetBorderImageRepeat(v pr.Strings) {
+	s.propsCache.known[pr.PBorderImageRepeat] = v
+}
+
+func (s *AnonymousStyle) GetBorderImageRepeat() pr.Strings {
+	return s.Get(pr.PBorderImageRepeat.Key()).(pr.Strings)
+}
+func (s *AnonymousStyle) SetBorderImageRepeat(v pr.Strings) {
+	s.propsCache.known[pr.PBorderImageRepeat] = v
+}
+
+func (s *ComputedStyle) GetBorderImageSlice() pr.Values {
+	return s.Get(pr.PBorderImageSlice.Key()).(pr.Values)
+}
+func (s *ComputedStyle) SetBorderImageSlice(v pr.Values) {
+	s.propsCache.known[pr.PBorderImageSlice] = v
+}
+
+func (s *AnonymousStyle) GetBorderImageSlice() pr.Values {
+	return s.Get(pr.PBorderImageSlice.Key()).(pr.Values)
+}
+func (s *AnonymousStyle) SetBorderImageSlice(v pr.Values) {
+	s.propsCache.known[pr.PBorderImageSlice] = v
+}
+
+func (s *ComputedStyle) GetBorderImageSource() pr.Image {
+	return s.Get(pr.PBorderImageSource.Key()).(pr.Image)
+}
+func (s *ComputedStyle) SetBorderImageSource(v pr.Image) {
+	s.propsCache.known[pr.PBorderImageSource] = v
+}
+
+func (s *AnonymousStyle) GetBorderImageSource() pr.Image {
+	return s.Get(pr.PBorderImageSource.Key()).(pr.Image)
+}
+func (s *AnonymousStyle) SetBorderImageSource(v pr.Image) {
+	s.propsCache.known[pr.PBorderImageSource] = v
+}
+
+func (s *ComputedStyle) GetBorderImageWidth() pr.Values {
+	return s.Get(pr.PBorderImageWidth.Key()).(pr.Values)
+}
+func (s *ComputedStyle) SetBorderImageWidth(v pr.Values) {
+	s.propsCache.known[pr.PBorderImageWidth] = v
+}
+
+func (s *AnonymousStyle) GetBorderImageWidth() pr.Values {
+	return s.Get(pr.PBorderImageWidth.Key()).(pr.Values)
+}
+func (s *AnonymousStyle) SetBorderImageWidth(v pr.Values) {
+	s.propsCache.known[pr.PBorderImageWidth] = v
 }
 
 func (s *ComputedStyle) GetBorderLeftColor() pr.Color {
@@ -410,17 +480,17 @@ func (s *AnonymousStyle) SetBorderLeftStyle(v pr.String) {
 	s.propsCache.known[pr.PBorderLeftStyle] = v
 }
 
-func (s *ComputedStyle) GetBorderLeftWidth() pr.Value {
-	return s.Get(pr.PBorderLeftWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetBorderLeftWidth() pr.DimOrS {
+	return s.Get(pr.PBorderLeftWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBorderLeftWidth(v pr.Value) {
+func (s *ComputedStyle) SetBorderLeftWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderLeftWidth] = v
 }
 
-func (s *AnonymousStyle) GetBorderLeftWidth() pr.Value {
-	return s.Get(pr.PBorderLeftWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBorderLeftWidth() pr.DimOrS {
+	return s.Get(pr.PBorderLeftWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBorderLeftWidth(v pr.Value) {
+func (s *AnonymousStyle) SetBorderLeftWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderLeftWidth] = v
 }
 
@@ -452,17 +522,17 @@ func (s *AnonymousStyle) SetBorderRightStyle(v pr.String) {
 	s.propsCache.known[pr.PBorderRightStyle] = v
 }
 
-func (s *ComputedStyle) GetBorderRightWidth() pr.Value {
-	return s.Get(pr.PBorderRightWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetBorderRightWidth() pr.DimOrS {
+	return s.Get(pr.PBorderRightWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBorderRightWidth(v pr.Value) {
+func (s *ComputedStyle) SetBorderRightWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderRightWidth] = v
 }
 
-func (s *AnonymousStyle) GetBorderRightWidth() pr.Value {
-	return s.Get(pr.PBorderRightWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBorderRightWidth() pr.DimOrS {
+	return s.Get(pr.PBorderRightWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBorderRightWidth(v pr.Value) {
+func (s *AnonymousStyle) SetBorderRightWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderRightWidth] = v
 }
 
@@ -536,31 +606,31 @@ func (s *AnonymousStyle) SetBorderTopStyle(v pr.String) {
 	s.propsCache.known[pr.PBorderTopStyle] = v
 }
 
-func (s *ComputedStyle) GetBorderTopWidth() pr.Value {
-	return s.Get(pr.PBorderTopWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetBorderTopWidth() pr.DimOrS {
+	return s.Get(pr.PBorderTopWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBorderTopWidth(v pr.Value) {
+func (s *ComputedStyle) SetBorderTopWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderTopWidth] = v
 }
 
-func (s *AnonymousStyle) GetBorderTopWidth() pr.Value {
-	return s.Get(pr.PBorderTopWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBorderTopWidth() pr.DimOrS {
+	return s.Get(pr.PBorderTopWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBorderTopWidth(v pr.Value) {
+func (s *AnonymousStyle) SetBorderTopWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PBorderTopWidth] = v
 }
 
-func (s *ComputedStyle) GetBottom() pr.Value {
-	return s.Get(pr.PBottom.Key()).(pr.Value)
+func (s *ComputedStyle) GetBottom() pr.DimOrS {
+	return s.Get(pr.PBottom.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetBottom(v pr.Value) {
+func (s *ComputedStyle) SetBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PBottom] = v
 }
 
-func (s *AnonymousStyle) GetBottom() pr.Value {
-	return s.Get(pr.PBottom.Key()).(pr.Value)
+func (s *AnonymousStyle) GetBottom() pr.DimOrS {
+	return s.Get(pr.PBottom.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetBottom(v pr.Value) {
+func (s *AnonymousStyle) SetBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PBottom] = v
 }
 
@@ -718,17 +788,17 @@ func (s *AnonymousStyle) SetColumnFill(v pr.String) {
 	s.propsCache.known[pr.PColumnFill] = v
 }
 
-func (s *ComputedStyle) GetColumnGap() pr.Value {
-	return s.Get(pr.PColumnGap.Key()).(pr.Value)
+func (s *ComputedStyle) GetColumnGap() pr.DimOrS {
+	return s.Get(pr.PColumnGap.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetColumnGap(v pr.Value) {
+func (s *ComputedStyle) SetColumnGap(v pr.DimOrS) {
 	s.propsCache.known[pr.PColumnGap] = v
 }
 
-func (s *AnonymousStyle) GetColumnGap() pr.Value {
-	return s.Get(pr.PColumnGap.Key()).(pr.Value)
+func (s *AnonymousStyle) GetColumnGap() pr.DimOrS {
+	return s.Get(pr.PColumnGap.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetColumnGap(v pr.Value) {
+func (s *AnonymousStyle) SetColumnGap(v pr.DimOrS) {
 	s.propsCache.known[pr.PColumnGap] = v
 }
 
@@ -760,17 +830,17 @@ func (s *AnonymousStyle) SetColumnRuleStyle(v pr.String) {
 	s.propsCache.known[pr.PColumnRuleStyle] = v
 }
 
-func (s *ComputedStyle) GetColumnRuleWidth() pr.Value {
-	return s.Get(pr.PColumnRuleWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetColumnRuleWidth() pr.DimOrS {
+	return s.Get(pr.PColumnRuleWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetColumnRuleWidth(v pr.Value) {
+func (s *ComputedStyle) SetColumnRuleWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PColumnRuleWidth] = v
 }
 
-func (s *AnonymousStyle) GetColumnRuleWidth() pr.Value {
-	return s.Get(pr.PColumnRuleWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetColumnRuleWidth() pr.DimOrS {
+	return s.Get(pr.PColumnRuleWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetColumnRuleWidth(v pr.Value) {
+func (s *AnonymousStyle) SetColumnRuleWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PColumnRuleWidth] = v
 }
 
@@ -788,17 +858,17 @@ func (s *AnonymousStyle) SetColumnSpan(v pr.String) {
 	s.propsCache.known[pr.PColumnSpan] = v
 }
 
-func (s *ComputedStyle) GetColumnWidth() pr.Value {
-	return s.Get(pr.PColumnWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetColumnWidth() pr.DimOrS {
+	return s.Get(pr.PColumnWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetColumnWidth(v pr.Value) {
+func (s *ComputedStyle) SetColumnWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PColumnWidth] = v
 }
 
-func (s *AnonymousStyle) GetColumnWidth() pr.Value {
-	return s.Get(pr.PColumnWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetColumnWidth() pr.DimOrS {
+	return s.Get(pr.PColumnWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetColumnWidth(v pr.Value) {
+func (s *AnonymousStyle) SetColumnWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PColumnWidth] = v
 }
 
@@ -914,17 +984,17 @@ func (s *AnonymousStyle) SetEmptyCells(v pr.String) {
 	s.propsCache.known[pr.PEmptyCells] = v
 }
 
-func (s *ComputedStyle) GetFlexBasis() pr.Value {
-	return s.Get(pr.PFlexBasis.Key()).(pr.Value)
+func (s *ComputedStyle) GetFlexBasis() pr.DimOrS {
+	return s.Get(pr.PFlexBasis.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetFlexBasis(v pr.Value) {
+func (s *ComputedStyle) SetFlexBasis(v pr.DimOrS) {
 	s.propsCache.known[pr.PFlexBasis] = v
 }
 
-func (s *AnonymousStyle) GetFlexBasis() pr.Value {
-	return s.Get(pr.PFlexBasis.Key()).(pr.Value)
+func (s *AnonymousStyle) GetFlexBasis() pr.DimOrS {
+	return s.Get(pr.PFlexBasis.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetFlexBasis(v pr.Value) {
+func (s *AnonymousStyle) SetFlexBasis(v pr.DimOrS) {
 	s.propsCache.known[pr.PFlexBasis] = v
 }
 
@@ -1054,17 +1124,17 @@ func (s *AnonymousStyle) SetFontLanguageOverride(v pr.String) {
 	s.propsCache.known[pr.PFontLanguageOverride] = v
 }
 
-func (s *ComputedStyle) GetFontSize() pr.Value {
-	return s.Get(pr.PFontSize.Key()).(pr.Value)
+func (s *ComputedStyle) GetFontSize() pr.DimOrS {
+	return s.Get(pr.PFontSize.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetFontSize(v pr.Value) {
+func (s *ComputedStyle) SetFontSize(v pr.DimOrS) {
 	s.propsCache.known[pr.PFontSize] = v
 }
 
-func (s *AnonymousStyle) GetFontSize() pr.Value {
-	return s.Get(pr.PFontSize.Key()).(pr.Value)
+func (s *AnonymousStyle) GetFontSize() pr.DimOrS {
+	return s.Get(pr.PFontSize.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetFontSize(v pr.Value) {
+func (s *AnonymousStyle) SetFontSize(v pr.DimOrS) {
 	s.propsCache.known[pr.PFontSize] = v
 }
 
@@ -1250,17 +1320,157 @@ func (s *AnonymousStyle) SetFootnotePolicy(v pr.String) {
 	s.propsCache.known[pr.PFootnotePolicy] = v
 }
 
-func (s *ComputedStyle) GetHeight() pr.Value {
-	return s.Get(pr.PHeight.Key()).(pr.Value)
+func (s *ComputedStyle) GetGridAutoColumns() pr.GridAuto {
+	return s.Get(pr.PGridAutoColumns.Key()).(pr.GridAuto)
 }
-func (s *ComputedStyle) SetHeight(v pr.Value) {
+func (s *ComputedStyle) SetGridAutoColumns(v pr.GridAuto) {
+	s.propsCache.known[pr.PGridAutoColumns] = v
+}
+
+func (s *AnonymousStyle) GetGridAutoColumns() pr.GridAuto {
+	return s.Get(pr.PGridAutoColumns.Key()).(pr.GridAuto)
+}
+func (s *AnonymousStyle) SetGridAutoColumns(v pr.GridAuto) {
+	s.propsCache.known[pr.PGridAutoColumns] = v
+}
+
+func (s *ComputedStyle) GetGridAutoFlow() pr.Strings {
+	return s.Get(pr.PGridAutoFlow.Key()).(pr.Strings)
+}
+func (s *ComputedStyle) SetGridAutoFlow(v pr.Strings) {
+	s.propsCache.known[pr.PGridAutoFlow] = v
+}
+
+func (s *AnonymousStyle) GetGridAutoFlow() pr.Strings {
+	return s.Get(pr.PGridAutoFlow.Key()).(pr.Strings)
+}
+func (s *AnonymousStyle) SetGridAutoFlow(v pr.Strings) {
+	s.propsCache.known[pr.PGridAutoFlow] = v
+}
+
+func (s *ComputedStyle) GetGridAutoRows() pr.GridAuto {
+	return s.Get(pr.PGridAutoRows.Key()).(pr.GridAuto)
+}
+func (s *ComputedStyle) SetGridAutoRows(v pr.GridAuto) {
+	s.propsCache.known[pr.PGridAutoRows] = v
+}
+
+func (s *AnonymousStyle) GetGridAutoRows() pr.GridAuto {
+	return s.Get(pr.PGridAutoRows.Key()).(pr.GridAuto)
+}
+func (s *AnonymousStyle) SetGridAutoRows(v pr.GridAuto) {
+	s.propsCache.known[pr.PGridAutoRows] = v
+}
+
+func (s *ComputedStyle) GetGridColumnEnd() pr.GridLine {
+	return s.Get(pr.PGridColumnEnd.Key()).(pr.GridLine)
+}
+func (s *ComputedStyle) SetGridColumnEnd(v pr.GridLine) {
+	s.propsCache.known[pr.PGridColumnEnd] = v
+}
+
+func (s *AnonymousStyle) GetGridColumnEnd() pr.GridLine {
+	return s.Get(pr.PGridColumnEnd.Key()).(pr.GridLine)
+}
+func (s *AnonymousStyle) SetGridColumnEnd(v pr.GridLine) {
+	s.propsCache.known[pr.PGridColumnEnd] = v
+}
+
+func (s *ComputedStyle) GetGridColumnStart() pr.GridLine {
+	return s.Get(pr.PGridColumnStart.Key()).(pr.GridLine)
+}
+func (s *ComputedStyle) SetGridColumnStart(v pr.GridLine) {
+	s.propsCache.known[pr.PGridColumnStart] = v
+}
+
+func (s *AnonymousStyle) GetGridColumnStart() pr.GridLine {
+	return s.Get(pr.PGridColumnStart.Key()).(pr.GridLine)
+}
+func (s *AnonymousStyle) SetGridColumnStart(v pr.GridLine) {
+	s.propsCache.known[pr.PGridColumnStart] = v
+}
+
+func (s *ComputedStyle) GetGridRowEnd() pr.GridLine {
+	return s.Get(pr.PGridRowEnd.Key()).(pr.GridLine)
+}
+func (s *ComputedStyle) SetGridRowEnd(v pr.GridLine) {
+	s.propsCache.known[pr.PGridRowEnd] = v
+}
+
+func (s *AnonymousStyle) GetGridRowEnd() pr.GridLine {
+	return s.Get(pr.PGridRowEnd.Key()).(pr.GridLine)
+}
+func (s *AnonymousStyle) SetGridRowEnd(v pr.GridLine) {
+	s.propsCache.known[pr.PGridRowEnd] = v
+}
+
+func (s *ComputedStyle) GetGridRowStart() pr.GridLine {
+	return s.Get(pr.PGridRowStart.Key()).(pr.GridLine)
+}
+func (s *ComputedStyle) SetGridRowStart(v pr.GridLine) {
+	s.propsCache.known[pr.PGridRowStart] = v
+}
+
+func (s *AnonymousStyle) GetGridRowStart() pr.GridLine {
+	return s.Get(pr.PGridRowStart.Key()).(pr.GridLine)
+}
+func (s *AnonymousStyle) SetGridRowStart(v pr.GridLine) {
+	s.propsCache.known[pr.PGridRowStart] = v
+}
+
+func (s *ComputedStyle) GetGridTemplateAreas() pr.GridTemplateAreas {
+	return s.Get(pr.PGridTemplateAreas.Key()).(pr.GridTemplateAreas)
+}
+func (s *ComputedStyle) SetGridTemplateAreas(v pr.GridTemplateAreas) {
+	s.propsCache.known[pr.PGridTemplateAreas] = v
+}
+
+func (s *AnonymousStyle) GetGridTemplateAreas() pr.GridTemplateAreas {
+	return s.Get(pr.PGridTemplateAreas.Key()).(pr.GridTemplateAreas)
+}
+func (s *AnonymousStyle) SetGridTemplateAreas(v pr.GridTemplateAreas) {
+	s.propsCache.known[pr.PGridTemplateAreas] = v
+}
+
+func (s *ComputedStyle) GetGridTemplateColumns() pr.GridTemplate {
+	return s.Get(pr.PGridTemplateColumns.Key()).(pr.GridTemplate)
+}
+func (s *ComputedStyle) SetGridTemplateColumns(v pr.GridTemplate) {
+	s.propsCache.known[pr.PGridTemplateColumns] = v
+}
+
+func (s *AnonymousStyle) GetGridTemplateColumns() pr.GridTemplate {
+	return s.Get(pr.PGridTemplateColumns.Key()).(pr.GridTemplate)
+}
+func (s *AnonymousStyle) SetGridTemplateColumns(v pr.GridTemplate) {
+	s.propsCache.known[pr.PGridTemplateColumns] = v
+}
+
+func (s *ComputedStyle) GetGridTemplateRows() pr.GridTemplate {
+	return s.Get(pr.PGridTemplateRows.Key()).(pr.GridTemplate)
+}
+func (s *ComputedStyle) SetGridTemplateRows(v pr.GridTemplate) {
+	s.propsCache.known[pr.PGridTemplateRows] = v
+}
+
+func (s *AnonymousStyle) GetGridTemplateRows() pr.GridTemplate {
+	return s.Get(pr.PGridTemplateRows.Key()).(pr.GridTemplate)
+}
+func (s *AnonymousStyle) SetGridTemplateRows(v pr.GridTemplate) {
+	s.propsCache.known[pr.PGridTemplateRows] = v
+}
+
+func (s *ComputedStyle) GetHeight() pr.DimOrS {
+	return s.Get(pr.PHeight.Key()).(pr.DimOrS)
+}
+func (s *ComputedStyle) SetHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PHeight] = v
 }
 
-func (s *AnonymousStyle) GetHeight() pr.Value {
-	return s.Get(pr.PHeight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetHeight() pr.DimOrS {
+	return s.Get(pr.PHeight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetHeight(v pr.Value) {
+func (s *AnonymousStyle) SetHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PHeight] = v
 }
 
@@ -1292,17 +1502,17 @@ func (s *AnonymousStyle) SetHyphenateLimitChars(v pr.Limits) {
 	s.propsCache.known[pr.PHyphenateLimitChars] = v
 }
 
-func (s *ComputedStyle) GetHyphenateLimitZone() pr.Value {
-	return s.Get(pr.PHyphenateLimitZone.Key()).(pr.Value)
+func (s *ComputedStyle) GetHyphenateLimitZone() pr.DimOrS {
+	return s.Get(pr.PHyphenateLimitZone.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetHyphenateLimitZone(v pr.Value) {
+func (s *ComputedStyle) SetHyphenateLimitZone(v pr.DimOrS) {
 	s.propsCache.known[pr.PHyphenateLimitZone] = v
 }
 
-func (s *AnonymousStyle) GetHyphenateLimitZone() pr.Value {
-	return s.Get(pr.PHyphenateLimitZone.Key()).(pr.Value)
+func (s *AnonymousStyle) GetHyphenateLimitZone() pr.DimOrS {
+	return s.Get(pr.PHyphenateLimitZone.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetHyphenateLimitZone(v pr.Value) {
+func (s *AnonymousStyle) SetHyphenateLimitZone(v pr.DimOrS) {
 	s.propsCache.known[pr.PHyphenateLimitZone] = v
 }
 
@@ -1348,87 +1558,115 @@ func (s *AnonymousStyle) SetImageRendering(v pr.String) {
 	s.propsCache.known[pr.PImageRendering] = v
 }
 
-func (s *ComputedStyle) GetImageResolution() pr.Value {
-	return s.Get(pr.PImageResolution.Key()).(pr.Value)
+func (s *ComputedStyle) GetImageResolution() pr.DimOrS {
+	return s.Get(pr.PImageResolution.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetImageResolution(v pr.Value) {
+func (s *ComputedStyle) SetImageResolution(v pr.DimOrS) {
 	s.propsCache.known[pr.PImageResolution] = v
 }
 
-func (s *AnonymousStyle) GetImageResolution() pr.Value {
-	return s.Get(pr.PImageResolution.Key()).(pr.Value)
+func (s *AnonymousStyle) GetImageResolution() pr.DimOrS {
+	return s.Get(pr.PImageResolution.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetImageResolution(v pr.Value) {
+func (s *AnonymousStyle) SetImageResolution(v pr.DimOrS) {
 	s.propsCache.known[pr.PImageResolution] = v
 }
 
-func (s *ComputedStyle) GetJustifyContent() pr.String {
-	return s.Get(pr.PJustifyContent.Key()).(pr.String)
+func (s *ComputedStyle) GetJustifyContent() pr.Strings {
+	return s.Get(pr.PJustifyContent.Key()).(pr.Strings)
 }
-func (s *ComputedStyle) SetJustifyContent(v pr.String) {
+func (s *ComputedStyle) SetJustifyContent(v pr.Strings) {
 	s.propsCache.known[pr.PJustifyContent] = v
 }
 
-func (s *AnonymousStyle) GetJustifyContent() pr.String {
-	return s.Get(pr.PJustifyContent.Key()).(pr.String)
+func (s *AnonymousStyle) GetJustifyContent() pr.Strings {
+	return s.Get(pr.PJustifyContent.Key()).(pr.Strings)
 }
-func (s *AnonymousStyle) SetJustifyContent(v pr.String) {
+func (s *AnonymousStyle) SetJustifyContent(v pr.Strings) {
 	s.propsCache.known[pr.PJustifyContent] = v
 }
 
-func (s *ComputedStyle) GetLang() pr.NamedString {
-	return s.Get(pr.PLang.Key()).(pr.NamedString)
+func (s *ComputedStyle) GetJustifyItems() pr.Strings {
+	return s.Get(pr.PJustifyItems.Key()).(pr.Strings)
 }
-func (s *ComputedStyle) SetLang(v pr.NamedString) {
+func (s *ComputedStyle) SetJustifyItems(v pr.Strings) {
+	s.propsCache.known[pr.PJustifyItems] = v
+}
+
+func (s *AnonymousStyle) GetJustifyItems() pr.Strings {
+	return s.Get(pr.PJustifyItems.Key()).(pr.Strings)
+}
+func (s *AnonymousStyle) SetJustifyItems(v pr.Strings) {
+	s.propsCache.known[pr.PJustifyItems] = v
+}
+
+func (s *ComputedStyle) GetJustifySelf() pr.Strings {
+	return s.Get(pr.PJustifySelf.Key()).(pr.Strings)
+}
+func (s *ComputedStyle) SetJustifySelf(v pr.Strings) {
+	s.propsCache.known[pr.PJustifySelf] = v
+}
+
+func (s *AnonymousStyle) GetJustifySelf() pr.Strings {
+	return s.Get(pr.PJustifySelf.Key()).(pr.Strings)
+}
+func (s *AnonymousStyle) SetJustifySelf(v pr.Strings) {
+	s.propsCache.known[pr.PJustifySelf] = v
+}
+
+func (s *ComputedStyle) GetLang() pr.TaggedString {
+	return s.Get(pr.PLang.Key()).(pr.TaggedString)
+}
+func (s *ComputedStyle) SetLang(v pr.TaggedString) {
 	s.propsCache.known[pr.PLang] = v
 }
 
-func (s *AnonymousStyle) GetLang() pr.NamedString {
-	return s.Get(pr.PLang.Key()).(pr.NamedString)
+func (s *AnonymousStyle) GetLang() pr.TaggedString {
+	return s.Get(pr.PLang.Key()).(pr.TaggedString)
 }
-func (s *AnonymousStyle) SetLang(v pr.NamedString) {
+func (s *AnonymousStyle) SetLang(v pr.TaggedString) {
 	s.propsCache.known[pr.PLang] = v
 }
 
-func (s *ComputedStyle) GetLeft() pr.Value {
-	return s.Get(pr.PLeft.Key()).(pr.Value)
+func (s *ComputedStyle) GetLeft() pr.DimOrS {
+	return s.Get(pr.PLeft.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetLeft(v pr.Value) {
+func (s *ComputedStyle) SetLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PLeft] = v
 }
 
-func (s *AnonymousStyle) GetLeft() pr.Value {
-	return s.Get(pr.PLeft.Key()).(pr.Value)
+func (s *AnonymousStyle) GetLeft() pr.DimOrS {
+	return s.Get(pr.PLeft.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetLeft(v pr.Value) {
+func (s *AnonymousStyle) SetLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PLeft] = v
 }
 
-func (s *ComputedStyle) GetLetterSpacing() pr.Value {
-	return s.Get(pr.PLetterSpacing.Key()).(pr.Value)
+func (s *ComputedStyle) GetLetterSpacing() pr.DimOrS {
+	return s.Get(pr.PLetterSpacing.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetLetterSpacing(v pr.Value) {
+func (s *ComputedStyle) SetLetterSpacing(v pr.DimOrS) {
 	s.propsCache.known[pr.PLetterSpacing] = v
 }
 
-func (s *AnonymousStyle) GetLetterSpacing() pr.Value {
-	return s.Get(pr.PLetterSpacing.Key()).(pr.Value)
+func (s *AnonymousStyle) GetLetterSpacing() pr.DimOrS {
+	return s.Get(pr.PLetterSpacing.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetLetterSpacing(v pr.Value) {
+func (s *AnonymousStyle) SetLetterSpacing(v pr.DimOrS) {
 	s.propsCache.known[pr.PLetterSpacing] = v
 }
 
-func (s *ComputedStyle) GetLineHeight() pr.Value {
-	return s.Get(pr.PLineHeight.Key()).(pr.Value)
+func (s *ComputedStyle) GetLineHeight() pr.DimOrS {
+	return s.Get(pr.PLineHeight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetLineHeight(v pr.Value) {
+func (s *ComputedStyle) SetLineHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PLineHeight] = v
 }
 
-func (s *AnonymousStyle) GetLineHeight() pr.Value {
-	return s.Get(pr.PLineHeight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetLineHeight() pr.DimOrS {
+	return s.Get(pr.PLineHeight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetLineHeight(v pr.Value) {
+func (s *AnonymousStyle) SetLineHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PLineHeight] = v
 }
 
@@ -1488,17 +1726,17 @@ func (s *AnonymousStyle) SetListStyleType(v pr.CounterStyleID) {
 	s.propsCache.known[pr.PListStyleType] = v
 }
 
-func (s *ComputedStyle) GetMarginBottom() pr.Value {
-	return s.Get(pr.PMarginBottom.Key()).(pr.Value)
+func (s *ComputedStyle) GetMarginBottom() pr.DimOrS {
+	return s.Get(pr.PMarginBottom.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMarginBottom(v pr.Value) {
+func (s *ComputedStyle) SetMarginBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginBottom] = v
 }
 
-func (s *AnonymousStyle) GetMarginBottom() pr.Value {
-	return s.Get(pr.PMarginBottom.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMarginBottom() pr.DimOrS {
+	return s.Get(pr.PMarginBottom.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMarginBottom(v pr.Value) {
+func (s *AnonymousStyle) SetMarginBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginBottom] = v
 }
 
@@ -1516,45 +1754,45 @@ func (s *AnonymousStyle) SetMarginBreak(v pr.String) {
 	s.propsCache.known[pr.PMarginBreak] = v
 }
 
-func (s *ComputedStyle) GetMarginLeft() pr.Value {
-	return s.Get(pr.PMarginLeft.Key()).(pr.Value)
+func (s *ComputedStyle) GetMarginLeft() pr.DimOrS {
+	return s.Get(pr.PMarginLeft.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMarginLeft(v pr.Value) {
+func (s *ComputedStyle) SetMarginLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginLeft] = v
 }
 
-func (s *AnonymousStyle) GetMarginLeft() pr.Value {
-	return s.Get(pr.PMarginLeft.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMarginLeft() pr.DimOrS {
+	return s.Get(pr.PMarginLeft.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMarginLeft(v pr.Value) {
+func (s *AnonymousStyle) SetMarginLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginLeft] = v
 }
 
-func (s *ComputedStyle) GetMarginRight() pr.Value {
-	return s.Get(pr.PMarginRight.Key()).(pr.Value)
+func (s *ComputedStyle) GetMarginRight() pr.DimOrS {
+	return s.Get(pr.PMarginRight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMarginRight(v pr.Value) {
+func (s *ComputedStyle) SetMarginRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginRight] = v
 }
 
-func (s *AnonymousStyle) GetMarginRight() pr.Value {
-	return s.Get(pr.PMarginRight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMarginRight() pr.DimOrS {
+	return s.Get(pr.PMarginRight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMarginRight(v pr.Value) {
+func (s *AnonymousStyle) SetMarginRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginRight] = v
 }
 
-func (s *ComputedStyle) GetMarginTop() pr.Value {
-	return s.Get(pr.PMarginTop.Key()).(pr.Value)
+func (s *ComputedStyle) GetMarginTop() pr.DimOrS {
+	return s.Get(pr.PMarginTop.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMarginTop(v pr.Value) {
+func (s *ComputedStyle) SetMarginTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginTop] = v
 }
 
-func (s *AnonymousStyle) GetMarginTop() pr.Value {
-	return s.Get(pr.PMarginTop.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMarginTop() pr.DimOrS {
+	return s.Get(pr.PMarginTop.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMarginTop(v pr.Value) {
+func (s *AnonymousStyle) SetMarginTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PMarginTop] = v
 }
 
@@ -1572,17 +1810,17 @@ func (s *AnonymousStyle) SetMarks(v pr.Marks) {
 	s.propsCache.known[pr.PMarks] = v
 }
 
-func (s *ComputedStyle) GetMaxHeight() pr.Value {
-	return s.Get(pr.PMaxHeight.Key()).(pr.Value)
+func (s *ComputedStyle) GetMaxHeight() pr.DimOrS {
+	return s.Get(pr.PMaxHeight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMaxHeight(v pr.Value) {
+func (s *ComputedStyle) SetMaxHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PMaxHeight] = v
 }
 
-func (s *AnonymousStyle) GetMaxHeight() pr.Value {
-	return s.Get(pr.PMaxHeight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMaxHeight() pr.DimOrS {
+	return s.Get(pr.PMaxHeight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMaxHeight(v pr.Value) {
+func (s *AnonymousStyle) SetMaxHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PMaxHeight] = v
 }
 
@@ -1600,45 +1838,45 @@ func (s *AnonymousStyle) SetMaxLines(v pr.TaggedInt) {
 	s.propsCache.known[pr.PMaxLines] = v
 }
 
-func (s *ComputedStyle) GetMaxWidth() pr.Value {
-	return s.Get(pr.PMaxWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetMaxWidth() pr.DimOrS {
+	return s.Get(pr.PMaxWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMaxWidth(v pr.Value) {
+func (s *ComputedStyle) SetMaxWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PMaxWidth] = v
 }
 
-func (s *AnonymousStyle) GetMaxWidth() pr.Value {
-	return s.Get(pr.PMaxWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMaxWidth() pr.DimOrS {
+	return s.Get(pr.PMaxWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMaxWidth(v pr.Value) {
+func (s *AnonymousStyle) SetMaxWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PMaxWidth] = v
 }
 
-func (s *ComputedStyle) GetMinHeight() pr.Value {
-	return s.Get(pr.PMinHeight.Key()).(pr.Value)
+func (s *ComputedStyle) GetMinHeight() pr.DimOrS {
+	return s.Get(pr.PMinHeight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMinHeight(v pr.Value) {
+func (s *ComputedStyle) SetMinHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PMinHeight] = v
 }
 
-func (s *AnonymousStyle) GetMinHeight() pr.Value {
-	return s.Get(pr.PMinHeight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMinHeight() pr.DimOrS {
+	return s.Get(pr.PMinHeight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMinHeight(v pr.Value) {
+func (s *AnonymousStyle) SetMinHeight(v pr.DimOrS) {
 	s.propsCache.known[pr.PMinHeight] = v
 }
 
-func (s *ComputedStyle) GetMinWidth() pr.Value {
-	return s.Get(pr.PMinWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetMinWidth() pr.DimOrS {
+	return s.Get(pr.PMinWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetMinWidth(v pr.Value) {
+func (s *ComputedStyle) SetMinWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PMinWidth] = v
 }
 
-func (s *AnonymousStyle) GetMinWidth() pr.Value {
-	return s.Get(pr.PMinWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetMinWidth() pr.DimOrS {
+	return s.Get(pr.PMinWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetMinWidth(v pr.Value) {
+func (s *AnonymousStyle) SetMinWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PMinWidth] = v
 }
 
@@ -1740,17 +1978,17 @@ func (s *AnonymousStyle) SetOutlineStyle(v pr.String) {
 	s.propsCache.known[pr.POutlineStyle] = v
 }
 
-func (s *ComputedStyle) GetOutlineWidth() pr.Value {
-	return s.Get(pr.POutlineWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetOutlineWidth() pr.DimOrS {
+	return s.Get(pr.POutlineWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetOutlineWidth(v pr.Value) {
+func (s *ComputedStyle) SetOutlineWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.POutlineWidth] = v
 }
 
-func (s *AnonymousStyle) GetOutlineWidth() pr.Value {
-	return s.Get(pr.POutlineWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetOutlineWidth() pr.DimOrS {
+	return s.Get(pr.POutlineWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetOutlineWidth(v pr.Value) {
+func (s *AnonymousStyle) SetOutlineWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.POutlineWidth] = v
 }
 
@@ -1782,59 +2020,59 @@ func (s *AnonymousStyle) SetOverflowWrap(v pr.String) {
 	s.propsCache.known[pr.POverflowWrap] = v
 }
 
-func (s *ComputedStyle) GetPaddingBottom() pr.Value {
-	return s.Get(pr.PPaddingBottom.Key()).(pr.Value)
+func (s *ComputedStyle) GetPaddingBottom() pr.DimOrS {
+	return s.Get(pr.PPaddingBottom.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetPaddingBottom(v pr.Value) {
+func (s *ComputedStyle) SetPaddingBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingBottom] = v
 }
 
-func (s *AnonymousStyle) GetPaddingBottom() pr.Value {
-	return s.Get(pr.PPaddingBottom.Key()).(pr.Value)
+func (s *AnonymousStyle) GetPaddingBottom() pr.DimOrS {
+	return s.Get(pr.PPaddingBottom.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetPaddingBottom(v pr.Value) {
+func (s *AnonymousStyle) SetPaddingBottom(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingBottom] = v
 }
 
-func (s *ComputedStyle) GetPaddingLeft() pr.Value {
-	return s.Get(pr.PPaddingLeft.Key()).(pr.Value)
+func (s *ComputedStyle) GetPaddingLeft() pr.DimOrS {
+	return s.Get(pr.PPaddingLeft.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetPaddingLeft(v pr.Value) {
+func (s *ComputedStyle) SetPaddingLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingLeft] = v
 }
 
-func (s *AnonymousStyle) GetPaddingLeft() pr.Value {
-	return s.Get(pr.PPaddingLeft.Key()).(pr.Value)
+func (s *AnonymousStyle) GetPaddingLeft() pr.DimOrS {
+	return s.Get(pr.PPaddingLeft.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetPaddingLeft(v pr.Value) {
+func (s *AnonymousStyle) SetPaddingLeft(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingLeft] = v
 }
 
-func (s *ComputedStyle) GetPaddingRight() pr.Value {
-	return s.Get(pr.PPaddingRight.Key()).(pr.Value)
+func (s *ComputedStyle) GetPaddingRight() pr.DimOrS {
+	return s.Get(pr.PPaddingRight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetPaddingRight(v pr.Value) {
+func (s *ComputedStyle) SetPaddingRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingRight] = v
 }
 
-func (s *AnonymousStyle) GetPaddingRight() pr.Value {
-	return s.Get(pr.PPaddingRight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetPaddingRight() pr.DimOrS {
+	return s.Get(pr.PPaddingRight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetPaddingRight(v pr.Value) {
+func (s *AnonymousStyle) SetPaddingRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingRight] = v
 }
 
-func (s *ComputedStyle) GetPaddingTop() pr.Value {
-	return s.Get(pr.PPaddingTop.Key()).(pr.Value)
+func (s *ComputedStyle) GetPaddingTop() pr.DimOrS {
+	return s.Get(pr.PPaddingTop.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetPaddingTop(v pr.Value) {
+func (s *ComputedStyle) SetPaddingTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingTop] = v
 }
 
-func (s *AnonymousStyle) GetPaddingTop() pr.Value {
-	return s.Get(pr.PPaddingTop.Key()).(pr.Value)
+func (s *AnonymousStyle) GetPaddingTop() pr.DimOrS {
+	return s.Get(pr.PPaddingTop.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetPaddingTop(v pr.Value) {
+func (s *AnonymousStyle) SetPaddingTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PPaddingTop] = v
 }
 
@@ -1880,18 +2118,32 @@ func (s *AnonymousStyle) SetQuotes(v pr.Quotes) {
 	s.propsCache.known[pr.PQuotes] = v
 }
 
-func (s *ComputedStyle) GetRight() pr.Value {
-	return s.Get(pr.PRight.Key()).(pr.Value)
+func (s *ComputedStyle) GetRight() pr.DimOrS {
+	return s.Get(pr.PRight.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetRight(v pr.Value) {
+func (s *ComputedStyle) SetRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PRight] = v
 }
 
-func (s *AnonymousStyle) GetRight() pr.Value {
-	return s.Get(pr.PRight.Key()).(pr.Value)
+func (s *AnonymousStyle) GetRight() pr.DimOrS {
+	return s.Get(pr.PRight.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetRight(v pr.Value) {
+func (s *AnonymousStyle) SetRight(v pr.DimOrS) {
 	s.propsCache.known[pr.PRight] = v
+}
+
+func (s *ComputedStyle) GetRowGap() pr.DimOrS {
+	return s.Get(pr.PRowGap.Key()).(pr.DimOrS)
+}
+func (s *ComputedStyle) SetRowGap(v pr.DimOrS) {
+	s.propsCache.known[pr.PRowGap] = v
+}
+
+func (s *AnonymousStyle) GetRowGap() pr.DimOrS {
+	return s.Get(pr.PRowGap.Key()).(pr.DimOrS)
+}
+func (s *AnonymousStyle) SetRowGap(v pr.DimOrS) {
+	s.propsCache.known[pr.PRowGap] = v
 }
 
 func (s *ComputedStyle) GetSize() pr.Point {
@@ -1922,17 +2174,17 @@ func (s *AnonymousStyle) SetStringSet(v pr.StringSet) {
 	s.propsCache.known[pr.PStringSet] = v
 }
 
-func (s *ComputedStyle) GetTabSize() pr.Value {
-	return s.Get(pr.PTabSize.Key()).(pr.Value)
+func (s *ComputedStyle) GetTabSize() pr.DimOrS {
+	return s.Get(pr.PTabSize.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetTabSize(v pr.Value) {
+func (s *ComputedStyle) SetTabSize(v pr.DimOrS) {
 	s.propsCache.known[pr.PTabSize] = v
 }
 
-func (s *AnonymousStyle) GetTabSize() pr.Value {
-	return s.Get(pr.PTabSize.Key()).(pr.Value)
+func (s *AnonymousStyle) GetTabSize() pr.DimOrS {
+	return s.Get(pr.PTabSize.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetTabSize(v pr.Value) {
+func (s *AnonymousStyle) SetTabSize(v pr.DimOrS) {
 	s.propsCache.known[pr.PTabSize] = v
 }
 
@@ -2020,17 +2272,17 @@ func (s *AnonymousStyle) SetTextDecorationStyle(v pr.String) {
 	s.propsCache.known[pr.PTextDecorationStyle] = v
 }
 
-func (s *ComputedStyle) GetTextIndent() pr.Value {
-	return s.Get(pr.PTextIndent.Key()).(pr.Value)
+func (s *ComputedStyle) GetTextIndent() pr.DimOrS {
+	return s.Get(pr.PTextIndent.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetTextIndent(v pr.Value) {
+func (s *ComputedStyle) SetTextIndent(v pr.DimOrS) {
 	s.propsCache.known[pr.PTextIndent] = v
 }
 
-func (s *AnonymousStyle) GetTextIndent() pr.Value {
-	return s.Get(pr.PTextIndent.Key()).(pr.Value)
+func (s *AnonymousStyle) GetTextIndent() pr.DimOrS {
+	return s.Get(pr.PTextIndent.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetTextIndent(v pr.Value) {
+func (s *AnonymousStyle) SetTextIndent(v pr.DimOrS) {
 	s.propsCache.known[pr.PTextIndent] = v
 }
 
@@ -2062,17 +2314,17 @@ func (s *AnonymousStyle) SetTextTransform(v pr.String) {
 	s.propsCache.known[pr.PTextTransform] = v
 }
 
-func (s *ComputedStyle) GetTop() pr.Value {
-	return s.Get(pr.PTop.Key()).(pr.Value)
+func (s *ComputedStyle) GetTop() pr.DimOrS {
+	return s.Get(pr.PTop.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetTop(v pr.Value) {
+func (s *ComputedStyle) SetTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PTop] = v
 }
 
-func (s *AnonymousStyle) GetTop() pr.Value {
-	return s.Get(pr.PTop.Key()).(pr.Value)
+func (s *AnonymousStyle) GetTop() pr.DimOrS {
+	return s.Get(pr.PTop.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetTop(v pr.Value) {
+func (s *AnonymousStyle) SetTop(v pr.DimOrS) {
 	s.propsCache.known[pr.PTop] = v
 }
 
@@ -2118,17 +2370,17 @@ func (s *AnonymousStyle) SetUnicodeBidi(v pr.String) {
 	s.propsCache.known[pr.PUnicodeBidi] = v
 }
 
-func (s *ComputedStyle) GetVerticalAlign() pr.Value {
-	return s.Get(pr.PVerticalAlign.Key()).(pr.Value)
+func (s *ComputedStyle) GetVerticalAlign() pr.DimOrS {
+	return s.Get(pr.PVerticalAlign.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetVerticalAlign(v pr.Value) {
+func (s *ComputedStyle) SetVerticalAlign(v pr.DimOrS) {
 	s.propsCache.known[pr.PVerticalAlign] = v
 }
 
-func (s *AnonymousStyle) GetVerticalAlign() pr.Value {
-	return s.Get(pr.PVerticalAlign.Key()).(pr.Value)
+func (s *AnonymousStyle) GetVerticalAlign() pr.DimOrS {
+	return s.Get(pr.PVerticalAlign.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetVerticalAlign(v pr.Value) {
+func (s *AnonymousStyle) SetVerticalAlign(v pr.DimOrS) {
 	s.propsCache.known[pr.PVerticalAlign] = v
 }
 
@@ -2174,17 +2426,17 @@ func (s *AnonymousStyle) SetWidows(v pr.Int) {
 	s.propsCache.known[pr.PWidows] = v
 }
 
-func (s *ComputedStyle) GetWidth() pr.Value {
-	return s.Get(pr.PWidth.Key()).(pr.Value)
+func (s *ComputedStyle) GetWidth() pr.DimOrS {
+	return s.Get(pr.PWidth.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetWidth(v pr.Value) {
+func (s *ComputedStyle) SetWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PWidth] = v
 }
 
-func (s *AnonymousStyle) GetWidth() pr.Value {
-	return s.Get(pr.PWidth.Key()).(pr.Value)
+func (s *AnonymousStyle) GetWidth() pr.DimOrS {
+	return s.Get(pr.PWidth.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetWidth(v pr.Value) {
+func (s *AnonymousStyle) SetWidth(v pr.DimOrS) {
 	s.propsCache.known[pr.PWidth] = v
 }
 
@@ -2202,17 +2454,17 @@ func (s *AnonymousStyle) SetWordBreak(v pr.String) {
 	s.propsCache.known[pr.PWordBreak] = v
 }
 
-func (s *ComputedStyle) GetWordSpacing() pr.Value {
-	return s.Get(pr.PWordSpacing.Key()).(pr.Value)
+func (s *ComputedStyle) GetWordSpacing() pr.DimOrS {
+	return s.Get(pr.PWordSpacing.Key()).(pr.DimOrS)
 }
-func (s *ComputedStyle) SetWordSpacing(v pr.Value) {
+func (s *ComputedStyle) SetWordSpacing(v pr.DimOrS) {
 	s.propsCache.known[pr.PWordSpacing] = v
 }
 
-func (s *AnonymousStyle) GetWordSpacing() pr.Value {
-	return s.Get(pr.PWordSpacing.Key()).(pr.Value)
+func (s *AnonymousStyle) GetWordSpacing() pr.DimOrS {
+	return s.Get(pr.PWordSpacing.Key()).(pr.DimOrS)
 }
-func (s *AnonymousStyle) SetWordSpacing(v pr.Value) {
+func (s *AnonymousStyle) SetWordSpacing(v pr.DimOrS) {
 	s.propsCache.known[pr.PWordSpacing] = v
 }
 

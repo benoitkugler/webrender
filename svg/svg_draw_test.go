@@ -17,9 +17,13 @@ var _ backend.Canvas = outputPage{}
 
 type outputPage struct{}
 
-func (outputPage) GetRectangle() (left, top, right, bottom fl) {
-	outputLog.Println("GetRectangle")
+func (outputPage) GetBoundingBox() (left, top, right, bottom fl) {
+	outputLog.Println("GetBoundingBox")
 	return 0, 0, 10, 10
+}
+
+func (outputPage) SetBoundingBox(left, top, right, bottom fl) {
+	outputLog.Println("SetBoundingBox")
 }
 
 func (outputPage) OnNewStack(f func()) {
@@ -33,6 +37,10 @@ func (outputPage) Rectangle(x fl, y fl, width fl, height fl) {
 
 func (outputPage) Clip(evenOdd bool) {
 	outputLog.Println("Clip")
+}
+
+func (outputPage) SetAlpha(alpha fl, stroke bool) {
+	outputLog.Println("SetAlpha")
 }
 
 func (outputPage) SetColorRgba(color parser.RGBA, stroke bool) {

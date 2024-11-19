@@ -5,7 +5,6 @@ import (
 	"sort"
 	"testing"
 
-	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
@@ -13,8 +12,7 @@ import (
 // Tests for footnotes layout.
 
 func TestInlineFootnote(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -33,22 +31,21 @@ func TestInlineFootnote(t *testing.T) {
         </style>
         <div>abc<span>de</span></div>`)
 	html, footnoteArea := unpack2(page)
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	divTextbox, footnoteCall := unpack2(div.Box().Children[0])
-	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "")
-	tu.AssertEqual(t, divTextbox.Box().PositionY, pr.Float(0), "")
+	body := unpack1(html)
+	div := unpack1(body)
+	divTextbox, footnoteCall := unpack2(unpack1(div))
+	assertText(t, divTextbox, "abc")
+	assertText(t, unpack1(footnoteCall), "1")
+	tu.AssertEqual(t, divTextbox.Box().PositionY, Fl(0))
 
-	footnoteMarker, footnoteTextbox := unpack2(footnoteArea.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "de", "")
-	tu.AssertEqual(t, footnoteArea.Box().PositionY, pr.Float(5), "")
+	footnoteMarker, footnoteTextbox := unpack2(unpack1(unpack1(footnoteArea)))
+	assertText(t, unpack1(footnoteMarker), "1.")
+	assertText(t, footnoteTextbox, "de")
+	tu.AssertEqual(t, footnoteArea.Box().PositionY, Fl(5))
 }
 
 func TestBlockFootnote(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -67,21 +64,20 @@ func TestBlockFootnote(t *testing.T) {
         </style>
         <div>abc<div class="footnote">de</div></div>`)
 	html, footnoteArea := unpack2(page)
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	divTextbox, footnoteCall := unpack2(div.Box().Children[0])
-	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "")
-	tu.AssertEqual(t, divTextbox.Box().PositionY, pr.Float(0), "")
-	footnoteMarker, footnoteTextbox := unpack2(footnoteArea.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "de", "")
-	tu.AssertEqual(t, footnoteArea.Box().PositionY, pr.Float(5), "")
+	body := unpack1(html)
+	div := unpack1(body)
+	divTextbox, footnoteCall := unpack2(unpack1(div))
+	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(footnoteCall).(*bo.TextBox).Text, "1")
+	tu.AssertEqual(t, divTextbox.Box().PositionY, Fl(0))
+	footnoteMarker, footnoteTextbox := unpack2(unpack1(unpack1(footnoteArea)))
+	tu.AssertEqual(t, unpack1(footnoteMarker).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "de")
+	tu.AssertEqual(t, footnoteArea.Box().PositionY, Fl(5))
 }
 
 func TestLongFootnote(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -100,25 +96,24 @@ func TestLongFootnote(t *testing.T) {
         </style>
         <div>abc<span>de f</span></div>`)
 	html, footnoteArea := unpack2(page)
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	divTextbox, footnoteCall := unpack2(div.Box().Children[0])
-	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "")
-	tu.AssertEqual(t, divTextbox.Box().PositionY, pr.Float(0), "")
-	footnoteLine1, footnoteLine2 := unpack2(footnoteArea.Box().Children[0])
+	body := unpack1(html)
+	div := unpack1(body)
+	divTextbox, footnoteCall := unpack2(unpack1(div))
+	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(footnoteCall).(*bo.TextBox).Text, "1")
+	tu.AssertEqual(t, divTextbox.Box().PositionY, Fl(0))
+	footnoteLine1, footnoteLine2 := unpack2(unpack1(footnoteArea))
 	footnoteMarker, footnoteContent1 := unpack2(footnoteLine1)
-	footnoteContent2 := footnoteLine2.Box().Children[0]
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteContent1.(*bo.TextBox).Text, "de", "")
-	tu.AssertEqual(t, footnoteArea.Box().PositionY, pr.Float(3), "")
-	tu.AssertEqual(t, footnoteContent2.(*bo.TextBox).Text, "f", "")
-	tu.AssertEqual(t, footnoteContent2.Box().PositionY, pr.Float(5), "")
+	footnoteContent2 := unpack1(footnoteLine2)
+	tu.AssertEqual(t, unpack1(footnoteMarker).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteContent1.(*bo.TextBox).Text, "de")
+	tu.AssertEqual(t, footnoteArea.Box().PositionY, Fl(3))
+	tu.AssertEqual(t, footnoteContent2.(*bo.TextBox).Text, "f")
+	tu.AssertEqual(t, footnoteContent2.Box().PositionY, Fl(5))
 }
 
 func TestSeveralFootnote(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -139,33 +134,32 @@ func TestSeveralFootnote(t *testing.T) {
 	page1, page2 := pages[0], pages[1]
 
 	html1, footnoteArea1 := unpack2(page1)
-	body1 := html1.Box().Children[0]
-	div1 := body1.Box().Children[0]
+	body1 := unpack1(html1)
+	div1 := unpack1(body1)
 	div1Line1, _ := unpack2(div1)
-	tu.AssertEqual(t, div1Line1.Box().Children[0].(*bo.TextBox).Text, "abcd", "")
+	tu.AssertEqual(t, unpack1(div1Line1).(*bo.TextBox).Text, "abcd")
 	div1Line2Text, div1_footnoteCall := unpack2(div1.Box().Children[1])
-	tu.AssertEqual(t, div1Line2Text.(*bo.TextBox).Text, "e", "")
-	tu.AssertEqual(t, div1_footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "")
-	footnoteMarker1, footnoteTextbox1 := unpack2(footnoteArea1.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker1.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "fg", "")
+	tu.AssertEqual(t, div1Line2Text.(*bo.TextBox).Text, "e")
+	tu.AssertEqual(t, unpack1(div1_footnoteCall).(*bo.TextBox).Text, "1")
+	footnoteMarker1, footnoteTextbox1 := unpack2(unpack1(unpack1(footnoteArea1)))
+	tu.AssertEqual(t, unpack1(footnoteMarker1).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "fg")
 
 	html2, footnoteArea2 := unpack2(page2)
-	body2 := html2.Box().Children[0]
-	div2 := body2.Box().Children[0]
+	body2 := unpack1(html2)
+	div2 := unpack1(body2)
 	div2Line1, _ := unpack2(div2)
-	tu.AssertEqual(t, div2Line1.Box().Children[0].(*bo.TextBox).Text, "hijk", "")
+	tu.AssertEqual(t, unpack1(div2Line1).(*bo.TextBox).Text, "hijk")
 	div2Line2Text, div2_footnoteCall := unpack2(div2.Box().Children[1])
-	tu.AssertEqual(t, div2Line2Text.(*bo.TextBox).Text, "l", "")
-	tu.AssertEqual(t, div2_footnoteCall.Box().Children[0].(*bo.TextBox).Text, "2", "")
-	footnoteMarker2, footnoteTextbox2 := unpack2(footnoteArea2.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker2.Box().Children[0].(*bo.TextBox).Text, "2.", "")
-	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "mn", "")
+	tu.AssertEqual(t, div2Line2Text.(*bo.TextBox).Text, "l")
+	tu.AssertEqual(t, unpack1(div2_footnoteCall).(*bo.TextBox).Text, "2")
+	footnoteMarker2, footnoteTextbox2 := unpack2(unpack1(unpack1(footnoteArea2)))
+	tu.AssertEqual(t, unpack1(footnoteMarker2).(*bo.TextBox).Text, "2.")
+	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "mn")
 }
 
 func TestReportedFootnote_1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -186,30 +180,29 @@ func TestReportedFootnote_1(t *testing.T) {
 	page1, page2 := pages[0], pages[1]
 
 	html1, footnoteArea1 := unpack2(page1)
-	body1 := html1.Box().Children[0]
-	div1 := body1.Box().Children[0]
+	body1 := unpack1(html1)
+	div1 := unpack1(body1)
 	div_line1, div_line2 := unpack2(div1)
 	div_line1_text, div_footnoteCall1 := unpack2(div_line1)
-	tu.AssertEqual(t, div_line1_text.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, div_footnoteCall1.Box().Children[0].(*bo.TextBox).Text, "1", "")
+	tu.AssertEqual(t, div_line1_text.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(div_footnoteCall1).(*bo.TextBox).Text, "1")
 	div_line2_text, div_footnoteCall2 := unpack2(div_line2)
-	tu.AssertEqual(t, div_line2_text.(*bo.TextBox).Text, "hij", "")
-	tu.AssertEqual(t, div_footnoteCall2.Box().Children[0].(*bo.TextBox).Text, "2", "")
+	tu.AssertEqual(t, div_line2_text.(*bo.TextBox).Text, "hij")
+	tu.AssertEqual(t, unpack1(div_footnoteCall2).(*bo.TextBox).Text, "2")
 
-	footnoteMarker1, footnoteTextbox1 := unpack2(footnoteArea1.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker1.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "f1", "")
+	footnoteMarker1, footnoteTextbox1 := unpack2(unpack1(footnoteArea1.Box().Children[0]))
+	tu.AssertEqual(t, unpack1(footnoteMarker1).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "f1")
 
 	html2, footnoteArea2 := unpack2(page2)
-	tu.AssertEqual(t, len(html2.Box().Children), 0, "")
-	footnoteMarker2, footnoteTextbox2 := unpack2(footnoteArea2.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker2.Box().Children[0].(*bo.TextBox).Text, "2.", "")
-	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "f2", "")
+	tu.AssertEqual(t, len(html2.Box().Children), 0)
+	footnoteMarker2, footnoteTextbox2 := unpack2(unpack1(unpack1(footnoteArea2)))
+	tu.AssertEqual(t, unpack1(footnoteMarker2).(*bo.TextBox).Text, "2.")
+	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "f2")
 }
 
 func TestReportedFootnote_2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -230,32 +223,31 @@ func TestReportedFootnote_2(t *testing.T) {
 	page1, page2 := pages[0], pages[1]
 
 	html1, footnoteArea1 := unpack2(page1)
-	body1 := html1.Box().Children[0]
-	div1 := body1.Box().Children[0]
+	body1 := unpack1(html1)
+	div1 := unpack1(body1)
 	div_line1, div_line2 := unpack2(div1)
 	div_line1_text, div_footnoteCall1 := unpack2(div_line1)
-	tu.AssertEqual(t, div_line1_text.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, div_footnoteCall1.Box().Children[0].(*bo.TextBox).Text, "1", "")
+	tu.AssertEqual(t, div_line1_text.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(div_footnoteCall1).(*bo.TextBox).Text, "1")
 	div_line2_text, div_footnoteCall2 := unpack2(div_line2)
-	tu.AssertEqual(t, div_line2_text.(*bo.TextBox).Text, "hij", "")
-	tu.AssertEqual(t, div_footnoteCall2.Box().Children[0].(*bo.TextBox).Text, "2", "")
-	footnoteMarker1, footnoteTextbox1 := unpack2(footnoteArea1.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker1.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "f1", "")
+	tu.AssertEqual(t, div_line2_text.(*bo.TextBox).Text, "hij")
+	tu.AssertEqual(t, unpack1(div_footnoteCall2).(*bo.TextBox).Text, "2")
+	footnoteMarker1, footnoteTextbox1 := unpack2(unpack1(footnoteArea1.Box().Children[0]))
+	tu.AssertEqual(t, unpack1(footnoteMarker1).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "f1")
 
 	html2, footnoteArea2 := unpack2(page2)
-	body2 := html2.Box().Children[0]
-	div2 := body2.Box().Children[0]
-	div2_line := div2.Box().Children[0]
-	tu.AssertEqual(t, div2_line.Box().Children[0].(*bo.TextBox).Text, "wow", "")
-	footnoteMarker2, footnoteTextbox2 := unpack2(footnoteArea2.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker2.Box().Children[0].(*bo.TextBox).Text, "2.", "")
-	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "f2", "")
+	body2 := unpack1(html2)
+	div2 := unpack1(body2)
+	div2_line := unpack1(div2)
+	tu.AssertEqual(t, unpack1(div2_line).(*bo.TextBox).Text, "wow")
+	footnoteMarker2, footnoteTextbox2 := unpack2(unpack1(unpack1(footnoteArea2)))
+	tu.AssertEqual(t, unpack1(footnoteMarker2).(*bo.TextBox).Text, "2.")
+	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "f2")
 }
 
 func TestReportedFootnote_3(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -280,32 +272,31 @@ func TestReportedFootnote_3(t *testing.T) {
 	page1, page2 := pages[0], pages[1]
 
 	html1, footnoteArea1 := unpack2(page1)
-	body1 := html1.Box().Children[0]
-	div1 := body1.Box().Children[0]
+	body1 := unpack1(html1)
+	div1 := unpack1(body1)
 	line1, line2, line3 := unpack3(div1)
-	tu.AssertEqual(t, line1.Box().Children[0].(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, line1.Box().Children[1].Box().Children[0].(*bo.TextBox).Text, "1", "")
-	tu.AssertEqual(t, line2.Box().Children[0].(*bo.TextBox).Text, "def", "")
-	tu.AssertEqual(t, line2.Box().Children[1].Box().Children[0].(*bo.TextBox).Text, "2", "")
-	tu.AssertEqual(t, line3.Box().Children[0].(*bo.TextBox).Text, "ghi", "")
-	tu.AssertEqual(t, line3.Box().Children[1].Box().Children[0].(*bo.TextBox).Text, "3", "")
-	footnote1 := footnoteArea1.Box().Children[0]
-	tu.AssertEqual(t, footnote1.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnote1.Box().Children[0].Box().Children[1].(*bo.TextBox).Text, "1", "")
+	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(line1.Box().Children[1]).(*bo.TextBox).Text, "1")
+	tu.AssertEqual(t, unpack1(line2).(*bo.TextBox).Text, "def")
+	tu.AssertEqual(t, unpack1(line2.Box().Children[1]).(*bo.TextBox).Text, "2")
+	tu.AssertEqual(t, unpack1(line3).(*bo.TextBox).Text, "ghi")
+	tu.AssertEqual(t, unpack1(line3.Box().Children[1]).(*bo.TextBox).Text, "3")
+	footnote1 := unpack1(footnoteArea1)
+	tu.AssertEqual(t, unpack1(footnote1.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, unpack1(footnote1).Box().Children[1].(*bo.TextBox).Text, "1")
 
 	_, footnoteArea2 := unpack2(page2)
 	footnote2, footnote3 := unpack2(footnoteArea2)
-	tu.AssertEqual(t, footnote2.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "2.", "")
-	tu.AssertEqual(t, footnote2.Box().Children[0].Box().Children[1].(*bo.TextBox).Text, "v", "")
-	tu.AssertEqual(t, footnote2.Box().Children[1].Box().Children[0].(*bo.TextBox).Text, "long", "")
-	tu.AssertEqual(t, footnote2.Box().Children[2].Box().Children[0].(*bo.TextBox).Text, "2", "")
-	tu.AssertEqual(t, footnote3.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "3.", "")
-	tu.AssertEqual(t, footnote3.Box().Children[0].Box().Children[1].(*bo.TextBox).Text, "3", "")
+	tu.AssertEqual(t, unpack1(footnote2.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "2.")
+	tu.AssertEqual(t, unpack1(footnote2).Box().Children[1].(*bo.TextBox).Text, "v")
+	tu.AssertEqual(t, unpack1(footnote2.Box().Children[1]).(*bo.TextBox).Text, "long")
+	tu.AssertEqual(t, unpack1(footnote2.Box().Children[2]).(*bo.TextBox).Text, "2")
+	tu.AssertEqual(t, unpack1(footnote3.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "3.")
+	tu.AssertEqual(t, unpack1(footnote3).Box().Children[1].(*bo.TextBox).Text, "3")
 }
 
 func TestReportedSequentialFootnote(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -335,12 +326,11 @@ func TestReportedSequentialFootnote(t *testing.T) {
 			return false
 		}))
 	}
-	tu.AssertEqual(t, sort.IsSorted(positions), true, "")
+	tu.AssertEqual(t, sort.IsSorted(positions), true)
 }
 
 func TestReportedSequentialFootnoteSecondLine(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -370,12 +360,11 @@ func TestReportedSequentialFootnoteSecondLine(t *testing.T) {
 			return false
 		}))
 	}
-	tu.AssertEqual(t, sort.IsSorted(positions), true, "")
+	tu.AssertEqual(t, sort.IsSorted(positions), true)
 }
 
 func TestFootnoteAreaAfterCall(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, test := range []struct {
 		css  string
@@ -417,13 +406,12 @@ func TestFootnoteAreaAfterCall(t *testing.T) {
 			return ok
 		})
 
-		tu.AssertEqual(t, footnoteCall.isLess(footnoteArea), true, "")
+		tu.AssertEqual(t, footnoteCall.isLess(footnoteArea), true)
 	}
 }
 
 func TestFootnoteDisplayInline(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -443,27 +431,26 @@ func TestFootnoteDisplayInline(t *testing.T) {
         </style>
         <div>abc<span>d</span> fgh<span>i</span></div>`)
 	html, footnoteArea := unpack2(page)
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	body := unpack1(html)
+	div := unpack1(body)
 	div_line1, div_line2 := unpack2(div)
 	div_textbox1, footnoteCall1 := unpack2(div_line1)
 	divTextbox2, footnoteCall2 := unpack2(div_line2)
-	tu.AssertEqual(t, div_textbox1.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, divTextbox2.(*bo.TextBox).Text, "fgh", "")
-	tu.AssertEqual(t, footnoteCall1.Box().Children[0].(*bo.TextBox).Text, "1", "")
-	tu.AssertEqual(t, footnoteCall2.Box().Children[0].(*bo.TextBox).Text, "2", "")
-	line := footnoteArea.Box().Children[0]
-	footnote_mark1, footnoteTextbox1 := unpack2(line.Box().Children[0])
+	tu.AssertEqual(t, div_textbox1.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, divTextbox2.(*bo.TextBox).Text, "fgh")
+	tu.AssertEqual(t, unpack1(footnoteCall1).(*bo.TextBox).Text, "1")
+	tu.AssertEqual(t, unpack1(footnoteCall2).(*bo.TextBox).Text, "2")
+	line := unpack1(footnoteArea)
+	footnote_mark1, footnoteTextbox1 := unpack2(unpack1(line))
 	footnote_mark2, footnoteTextbox2 := unpack2(line.Box().Children[1])
-	tu.AssertEqual(t, footnote_mark1.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "d", "")
-	tu.AssertEqual(t, footnote_mark2.Box().Children[0].(*bo.TextBox).Text, "2.", "")
-	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "i", "")
+	tu.AssertEqual(t, unpack1(footnote_mark1).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox1.(*bo.TextBox).Text, "d")
+	tu.AssertEqual(t, unpack1(footnote_mark2).(*bo.TextBox).Text, "2.")
+	tu.AssertEqual(t, footnoteTextbox2.(*bo.TextBox).Text, "i")
 }
 
 func TestFootnoteLongerThanSpaceLeft(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -483,28 +470,27 @@ func TestFootnoteLongerThanSpaceLeft(t *testing.T) {
         <div>abc<span>def ghi jkl</span></div>`)
 	page1, page2 := pages[0], pages[1]
 
-	html1 := page1.Box().Children[0]
-	body1 := html1.Box().Children[0]
-	div := body1.Box().Children[0]
-	divTextbox, footnoteCall := unpack2(div.Box().Children[0])
-	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "")
+	html1 := unpack1(page1)
+	body1 := unpack1(html1)
+	div := unpack1(body1)
+	divTextbox, footnoteCall := unpack2(unpack1(div))
+	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(footnoteCall).(*bo.TextBox).Text, "1")
 
 	html2, footnoteArea := unpack2(page2)
-	tu.AssertEqual(t, len(html2.Box().Children), 0, "")
-	footnoteLine1, footnoteLine2, footnoteLine3 := unpack3(footnoteArea.Box().Children[0])
+	tu.AssertEqual(t, len(html2.Box().Children), 0)
+	footnoteLine1, footnoteLine2, footnoteLine3 := unpack3(unpack1(footnoteArea))
 	footnoteMarker, footnoteContent1 := unpack2(footnoteLine1)
-	footnoteContent2 := footnoteLine2.Box().Children[0]
-	footnoteContent3 := footnoteLine3.Box().Children[0]
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteContent1.(*bo.TextBox).Text, "def", "")
-	tu.AssertEqual(t, footnoteContent2.(*bo.TextBox).Text, "ghi", "")
-	tu.AssertEqual(t, footnoteContent3.(*bo.TextBox).Text, "jkl", "")
+	footnoteContent2 := unpack1(footnoteLine2)
+	footnoteContent3 := unpack1(footnoteLine3)
+	tu.AssertEqual(t, unpack1(footnoteMarker).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteContent1.(*bo.TextBox).Text, "def")
+	tu.AssertEqual(t, footnoteContent2.(*bo.TextBox).Text, "ghi")
+	tu.AssertEqual(t, footnoteContent3.(*bo.TextBox).Text, "jkl")
 }
 
 func TestFootnoteLongerThanPage(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Nothing is defined for this use case in the specification. In WeasyPrint,
 	// the content simply overflows.
@@ -526,30 +512,29 @@ func TestFootnoteLongerThanPage(t *testing.T) {
         <div>abc<span>def ghi jkl mno</span></div>`)
 	page1, page2 := pages[0], pages[1]
 
-	html1 := page1.Box().Children[0]
-	body1 := html1.Box().Children[0]
-	div := body1.Box().Children[0]
-	divTextbox, footnoteCall := unpack2(div.Box().Children[0])
-	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "")
+	html1 := unpack1(page1)
+	body1 := unpack1(html1)
+	div := unpack1(body1)
+	divTextbox, footnoteCall := unpack2(unpack1(div))
+	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(footnoteCall).(*bo.TextBox).Text, "1")
 
 	html2, footnoteArea2 := unpack2(page2)
-	tu.AssertEqual(t, len(html2.Box().Children), 0, "")
-	footnoteLine1, footnoteLine2, footnoteLine3, footnoteLine4 := unpack4(footnoteArea2.Box().Children[0])
+	tu.AssertEqual(t, len(html2.Box().Children), 0)
+	footnoteLine1, footnoteLine2, footnoteLine3, footnoteLine4 := unpack4(unpack1(footnoteArea2))
 	footnoteMarker1, footnoteContent1 := unpack2(footnoteLine1)
-	footnoteContent2 := footnoteLine2.Box().Children[0]
-	footnoteContent3 := footnoteLine3.Box().Children[0]
-	footnoteContent4 := footnoteLine4.Box().Children[0]
-	tu.AssertEqual(t, footnoteMarker1.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteContent1.(*bo.TextBox).Text, "def", "")
-	tu.AssertEqual(t, footnoteContent2.(*bo.TextBox).Text, "ghi", "")
-	tu.AssertEqual(t, footnoteContent3.(*bo.TextBox).Text, "jkl", "")
-	tu.AssertEqual(t, footnoteContent4.(*bo.TextBox).Text, "mno", "")
+	footnoteContent2 := unpack1(footnoteLine2)
+	footnoteContent3 := unpack1(footnoteLine3)
+	footnoteContent4 := unpack1(footnoteLine4)
+	tu.AssertEqual(t, unpack1(footnoteMarker1).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteContent1.(*bo.TextBox).Text, "def")
+	tu.AssertEqual(t, footnoteContent2.(*bo.TextBox).Text, "ghi")
+	tu.AssertEqual(t, footnoteContent3.(*bo.TextBox).Text, "jkl")
+	tu.AssertEqual(t, footnoteContent4.(*bo.TextBox).Text, "mno")
 }
 
 func TestFootnotePolicyLine(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -572,29 +557,28 @@ func TestFootnotePolicyLine(t *testing.T) {
         <div>abc def ghi jkl<span>1</span></div>`)
 	page1, page2 := pages[0], pages[1]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	linebox1, linebox2 := unpack2(div)
-	tu.AssertEqual(t, linebox1.Box().Children[0].(*bo.TextBox).Text, "abc", "")
-	tu.AssertEqual(t, linebox2.Box().Children[0].(*bo.TextBox).Text, "def", "")
+	tu.AssertEqual(t, unpack1(linebox1).(*bo.TextBox).Text, "abc")
+	tu.AssertEqual(t, unpack1(linebox2).(*bo.TextBox).Text, "def")
 
 	html, footnoteArea := unpack2(page2)
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	body = unpack1(html)
+	div = unpack1(body)
 	linebox1, linebox2 = unpack2(div)
-	tu.AssertEqual(t, linebox1.Box().Children[0].(*bo.TextBox).Text, "ghi", "")
-	tu.AssertEqual(t, linebox2.Box().Children[0].(*bo.TextBox).Text, "jkl", "")
-	tu.AssertEqual(t, linebox2.Box().Children[1].Box().Children[0].(*bo.TextBox).Text, "1", "")
+	tu.AssertEqual(t, unpack1(linebox1).(*bo.TextBox).Text, "ghi")
+	tu.AssertEqual(t, unpack1(linebox2).(*bo.TextBox).Text, "jkl")
+	tu.AssertEqual(t, unpack1(linebox2.Box().Children[1]).(*bo.TextBox).Text, "1")
 
-	footnoteMarker, footnoteTextbox := unpack2(footnoteArea.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "1", "")
+	footnoteMarker, footnoteTextbox := unpack2(unpack1(unpack1(footnoteArea)))
+	tu.AssertEqual(t, unpack1(footnoteMarker).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "1")
 }
 
 func TestFootnotePolicyBlock(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
         <style>
@@ -615,29 +599,28 @@ func TestFootnotePolicyBlock(t *testing.T) {
         <div>abc</div><div>def ghi jkl<span>1</span></div>`)
 	page1, page2 := pages[0], pages[1]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	linebox1 := div.Box().Children[0]
-	tu.AssertEqual(t, linebox1.Box().Children[0].(*bo.TextBox).Text, "abc", "")
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
+	linebox1 := unpack1(div)
+	tu.AssertEqual(t, unpack1(linebox1).(*bo.TextBox).Text, "abc")
 
 	html, footnoteArea := unpack2(page2)
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	body = unpack1(html)
+	div = unpack1(body)
 	linebox1, linebox2, linebox3 := unpack3(div)
-	tu.AssertEqual(t, linebox1.Box().Children[0].(*bo.TextBox).Text, "def", "")
-	tu.AssertEqual(t, linebox2.Box().Children[0].(*bo.TextBox).Text, "ghi", "")
-	tu.AssertEqual(t, linebox3.Box().Children[0].(*bo.TextBox).Text, "jkl", "")
-	tu.AssertEqual(t, linebox3.Box().Children[1].Box().Children[0].(*bo.TextBox).Text, "1", "")
+	tu.AssertEqual(t, unpack1(linebox1).(*bo.TextBox).Text, "def")
+	tu.AssertEqual(t, unpack1(linebox2).(*bo.TextBox).Text, "ghi")
+	tu.AssertEqual(t, unpack1(linebox3).(*bo.TextBox).Text, "jkl")
+	tu.AssertEqual(t, unpack1(linebox3.Box().Children[1]).(*bo.TextBox).Text, "1")
 
-	footnoteMarker, footnoteTextbox := unpack2(footnoteArea.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "1", "")
+	footnoteMarker, footnoteTextbox := unpack2(unpack1(unpack1(footnoteArea)))
+	tu.AssertEqual(t, unpack1(footnoteMarker).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "1")
 }
 
 func TestFootnoteRepagination(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
         <style>
@@ -659,23 +642,22 @@ func TestFootnoteRepagination(t *testing.T) {
         </style>
         <div>ab<span>de</span></div>`)
 	html, footnoteArea := unpack2(page)
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	divTextbox, footnoteCall, divAfter := unpack3(div.Box().Children[0])
-	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "ab", "")
-	tu.AssertEqual(t, footnoteCall.Box().Children[0].(*bo.TextBox).Text, "1", "footnoteCall")
-	tu.AssertEqual(t, divTextbox.Box().PositionY, pr.Float(0), "")
-	tu.AssertEqual(t, divAfter.Box().Children[0].(*bo.TextBox).Text, "1", "divAfter")
+	body := unpack1(html)
+	div := unpack1(body)
+	divTextbox, footnoteCall, divAfter := unpack3(unpack1(div))
+	tu.AssertEqual(t, divTextbox.(*bo.TextBox).Text, "ab")
+	tu.AssertEqual(t, unpack1(footnoteCall).(*bo.TextBox).Text, "1")
+	tu.AssertEqual(t, divTextbox.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, unpack1(divAfter).(*bo.TextBox).Text, "1")
 
-	footnoteMarker, footnoteTextbox := unpack2(footnoteArea.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, footnoteMarker.Box().Children[0].(*bo.TextBox).Text, "1.", "")
-	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "de", "")
-	tu.AssertEqual(t, footnoteArea.Box().PositionY, pr.Float(5), "")
+	footnoteMarker, footnoteTextbox := unpack2(unpack1(unpack1(footnoteArea)))
+	tu.AssertEqual(t, unpack1(footnoteMarker).(*bo.TextBox).Text, "1.")
+	tu.AssertEqual(t, footnoteTextbox.(*bo.TextBox).Text, "de")
+	tu.AssertEqual(t, footnoteArea.Box().PositionY, Fl(5))
 }
 
 func TestReportedFootnoteRepagination(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1700
 	pages := renderPages(t, `
@@ -698,33 +680,32 @@ func TestReportedFootnoteRepagination(t *testing.T) {
         </style>
         <div><a href="#i">a</a> bb<span>de</span> <i id="i">fg</i></div>`)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	line1, line2 := unpack2(div)
-	a := line1.Box().Children[0]
-	assertText(t, a.Box().Children[0], "a")
-	assertText(t, a.Box().Children[1].Box().Children[0], "2")
+	a := unpack1(line1)
+	assertText(t, unpack1(a), "a")
+	assertText(t, unpack1(a.Box().Children[1]), "2")
 	b, footnoteCall, _ := unpack3(line2)
 	assertText(t, b, "bb")
-	assertText(t, footnoteCall.Box().Children[0], "1")
+	assertText(t, unpack1(footnoteCall), "1")
 
 	html, footnoteArea := unpack2(page2)
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
-	line1 = div.Box().Children[0]
-	i := line1.Box().Children[0]
-	assertText(t, i.Box().Children[0], "fg")
+	body = unpack1(html)
+	div = unpack1(body)
+	line1 = unpack1(div)
+	i := unpack1(line1)
+	assertText(t, unpack1(i), "fg")
 
-	footnoteMarker, footnoteTextbox := unpack2(footnoteArea.Box().Children[0].Box().Children[0])
-	assertText(t, footnoteMarker.Box().Children[0], "1.")
+	footnoteMarker, footnoteTextbox := unpack2(unpack1(unpack1(footnoteArea)))
+	assertText(t, unpack1(footnoteMarker), "1.")
 	assertText(t, footnoteTextbox, "de")
-	tu.AssertEqual(t, footnoteArea.Box().PositionY, pr.Float(3), "")
+	tu.AssertEqual(t, footnoteArea.Box().PositionY, Fl(3))
 }
 
 func TestFootnoteMaxHeight(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -738,14 +719,12 @@ func TestFootnoteMaxHeight(t *testing.T) {
               }
           }
           div {
-              color: red;
               font-family: weasyprint;
               font-size: 2px;
               line-height: 1;
           }
           div.footnote {
               float: footnote;
-              color: blue;
           }
       </style>
       <div>ab<div class="footnote">c</div><div class="footnote">d</div>
@@ -754,31 +733,132 @@ func TestFootnoteMaxHeight(t *testing.T) {
 	page1, page2 := pages[0], pages[1]
 
 	html1, footnote_area1 := unpack2(page1)
-	body1 := html1.Box().Children[0]
-	div := body1.Box().Children[0]
-	divTextbox, footnoteCall1, footnoteCall2, space, footnoteCall3 := unpack5(div.Box().Children[0])
+	body1 := unpack1(html1)
+	div := unpack1(body1)
+	divTextbox, footnoteCall1, footnoteCall2, space, footnoteCall3 := unpack5(unpack1(div))
 	assertText(t, divTextbox, "ab")
-	assertText(t, footnoteCall1.Box().Children[0], "1")
-	assertText(t, footnoteCall2.Box().Children[0], "2")
+	assertText(t, unpack1(footnoteCall1), "1")
+	assertText(t, unpack1(footnoteCall2), "2")
 	assertText(t, space, " ")
-	assertText(t, footnoteCall3.Box().Children[0], "3")
+	assertText(t, unpack1(footnoteCall3), "3")
 	footnote1, footnote2 := unpack2(footnote_area1)
-	footnoteLine1 := footnote1.Box().Children[0]
+	footnoteLine1 := unpack1(footnote1)
 	footnoteMarker1, footnoteContent1 := unpack2(footnoteLine1)
-	assertText(t, footnoteMarker1.Box().Children[0], "1.")
+	assertText(t, unpack1(footnoteMarker1), "1.")
 	assertText(t, footnoteContent1, "c")
-	footnoteLine2 := footnote2.Box().Children[0]
+	footnoteLine2 := unpack1(footnote2)
 	footnoteMarker2, footnoteContent2 := unpack2(footnoteLine2)
-	assertText(t, footnoteMarker2.Box().Children[0], "2.")
+	assertText(t, unpack1(footnoteMarker2), "2.")
 	assertText(t, footnoteContent2, "d")
 
 	html2, footnoteArea2 := unpack2(page2)
-	body2 := html2.Box().Children[0]
-	div2 := body2.Box().Children[0]
-	divTextbox2 := div2.Box().Children[0].Box().Children[0]
+	body2 := unpack1(html2)
+	div2 := unpack1(body2)
+	divTextbox2 := unpack1(div2.Box().Children[0])
 	assertText(t, divTextbox2, "fg")
-	footnoteLine3 := footnoteArea2.Box().Children[0].Box().Children[0]
+	footnoteLine3 := unpack1(unpack1(footnoteArea2))
 	footnoteMarker3, footnoteContent3 := unpack2(footnoteLine3)
-	assertText(t, footnoteMarker3.Box().Children[0], "3.")
+	assertText(t, unpack1(footnoteMarker3), "3.")
 	assertText(t, footnoteContent3, "e")
+}
+
+func TestFootnoteTableAbortedRow(t *testing.T) {
+	pages := renderPages(t, `
+      <style>
+        @font-face {src: url(weasyprint.otf); font-family: weasyprint}
+        @page {size: 10px 35px}
+        body {font-family: weasyprint; font-size: 2px}
+        tr {height: 10px}
+        .footnote {float: footnote}
+      </style>
+      <table><tbody>
+        <tr><td>abc</td></tr>
+        <tr><td>abc</td></tr>
+        <tr><td>abc</td></tr>
+        <tr><td>def<div class="footnote">f</div></td></tr>
+      </tbody></table>
+    `)
+	page1, page2 := pages[0], pages[1]
+
+	html := unpack1(page1)
+	body := unpack1(html)
+	table_wrapper := unpack1(body)
+	table := unpack1(table_wrapper)
+	tbody := unpack1(table)
+	for _, tr := range tbody.Box().Children {
+		td := unpack1(tr)
+		line := unpack1(td)
+		textbox := unpack1(line)
+		assertText(t, textbox, "abc")
+	}
+
+	html, footnote_area := unpack2(page2)
+	body = unpack1(html)
+	table_wrapper = unpack1(body)
+	table = unpack1(table_wrapper)
+	tbody = unpack1(table)
+	tr := unpack1(tbody)
+	td := unpack1(tr)
+	line := unpack1(td)
+	textbox, _ := unpack2(line)
+	assertText(t, textbox, "def")
+	footnote := unpack1(footnote_area)
+	line = unpack1(footnote)
+	_, textbox = unpack2(line)
+	assertText(t, textbox, "f")
+}
+
+func TestFootnoteTableAbortedGroup(t *testing.T) {
+	pages := renderPages(t, `
+      <style>
+        @font-face {src: url(weasyprint.otf); font-family: weasyprint}
+        @page {size: 10px 35px}
+        body {font-family: weasyprint; font-size: 2px}
+        tr {height: 10px}
+        tbody {break-inside: avoid}
+        .footnote {float: footnote}
+      </style>
+      <table>
+        <tbody>
+          <tr><td>abc</td></tr>
+          <tr><td>abc</td></tr>
+        </tbody>
+        <tbody>
+          <tr><td>def<div class="footnote">f</div></td></tr>
+          <tr><td>ghi</td></tr>
+        </tbody>
+      </table>
+    `)
+	page1, page2 := pages[0], pages[1]
+
+	html := unpack1(page1)
+	body := unpack1(html)
+	table_wrapper := unpack1(body)
+	table := unpack1(table_wrapper)
+	tbody := unpack1(table)
+	for _, tr := range tbody.Box().Children {
+		td := unpack1(tr)
+		line := unpack1(td)
+		textbox := unpack1(line)
+		assertText(t, textbox, "abc")
+	}
+
+	html, footnote_area := unpack2(page2)
+	body = unpack1(html)
+	table_wrapper = unpack1(body)
+	table = unpack1(table_wrapper)
+	tbody = unpack1(table)
+	tr1, tr2 := unpack2(tbody)
+	td := unpack1(tr1)
+	line := unpack1(td)
+	textbox, _ := unpack2(line)
+	assertText(t, textbox, "def")
+	td = unpack1(tr2)
+	line = unpack1(td)
+	textbox = unpack1(line)
+	assertText(t, textbox, "ghi")
+	footnote := unpack1(footnote_area)
+	line = unpack1(footnote)
+	_, textbox = unpack2(line)
+	assertText(t, textbox, "f")
 }

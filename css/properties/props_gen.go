@@ -2,14 +2,14 @@ package properties
 
 // Code generated from properties/properties.go DO NOT EDIT
 
-func (s Properties) GetAlignContent() String  { return s[PAlignContent].(String) }
-func (s Properties) SetAlignContent(v String) { s[PAlignContent] = v }
+func (s Properties) GetAlignContent() Strings  { return s[PAlignContent].(Strings) }
+func (s Properties) SetAlignContent(v Strings) { s[PAlignContent] = v }
 
-func (s Properties) GetAlignItems() String  { return s[PAlignItems].(String) }
-func (s Properties) SetAlignItems(v String) { s[PAlignItems] = v }
+func (s Properties) GetAlignItems() Strings  { return s[PAlignItems].(Strings) }
+func (s Properties) SetAlignItems(v Strings) { s[PAlignItems] = v }
 
-func (s Properties) GetAlignSelf() String  { return s[PAlignSelf].(String) }
-func (s Properties) SetAlignSelf(v String) { s[PAlignSelf] = v }
+func (s Properties) GetAlignSelf() Strings  { return s[PAlignSelf].(Strings) }
+func (s Properties) SetAlignSelf(v Strings) { s[PAlignSelf] = v }
 
 func (s Properties) GetAnchor() String  { return s[PAnchor].(String) }
 func (s Properties) SetAnchor(v String) { s[PAnchor] = v }
@@ -41,17 +41,17 @@ func (s Properties) SetBackgroundRepeat(v Repeats) { s[PBackgroundRepeat] = v }
 func (s Properties) GetBackgroundSize() Sizes  { return s[PBackgroundSize].(Sizes) }
 func (s Properties) SetBackgroundSize(v Sizes) { s[PBackgroundSize] = v }
 
-func (s Properties) GetBleedBottom() Value  { return s[PBleedBottom].(Value) }
-func (s Properties) SetBleedBottom(v Value) { s[PBleedBottom] = v }
+func (s Properties) GetBleedBottom() DimOrS  { return s[PBleedBottom].(DimOrS) }
+func (s Properties) SetBleedBottom(v DimOrS) { s[PBleedBottom] = v }
 
-func (s Properties) GetBleedLeft() Value  { return s[PBleedLeft].(Value) }
-func (s Properties) SetBleedLeft(v Value) { s[PBleedLeft] = v }
+func (s Properties) GetBleedLeft() DimOrS  { return s[PBleedLeft].(DimOrS) }
+func (s Properties) SetBleedLeft(v DimOrS) { s[PBleedLeft] = v }
 
-func (s Properties) GetBleedRight() Value  { return s[PBleedRight].(Value) }
-func (s Properties) SetBleedRight(v Value) { s[PBleedRight] = v }
+func (s Properties) GetBleedRight() DimOrS  { return s[PBleedRight].(DimOrS) }
+func (s Properties) SetBleedRight(v DimOrS) { s[PBleedRight] = v }
 
-func (s Properties) GetBleedTop() Value  { return s[PBleedTop].(Value) }
-func (s Properties) SetBleedTop(v Value) { s[PBleedTop] = v }
+func (s Properties) GetBleedTop() DimOrS  { return s[PBleedTop].(DimOrS) }
+func (s Properties) SetBleedTop(v DimOrS) { s[PBleedTop] = v }
 
 func (s Properties) GetBlockEllipsis() TaggedString  { return s[PBlockEllipsis].(TaggedString) }
 func (s Properties) SetBlockEllipsis(v TaggedString) { s[PBlockEllipsis] = v }
@@ -61,8 +61,8 @@ func (s Properties) GetBookmarkLabel() ContentProperties {
 }
 func (s Properties) SetBookmarkLabel(v ContentProperties) { s[PBookmarkLabel] = v }
 
-func (s Properties) GetBookmarkLevel() IntString  { return s[PBookmarkLevel].(IntString) }
-func (s Properties) SetBookmarkLevel(v IntString) { s[PBookmarkLevel] = v }
+func (s Properties) GetBookmarkLevel() TaggedInt  { return s[PBookmarkLevel].(TaggedInt) }
+func (s Properties) SetBookmarkLevel(v TaggedInt) { s[PBookmarkLevel] = v }
 
 func (s Properties) GetBookmarkState() String  { return s[PBookmarkState].(String) }
 func (s Properties) SetBookmarkState(v String) { s[PBookmarkState] = v }
@@ -79,11 +79,26 @@ func (s Properties) SetBorderBottomRightRadius(v Point) { s[PBorderBottomRightRa
 func (s Properties) GetBorderBottomStyle() String  { return s[PBorderBottomStyle].(String) }
 func (s Properties) SetBorderBottomStyle(v String) { s[PBorderBottomStyle] = v }
 
-func (s Properties) GetBorderBottomWidth() Value  { return s[PBorderBottomWidth].(Value) }
-func (s Properties) SetBorderBottomWidth(v Value) { s[PBorderBottomWidth] = v }
+func (s Properties) GetBorderBottomWidth() DimOrS  { return s[PBorderBottomWidth].(DimOrS) }
+func (s Properties) SetBorderBottomWidth(v DimOrS) { s[PBorderBottomWidth] = v }
 
 func (s Properties) GetBorderCollapse() String  { return s[PBorderCollapse].(String) }
 func (s Properties) SetBorderCollapse(v String) { s[PBorderCollapse] = v }
+
+func (s Properties) GetBorderImageOutset() Values  { return s[PBorderImageOutset].(Values) }
+func (s Properties) SetBorderImageOutset(v Values) { s[PBorderImageOutset] = v }
+
+func (s Properties) GetBorderImageRepeat() Strings  { return s[PBorderImageRepeat].(Strings) }
+func (s Properties) SetBorderImageRepeat(v Strings) { s[PBorderImageRepeat] = v }
+
+func (s Properties) GetBorderImageSlice() Values  { return s[PBorderImageSlice].(Values) }
+func (s Properties) SetBorderImageSlice(v Values) { s[PBorderImageSlice] = v }
+
+func (s Properties) GetBorderImageSource() Image  { return s[PBorderImageSource].(Image) }
+func (s Properties) SetBorderImageSource(v Image) { s[PBorderImageSource] = v }
+
+func (s Properties) GetBorderImageWidth() Values  { return s[PBorderImageWidth].(Values) }
+func (s Properties) SetBorderImageWidth(v Values) { s[PBorderImageWidth] = v }
 
 func (s Properties) GetBorderLeftColor() Color  { return s[PBorderLeftColor].(Color) }
 func (s Properties) SetBorderLeftColor(v Color) { s[PBorderLeftColor] = v }
@@ -91,8 +106,8 @@ func (s Properties) SetBorderLeftColor(v Color) { s[PBorderLeftColor] = v }
 func (s Properties) GetBorderLeftStyle() String  { return s[PBorderLeftStyle].(String) }
 func (s Properties) SetBorderLeftStyle(v String) { s[PBorderLeftStyle] = v }
 
-func (s Properties) GetBorderLeftWidth() Value  { return s[PBorderLeftWidth].(Value) }
-func (s Properties) SetBorderLeftWidth(v Value) { s[PBorderLeftWidth] = v }
+func (s Properties) GetBorderLeftWidth() DimOrS  { return s[PBorderLeftWidth].(DimOrS) }
+func (s Properties) SetBorderLeftWidth(v DimOrS) { s[PBorderLeftWidth] = v }
 
 func (s Properties) GetBorderRightColor() Color  { return s[PBorderRightColor].(Color) }
 func (s Properties) SetBorderRightColor(v Color) { s[PBorderRightColor] = v }
@@ -100,8 +115,8 @@ func (s Properties) SetBorderRightColor(v Color) { s[PBorderRightColor] = v }
 func (s Properties) GetBorderRightStyle() String  { return s[PBorderRightStyle].(String) }
 func (s Properties) SetBorderRightStyle(v String) { s[PBorderRightStyle] = v }
 
-func (s Properties) GetBorderRightWidth() Value  { return s[PBorderRightWidth].(Value) }
-func (s Properties) SetBorderRightWidth(v Value) { s[PBorderRightWidth] = v }
+func (s Properties) GetBorderRightWidth() DimOrS  { return s[PBorderRightWidth].(DimOrS) }
+func (s Properties) SetBorderRightWidth(v DimOrS) { s[PBorderRightWidth] = v }
 
 func (s Properties) GetBorderSpacing() Point  { return s[PBorderSpacing].(Point) }
 func (s Properties) SetBorderSpacing(v Point) { s[PBorderSpacing] = v }
@@ -118,11 +133,11 @@ func (s Properties) SetBorderTopRightRadius(v Point) { s[PBorderTopRightRadius] 
 func (s Properties) GetBorderTopStyle() String  { return s[PBorderTopStyle].(String) }
 func (s Properties) SetBorderTopStyle(v String) { s[PBorderTopStyle] = v }
 
-func (s Properties) GetBorderTopWidth() Value  { return s[PBorderTopWidth].(Value) }
-func (s Properties) SetBorderTopWidth(v Value) { s[PBorderTopWidth] = v }
+func (s Properties) GetBorderTopWidth() DimOrS  { return s[PBorderTopWidth].(DimOrS) }
+func (s Properties) SetBorderTopWidth(v DimOrS) { s[PBorderTopWidth] = v }
 
-func (s Properties) GetBottom() Value  { return s[PBottom].(Value) }
-func (s Properties) SetBottom(v Value) { s[PBottom] = v }
+func (s Properties) GetBottom() DimOrS  { return s[PBottom].(DimOrS) }
+func (s Properties) SetBottom(v DimOrS) { s[PBottom] = v }
 
 func (s Properties) GetBoxDecorationBreak() String  { return s[PBoxDecorationBreak].(String) }
 func (s Properties) SetBoxDecorationBreak(v String) { s[PBoxDecorationBreak] = v }
@@ -157,8 +172,8 @@ func (s Properties) SetColumnCount(v IntString) { s[PColumnCount] = v }
 func (s Properties) GetColumnFill() String  { return s[PColumnFill].(String) }
 func (s Properties) SetColumnFill(v String) { s[PColumnFill] = v }
 
-func (s Properties) GetColumnGap() Value  { return s[PColumnGap].(Value) }
-func (s Properties) SetColumnGap(v Value) { s[PColumnGap] = v }
+func (s Properties) GetColumnGap() DimOrS  { return s[PColumnGap].(DimOrS) }
+func (s Properties) SetColumnGap(v DimOrS) { s[PColumnGap] = v }
 
 func (s Properties) GetColumnRuleColor() Color  { return s[PColumnRuleColor].(Color) }
 func (s Properties) SetColumnRuleColor(v Color) { s[PColumnRuleColor] = v }
@@ -166,14 +181,14 @@ func (s Properties) SetColumnRuleColor(v Color) { s[PColumnRuleColor] = v }
 func (s Properties) GetColumnRuleStyle() String  { return s[PColumnRuleStyle].(String) }
 func (s Properties) SetColumnRuleStyle(v String) { s[PColumnRuleStyle] = v }
 
-func (s Properties) GetColumnRuleWidth() Value  { return s[PColumnRuleWidth].(Value) }
-func (s Properties) SetColumnRuleWidth(v Value) { s[PColumnRuleWidth] = v }
+func (s Properties) GetColumnRuleWidth() DimOrS  { return s[PColumnRuleWidth].(DimOrS) }
+func (s Properties) SetColumnRuleWidth(v DimOrS) { s[PColumnRuleWidth] = v }
 
 func (s Properties) GetColumnSpan() String  { return s[PColumnSpan].(String) }
 func (s Properties) SetColumnSpan(v String) { s[PColumnSpan] = v }
 
-func (s Properties) GetColumnWidth() Value  { return s[PColumnWidth].(Value) }
-func (s Properties) SetColumnWidth(v Value) { s[PColumnWidth] = v }
+func (s Properties) GetColumnWidth() DimOrS  { return s[PColumnWidth].(DimOrS) }
+func (s Properties) SetColumnWidth(v DimOrS) { s[PColumnWidth] = v }
 
 func (s Properties) GetContent() SContent  { return s[PContent].(SContent) }
 func (s Properties) SetContent(v SContent) { s[PContent] = v }
@@ -199,8 +214,8 @@ func (s Properties) SetDisplay(v Display) { s[PDisplay] = v }
 func (s Properties) GetEmptyCells() String  { return s[PEmptyCells].(String) }
 func (s Properties) SetEmptyCells(v String) { s[PEmptyCells] = v }
 
-func (s Properties) GetFlexBasis() Value  { return s[PFlexBasis].(Value) }
-func (s Properties) SetFlexBasis(v Value) { s[PFlexBasis] = v }
+func (s Properties) GetFlexBasis() DimOrS  { return s[PFlexBasis].(DimOrS) }
+func (s Properties) SetFlexBasis(v DimOrS) { s[PFlexBasis] = v }
 
 func (s Properties) GetFlexDirection() String  { return s[PFlexDirection].(String) }
 func (s Properties) SetFlexDirection(v String) { s[PFlexDirection] = v }
@@ -231,8 +246,8 @@ func (s Properties) SetFontKerning(v String) { s[PFontKerning] = v }
 func (s Properties) GetFontLanguageOverride() String  { return s[PFontLanguageOverride].(String) }
 func (s Properties) SetFontLanguageOverride(v String) { s[PFontLanguageOverride] = v }
 
-func (s Properties) GetFontSize() Value  { return s[PFontSize].(Value) }
-func (s Properties) SetFontSize(v Value) { s[PFontSize] = v }
+func (s Properties) GetFontSize() DimOrS  { return s[PFontSize].(DimOrS) }
+func (s Properties) SetFontSize(v DimOrS) { s[PFontSize] = v }
 
 func (s Properties) GetFontStretch() String  { return s[PFontStretch].(String) }
 func (s Properties) SetFontStretch(v String) { s[PFontStretch] = v }
@@ -275,8 +290,42 @@ func (s Properties) SetFootnoteDisplay(v String) { s[PFootnoteDisplay] = v }
 func (s Properties) GetFootnotePolicy() String  { return s[PFootnotePolicy].(String) }
 func (s Properties) SetFootnotePolicy(v String) { s[PFootnotePolicy] = v }
 
-func (s Properties) GetHeight() Value  { return s[PHeight].(Value) }
-func (s Properties) SetHeight(v Value) { s[PHeight] = v }
+func (s Properties) GetGridAutoColumns() GridAuto  { return s[PGridAutoColumns].(GridAuto) }
+func (s Properties) SetGridAutoColumns(v GridAuto) { s[PGridAutoColumns] = v }
+
+func (s Properties) GetGridAutoFlow() Strings  { return s[PGridAutoFlow].(Strings) }
+func (s Properties) SetGridAutoFlow(v Strings) { s[PGridAutoFlow] = v }
+
+func (s Properties) GetGridAutoRows() GridAuto  { return s[PGridAutoRows].(GridAuto) }
+func (s Properties) SetGridAutoRows(v GridAuto) { s[PGridAutoRows] = v }
+
+func (s Properties) GetGridColumnEnd() GridLine  { return s[PGridColumnEnd].(GridLine) }
+func (s Properties) SetGridColumnEnd(v GridLine) { s[PGridColumnEnd] = v }
+
+func (s Properties) GetGridColumnStart() GridLine  { return s[PGridColumnStart].(GridLine) }
+func (s Properties) SetGridColumnStart(v GridLine) { s[PGridColumnStart] = v }
+
+func (s Properties) GetGridRowEnd() GridLine  { return s[PGridRowEnd].(GridLine) }
+func (s Properties) SetGridRowEnd(v GridLine) { s[PGridRowEnd] = v }
+
+func (s Properties) GetGridRowStart() GridLine  { return s[PGridRowStart].(GridLine) }
+func (s Properties) SetGridRowStart(v GridLine) { s[PGridRowStart] = v }
+
+func (s Properties) GetGridTemplateAreas() GridTemplateAreas {
+	return s[PGridTemplateAreas].(GridTemplateAreas)
+}
+func (s Properties) SetGridTemplateAreas(v GridTemplateAreas) { s[PGridTemplateAreas] = v }
+
+func (s Properties) GetGridTemplateColumns() GridTemplate {
+	return s[PGridTemplateColumns].(GridTemplate)
+}
+func (s Properties) SetGridTemplateColumns(v GridTemplate) { s[PGridTemplateColumns] = v }
+
+func (s Properties) GetGridTemplateRows() GridTemplate  { return s[PGridTemplateRows].(GridTemplate) }
+func (s Properties) SetGridTemplateRows(v GridTemplate) { s[PGridTemplateRows] = v }
+
+func (s Properties) GetHeight() DimOrS  { return s[PHeight].(DimOrS) }
+func (s Properties) SetHeight(v DimOrS) { s[PHeight] = v }
 
 func (s Properties) GetHyphenateCharacter() String  { return s[PHyphenateCharacter].(String) }
 func (s Properties) SetHyphenateCharacter(v String) { s[PHyphenateCharacter] = v }
@@ -284,8 +333,8 @@ func (s Properties) SetHyphenateCharacter(v String) { s[PHyphenateCharacter] = v
 func (s Properties) GetHyphenateLimitChars() Limits  { return s[PHyphenateLimitChars].(Limits) }
 func (s Properties) SetHyphenateLimitChars(v Limits) { s[PHyphenateLimitChars] = v }
 
-func (s Properties) GetHyphenateLimitZone() Value  { return s[PHyphenateLimitZone].(Value) }
-func (s Properties) SetHyphenateLimitZone(v Value) { s[PHyphenateLimitZone] = v }
+func (s Properties) GetHyphenateLimitZone() DimOrS  { return s[PHyphenateLimitZone].(DimOrS) }
+func (s Properties) SetHyphenateLimitZone(v DimOrS) { s[PHyphenateLimitZone] = v }
 
 func (s Properties) GetHyphens() String  { return s[PHyphens].(String) }
 func (s Properties) SetHyphens(v String) { s[PHyphens] = v }
@@ -296,23 +345,29 @@ func (s Properties) SetImageOrientation(v SBoolFloat) { s[PImageOrientation] = v
 func (s Properties) GetImageRendering() String  { return s[PImageRendering].(String) }
 func (s Properties) SetImageRendering(v String) { s[PImageRendering] = v }
 
-func (s Properties) GetImageResolution() Value  { return s[PImageResolution].(Value) }
-func (s Properties) SetImageResolution(v Value) { s[PImageResolution] = v }
+func (s Properties) GetImageResolution() DimOrS  { return s[PImageResolution].(DimOrS) }
+func (s Properties) SetImageResolution(v DimOrS) { s[PImageResolution] = v }
 
-func (s Properties) GetJustifyContent() String  { return s[PJustifyContent].(String) }
-func (s Properties) SetJustifyContent(v String) { s[PJustifyContent] = v }
+func (s Properties) GetJustifyContent() Strings  { return s[PJustifyContent].(Strings) }
+func (s Properties) SetJustifyContent(v Strings) { s[PJustifyContent] = v }
 
-func (s Properties) GetLang() NamedString  { return s[PLang].(NamedString) }
-func (s Properties) SetLang(v NamedString) { s[PLang] = v }
+func (s Properties) GetJustifyItems() Strings  { return s[PJustifyItems].(Strings) }
+func (s Properties) SetJustifyItems(v Strings) { s[PJustifyItems] = v }
 
-func (s Properties) GetLeft() Value  { return s[PLeft].(Value) }
-func (s Properties) SetLeft(v Value) { s[PLeft] = v }
+func (s Properties) GetJustifySelf() Strings  { return s[PJustifySelf].(Strings) }
+func (s Properties) SetJustifySelf(v Strings) { s[PJustifySelf] = v }
 
-func (s Properties) GetLetterSpacing() Value  { return s[PLetterSpacing].(Value) }
-func (s Properties) SetLetterSpacing(v Value) { s[PLetterSpacing] = v }
+func (s Properties) GetLang() TaggedString  { return s[PLang].(TaggedString) }
+func (s Properties) SetLang(v TaggedString) { s[PLang] = v }
 
-func (s Properties) GetLineHeight() Value  { return s[PLineHeight].(Value) }
-func (s Properties) SetLineHeight(v Value) { s[PLineHeight] = v }
+func (s Properties) GetLeft() DimOrS  { return s[PLeft].(DimOrS) }
+func (s Properties) SetLeft(v DimOrS) { s[PLeft] = v }
+
+func (s Properties) GetLetterSpacing() DimOrS  { return s[PLetterSpacing].(DimOrS) }
+func (s Properties) SetLetterSpacing(v DimOrS) { s[PLetterSpacing] = v }
+
+func (s Properties) GetLineHeight() DimOrS  { return s[PLineHeight].(DimOrS) }
+func (s Properties) SetLineHeight(v DimOrS) { s[PLineHeight] = v }
 
 func (s Properties) GetLink() NamedString  { return s[PLink].(NamedString) }
 func (s Properties) SetLink(v NamedString) { s[PLink] = v }
@@ -326,38 +381,38 @@ func (s Properties) SetListStylePosition(v String) { s[PListStylePosition] = v }
 func (s Properties) GetListStyleType() CounterStyleID  { return s[PListStyleType].(CounterStyleID) }
 func (s Properties) SetListStyleType(v CounterStyleID) { s[PListStyleType] = v }
 
-func (s Properties) GetMarginBottom() Value  { return s[PMarginBottom].(Value) }
-func (s Properties) SetMarginBottom(v Value) { s[PMarginBottom] = v }
+func (s Properties) GetMarginBottom() DimOrS  { return s[PMarginBottom].(DimOrS) }
+func (s Properties) SetMarginBottom(v DimOrS) { s[PMarginBottom] = v }
 
 func (s Properties) GetMarginBreak() String  { return s[PMarginBreak].(String) }
 func (s Properties) SetMarginBreak(v String) { s[PMarginBreak] = v }
 
-func (s Properties) GetMarginLeft() Value  { return s[PMarginLeft].(Value) }
-func (s Properties) SetMarginLeft(v Value) { s[PMarginLeft] = v }
+func (s Properties) GetMarginLeft() DimOrS  { return s[PMarginLeft].(DimOrS) }
+func (s Properties) SetMarginLeft(v DimOrS) { s[PMarginLeft] = v }
 
-func (s Properties) GetMarginRight() Value  { return s[PMarginRight].(Value) }
-func (s Properties) SetMarginRight(v Value) { s[PMarginRight] = v }
+func (s Properties) GetMarginRight() DimOrS  { return s[PMarginRight].(DimOrS) }
+func (s Properties) SetMarginRight(v DimOrS) { s[PMarginRight] = v }
 
-func (s Properties) GetMarginTop() Value  { return s[PMarginTop].(Value) }
-func (s Properties) SetMarginTop(v Value) { s[PMarginTop] = v }
+func (s Properties) GetMarginTop() DimOrS  { return s[PMarginTop].(DimOrS) }
+func (s Properties) SetMarginTop(v DimOrS) { s[PMarginTop] = v }
 
 func (s Properties) GetMarks() Marks  { return s[PMarks].(Marks) }
 func (s Properties) SetMarks(v Marks) { s[PMarks] = v }
 
-func (s Properties) GetMaxHeight() Value  { return s[PMaxHeight].(Value) }
-func (s Properties) SetMaxHeight(v Value) { s[PMaxHeight] = v }
+func (s Properties) GetMaxHeight() DimOrS  { return s[PMaxHeight].(DimOrS) }
+func (s Properties) SetMaxHeight(v DimOrS) { s[PMaxHeight] = v }
 
 func (s Properties) GetMaxLines() TaggedInt  { return s[PMaxLines].(TaggedInt) }
 func (s Properties) SetMaxLines(v TaggedInt) { s[PMaxLines] = v }
 
-func (s Properties) GetMaxWidth() Value  { return s[PMaxWidth].(Value) }
-func (s Properties) SetMaxWidth(v Value) { s[PMaxWidth] = v }
+func (s Properties) GetMaxWidth() DimOrS  { return s[PMaxWidth].(DimOrS) }
+func (s Properties) SetMaxWidth(v DimOrS) { s[PMaxWidth] = v }
 
-func (s Properties) GetMinHeight() Value  { return s[PMinHeight].(Value) }
-func (s Properties) SetMinHeight(v Value) { s[PMinHeight] = v }
+func (s Properties) GetMinHeight() DimOrS  { return s[PMinHeight].(DimOrS) }
+func (s Properties) SetMinHeight(v DimOrS) { s[PMinHeight] = v }
 
-func (s Properties) GetMinWidth() Value  { return s[PMinWidth].(Value) }
-func (s Properties) SetMinWidth(v Value) { s[PMinWidth] = v }
+func (s Properties) GetMinWidth() DimOrS  { return s[PMinWidth].(DimOrS) }
+func (s Properties) SetMinWidth(v DimOrS) { s[PMinWidth] = v }
 
 func (s Properties) GetObjectFit() String  { return s[PObjectFit].(String) }
 func (s Properties) SetObjectFit(v String) { s[PObjectFit] = v }
@@ -380,8 +435,8 @@ func (s Properties) SetOutlineColor(v Color) { s[POutlineColor] = v }
 func (s Properties) GetOutlineStyle() String  { return s[POutlineStyle].(String) }
 func (s Properties) SetOutlineStyle(v String) { s[POutlineStyle] = v }
 
-func (s Properties) GetOutlineWidth() Value  { return s[POutlineWidth].(Value) }
-func (s Properties) SetOutlineWidth(v Value) { s[POutlineWidth] = v }
+func (s Properties) GetOutlineWidth() DimOrS  { return s[POutlineWidth].(DimOrS) }
+func (s Properties) SetOutlineWidth(v DimOrS) { s[POutlineWidth] = v }
 
 func (s Properties) GetOverflow() String  { return s[POverflow].(String) }
 func (s Properties) SetOverflow(v String) { s[POverflow] = v }
@@ -389,17 +444,17 @@ func (s Properties) SetOverflow(v String) { s[POverflow] = v }
 func (s Properties) GetOverflowWrap() String  { return s[POverflowWrap].(String) }
 func (s Properties) SetOverflowWrap(v String) { s[POverflowWrap] = v }
 
-func (s Properties) GetPaddingBottom() Value  { return s[PPaddingBottom].(Value) }
-func (s Properties) SetPaddingBottom(v Value) { s[PPaddingBottom] = v }
+func (s Properties) GetPaddingBottom() DimOrS  { return s[PPaddingBottom].(DimOrS) }
+func (s Properties) SetPaddingBottom(v DimOrS) { s[PPaddingBottom] = v }
 
-func (s Properties) GetPaddingLeft() Value  { return s[PPaddingLeft].(Value) }
-func (s Properties) SetPaddingLeft(v Value) { s[PPaddingLeft] = v }
+func (s Properties) GetPaddingLeft() DimOrS  { return s[PPaddingLeft].(DimOrS) }
+func (s Properties) SetPaddingLeft(v DimOrS) { s[PPaddingLeft] = v }
 
-func (s Properties) GetPaddingRight() Value  { return s[PPaddingRight].(Value) }
-func (s Properties) SetPaddingRight(v Value) { s[PPaddingRight] = v }
+func (s Properties) GetPaddingRight() DimOrS  { return s[PPaddingRight].(DimOrS) }
+func (s Properties) SetPaddingRight(v DimOrS) { s[PPaddingRight] = v }
 
-func (s Properties) GetPaddingTop() Value  { return s[PPaddingTop].(Value) }
-func (s Properties) SetPaddingTop(v Value) { s[PPaddingTop] = v }
+func (s Properties) GetPaddingTop() DimOrS  { return s[PPaddingTop].(DimOrS) }
+func (s Properties) SetPaddingTop(v DimOrS) { s[PPaddingTop] = v }
 
 func (s Properties) GetPage() Page  { return s[PPage].(Page) }
 func (s Properties) SetPage(v Page) { s[PPage] = v }
@@ -410,8 +465,11 @@ func (s Properties) SetPosition(v BoolString) { s[PPosition] = v }
 func (s Properties) GetQuotes() Quotes  { return s[PQuotes].(Quotes) }
 func (s Properties) SetQuotes(v Quotes) { s[PQuotes] = v }
 
-func (s Properties) GetRight() Value  { return s[PRight].(Value) }
-func (s Properties) SetRight(v Value) { s[PRight] = v }
+func (s Properties) GetRight() DimOrS  { return s[PRight].(DimOrS) }
+func (s Properties) SetRight(v DimOrS) { s[PRight] = v }
+
+func (s Properties) GetRowGap() DimOrS  { return s[PRowGap].(DimOrS) }
+func (s Properties) SetRowGap(v DimOrS) { s[PRowGap] = v }
 
 func (s Properties) GetSize() Point  { return s[PSize].(Point) }
 func (s Properties) SetSize(v Point) { s[PSize] = v }
@@ -419,8 +477,8 @@ func (s Properties) SetSize(v Point) { s[PSize] = v }
 func (s Properties) GetStringSet() StringSet  { return s[PStringSet].(StringSet) }
 func (s Properties) SetStringSet(v StringSet) { s[PStringSet] = v }
 
-func (s Properties) GetTabSize() Value  { return s[PTabSize].(Value) }
-func (s Properties) SetTabSize(v Value) { s[PTabSize] = v }
+func (s Properties) GetTabSize() DimOrS  { return s[PTabSize].(DimOrS) }
+func (s Properties) SetTabSize(v DimOrS) { s[PTabSize] = v }
 
 func (s Properties) GetTableLayout() String  { return s[PTableLayout].(String) }
 func (s Properties) SetTableLayout(v String) { s[PTableLayout] = v }
@@ -440,8 +498,8 @@ func (s Properties) SetTextDecorationLine(v Decorations) { s[PTextDecorationLine
 func (s Properties) GetTextDecorationStyle() String  { return s[PTextDecorationStyle].(String) }
 func (s Properties) SetTextDecorationStyle(v String) { s[PTextDecorationStyle] = v }
 
-func (s Properties) GetTextIndent() Value  { return s[PTextIndent].(Value) }
-func (s Properties) SetTextIndent(v Value) { s[PTextIndent] = v }
+func (s Properties) GetTextIndent() DimOrS  { return s[PTextIndent].(DimOrS) }
+func (s Properties) SetTextIndent(v DimOrS) { s[PTextIndent] = v }
 
 func (s Properties) GetTextOverflow() String  { return s[PTextOverflow].(String) }
 func (s Properties) SetTextOverflow(v String) { s[PTextOverflow] = v }
@@ -449,8 +507,8 @@ func (s Properties) SetTextOverflow(v String) { s[PTextOverflow] = v }
 func (s Properties) GetTextTransform() String  { return s[PTextTransform].(String) }
 func (s Properties) SetTextTransform(v String) { s[PTextTransform] = v }
 
-func (s Properties) GetTop() Value  { return s[PTop].(Value) }
-func (s Properties) SetTop(v Value) { s[PTop] = v }
+func (s Properties) GetTop() DimOrS  { return s[PTop].(DimOrS) }
+func (s Properties) SetTop(v DimOrS) { s[PTop] = v }
 
 func (s Properties) GetTransform() Transforms  { return s[PTransform].(Transforms) }
 func (s Properties) SetTransform(v Transforms) { s[PTransform] = v }
@@ -461,8 +519,8 @@ func (s Properties) SetTransformOrigin(v Point) { s[PTransformOrigin] = v }
 func (s Properties) GetUnicodeBidi() String  { return s[PUnicodeBidi].(String) }
 func (s Properties) SetUnicodeBidi(v String) { s[PUnicodeBidi] = v }
 
-func (s Properties) GetVerticalAlign() Value  { return s[PVerticalAlign].(Value) }
-func (s Properties) SetVerticalAlign(v Value) { s[PVerticalAlign] = v }
+func (s Properties) GetVerticalAlign() DimOrS  { return s[PVerticalAlign].(DimOrS) }
+func (s Properties) SetVerticalAlign(v DimOrS) { s[PVerticalAlign] = v }
 
 func (s Properties) GetVisibility() String  { return s[PVisibility].(String) }
 func (s Properties) SetVisibility(v String) { s[PVisibility] = v }
@@ -473,27 +531,27 @@ func (s Properties) SetWhiteSpace(v String) { s[PWhiteSpace] = v }
 func (s Properties) GetWidows() Int  { return s[PWidows].(Int) }
 func (s Properties) SetWidows(v Int) { s[PWidows] = v }
 
-func (s Properties) GetWidth() Value  { return s[PWidth].(Value) }
-func (s Properties) SetWidth(v Value) { s[PWidth] = v }
+func (s Properties) GetWidth() DimOrS  { return s[PWidth].(DimOrS) }
+func (s Properties) SetWidth(v DimOrS) { s[PWidth] = v }
 
 func (s Properties) GetWordBreak() String  { return s[PWordBreak].(String) }
 func (s Properties) SetWordBreak(v String) { s[PWordBreak] = v }
 
-func (s Properties) GetWordSpacing() Value  { return s[PWordSpacing].(Value) }
-func (s Properties) SetWordSpacing(v Value) { s[PWordSpacing] = v }
+func (s Properties) GetWordSpacing() DimOrS  { return s[PWordSpacing].(DimOrS) }
+func (s Properties) SetWordSpacing(v DimOrS) { s[PWordSpacing] = v }
 
 func (s Properties) GetZIndex() IntString  { return s[PZIndex].(IntString) }
 func (s Properties) SetZIndex(v IntString) { s[PZIndex] = v }
 
 type StyleAccessor interface {
-	GetAlignContent() String
-	SetAlignContent(v String)
+	GetAlignContent() Strings
+	SetAlignContent(v Strings)
 
-	GetAlignItems() String
-	SetAlignItems(v String)
+	GetAlignItems() Strings
+	SetAlignItems(v Strings)
 
-	GetAlignSelf() String
-	SetAlignSelf(v String)
+	GetAlignSelf() Strings
+	SetAlignSelf(v Strings)
 
 	GetAnchor() String
 	SetAnchor(v String)
@@ -525,17 +583,17 @@ type StyleAccessor interface {
 	GetBackgroundSize() Sizes
 	SetBackgroundSize(v Sizes)
 
-	GetBleedBottom() Value
-	SetBleedBottom(v Value)
+	GetBleedBottom() DimOrS
+	SetBleedBottom(v DimOrS)
 
-	GetBleedLeft() Value
-	SetBleedLeft(v Value)
+	GetBleedLeft() DimOrS
+	SetBleedLeft(v DimOrS)
 
-	GetBleedRight() Value
-	SetBleedRight(v Value)
+	GetBleedRight() DimOrS
+	SetBleedRight(v DimOrS)
 
-	GetBleedTop() Value
-	SetBleedTop(v Value)
+	GetBleedTop() DimOrS
+	SetBleedTop(v DimOrS)
 
 	GetBlockEllipsis() TaggedString
 	SetBlockEllipsis(v TaggedString)
@@ -543,8 +601,8 @@ type StyleAccessor interface {
 	GetBookmarkLabel() ContentProperties
 	SetBookmarkLabel(v ContentProperties)
 
-	GetBookmarkLevel() IntString
-	SetBookmarkLevel(v IntString)
+	GetBookmarkLevel() TaggedInt
+	SetBookmarkLevel(v TaggedInt)
 
 	GetBookmarkState() String
 	SetBookmarkState(v String)
@@ -561,11 +619,26 @@ type StyleAccessor interface {
 	GetBorderBottomStyle() String
 	SetBorderBottomStyle(v String)
 
-	GetBorderBottomWidth() Value
-	SetBorderBottomWidth(v Value)
+	GetBorderBottomWidth() DimOrS
+	SetBorderBottomWidth(v DimOrS)
 
 	GetBorderCollapse() String
 	SetBorderCollapse(v String)
+
+	GetBorderImageOutset() Values
+	SetBorderImageOutset(v Values)
+
+	GetBorderImageRepeat() Strings
+	SetBorderImageRepeat(v Strings)
+
+	GetBorderImageSlice() Values
+	SetBorderImageSlice(v Values)
+
+	GetBorderImageSource() Image
+	SetBorderImageSource(v Image)
+
+	GetBorderImageWidth() Values
+	SetBorderImageWidth(v Values)
 
 	GetBorderLeftColor() Color
 	SetBorderLeftColor(v Color)
@@ -573,8 +646,8 @@ type StyleAccessor interface {
 	GetBorderLeftStyle() String
 	SetBorderLeftStyle(v String)
 
-	GetBorderLeftWidth() Value
-	SetBorderLeftWidth(v Value)
+	GetBorderLeftWidth() DimOrS
+	SetBorderLeftWidth(v DimOrS)
 
 	GetBorderRightColor() Color
 	SetBorderRightColor(v Color)
@@ -582,8 +655,8 @@ type StyleAccessor interface {
 	GetBorderRightStyle() String
 	SetBorderRightStyle(v String)
 
-	GetBorderRightWidth() Value
-	SetBorderRightWidth(v Value)
+	GetBorderRightWidth() DimOrS
+	SetBorderRightWidth(v DimOrS)
 
 	GetBorderSpacing() Point
 	SetBorderSpacing(v Point)
@@ -600,11 +673,11 @@ type StyleAccessor interface {
 	GetBorderTopStyle() String
 	SetBorderTopStyle(v String)
 
-	GetBorderTopWidth() Value
-	SetBorderTopWidth(v Value)
+	GetBorderTopWidth() DimOrS
+	SetBorderTopWidth(v DimOrS)
 
-	GetBottom() Value
-	SetBottom(v Value)
+	GetBottom() DimOrS
+	SetBottom(v DimOrS)
 
 	GetBoxDecorationBreak() String
 	SetBoxDecorationBreak(v String)
@@ -639,8 +712,8 @@ type StyleAccessor interface {
 	GetColumnFill() String
 	SetColumnFill(v String)
 
-	GetColumnGap() Value
-	SetColumnGap(v Value)
+	GetColumnGap() DimOrS
+	SetColumnGap(v DimOrS)
 
 	GetColumnRuleColor() Color
 	SetColumnRuleColor(v Color)
@@ -648,14 +721,14 @@ type StyleAccessor interface {
 	GetColumnRuleStyle() String
 	SetColumnRuleStyle(v String)
 
-	GetColumnRuleWidth() Value
-	SetColumnRuleWidth(v Value)
+	GetColumnRuleWidth() DimOrS
+	SetColumnRuleWidth(v DimOrS)
 
 	GetColumnSpan() String
 	SetColumnSpan(v String)
 
-	GetColumnWidth() Value
-	SetColumnWidth(v Value)
+	GetColumnWidth() DimOrS
+	SetColumnWidth(v DimOrS)
 
 	GetContent() SContent
 	SetContent(v SContent)
@@ -681,8 +754,8 @@ type StyleAccessor interface {
 	GetEmptyCells() String
 	SetEmptyCells(v String)
 
-	GetFlexBasis() Value
-	SetFlexBasis(v Value)
+	GetFlexBasis() DimOrS
+	SetFlexBasis(v DimOrS)
 
 	GetFlexDirection() String
 	SetFlexDirection(v String)
@@ -711,8 +784,8 @@ type StyleAccessor interface {
 	GetFontLanguageOverride() String
 	SetFontLanguageOverride(v String)
 
-	GetFontSize() Value
-	SetFontSize(v Value)
+	GetFontSize() DimOrS
+	SetFontSize(v DimOrS)
 
 	GetFontStretch() String
 	SetFontStretch(v String)
@@ -753,8 +826,38 @@ type StyleAccessor interface {
 	GetFootnotePolicy() String
 	SetFootnotePolicy(v String)
 
-	GetHeight() Value
-	SetHeight(v Value)
+	GetGridAutoColumns() GridAuto
+	SetGridAutoColumns(v GridAuto)
+
+	GetGridAutoFlow() Strings
+	SetGridAutoFlow(v Strings)
+
+	GetGridAutoRows() GridAuto
+	SetGridAutoRows(v GridAuto)
+
+	GetGridColumnEnd() GridLine
+	SetGridColumnEnd(v GridLine)
+
+	GetGridColumnStart() GridLine
+	SetGridColumnStart(v GridLine)
+
+	GetGridRowEnd() GridLine
+	SetGridRowEnd(v GridLine)
+
+	GetGridRowStart() GridLine
+	SetGridRowStart(v GridLine)
+
+	GetGridTemplateAreas() GridTemplateAreas
+	SetGridTemplateAreas(v GridTemplateAreas)
+
+	GetGridTemplateColumns() GridTemplate
+	SetGridTemplateColumns(v GridTemplate)
+
+	GetGridTemplateRows() GridTemplate
+	SetGridTemplateRows(v GridTemplate)
+
+	GetHeight() DimOrS
+	SetHeight(v DimOrS)
 
 	GetHyphenateCharacter() String
 	SetHyphenateCharacter(v String)
@@ -762,8 +865,8 @@ type StyleAccessor interface {
 	GetHyphenateLimitChars() Limits
 	SetHyphenateLimitChars(v Limits)
 
-	GetHyphenateLimitZone() Value
-	SetHyphenateLimitZone(v Value)
+	GetHyphenateLimitZone() DimOrS
+	SetHyphenateLimitZone(v DimOrS)
 
 	GetHyphens() String
 	SetHyphens(v String)
@@ -774,23 +877,29 @@ type StyleAccessor interface {
 	GetImageRendering() String
 	SetImageRendering(v String)
 
-	GetImageResolution() Value
-	SetImageResolution(v Value)
+	GetImageResolution() DimOrS
+	SetImageResolution(v DimOrS)
 
-	GetJustifyContent() String
-	SetJustifyContent(v String)
+	GetJustifyContent() Strings
+	SetJustifyContent(v Strings)
 
-	GetLang() NamedString
-	SetLang(v NamedString)
+	GetJustifyItems() Strings
+	SetJustifyItems(v Strings)
 
-	GetLeft() Value
-	SetLeft(v Value)
+	GetJustifySelf() Strings
+	SetJustifySelf(v Strings)
 
-	GetLetterSpacing() Value
-	SetLetterSpacing(v Value)
+	GetLang() TaggedString
+	SetLang(v TaggedString)
 
-	GetLineHeight() Value
-	SetLineHeight(v Value)
+	GetLeft() DimOrS
+	SetLeft(v DimOrS)
+
+	GetLetterSpacing() DimOrS
+	SetLetterSpacing(v DimOrS)
+
+	GetLineHeight() DimOrS
+	SetLineHeight(v DimOrS)
 
 	GetLink() NamedString
 	SetLink(v NamedString)
@@ -804,38 +913,38 @@ type StyleAccessor interface {
 	GetListStyleType() CounterStyleID
 	SetListStyleType(v CounterStyleID)
 
-	GetMarginBottom() Value
-	SetMarginBottom(v Value)
+	GetMarginBottom() DimOrS
+	SetMarginBottom(v DimOrS)
 
 	GetMarginBreak() String
 	SetMarginBreak(v String)
 
-	GetMarginLeft() Value
-	SetMarginLeft(v Value)
+	GetMarginLeft() DimOrS
+	SetMarginLeft(v DimOrS)
 
-	GetMarginRight() Value
-	SetMarginRight(v Value)
+	GetMarginRight() DimOrS
+	SetMarginRight(v DimOrS)
 
-	GetMarginTop() Value
-	SetMarginTop(v Value)
+	GetMarginTop() DimOrS
+	SetMarginTop(v DimOrS)
 
 	GetMarks() Marks
 	SetMarks(v Marks)
 
-	GetMaxHeight() Value
-	SetMaxHeight(v Value)
+	GetMaxHeight() DimOrS
+	SetMaxHeight(v DimOrS)
 
 	GetMaxLines() TaggedInt
 	SetMaxLines(v TaggedInt)
 
-	GetMaxWidth() Value
-	SetMaxWidth(v Value)
+	GetMaxWidth() DimOrS
+	SetMaxWidth(v DimOrS)
 
-	GetMinHeight() Value
-	SetMinHeight(v Value)
+	GetMinHeight() DimOrS
+	SetMinHeight(v DimOrS)
 
-	GetMinWidth() Value
-	SetMinWidth(v Value)
+	GetMinWidth() DimOrS
+	SetMinWidth(v DimOrS)
 
 	GetObjectFit() String
 	SetObjectFit(v String)
@@ -858,8 +967,8 @@ type StyleAccessor interface {
 	GetOutlineStyle() String
 	SetOutlineStyle(v String)
 
-	GetOutlineWidth() Value
-	SetOutlineWidth(v Value)
+	GetOutlineWidth() DimOrS
+	SetOutlineWidth(v DimOrS)
 
 	GetOverflow() String
 	SetOverflow(v String)
@@ -867,17 +976,17 @@ type StyleAccessor interface {
 	GetOverflowWrap() String
 	SetOverflowWrap(v String)
 
-	GetPaddingBottom() Value
-	SetPaddingBottom(v Value)
+	GetPaddingBottom() DimOrS
+	SetPaddingBottom(v DimOrS)
 
-	GetPaddingLeft() Value
-	SetPaddingLeft(v Value)
+	GetPaddingLeft() DimOrS
+	SetPaddingLeft(v DimOrS)
 
-	GetPaddingRight() Value
-	SetPaddingRight(v Value)
+	GetPaddingRight() DimOrS
+	SetPaddingRight(v DimOrS)
 
-	GetPaddingTop() Value
-	SetPaddingTop(v Value)
+	GetPaddingTop() DimOrS
+	SetPaddingTop(v DimOrS)
 
 	GetPage() Page
 	SetPage(v Page)
@@ -888,8 +997,11 @@ type StyleAccessor interface {
 	GetQuotes() Quotes
 	SetQuotes(v Quotes)
 
-	GetRight() Value
-	SetRight(v Value)
+	GetRight() DimOrS
+	SetRight(v DimOrS)
+
+	GetRowGap() DimOrS
+	SetRowGap(v DimOrS)
 
 	GetSize() Point
 	SetSize(v Point)
@@ -897,8 +1009,8 @@ type StyleAccessor interface {
 	GetStringSet() StringSet
 	SetStringSet(v StringSet)
 
-	GetTabSize() Value
-	SetTabSize(v Value)
+	GetTabSize() DimOrS
+	SetTabSize(v DimOrS)
 
 	GetTableLayout() String
 	SetTableLayout(v String)
@@ -918,8 +1030,8 @@ type StyleAccessor interface {
 	GetTextDecorationStyle() String
 	SetTextDecorationStyle(v String)
 
-	GetTextIndent() Value
-	SetTextIndent(v Value)
+	GetTextIndent() DimOrS
+	SetTextIndent(v DimOrS)
 
 	GetTextOverflow() String
 	SetTextOverflow(v String)
@@ -927,8 +1039,8 @@ type StyleAccessor interface {
 	GetTextTransform() String
 	SetTextTransform(v String)
 
-	GetTop() Value
-	SetTop(v Value)
+	GetTop() DimOrS
+	SetTop(v DimOrS)
 
 	GetTransform() Transforms
 	SetTransform(v Transforms)
@@ -939,8 +1051,8 @@ type StyleAccessor interface {
 	GetUnicodeBidi() String
 	SetUnicodeBidi(v String)
 
-	GetVerticalAlign() Value
-	SetVerticalAlign(v Value)
+	GetVerticalAlign() DimOrS
+	SetVerticalAlign(v DimOrS)
 
 	GetVisibility() String
 	SetVisibility(v String)
@@ -951,14 +1063,14 @@ type StyleAccessor interface {
 	GetWidows() Int
 	SetWidows(v Int)
 
-	GetWidth() Value
-	SetWidth(v Value)
+	GetWidth() DimOrS
+	SetWidth(v DimOrS)
 
 	GetWordBreak() String
 	SetWordBreak(v String)
 
-	GetWordSpacing() Value
-	SetWordSpacing(v Value)
+	GetWordSpacing() DimOrS
+	SetWordSpacing(v DimOrS)
 
 	GetZIndex() IntString
 	SetZIndex(v IntString)
@@ -992,6 +1104,11 @@ var propsNames = [...]string{
 	PBorderBottomStyle:       "border-bottom-style",
 	PBorderBottomWidth:       "border-bottom-width",
 	PBorderCollapse:          "border-collapse",
+	PBorderImageOutset:       "border-image-outset",
+	PBorderImageRepeat:       "border-image-repeat",
+	PBorderImageSlice:        "border-image-slice",
+	PBorderImageSource:       "border-image-source",
+	PBorderImageWidth:        "border-image-width",
 	PBorderLeftColor:         "border-left-color",
 	PBorderLeftStyle:         "border-left-style",
 	PBorderLeftWidth:         "border-left-width",
@@ -1054,6 +1171,16 @@ var propsNames = [...]string{
 	PFontWeight:              "font-weight",
 	PFootnoteDisplay:         "footnote-display",
 	PFootnotePolicy:          "footnote-policy",
+	PGridAutoColumns:         "grid-auto-columns",
+	PGridAutoFlow:            "grid-auto-flow",
+	PGridAutoRows:            "grid-auto-rows",
+	PGridColumnEnd:           "grid-column-end",
+	PGridColumnStart:         "grid-column-start",
+	PGridRowEnd:              "grid-row-end",
+	PGridRowStart:            "grid-row-start",
+	PGridTemplateAreas:       "grid-template-areas",
+	PGridTemplateColumns:     "grid-template-columns",
+	PGridTemplateRows:        "grid-template-rows",
 	PHeight:                  "height",
 	PHyphenateCharacter:      "hyphenate-character",
 	PHyphenateLimitChars:     "hyphenate-limit-chars",
@@ -1063,6 +1190,8 @@ var propsNames = [...]string{
 	PImageRendering:          "image-rendering",
 	PImageResolution:         "image-resolution",
 	PJustifyContent:          "justify-content",
+	PJustifyItems:            "justify-items",
+	PJustifySelf:             "justify-self",
 	PLang:                    "lang",
 	PLeft:                    "left",
 	PLetterSpacing:           "letter-spacing",
@@ -1100,6 +1229,7 @@ var propsNames = [...]string{
 	PPosition:                "position",
 	PQuotes:                  "quotes",
 	PRight:                   "right",
+	PRowGap:                  "row-gap",
 	PSize:                    "size",
 	PStringSet:               "string-set",
 	PTabSize:                 "tab-size",
@@ -1155,6 +1285,11 @@ var PropsFromNames = map[string]KnownProp{
 	"border-bottom-style":        PBorderBottomStyle,
 	"border-bottom-width":        PBorderBottomWidth,
 	"border-collapse":            PBorderCollapse,
+	"border-image-outset":        PBorderImageOutset,
+	"border-image-repeat":        PBorderImageRepeat,
+	"border-image-slice":         PBorderImageSlice,
+	"border-image-source":        PBorderImageSource,
+	"border-image-width":         PBorderImageWidth,
 	"border-left-color":          PBorderLeftColor,
 	"border-left-style":          PBorderLeftStyle,
 	"border-left-width":          PBorderLeftWidth,
@@ -1217,6 +1352,16 @@ var PropsFromNames = map[string]KnownProp{
 	"font-weight":                PFontWeight,
 	"footnote-display":           PFootnoteDisplay,
 	"footnote-policy":            PFootnotePolicy,
+	"grid-auto-columns":          PGridAutoColumns,
+	"grid-auto-flow":             PGridAutoFlow,
+	"grid-auto-rows":             PGridAutoRows,
+	"grid-column-end":            PGridColumnEnd,
+	"grid-column-start":          PGridColumnStart,
+	"grid-row-end":               PGridRowEnd,
+	"grid-row-start":             PGridRowStart,
+	"grid-template-areas":        PGridTemplateAreas,
+	"grid-template-columns":      PGridTemplateColumns,
+	"grid-template-rows":         PGridTemplateRows,
 	"height":                     PHeight,
 	"hyphenate-character":        PHyphenateCharacter,
 	"hyphenate-limit-chars":      PHyphenateLimitChars,
@@ -1226,6 +1371,8 @@ var PropsFromNames = map[string]KnownProp{
 	"image-rendering":            PImageRendering,
 	"image-resolution":           PImageResolution,
 	"justify-content":            PJustifyContent,
+	"justify-items":              PJustifyItems,
+	"justify-self":               PJustifySelf,
 	"lang":                       PLang,
 	"left":                       PLeft,
 	"letter-spacing":             PLetterSpacing,
@@ -1263,6 +1410,7 @@ var PropsFromNames = map[string]KnownProp{
 	"position":                   PPosition,
 	"quotes":                     PQuotes,
 	"right":                      PRight,
+	"row-gap":                    PRowGap,
 	"size":                       PSize,
 	"string-set":                 PStringSet,
 	"tab-size":                   PTabSize,

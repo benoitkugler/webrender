@@ -27,33 +27,21 @@ func (node *svgNode) resolveBoundingBox(dims drawingDims, withStroke bool) (Rect
 	return bbox, true
 }
 
-// compute the union of all the node bounding boxes or return false if
-// no one is valid
-func boundingBoxUnion(nodes []*svgNode, dims drawingDims) (Rectangle, bool) {
-	foundValid := false
-	out := Rectangle{}
-	for _, node := range nodes {
-		bb, ok := node.resolveBoundingBox(dims, true)
-		if !ok {
-			continue
-		}
-
-		if !foundValid { // start with this box
-			out = bb
-			foundValid = true
-		} else { // perform the union
-			out.union(bb)
-		}
-	}
-	return out, foundValid
-}
-
 type Rectangle struct {
 	X, Y, Width, Height Fl
 }
 
+var (
+	inf       = Fl(math.Inf(+1))
+	emptyBbox = Rectangle{inf, inf, 0, 0}
+)
+
 // increase the rectangle to contain (x,y)
 func (r *Rectangle) add(x, y Fl) {
+	if *r == emptyBbox {
+		r.X, r.Y = x, y
+		return
+	}
 	minX, minY := utils.MinF(r.X, x), utils.MinF(r.Y, y)
 	maxX, maxY := utils.MaxF(r.X+r.Width, x), utils.MaxF(r.Y+r.Height, y)
 	r.X, r.Y, r.Width, r.Height = minX, minY, maxX-minX, maxY-minY
@@ -117,8 +105,8 @@ func (svg) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
 	return Rectangle{}, false
 }
 
-func (span) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
-	return Rectangle{}, false
+func (t textSpan) boundingBox(_ *attributes, _ drawingDims) (Rectangle, bool) {
+	return t.textBoundingBox, t.textBoundingBox != emptyBbox
 }
 
 // bounding box for bezier curves

@@ -13,6 +13,7 @@
 package tree
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ import (
 
 	"github.com/benoitkugler/webrender/css/selector"
 
-	"github.com/benoitkugler/webrender/css/parser"
+	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/utils"
@@ -36,7 +37,7 @@ import (
 // Reject anything not in here
 var pseudoElements = utils.NewSet("", "before", "after", "marker", "first-line", "first-letter", "footnote-call", "footnote-marker")
 
-type Token = parser.Token
+type Token = pa.Token
 
 // StyleFor provides a convenience function `Get` to get the computed styles for an Element.
 type StyleFor struct {
@@ -71,7 +72,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 			we := weight{precedence: precedence, specificity: styleAttr.specificity}
 			oldWeight := style[decl.Name].weight
 			if oldWeight.isNone() || oldWeight.Less(we) {
-				style[decl.Name] = weigthedValue{weight: we, value: decl.Value}
+				style[decl.Name] = weigthedValue{weight: we, value: decl.Value, shortand: decl.Shortand}
 			}
 		}
 	}
@@ -87,7 +88,8 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 		for _, sh := range sheets {
 			// sheet, origin, sheetSpecificity
 			// Add declarations for matched elements
-			matchedSelectors := sh.sheet.Matcher.Match(element.AsHtmlNode())
+			matchedSelectors := sh.sheet.matcher.match(element.AsHtmlNode())
+
 			for _, sel := range matchedSelectors {
 				// specificity, order, pseudoType, declarations = selector
 				specificity := sel.specificity
@@ -107,7 +109,7 @@ func newStyleFor(html *HTML, sheets []sheet, presentationalHints bool,
 					we := weight{precedence: precedence, specificity: specificity}
 					oldWeight := style[decl.Name].weight
 					if oldWeight.isNone() || oldWeight.Less(we) {
-						style[decl.Name] = weigthedValue{weight: we, value: decl.Value}
+						style[decl.Name] = weigthedValue{weight: we, value: decl.Value, shortand: decl.Shortand}
 					}
 				}
 			}
@@ -180,30 +182,6 @@ func (sf *StyleFor) setComputedStyles(element, parent Element,
 	}
 	sf.computedStyles[key] = computedFromCascaded(element, cascaded, parentStyle,
 		rootStyle_, pseudoType, baseUrl, targetCollector, sf.textContext)
-
-	// The style of marker is deleted when display is different from
-	// list-item.
-	if pseudoType == "" {
-		hasBroken := false
-		for _, pseudo := range [...]string{"", "before", "after"} {
-			key := element.ToKey(pseudo)
-			pseudoStyle := sf.cascadedStyles[key]
-			if display, has := pseudoStyle[pr.PDisplay.Key()]; has {
-				if v := display.value; v.SpecialProperty == nil {
-					if c := v.ToCascaded(); c.Default == 0 {
-						if c.ToCSS().(pr.Display).Has("list-item") {
-							hasBroken = true
-							break
-						}
-					}
-				}
-			}
-		}
-		if !hasBroken {
-			key := element.ToKey("marker")
-			delete(sf.cascadedStyles, key)
-		}
-	}
 }
 
 func (s StyleFor) Get(element Element, pseudoType string) pr.ElementStyle {
@@ -253,7 +231,7 @@ func (s StyleFor) addPageDeclarations(page_T utils.PageElement) {
 						we := weight{precedence: precedence, specificity: specificity}
 						oldWeight := style[decl.Name].weight
 						if oldWeight.isNone() || oldWeight.Less(we) {
-							style[decl.Name] = weigthedValue{weight: we, value: decl.Value}
+							style[decl.Name] = weigthedValue{weight: we, value: decl.Value, shortand: decl.Shortand}
 						}
 					}
 				}
@@ -338,7 +316,7 @@ func (c *propsCache) updateWith(other propsCache) {
 
 // subset of properties of the root element
 type rootStyle struct {
-	fontSize pr.Value
+	fontSize pr.DimOrS
 }
 
 // ComputedStyle provides on demand access of computed properties
@@ -351,7 +329,7 @@ type ComputedStyle struct {
 
 	cache pr.TextRatioCache
 
-	variables  map[string]pr.ValidatedProperty
+	variables  map[string]pr.RawTokens
 	rootStyle  rootStyle
 	cascaded   cascadedStyle
 	pseudoType string
@@ -365,7 +343,7 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 	out := &ComputedStyle{
 		propsCache: newPropsCache(),
 
-		variables:   make(map[string]pr.ValidatedProperty),
+		variables:   make(map[string]pr.RawTokens),
 		textContext: textContext,
 		parentStyle: parentStyle,
 		cascaded:    cascaded,
@@ -383,7 +361,7 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 	}
 	for k, v := range cascaded {
 		if k.Var != "" {
-			out.variables[k.Var] = v.value
+			out.variables[k.Var] = v.value.(pr.RawTokens)
 		}
 	}
 	// inherit the cache
@@ -394,19 +372,13 @@ func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
 	}
 
 	// Set specified value needed for computed value
-	_, position := out.cascadeValue(pr.PPosition.Key())
-	_, display := out.cascadeValue(pr.PDisplay.Key())
-	_, float := out.cascadeValue(pr.PFloat.Key())
+	position, _ := out.cascadeValue(pr.PPosition.Key())
+	display, _ := out.cascadeValue(pr.PDisplay.Key())
+	float, _ := out.cascadeValue(pr.PFloat.Key())
 
-	if position.SpecialProperty == nil && position.ToCascaded().Default == 0 {
-		out.specified.Position = position.ToCascaded().ToCSS().(pr.BoolString)
-	}
-	if display.SpecialProperty == nil && display.ToCascaded().Default == 0 {
-		out.specified.Display = display.ToCascaded().ToCSS().(pr.Display)
-	}
-	if float.SpecialProperty == nil && float.ToCascaded().Default == 0 {
-		out.specified.Float = float.ToCascaded().ToCSS().(pr.String)
-	}
+	out.specified.Position, _ = position.(pr.BoolString)
+	out.specified.Display, _ = display.(pr.Display)
+	out.specified.Float, _ = float.(pr.String)
 
 	return out
 }
@@ -419,44 +391,85 @@ func (c *ComputedStyle) Copy() pr.ElementStyle {
 	return out
 }
 
-func (c *ComputedStyle) ParentStyle() pr.ElementStyle               { return c.parentStyle }
-func (c *ComputedStyle) Variables() map[string]pr.ValidatedProperty { return c.variables }
-func (c *ComputedStyle) Cache() pr.TextRatioCache                   { return c.cache }
-func (c *ComputedStyle) Specified() pr.SpecifiedAttributes          { return c.specified }
+func (c *ComputedStyle) ParentStyle() pr.ElementStyle       { return c.parentStyle }
+func (c *ComputedStyle) Variables() map[string]pr.RawTokens { return c.variables }
+func (c *ComputedStyle) Cache() pr.TextRatioCache           { return c.cache }
+func (c *ComputedStyle) Specified() pr.SpecifiedAttributes  { return c.specified }
 
-func (c *ComputedStyle) cascadeValue(key pr.PropKey) (pr.DefaultKind, pr.ValidatedProperty) {
-	var (
-		value   pr.ValidatedProperty
-		keyword pr.DefaultKind
-	)
-
-	if casc, in := c.cascaded[key]; in {
+// the returned boolean is true if the value must be saved
+func (c *ComputedStyle) cascadeValue(key pr.PropKey) (value pr.DeclaredValue, save bool) {
+	var shortand pr.Shortand
+	if casc, in := c.cascaded[key]; in { // Property defined in cascaded properties.
 		value = casc.value
-		if value.SpecialProperty == nil {
-			keyword = value.ToCascaded().Default
-		}
+		shortand = casc.shortand
 	} else {
-		if pr.Inherited.Has(key.KnownProp) {
-			keyword = pr.Inherit
+		// Property not defined in cascaded properties, defined as inherited
+		// or initial value.
+		if pr.Inherited.Has(key.KnownProp) || key.Var != "" {
+			value = pr.Inherit
 		} else {
-			keyword = pr.Initial
+			value = pr.Initial
 		}
 	}
 
-	if keyword == pr.Inherit && c.isRootElement() {
-		// On the Root Element, "inherit" from initial values
-		keyword = pr.Initial
+	if value == pr.Inherit && c.isRootElement() {
+		// On the root element, "inherit" from initial values
+		value = pr.Initial
 	}
 
-	if keyword == pr.Initial {
-		value_ := pr.InitialValues[key.KnownProp]
-		value = pr.AsCascaded(value_).AsValidated()
-	} else if keyword == pr.Inherit {
-		value_ := c.parentStyle.Get(key)
-		value = pr.AsCascaded(value_).AsValidated()
+	parent_style := c.parentStyle
+	if rawTokens, isPending := value.(pr.RawTokens); isPending { // Property with pending values, validate them.
+		var solvedTokens []Token
+		for _, token := range rawTokens {
+			tokens := resolveVar(c.variables, token)
+			if tokens == nil {
+				solvedTokens = append(solvedTokens, token)
+			} else {
+				solvedTokens = append(solvedTokens, tokens...)
+			}
+		}
+		var err error
+		if len(solvedTokens) == 0 {
+			err = errors.New("no value")
+		} else if shortand != 0 {
+			// the tokens must be expanded (shortand are never variable)
+			value, err = validation.ExpandValidatePending(key.KnownProp, shortand, solvedTokens)
+		} else {
+			value, err = validation.Validate(key, solvedTokens)
+		}
+		if err != nil {
+			logger.WarningLogger.Printf("Ignored `%s: %s`, %s",
+				key, pa.Serialize(solvedTokens), err)
+
+			if pr.Inherited.Has(key.KnownProp) {
+				// Values in parent_style are already computed.
+				save = true
+				value = parent_style.Get(key)
+			} else {
+				value = pr.InitialValues[key.KnownProp]
+				if !pr.InitialNotComputed.Has(key.KnownProp) {
+					// The value is the same as when computed.
+					save = true
+				}
+			}
+		}
 	}
 
-	return keyword, value
+	if value == pr.Initial {
+		value = pr.InitialValues[key.KnownProp]
+		if !pr.InitialNotComputed.Has(key.KnownProp) {
+			// The value is the same as when computed.
+			save = true
+		}
+	} else if value == pr.Inherit {
+		// Values in parent_style are already computed.
+		value = c.parentStyle.Get(key)
+		save = true
+	}
+
+	_ = value.(pr.CssProperty) // TODO: can we ensure this behavior ?
+
+	return value, save
 }
 
 // provide on demand computation
@@ -466,85 +479,44 @@ func (c *ComputedStyle) Get(key pr.PropKey) pr.CssProperty {
 		return v
 	}
 
-	keyword, value := c.cascadeValue(key)
+	value, save := c.cascadeValue(key)
 
-	if keyword == pr.Initial && !pr.InitialNotComputed.Has(key.KnownProp) {
-		// The value is the same as when computed
-		c.Set(key, value.ToCascaded().ToCSS())
-	} else if keyword == pr.Inherit {
-		// Values in parentStyle are already computed.
-		c.Set(key, value.ToCascaded().ToCSS())
+	if save {
+		c.Set(key, value.(pr.CssProperty))
 	}
 
-	if key.KnownProp.IsTextDecoration() && value.SpecialProperty == nil && c.parentStyle != nil {
+	if css, ok := value.(pr.CssProperty); ok && key.KnownProp.IsTextDecoration() && c.parentStyle != nil {
+		// Text decorations are not inherited but propagated. See
+		// https://www.w3.org/TR/css-text-decor-3/#line-decoration.
 		_, isCascaded := c.cascaded[key]
-		value_ := textDecoration(key.KnownProp, value.ToCascaded().ToCSS(), c.parentStyle.Get(key), isCascaded)
-		value = pr.AsCascaded(value_).AsValidated()
+		value = textDecoration(key.KnownProp, css, c.parentStyle.Get(key), isCascaded)
 		c.delete(key)
-	} else if key.KnownProp == pr.PPage && value.SpecialProperty == nil && value.ToCascaded().Default == 0 && value.ToCascaded().ToCSS().(pr.Page).String == "auto" {
+	} else if key.KnownProp == pr.PPage && value == pr.Page("auto") {
 		// The page property does not inherit. However, if the page value on
-		// an Element is auto, then its used value is the value specified on
+		// an element is auto, then its used value is the value specified on
 		// its nearest ancestor with a non-auto value. When specified on the
-		// Root Element, the used value for auto is the empty string.
-		value_ := pr.Page{Valid: true, String: ""}
+		// Root Element, the used value for auto is the empty string. See
+		// https://www.w3.org/TR/css-page-3/#using-named-pages.
+		value = pr.Page("")
 		if c.parentStyle != nil {
-			value_ = c.parentStyle.GetPage()
+			value = c.parentStyle.GetPage()
 		}
-		value = pr.AsCascaded(value_).AsValidated()
 		c.delete(key)
 	}
 
 	// check the cache again
 	if v, has := c.propsCache.get(key); has {
+		// Value already computed and saved: return.
 		return v
 	}
 
-	var (
-		newValue             pr.CascadedProperty
-		alreadyComputedValue bool
-	)
-
-	// special case for content property. See validation.multiValProperties
-	if key.KnownProp == pr.PContent && value.SpecialProperty == nil && value.ToCascaded().Default == 0 {
-		contentValue := value.ToCascaded().ToCSS().(pr.SContent)
-		resolvedContents := make(pr.ContentProperties, 0, len(contentValue.Contents))
-		for _, v := range contentValue.Contents {
-			if varData, ok := v.Content.(pr.VarData); ok {
-				newValue, alreadyComputedValue = computeVariable(varData, key, c.variables, c.baseUrl, c.parentStyle)
-				if newValue.Default != 0 {
-					logger.WarningLogger.Printf("invalid default in content: %v", newValue)
-					newValue.Default = 0
-				}
-				newValue, _ := newValue.ToCSS().(pr.SContent)
-				if len(newValue.Contents) == 1 {
-					resolvedContents = append(resolvedContents, newValue.Contents[0])
-				}
-			} else {
-				resolvedContents = append(resolvedContents, v)
-			}
-		}
-		contentValue.Contents = resolvedContents
-		value = pr.AsCascaded(contentValue).AsValidated()
+	out := value.(pr.CssProperty)
+	if fn := computerFunctions[key.KnownProp]; fn != nil {
+		// Value not computed yet: compute.
+		out = fn(c, key.KnownProp, out)
 	}
-
-	if varData, ok := value.SpecialProperty.(pr.VarData); ok {
-		newValue, alreadyComputedValue = computeVariable(varData, key, c.variables, c.baseUrl, c.parentStyle)
-	} else {
-		newValue = value.ToCascaded()
-	}
-	if newValue.Default != 0 {
-		logger.WarningLogger.Printf("invalid default after variable resolution: %v", newValue)
-		newValue.Default = 0
-	}
-
-	outValue := newValue.ToCSS()
-
-	fn := computerFunctions[key.KnownProp]
-	if fn != nil && !alreadyComputedValue {
-		outValue = fn(c, key.KnownProp, outValue)
-	}
-	c.Set(key, outValue)
-	return outValue
+	c.propsCache.Set(key, out)
+	return out
 }
 
 // AnonymousStyle provides on demand access of computed properties,
@@ -554,7 +526,7 @@ type AnonymousStyle struct {
 
 	parentStyle pr.ElementStyle
 	cache       pr.TextRatioCache
-	variables   map[string]pr.ValidatedProperty
+	variables   map[string]pr.RawTokens
 
 	specified pr.SpecifiedAttributes
 }
@@ -563,7 +535,7 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	out := &AnonymousStyle{
 		propsCache:  newPropsCache(),
 		parentStyle: parentStyle,
-		variables:   make(map[string]pr.ValidatedProperty),
+		variables:   make(map[string]pr.RawTokens),
 	}
 	// inherit the variables
 	if parentStyle != nil {
@@ -581,11 +553,11 @@ func newAnonymousStyle(parentStyle pr.ElementStyle) *AnonymousStyle {
 	// border-*-style is none, so border-width computes to zero.
 	// Other than that, properties that would need computing are
 	// border-*-color, but they do not apply.
-	out.propsCache.Set(pr.PBorderTopWidth.Key(), pr.Value{})
-	out.propsCache.Set(pr.PBorderBottomWidth.Key(), pr.Value{})
-	out.propsCache.Set(pr.PBorderLeftWidth.Key(), pr.Value{})
-	out.propsCache.Set(pr.PBorderRightWidth.Key(), pr.Value{})
-	out.propsCache.Set(pr.POutlineWidth.Key(), pr.Value{})
+	out.propsCache.Set(pr.PBorderTopWidth.Key(), pr.DimOrS{})
+	out.propsCache.Set(pr.PBorderBottomWidth.Key(), pr.DimOrS{})
+	out.propsCache.Set(pr.PBorderLeftWidth.Key(), pr.DimOrS{})
+	out.propsCache.Set(pr.PBorderRightWidth.Key(), pr.DimOrS{})
+	out.propsCache.Set(pr.POutlineWidth.Key(), pr.DimOrS{})
 
 	out.specified.Display = out.GetDisplay()
 	out.specified.Float = out.GetFloat()
@@ -599,10 +571,10 @@ func (c *AnonymousStyle) Copy() pr.ElementStyle {
 	return out
 }
 
-func (c *AnonymousStyle) ParentStyle() pr.ElementStyle               { return c.parentStyle }
-func (c *AnonymousStyle) Variables() map[string]pr.ValidatedProperty { return c.variables }
-func (c *AnonymousStyle) Cache() pr.TextRatioCache                   { return c.cache }
-func (c *AnonymousStyle) Specified() pr.SpecifiedAttributes          { return c.specified }
+func (c *AnonymousStyle) ParentStyle() pr.ElementStyle       { return c.parentStyle }
+func (c *AnonymousStyle) Variables() map[string]pr.RawTokens { return c.variables }
+func (c *AnonymousStyle) Cache() pr.TextRatioCache           { return c.cache }
+func (c *AnonymousStyle) Specified() pr.SpecifiedAttributes  { return c.specified }
 
 func (a *AnonymousStyle) Get(key pr.PropKey) pr.CssProperty {
 	// check the cache
@@ -628,11 +600,11 @@ func (a *AnonymousStyle) Get(key pr.PropKey) pr.CssProperty {
 
 // ResolveColor return the color for `key`, replacing
 // `currentColor` with p["color"]
-// It panics if the key has not concrete type `Color`
-// replace Python getColor function
+// It panics if the key has not concrete type `Color`.
 func ResolveColor(style pr.ElementStyle, key pr.KnownProp) pr.Color {
+	// replace Python getColor function
 	value := style.Get(key.Key()).(pr.Color)
-	if value.Type == parser.ColorCurrentColor {
+	if value.Type == pa.ColorCurrentColor {
 		return style.GetColor()
 	}
 	return value
@@ -717,7 +689,7 @@ func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, url
 			content := element.GetChildrenText()
 			// ElementTree should give us either unicode or  ASCII-only
 			// bytestrings, so we don"t need `encoding` here.
-			css, err := NewCSS(utils.InputString(content), baseUrl, urlFetcher, false, deviceMediaType,
+			css, err := newCSS(utils.InputString(content), baseUrl, urlFetcher, false, deviceMediaType,
 				fontConfig, nil, pageRules, counterStyle)
 			if err != nil {
 				logger.WarningLogger.Printf("Invalid style %s : %s \n", content, err)
@@ -731,7 +703,7 @@ func findStylesheets(wrapperElement *utils.HTMLNode, deviceMediaType string, url
 				}
 				href := element.GetUrlAttribute("href", baseUrl, false)
 				if href != "" {
-					css, err := NewCSS(utils.InputUrl(href), "", urlFetcher, true, deviceMediaType,
+					css, err := newCSS(utils.InputUrl(href), "", urlFetcher, true, deviceMediaType,
 						fontConfig, nil, pageRules, counterStyle)
 					if err != nil {
 						logger.WarningLogger.Printf("Failed to load stylesheet at %s : %s \n", href, err)
@@ -766,7 +738,7 @@ func isDigit(s string) bool {
 // presentationalHints=false
 func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl string) (out []styleAttrSpec) {
 	checkStyleAttribute := func(element *utils.HTMLNode, styleAttribute string) styleAttr {
-		declarations := parser.ParseDeclarationListString(styleAttribute, false, false)
+		declarations := pa.ParseBlocksContentsString(styleAttribute)
 		return styleAttr{element: element, declaration: declarations, baseUrl: baseUrl}
 	}
 
@@ -1124,8 +1096,9 @@ func (w weight) Less(other weight) bool {
 }
 
 type weigthedValue struct {
-	value  pr.ValidatedProperty
-	weight weight
+	value    pr.DeclaredValue
+	shortand pr.Shortand
+	weight   weight
 }
 
 type cascadedStyle = map[pr.PropKey]weigthedValue
@@ -1140,10 +1113,10 @@ type cascadedStyle = map[pr.PropKey]weigthedValue
 //	- "name" (page name string or ""), and
 //	- "specificity" (list of numbers).
 //	Return ``None` if something went wrong while parsing the rule.
-func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
+func parsePageSelectors(rule pa.QualifiedRule) (out []pageSelector) {
 	// See https://drafts.csswg.org/css-page-3/#syntax-page-selector
 
-	tokens := validation.RemoveWhitespace(*rule.Prelude)
+	tokens := pa.RemoveWhitespace(rule.Prelude)
 
 	// TODO: Specificity is probably wrong, should clean and test that.
 	if len(tokens) == 0 {
@@ -1154,7 +1127,7 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 	for len(tokens) > 0 {
 		var types_ pageSelector
 
-		if ident, ok := tokens[0].(parser.IdentToken); ok {
+		if ident, ok := tokens[0].(pa.Ident); ok {
 			tokens = tokens[1:]
 			types_.Name = string(ident.Value)
 			types_.Specificity[0] = 1
@@ -1170,7 +1143,7 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 		for len(tokens) > 0 {
 			token_ := tokens[0]
 			tokens = tokens[1:]
-			literal, ok := token_.(parser.LiteralToken)
+			literal, ok := token_.(pa.Literal)
 			if !ok {
 				return nil
 			}
@@ -1180,9 +1153,9 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 					return nil
 				}
 				switch firstToken := tokens[0].(type) {
-				case parser.IdentToken:
+				case pa.Ident:
 					tokens = tokens[1:]
-					pseudoClass := firstToken.Value.Lower()
+					pseudoClass := utils.AsciiLower(firstToken.Value)
 					switch pseudoClass {
 					case "left", "right":
 						if types_.Side != "" && types_.Side != pseudoClass {
@@ -1200,34 +1173,34 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 						types_.Specificity[1] += 1
 						continue
 					}
-				case parser.FunctionBlock:
+				case pa.FunctionBlock:
 					tokens = tokens[1:]
 					if firstToken.Name != "nth" {
 						return nil
 					}
-					var group []parser.Token
-					nth := *firstToken.Arguments
-					for i, argument := range *firstToken.Arguments {
-						if ident, ok := argument.(parser.IdentToken); ok && ident.Value == "of" {
-							nth = (*firstToken.Arguments)[:(i - 1)]
-							group = (*firstToken.Arguments)[i:]
+					var group []pa.Token
+					nth := firstToken.Arguments
+					for i, argument := range firstToken.Arguments {
+						if ident, ok := argument.(pa.Ident); ok && ident.Value == "of" {
+							nth = (firstToken.Arguments)[:(i - 1)]
+							group = (firstToken.Arguments)[i:]
 						}
 					}
-					nthValues := parser.ParseNth(nth)
+					nthValues := pa.ParseNth(nth)
 					if nthValues == nil {
 						return nil
 					}
 					if group != nil {
-						var group_ []parser.Token
+						var group_ []pa.Token
 						for _, token := range group {
-							if ty := token.Type(); ty != parser.CommentT && ty != parser.WhitespaceTokenT {
+							if ty := token.Kind(); ty != pa.KComment && ty != pa.KWhitespace {
 								group_ = append(group_, token)
 							}
 						}
 						if len(group_) != 1 {
 							return nil
 						}
-						if _, ok := group_[0].(parser.IdentToken); ok {
+						if _, ok := group_[0].(pa.Ident); ok {
 							// TODO: handle page groups
 							return nil
 						}
@@ -1258,11 +1231,11 @@ func parsePageSelectors(rule parser.QualifiedRule) (out []pageSelector) {
 	return out
 }
 
-func _isContentNone(rule Token) bool {
+func _isContentNone(rule pa.Compound) bool {
 	switch token := rule.(type) {
-	case parser.QualifiedRule:
+	case pa.QualifiedRule:
 		return token.Content == nil
-	case parser.AtRule:
+	case pa.AtRule:
 		return token.Content == nil
 	default:
 		return true
@@ -1276,64 +1249,67 @@ type selectorPageRule struct {
 }
 
 type PageRule struct {
-	rule         parser.AtRule
+	rule         pa.AtRule
 	selectors    []selectorPageRule
-	declarations []validation.ValidatedProperty
+	declarations []validation.Declaration
 }
 
 // Do the work that can be done early on stylesheet, before they are
 // in a document.
 // ignoreImports = false
-func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Token,
+func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []pa.Compound,
 	urlFetcher utils.UrlFetcher, matcher *matcher, pageRules *[]PageRule,
 	fontConfig text.FontConfiguration, counterStyle counters.CounterStyle, ignoreImports bool,
 ) {
 	for _, rule := range stylesheetRules {
-		if atRule, isAtRule := rule.(parser.AtRule); _isContentNone(rule) && (!isAtRule || atRule.AtKeyword.Lower() != "import") {
+		atRule, isAtRule := rule.(pa.AtRule)
+		if _isContentNone(rule) && (!isAtRule || utils.AsciiLower(atRule.AtKeyword) != "import") {
 			continue
 		}
 
 		switch rule := rule.(type) {
-		case parser.QualifiedRule:
-			declarations := validation.PreprocessDeclarations(baseUrl, parser.ParseDeclarationList(*rule.Content, false, false))
-			if len(declarations) > 0 {
-				prelude := parser.Serialize(*rule.Prelude)
-				selector, err := selector.ParseGroup(prelude)
-				if err != nil {
-					logger.WarningLogger.Printf("Invalid or unsupported selector '%s', %s \n", prelude, err)
-					continue
-				}
-				for _, sel := range selector {
-					if _, in := pseudoElements[sel.PseudoElement()]; !in {
-						err = fmt.Errorf("unsupported pseudo-element : %s", sel.PseudoElement())
-						break
+		case pa.QualifiedRule:
+			allDeclarations, err := validation.PreprocessDeclarationsPrelude(baseUrl,
+				pa.ParseBlocksContents(rule.Content, false), rule.Prelude)
+			if err != nil {
+				logger.WarningLogger.Printf("Invalid or unsupported selector '%s', %s \n", pa.Serialize(rule.Prelude), err)
+				continue
+			}
+
+			if len(allDeclarations) > 0 {
+				for _, item := range allDeclarations {
+					for _, sel := range item.Selector {
+						if _, in := pseudoElements[sel.PseudoElement()]; !in {
+							err = fmt.Errorf("unsupported pseudo-element : %s", sel.PseudoElement())
+							break
+						}
 					}
+					if err != nil {
+						logger.WarningLogger.Println(err)
+						continue
+					}
+					*matcher = append(*matcher, match{item.Selector, item.Declarations})
+					ignoreImports = true
 				}
-				if err != nil {
-					logger.WarningLogger.Println(err)
-					continue
-				}
-				*matcher = append(*matcher, match{selector: selector, declarations: declarations})
-				ignoreImports = true
 			} else {
 				ignoreImports = true
 			}
-		case parser.AtRule:
-			switch rule.AtKeyword.Lower() {
+		case pa.AtRule:
+			switch utils.AsciiLower(rule.AtKeyword) {
 			case "import":
 				if ignoreImports {
 					logger.WarningLogger.Printf("@import rule '%s' not at the beginning of the whole rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 
-				tokens := validation.RemoveWhitespace(*rule.Prelude)
+				tokens := pa.RemoveWhitespace(rule.Prelude)
 				var url string
 				if len(tokens) > 0 {
 					switch str := tokens[0].(type) {
-					case parser.URLToken:
+					case pa.URL:
 						url = str.Value
-					case parser.StringToken:
+					case pa.String:
 						url = str.Value
 					}
 				} else {
@@ -1342,7 +1318,7 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				media := parseMediaQuery(tokens[1:])
 				if media == nil {
 					logger.WarningLogger.Printf("Invalid media type '%s' the whole @import rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 				if !evaluateMediaQuery(media, deviceMediaType) {
@@ -1350,24 +1326,24 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				}
 				url = utils.UrlJoin(baseUrl, url, false, "@import")
 				if url != "" {
-					_, err := NewCSS(utils.InputUrl(url), "", urlFetcher, false,
+					_, err := newCSS(utils.InputUrl(url), "", urlFetcher, false,
 						deviceMediaType, fontConfig, matcher, pageRules, counterStyle)
 					if err != nil {
 						logger.WarningLogger.Printf("Failed to load stylesheet at %s : %s \n", url, err)
 					}
 				}
 			case "media":
-				media := parseMediaQuery(*rule.Prelude)
+				media := parseMediaQuery(rule.Prelude)
 				if media == nil {
 					logger.WarningLogger.Printf("Invalid media type '%s' the whole @media rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 				ignoreImports = true
 				if !evaluateMediaQuery(media, deviceMediaType) {
 					continue
 				}
-				contentRules := parser.ParseRuleList(*rule.Content, false, false)
+				contentRules := pa.ParseRuleList(rule.Content, false, false)
 				preprocessStylesheet(
 					deviceMediaType, baseUrl, contentRules, urlFetcher,
 					matcher, pageRules, fontConfig, counterStyle, true)
@@ -1375,14 +1351,14 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				data := parsePageSelectors(rule.QualifiedRule)
 				if data == nil {
 					logger.WarningLogger.Printf("Unsupported @page selector '%s', the whole @page rule was ignored. \n",
-						parser.Serialize(*rule.Prelude))
+						pa.Serialize(rule.Prelude))
 					continue
 				}
 				ignoreImports = true
 				for _, pageType := range data {
 					specificity := pageType.Specificity
 					pageType.Specificity = selector.Specificity{}
-					content := parser.ParseDeclarationList(*rule.Content, false, false)
+					content := pa.ParseBlocksContents(rule.Content, false)
 					declarations := validation.PreprocessDeclarations(baseUrl, content)
 
 					var selectors []selectorPageRule
@@ -1392,16 +1368,15 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 					}
 
 					for _, marginRule := range content {
-						atRule, ok := marginRule.(parser.AtRule)
+						atRule, ok := marginRule.(pa.AtRule)
 						if !ok || atRule.Content == nil {
 							continue
 						}
 						declarations = validation.PreprocessDeclarations(
-							baseUrl,
-							parser.ParseDeclarationList(*atRule.Content, false, false))
+							baseUrl, pa.ParseBlocksContents(atRule.Content, false))
 						if len(declarations) > 0 {
 							selectors = []selectorPageRule{{
-								specificity: specificity, pseudoType: "@" + atRule.AtKeyword.Lower(),
+								specificity: specificity, pseudoType: "@" + utils.AsciiLower(atRule.AtKeyword),
 								pageType: pageType,
 							}}
 							*pageRules = append(*pageRules, PageRule{rule: atRule, selectors: selectors, declarations: declarations})
@@ -1410,34 +1385,36 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []Tok
 				}
 			case "font-face":
 				ignoreImports = true
-				content := parser.ParseDeclarationList(*rule.Content, false, false)
+				content := pa.ParseBlocksContents(rule.Content, false)
 				ruleDescriptors := validation.PreprocessFontFaceDescriptors(baseUrl, content)
 				if ruleDescriptors.Src == nil {
 					logger.WarningLogger.Printf(`Missing src descriptor in "@font-face" rule at %d:%d`+"\n",
-						rule.Position().Line, rule.Position().Column)
+						rule.Pos().Line, rule.Pos().Column)
+					break
 				}
 				if ruleDescriptors.FontFamily == "" {
 					logger.WarningLogger.Printf(`Missing font-family descriptor in "@font-face" rule at %d:%d`+"\n",
-						rule.Position().Line, rule.Position().Column)
+						rule.Pos().Line, rule.Pos().Column)
+					break
 				}
 				if ruleDescriptors.Src != nil && ruleDescriptors.FontFamily != "" && fontConfig != nil {
 					fontConfig.AddFontFace(ruleDescriptors, urlFetcher)
 				}
 
 			case "counter-style":
-				name := validation.ParseCounterStyleName(*rule.Prelude, counterStyle)
+				name := validation.ParseCounterStyleName(rule.Prelude, counterStyle)
 				if name == "" {
 					logger.WarningLogger.Printf(`Invalid counter style name %s, the whole @counter-style rule was ignored at %d:%d.`,
-						parser.Serialize(*rule.Prelude), rule.Position().Line, rule.Position().Column)
+						pa.Serialize(rule.Prelude), rule.Pos().Line, rule.Pos().Column)
 					continue
 				}
 
 				ignoreImports = true
-				content := parser.ParseDeclarationList(*rule.Content, false, false)
+				content := pa.ParseBlocksContents(rule.Content, false)
 				ruleDescriptors := validation.PreprocessCounterStyleDescriptors(baseUrl, content)
 
 				if err := ruleDescriptors.Validate(); err != nil {
-					logger.WarningLogger.Printf("In counter style %s at %d:%d, %s", name, rule.Line, rule.Column, err)
+					logger.WarningLogger.Printf("In counter style %s at %d:%d, %s", name, rule.Pos().Line, rule.Pos().Column, err)
 					continue
 				}
 
@@ -1456,7 +1433,7 @@ type sheet struct {
 type styleAttr struct {
 	element     *utils.HTMLNode
 	baseUrl     string
-	declaration []Token
+	declaration []pa.Compound
 }
 
 type styleAttrSpec struct {
@@ -1522,4 +1499,47 @@ func (styleFor StyleFor) SetPageComputedStylesT(pageType utils.PageElement, html
 			styleFor.setComputedStyles(key.PageType, key.PageType, html.Root, key.PseudoType, html.BaseUrl, nil)
 		}
 	}
+}
+
+// Return tokens with resolved CSS variables.
+func resolveVar(computed map[string]pr.RawTokens, token Token) []Token {
+	if !validation.HasVar(token) {
+		return nil
+	}
+
+	fn := token.(pa.FunctionBlock)
+	if utils.AsciiLower(fn.Name) != "var" {
+		arguments := []Token{}
+		for _, argument := range fn.Arguments {
+			if fna, isFunction := argument.(pa.FunctionBlock); isFunction && utils.AsciiLower(fna.Name) == "var" {
+				arguments = append(arguments, resolveVar(computed, argument)...)
+			} else {
+				arguments = append(arguments, argument)
+			}
+		}
+		token = pa.NewFunctionBlock(token.Pos(), fn.Name, arguments)
+		if resolved := resolveVar(computed, token); len(resolved) != 0 {
+			return resolved
+		}
+		return []Token{token}
+	}
+
+	_, args := pa.ParseFunction(token)
+	// first arg is name, next args are default value
+	varNameToken, default_ := args[0], args[1:]
+	variableName := varNameToken.(pa.Ident).Value
+
+	source := default_
+	if l := computed[variableName]; len(l) != 0 {
+		source = l
+	}
+	computedValue := []Token{}
+	for _, value := range source {
+		if resolved := resolveVar(computed, value); resolved != nil {
+			computedValue = append(computedValue, resolved...)
+		} else {
+			computedValue = append(computedValue, value)
+		}
+	}
+	return computedValue
 }

@@ -49,7 +49,7 @@ type TextBox struct {
 func TextBoxAnonymousFrom(parent Box, text string) *TextBox {
 	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
 	out := NewTextBox(style, parent.Box().Element, parent.Box().PseudoType, text)
-	return &out
+	return out
 }
 
 type InlineBlockBox struct {
@@ -122,6 +122,27 @@ type PageBox struct {
 	PageType         utils.PageElement
 }
 
+func (pb *PageBox) Bleed() Bleed {
+	return Bleed{
+		Top:    pb.Style.GetBleedTop().Value,
+		Bottom: pb.Style.GetBleedBottom().Value,
+		Left:   pb.Style.GetBleedLeft().Value,
+		Right:  pb.Style.GetBleedRight().Value,
+	}
+}
+
+func (pb *PageBox) BleedArea() pr.Rectangle {
+	bl := pb.Bleed()
+	return pr.Rectangle{
+		-bl.Left, -bl.Top,
+		pb.MarginWidth() + bl.Left + bl.Right, pb.MarginHeight() + bl.Top + bl.Bottom,
+	}
+}
+
+type Bleed struct {
+	Top, Bottom, Left, Right pr.Float
+}
+
 type MarginBox struct {
 	BoxFields
 	AtKeyword   string
@@ -140,6 +161,16 @@ type FlexBox struct {
 }
 
 type InlineFlexBox struct {
+	InlineLevelBox
+	BoxFields
+}
+
+type GridBox struct {
+	BlockLevelBox
+	BoxFields
+}
+
+type InlineGridBox struct {
 	InlineLevelBox
 	BoxFields
 }
@@ -200,13 +231,13 @@ func NewInlineBox(style pr.ElementStyle, element *html.Node, pseudoType string, 
 	return &out
 }
 
-func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, text string) TextBox {
+func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, text string) *TextBox {
 	if len(text) == 0 {
 		panic("NewTextBox called with empty text")
 	}
 	box := newBoxFields(style, element, pseudoType, nil)
 	out := TextBox{BoxFields: box, Text: text}
-	return out
+	return &out
 }
 
 // Return a new TextBox identical to this one except for the text.
@@ -431,5 +462,19 @@ func NewInlineFlexBox(style pr.ElementStyle, element *html.Node, pseudoType stri
 }
 
 func (u InlineFlexBox) RemoveDecoration(b *BoxFields, start, end bool) {
+	u.BoxFields.RemoveDecoration(b, start, end)
+}
+
+func NewGridBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) *GridBox {
+	out := GridBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
+	return &out
+}
+
+func NewInlineGridBox(style pr.ElementStyle, element *html.Node, pseudoType string, children []Box) *InlineGridBox {
+	out := InlineGridBox{BoxFields: newBoxFields(style, element, pseudoType, children)}
+	return &out
+}
+
+func (u InlineGridBox) RemoveDecoration(b *BoxFields, start, end bool) {
 	u.BoxFields.RemoveDecoration(b, start, end)
 }

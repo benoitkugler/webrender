@@ -81,6 +81,11 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 		box_, tmp = flexLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			true, absoluteBoxes, fixedBoxes)
 		resumeAt = tmp.resumeAt
+	} else if bo.GridContainerT.IsInstance(box_) {
+		box_, tmp = gridLayout(
+			context, box_, bottomSpace, skipStack, containingBlock,
+			true, absoluteBoxes, fixedBoxes)
+		resumeAt = tmp.resumeAt
 	} else if !bo.BlockReplacedT.IsInstance(box_) {
 		panic(fmt.Sprintf("expected BlockReplaced , got %v", box))
 	}

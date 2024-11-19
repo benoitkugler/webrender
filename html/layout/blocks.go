@@ -18,51 +18,64 @@ type blockLayout struct {
 	collapsingThrough bool
 }
 
-// Lay out the block-level “box“.
+// Lay out the block-level [box].
 //
-// `maxPositionY` is the absolute vertical position (as in
-// “someBox.PositionY“) of the bottom of the
+// [maxPositionY] is the absolute vertical position (as in
+// 'someBox.PositionY') of the bottom of the
 // content box of the current page area.
-func blockLevelLayout(context *layoutContext, box_ bo.BlockLevelBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
-	containingBlock *bo.BoxFields, pageIsEmpty bool, absoluteBoxes,
-	fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float,
+//
+// [absoluteBoxes], [fixedBoxes] and [adjoiningMargins] may be nil
+// [discard] default to false, [maxLines] default to -1
+func blockLevelLayout(context *layoutContext, box bo.BlockLevelBoxITF, bottomSpace pr.Float, skipStack tree.ResumeStack,
+	containingBlock *bo.BoxFields, pageIsEmpty bool,
+	absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float,
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout, int) {
-	box := box_.Box()
-	if !bo.TableT.IsInstance(box_) {
-		resolvePercentagesBox(box_, containingBlock, 0)
+	if absoluteBoxes == nil {
+		absoluteBoxes = new([]*AbsolutePlaceholder)
+	}
+	if fixedBoxes == nil {
+		fixedBoxes = new([]*AbsolutePlaceholder)
+	}
+	if adjoiningMargins == nil {
+		adjoiningMargins = new([]pr.Float)
+	}
 
-		if box.MarginTop == pr.AutoF {
-			box.MarginTop = pr.Float(0)
+	box_ := box.Box()
+	if !bo.TableT.IsInstance(box) {
+		resolvePercentagesBox(box, containingBlock, 0)
+
+		if box_.MarginTop == pr.AutoF {
+			box_.MarginTop = pr.Float(0)
 		}
-		if box.MarginBottom == pr.AutoF {
-			box.MarginBottom = pr.Float(0)
+		if box_.MarginBottom == pr.AutoF {
+			box_.MarginBottom = pr.Float(0)
 		}
 
 		if context.currentPage > 1 && pageIsEmpty {
 			// When an unforced break occurs before or after a block-level box,
 			// any margins adjoining the break are truncated to zero.
 			if collapseWithPage := containingBlock.IsForRootElement || len(*adjoiningMargins) != 0; collapseWithPage {
-				if box.Style.GetMarginBreak() == "discard" {
-					box.MarginTop = pr.Float(0)
-				} else if box.Style.GetMarginBreak() == "auto" {
+				if box_.Style.GetMarginBreak() == "discard" {
+					box_.MarginTop = pr.Float(0)
+				} else if box_.Style.GetMarginBreak() == "auto" {
 					if !context.forcedBreak {
-						box.MarginTop = pr.Float(0)
+						box_.MarginTop = pr.Float(0)
 					}
 				}
 			}
 		}
 
-		collapsedMargin := collapseMargin(append(*adjoiningMargins, box.MarginTop.V()))
-		bl := box_.BlockLevel()
-		bl.Clearance = getClearance(context, box, collapsedMargin)
+		collapsedMargin := collapseMargin(append(*adjoiningMargins, box_.MarginTop.V()))
+		bl := box.BlockLevel()
+		bl.Clearance = getClearance(context, box_, collapsedMargin)
 		if bl.Clearance != nil {
-			topBorderEdge := box.PositionY + collapsedMargin + bl.Clearance.V()
-			box.PositionY = topBorderEdge - box.MarginTop.V()
+			topBorderEdge := box_.PositionY + collapsedMargin + bl.Clearance.V()
+			box_.PositionY = topBorderEdge - box_.MarginTop.V()
 			adjoiningMargins = new([]pr.Float)
 		}
 	}
-	return blockLevelLayoutSwitch(context, box_, bottomSpace, skipStack, containingBlock,
+	return blockLevelLayoutSwitch(context, box, bottomSpace, skipStack, containingBlock,
 		pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins, discard, maxLines)
 }
 
@@ -93,7 +106,11 @@ func blockLevelLayoutSwitch(context *layoutContext, box_ bo.BlockLevelBoxITF, bo
 		box_, layout := flexLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes)
 		return box_.(bo.BlockLevelBoxITF), layout, -1 // flexLayout is type stable
-	} else { // pragma: no cover
+	} else if bo.GridT.IsInstance(box_) {
+		box_, layout := gridLayout(context, box_, bottomSpace, skipStack, containingBlock,
+			pageIsEmpty, absoluteBoxes, fixedBoxes)
+		return box_.(bo.BlockLevelBoxITF), layout, -1 // gridLayout is type stable
+	} else {
 		panic(fmt.Sprintf("Layout for %s not handled yet", box_))
 	}
 }
@@ -104,7 +121,7 @@ func blockBoxLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.
 	discard bool, maxLines int,
 ) (bo.BlockLevelBoxITF, blockLayout) {
 	box := box_.Box()
-	if box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto" {
+	if box.Style.GetColumnWidth().S != "auto" || box.Style.GetColumnCount().String != "auto" {
 		newBox_, result := columnsLayout(context, box_, bottomSpace, skipStack, containingBlock,
 			pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins)
 		resumeAt := result.resumeAt
@@ -318,9 +335,11 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	thisBoxAdjoiningMargins := adjoiningMargins
 
 	collapsingWithChildren := !(pr.Is(box.BorderTopWidth) || pr.Is(box.PaddingTop) || box.IsFlexItem ||
-		establishesFormattingContext(box_) || box.IsForRootElement)
+		box.IsGridItem || establishesFormattingContext(box_) || box.IsForRootElement)
 	var positionY pr.Float
 	if collapsingWithChildren {
+		// Not counting margins in adjoining_margins, if any
+		// (there are not padding or borders, see above)
 		positionY = box.PositionY
 	} else {
 		box.PositionY += collapseMargin(*adjoiningMargins) - box.MarginTop.V()
@@ -332,7 +351,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 
 	if box.Style.GetPosition().String == "relative" {
 		// New containing block, use a new absolute list
-		absoluteBoxes = &[]*AbsolutePlaceholder{}
+		absoluteBoxes = new([]*AbsolutePlaceholder)
 	}
 
 	var (
@@ -372,7 +391,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 				outOfFlowResumeAt tree.ResumeStack
 				newChild          Box
 			)
-			stop, resumeAt, newChild, outOfFlowResumeAt = outOfFlowLayout(context, box, index, child_,
+			stop, resumeAt, newChild, outOfFlowResumeAt = outOfFlowLayout(context, box_, index, child_,
 				&newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, *adjoiningMargins, bottomSpace)
 			if outOfFlowResumeAt != nil {
 				brokenOutOfFlow[newChild] = brokenBox{child_, box_, outOfFlowResumeAt}
@@ -389,7 +408,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 				adjoiningMarginsV []pr.Float
 				newMaxLines       int
 			)
-			abort, stop, resumeAt, positionY, adjoiningMarginsV, nextPage, newChildren, newMaxLines = inFlowLayout(context, box, index, child_,
+			abort, stop, resumeAt, positionY, adjoiningMarginsV, nextPage, newChildren, newMaxLines = inFlowLayout(context, box_, index, child_,
 				newChildren, pageIsEmpty, absoluteBoxes, fixedBoxes, adjoiningMargins,
 				bottomSpace, positionY, skipStack, firstLetterStyle, collapsingWithChildren, discard, maxLines)
 			skipStack = nil
@@ -437,6 +456,14 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 
 			return nil, blockLayout{nextPage: tree.PageBreak{Break: "any", Page: page_}}, maxLines
 		} else if stop {
+			if box.Height != pr.AutoF {
+				if context.overflowsPage(box.PositionY+box.Height.V(), positionY) {
+					// Box height is fixed and it doesn’t overflow page, forget
+					// overflowing children.
+					resumeAt = nil
+				}
+			}
+			adjoiningMargins = new([]pr.Float)
 			break
 		}
 	}
@@ -549,7 +576,7 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 		}
 	}
 
-	if nextPage.Page.IsNone() {
+	if nextPage.Page == "" {
 		_, nextPage.Page = newBox.PageValues()
 	}
 
@@ -568,44 +595,62 @@ func findLastInFlowChild(children []Box) Box {
 	return nil
 }
 
-func outOfFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ Box, newChildren *[]Box,
+// stop : whether we should stop parent rendering after this layout
+// resumeAt : where to resume in-flow rendering
+// newChild : child rendered by this layout
+// outOfFlowLayoutResumeAt : where to resume out-of-flow rendering
+func outOfFlowLayout(context *layoutContext, box bo.Box, index int, child_ Box, newChildren *[]Box,
 	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins []pr.Float, bottomSpace pr.Float,
 ) (stop bool, resumeAt tree.ResumeStack, newChild Box, outOfFlowLayoutResumeAt tree.ResumeStack) {
 	child := child_.Box()
+
+	// Add the parent’s collapsing margins to shift the child’s position. Don’t
+	// include the out-of-flow child’s top margin because it doesn’t collapse
+	// with its parent.
 	child.PositionY += collapseMargin(adjoiningMargins)
 
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("out of flow: %d %v", index, child.IsAbsolutelyPositioned()))
+	}
+
+	// Absolute child layout: create placeholder.
 	if child.IsAbsolutelyPositioned() {
 		placeholder := NewAbsolutePlaceholder(child_)
-		newChild = placeholder
 		placeholder.Box().Index = index
+		newChild = placeholder
 		*newChildren = append(*newChildren, placeholder)
 		if child.Style.GetPosition().String == "absolute" {
 			*absoluteBoxes = append(*absoluteBoxes, placeholder)
 		} else {
 			*fixedBoxes = append(*fixedBoxes, placeholder)
 		}
-	} else if child.IsFloated() {
-		newChild, outOfFlowLayoutResumeAt = floatLayout(context, child_, box, absoluteBoxes, fixedBoxes, bottomSpace, nil)
-		newChild_ := newChild.Box()
-		// New page if overflow
-		pageOverflow := context.overflowsPage(bottomSpace, newChild_.PositionY+newChild_.Height.V())
-		if (pageIsEmpty && len(*newChildren) == 0) || !pageOverflow {
-			asPlaceholder := AbsolutePlaceholder{AliasBox: newChild}
-			asPlaceholder.Box().Index = index
-			*newChildren = append(*newChildren, &asPlaceholder)
+	} else if child.IsFloated() { // Float child layout.
+		newChild, outOfFlowLayoutResumeAt = floatLayout(context, child_, box.Box(), absoluteBoxes, fixedBoxes, bottomSpace, nil)
+		// Check that child doesn’t overflow page.
+		pageOverflow := context.overflowsPage(bottomSpace, newChild.Box().PositionY+newChild.Box().Height.V())
+		if (pageIsEmpty && len(*newChildren) == 0) || !pageOverflow || bo.IsMonolithic(box) {
+			// Child fits or has to fit, add it.
+			newChild.Box().Index = index
+			*newChildren = append(*newChildren, &AbsolutePlaceholder{AliasBox: newChild})
 		} else {
+			// Child doesn’t fit and we can break, find where to break and stop
+			// parent rendering.
 			lastInFlowChild := findLastInFlowChild(*newChildren)
 			pageBreak := blockLevelPageBreak(lastInFlowChild, child_)
 			resumeAt = tree.ResumeStack{index: nil}
+			stop = true
 			if len(*newChildren) != 0 && avoidPageBreak(pageBreak, context) {
+				// Can’t break inside float, find an earlier page break.
 				r1, r2 := findEarlierPageBreak(context, *newChildren, absoluteBoxes, fixedBoxes)
 				if r1 != nil || r2 != nil {
-					_, resumeAt = r1, r2
+					// Earlier page break found, drop whole child rendering.
+					*newChildren, resumeAt = r1, r2
+					newChild = nil
+					outOfFlowLayoutResumeAt = nil
 				}
 			}
-			stop = true
 		}
-	} else if child.IsRunning() {
+	} else if child.IsRunning() { // Running element layout.
 		context.addRunning(child_)
 	}
 	return stop, resumeAt, newChild, outOfFlowLayoutResumeAt
@@ -781,12 +826,13 @@ func lineBoxLayout(context *layoutContext, box_ Box, index int, child_ *bo.LineB
 	return abort, stop, resumeAt, positionY, newChildren, newFootnotes, maxLines
 }
 
-func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ Box, newChildren []Box,
+func inFlowLayout(context *layoutContext, box_ bo.Box, index int, child_ Box, newChildren []Box,
 	pageIsEmpty bool, absoluteBoxes, fixedBoxes *[]*AbsolutePlaceholder, adjoiningMargins *[]pr.Float, bottomSpace, positionY pr.Float,
 	skipStack tree.ResumeStack, firstLetterStyle pr.ElementStyle, collapsingWithChildren, discard bool,
 	maxLines int) (
 	abort, stop bool, resumeAt tree.ResumeStack, _ pr.Float, _ []pr.Float, nextPage tree.PageBreak, _ []Box, _ int,
 ) {
+	box := box_.Box()
 	lastInFlowChild := findLastInFlowChild(newChildren)
 	child := child_.Box()
 	pageBreak := "auto"
@@ -794,7 +840,7 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 		// Between in-flow siblings
 		pageBreak = blockLevelPageBreak(lastInFlowChild, child_)
 		pageName_ := blockLevelPageName(lastInFlowChild, child_)
-		if (pageName_.String != "" || pageName_.Page != 0) || forcePageBreak(pageBreak, context) {
+		if pageName_ != "" || forcePageBreak(pageBreak, context) {
 			pageName, _ := child.PageValues()
 			nextPage = tree.PageBreak{Break: pageBreak, Page: pageName}
 			resumeAt = tree.ResumeStack{index: nil}
@@ -880,13 +926,15 @@ func inFlowLayout(context *layoutContext, box *bo.BoxFields, index int, child_ B
 		if !collapsingThrough {
 			newContentPositionY := newChild.ContentBoxY() + newChild.Height.V()
 			newPositionY := newChild.BorderBoxY() + newChild.BorderHeight()
-			pageOverflow := context.overflowsPage(bottomSpace, newContentPositionY)
-			if pageOverflow && !pageIsEmptyWithNoChildren {
+			contentPageOverflow := context.overflowsPage(bottomSpace, newContentPositionY)
+			borderPageOverflow := context.overflowsPage(bottomSpace, newPositionY)
+			canBreak := !(pageIsEmptyWithNoChildren || bo.IsMonolithic(box_))
+			if canBreak && contentPageOverflow {
 				// The child content overflows the page area, display it on the
 				// next page.
 				removePlaceholders(context, []Box{newChild_}, absoluteBoxes, fixedBoxes)
 				newChild_ = nil
-			} else if context.overflowsPage(bottomSpace, newPositionY) && !pageIsEmptyWithNoChildren {
+			} else if canBreak && borderPageOverflow {
 				// The child border/padding overflows the page area, do the
 				// layout again with a higher bottomSpace value.
 				removePlaceholders(context, []Box{newChild_}, absoluteBoxes, fixedBoxes)
@@ -1027,7 +1075,7 @@ func blockLevelPageBreak(siblingBefore, siblingAfter Box) string {
 	for isParallel(box_) {
 		box := box_.Box()
 		values = append(values, box.Style.GetBreakAfter())
-		if !(bo.ParentT.IsInstance(box_) && len(box.Children) != 0) {
+		if len(box.Children) == 0 {
 			break
 		}
 		box_ = box.Children[len(box.Children)-1]
@@ -1038,7 +1086,7 @@ func blockLevelPageBreak(siblingBefore, siblingAfter Box) string {
 	for isParallel(box_) {
 		box := box_.Box()
 		values = append(values, box.Style.GetBreakBefore())
-		if !(bo.ParentT.IsInstance(box_) && len(box.Children) != 0) {
+		if len(box.Children) == 0 {
 			break
 		}
 		box_ = box.Children[0]
@@ -1076,7 +1124,7 @@ func blockLevelPageName(siblingBefore, siblingAfter Box) pr.Page {
 	if beforePage != afterPage {
 		return afterPage
 	}
-	return pr.Page{}
+	return ""
 }
 
 // Find the last possible page break in “children“

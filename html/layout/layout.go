@@ -29,6 +29,7 @@ import (
 )
 
 // if true, save a structured trace in an external file
+// this is a costly operation, and should only be used for debugging purpose
 const traceMode = false
 
 var traceLogger tracer.Tracer // used only when traceMode is true
@@ -162,11 +163,10 @@ func layoutDocument(doc *tree.HTML, rootBox bo.BlockLevelBoxITF, context *layout
 			// Update pages
 			pageCounterValues := pageData.InitialPageState.CounterValues
 			pageCounterValues["pages"] = []int{actualTotalPages}
-			remakeState := pageData.RemakeState
-			if remakeState.ContentChanged {
+			if pageData.RemakeState.ContentChanged {
 				reloopContent = true
 			}
-			if remakeState.PagesWanted {
+			if pageData.RemakeState.PagesWanted {
 				reloopPages = initialTotalPages != actualTotalPages
 			}
 		}
@@ -368,7 +368,7 @@ func (l *layoutContext) createBlockFormattingContext() {
 func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 	// See https://www.w3.org/TR/CSS2/visudet.html#root-height
 	rootBox := rootBox_.Box()
-	if rootBox.Style.GetHeight().String == "auto" && len(*l.excludedShapes) != 0 {
+	if rootBox.Style.GetHeight().S == "auto" && len(*l.excludedShapes) != 0 {
 		boxBottom := rootBox.ContentBoxY() + rootBox.Height.V()
 		maxShapeBottom := boxBottom
 		for _, shape := range *l.excludedShapes {
@@ -401,11 +401,9 @@ func resolveKeyword(keyword, name string, page Box) string {
 					}
 				}
 			}
-			if bo.ParentT.IsInstance(element) {
-				if len(element.Box().Children) > 0 {
-					element = element.Box().Children[0]
-					continue
-				}
+			if len(element.Box().Children) > 0 {
+				element = element.Box().Children[0]
+				continue
 			}
 			break
 		}
@@ -511,7 +509,7 @@ func (l *layoutContext) updateFootnoteArea() bool {
 		footnoteArea := bo.CreateAnonymousBox(bo.Deepcopy(l.currentFootnoteArea)).(bo.BlockLevelBoxITF)
 		footnoteArea, _, _ = blockLevelLayout(
 			l, footnoteArea, -pr.Inf, nil,
-			&l.currentFootnoteArea.Page.BoxFields, true, new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false, -1)
+			&l.currentFootnoteArea.Page.BoxFields, true, nil, nil, nil, false, -1)
 		l.currentFootnoteArea.Height = footnoteArea.Box().Height
 		if !l.inColumn {
 			l.pageBottom -= footnoteArea.Box().MarginHeight()

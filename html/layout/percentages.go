@@ -14,9 +14,9 @@ import (
 //
 // the return value should be set on the box
 // mainFlexDirection is either 0, Width or Height
-func resolveOnePercentage(value pr.Value, propertyName pr.KnownProp, referTo pr.Float, mainFlexDirection pr.KnownProp) pr.MaybeFloat {
+func resolveOnePercentage(value pr.DimOrS, propertyName pr.KnownProp, referTo pr.Float, mainFlexDirection pr.KnownProp) pr.MaybeFloat {
 	// box attributes are used values
-	percent := pr.ResoudPercentage(value, referTo)
+	percent := pr.ResolvePercentage(value, referTo)
 
 	if (propertyName == pr.PMinWidth || propertyName == pr.PMinHeight) && percent == pr.AutoF {
 		if mainFlexDirection == 0 || propertyName != mainFlexDirection+2 {
@@ -48,12 +48,12 @@ func resolvePercentagesBox(box Box, containingBlock containingBlock, mainFlexDir
 }
 
 // Set used values as attributes of the box object.
-// mainFlexDirection is either 0, Width or Height
+// mainFlexDirection is either 0 (for nil), Width or Height
 func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirection pr.KnownProp) {
 	cbWidth, cbHeight := containingBlock[0], containingBlock[1]
 
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("resolvePercentages: %s %s",
+		traceLogger.Dump(fmt.Sprintf("resolvePercentages: %s x %s",
 			tracer.FormatMaybeFloat(cbWidth), tracer.FormatMaybeFloat(cbHeight)))
 	}
 
@@ -80,7 +80,7 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		// Special handling when the height of the containing block
 		// depends on its content.
 		height := box.Style.GetHeight()
-		if height.String == "auto" || height.Unit == pr.Perc {
+		if height.S == "auto" || height.Unit == pr.Perc {
 			box.Height = pr.AutoF
 		} else {
 			if height.Unit != pr.Px {
@@ -96,11 +96,20 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 		box.MaxHeight = resolveOnePercentage(box.Style.GetMaxHeight(), pr.PMaxHeight, cbHeight.V(), mainFlexDirection)
 	}
 
+	collapse := box.Style.GetBorderCollapse() == "collapse"
 	// Used value == computed value
-	box.BorderTopWidth = box.Style.GetBorderTopWidth().Value
-	box.BorderRightWidth = box.Style.GetBorderRightWidth().Value
-	box.BorderBottomWidth = box.Style.GetBorderBottomWidth().Value
-	box.BorderLeftWidth = box.Style.GetBorderLeftWidth().Value
+	if !collapse || box.BorderTopWidth == 0 {
+		box.BorderTopWidth = box.Style.GetBorderTopWidth().Value
+	}
+	if !collapse || box.BorderRightWidth == 0 {
+		box.BorderRightWidth = box.Style.GetBorderRightWidth().Value
+	}
+	if !collapse || box.BorderBottomWidth == 0 {
+		box.BorderBottomWidth = box.Style.GetBorderBottomWidth().Value
+	}
+	if !collapse || box.BorderLeftWidth == 0 {
+		box.BorderLeftWidth = box.Style.GetBorderLeftWidth().Value
+	}
 
 	// Shrink *content* widths and heights according to box-sizing
 	// Thanks heavens and the spec: Our validator rejects negative values
@@ -141,6 +150,10 @@ func resolvePercentages(box_ Box, containingBlock bo.MaybePoint, mainFlexDirecti
 			box.MinHeight = pr.Max(0, box.MinHeight.V()-verticalDelta)
 		}
 	}
+
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("after resolvePercentages: %s %s", tracer.FormatMaybeFloat(box.Width), tracer.FormatMaybeFloat(box.Height)))
+	}
 }
 
 func resoudRadius(box *bo.BoxFields, v pr.Point, side1, side2 bo.Side) bo.MaybePoint {
@@ -152,8 +165,8 @@ func resoudRadius(box *bo.BoxFields, v pr.Point, side1, side2 bo.Side) bo.MaybeP
 	if box.RemoveDecorationSides[side1] || box.RemoveDecorationSides[side2] {
 		return bo.MaybePoint{pr.Float(0), pr.Float(0)}
 	}
-	rx := pr.ResoudPercentage(v[0].ToValue(), box.BorderWidth())
-	ry := pr.ResoudPercentage(v[1].ToValue(), box.BorderHeight())
+	rx := pr.ResolvePercentage(v[0].ToValue(), box.BorderWidth())
+	ry := pr.ResolvePercentage(v[1].ToValue(), box.BorderHeight())
 	return bo.MaybePoint{rx, ry}
 }
 

@@ -28,9 +28,7 @@ func TestParseIdentifier(t *testing.T) {
 		}
 
 		if want == "" {
-			if err == nil {
-				t.Errorf("parsing %q: got %q, want error", source, got)
-			}
+			t.Errorf("parsing %q: got %q, want error", source, got)
 			continue
 		}
 

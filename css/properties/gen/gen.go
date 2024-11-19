@@ -101,14 +101,6 @@ func main() {
 	fmt.Println("Generated", OUT_1, OUT_2)
 }
 
-func camelCase(s string) string {
-	out := ""
-	for _, part := range strings.Split(s, "_") {
-		out += strings.Title(part)
-	}
-	return out
-}
-
 func kebabCase(s string) string {
 	var out strings.Builder
 	for i, r := range s {

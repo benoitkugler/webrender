@@ -392,7 +392,7 @@ func TestParseText1(t *testing.T) {
 		t.Fatal("unexpected children")
 	}
 
-	te, ok := img.root.children[0].graphicContent.(span)
+	te, ok := img.root.children[0].graphicContent.(*textSpan)
 	if !ok {
 		t.Fatalf("unexpected content %T", img.root.children[0].graphicContent)
 	}
@@ -423,7 +423,7 @@ func TestParseText2(t *testing.T) {
 		t.Fatal("unexpected children")
 	}
 
-	te, ok := img.root.children[0].graphicContent.(span)
+	te, ok := img.root.children[0].graphicContent.(*textSpan)
 	if !ok {
 		t.Fatalf("unexpected content %T", img.root.children[0].graphicContent)
 	}

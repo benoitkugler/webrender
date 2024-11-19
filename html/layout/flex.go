@@ -97,8 +97,8 @@ func getCrossMargins(child *bo.BoxFields, cross pr.KnownProp) bo.MaybePoint {
 	return crossMargins
 }
 
-func getCross(box *bo.BoxFields, cross pr.KnownProp) pr.Value {
-	out, _ := box.Style.Get(cross.Key()).(pr.Value)
+func getCross(box *bo.BoxFields, cross pr.KnownProp) pr.DimOrS {
+	out, _ := box.Style.Get(cross.Key()).(pr.DimOrS)
 	return out
 }
 
@@ -178,8 +178,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	// Step 3
-	children := box.Children
-	parentBox_ := bo.CopyWithChildren(box_, children)
+	parentBox_ := bo.CopyWithChildren(box_, box.Children)
 	parentBox := parentBox_.Box()
 	resolvePercentagesBox(parentBox_, containingBlock, 0)
 
@@ -205,6 +204,8 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		parentBox.Width = flexMaxContentWidth(context, parentBox_, true)
 	}
 	originalSkipStack := skipStack
+	children := append([]Box{}, box.Children...)
+	sort.Slice(children, func(i, j int) bool { return children[i].Box().Style.GetOrder() < children[j].Box().Style.GetOrder() })
 	if skipStack != nil {
 		var index int
 		index, skipStack = skipStack.Unpack()
@@ -263,15 +264,14 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			newChild.Box().Style.SetMinHeight(pr.ZeroPixels.ToValue())
 			newChild.Box().Style.SetMaxHeight(pr.Dimension{Value: pr.Inf, Unit: pr.Px}.ToValue())
 			newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF),
-				-pr.Inf, childSkipStack, parentBox, pageIsEmpty,
-				new([]*AbsolutePlaceholder), new([]*AbsolutePlaceholder), new([]pr.Float), false, -1)
+				-pr.Inf, childSkipStack, parentBox, pageIsEmpty, nil, nil, nil, false, -1)
 			contentSize := newChild.Box().Height.V()
 			child.MinHeight = pr.Min(specifiedSize, contentSize)
 		}
 
 		child.Style = child.Style.Copy()
-		var flexBasis pr.Value
-		if child.Style.GetFlexBasis().String == "content" {
+		var flexBasis pr.DimOrS
+		if child.Style.GetFlexBasis().S == "content" {
 			flexBasis = pr.SToV("content")
 			child.FlexBasis = flexBasis
 		} else {
@@ -287,8 +287,8 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			target, val = &child.Width, child.Style.GetWidth()
 		}
 		*target = resolveOnePercentage(val, axis, availableMainSpace, 0)
-		if flexBasis.String == "auto" {
-			if getCross(child, axis).String == "auto" {
+		if flexBasis.S == "auto" {
+			if getCross(child, axis).S == "auto" {
 				flexBasis = pr.SToV("content")
 			} else {
 				if axis == pr.PWidth {
@@ -314,7 +314,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		// Step 3.A
-		if flexBasis.String != "content" {
+		if flexBasis.S != "content" {
 			child.FlexBaseSize = flexBasis.Value
 
 			// TODO: Step 3.B
@@ -325,9 +325,9 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			// Step 3.E
 		} else {
 			child.Style.Set(axis.Key(), pr.SToV("max-content"))
-			styleAxis := child.Style.Get(axis.Key()).(pr.Value)
+			styleAxis := child.Style.Get(axis.Key()).(pr.DimOrS)
 			// TODO: don"t set style value, support *-content values instead
-			if styleAxis.String == "max-content" {
+			if styleAxis.S == "max-content" {
 				child.Style.Set(axis.Key(), pr.SToV("auto"))
 				if axis == pr.PWidth {
 					child.FlexBaseSize = maxContentWidth(context, child_, true)
@@ -338,10 +338,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 					}
 					newChild.Box().Width = pr.Inf
 					newChild, _, _ = blockLevelLayout(context, newChild.(bo.BlockLevelBoxITF), -pr.Inf, childSkipStack,
-						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
+						parentBox, pageIsEmpty, absoluteBoxes, fixedBoxes, nil, false, -1)
 					child.FlexBaseSize = newChild.Box().MarginHeight()
 				}
-			} else if styleAxis.String == "min-content" {
+			} else if styleAxis.S == "min-content" {
 				child.Style.Set(axis.Key(), pr.SToV("auto"))
 				if axis == pr.PWidth {
 					child.FlexBaseSize = minContentWidth(context, child_, true)
@@ -377,8 +377,12 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	if axis == pr.PWidth {
 		blockLevelWidth(box_, nil, containingBlock)
 	} else {
-		if he := box.Style.GetHeight(); he.String != "auto" {
-			box.Height = he.Value
+		if he := box.Style.GetHeight(); he.S != "auto" {
+			if he.Unit == pr.Perc {
+				box.Height = he.Value / 100 * cbHeight.V()
+			} else {
+				box.Height = he.Value
+			}
 		} else {
 			box.Height = pr.Float(0)
 			for i, child_ := range children {
@@ -405,11 +409,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	var lineSize pr.Float
 	axisSize := getAttr(box, axis, "")
 
-	sortedChildren := append([]Box{}, children...)
-	sort.Slice(sortedChildren, func(i, j int) bool {
-		return sortedChildren[i].Box().Style.GetOrder() < sortedChildren[j].Box().Style.GetOrder()
-	})
-	for i, child_ := range sortedChildren {
+	for i, child_ := range children {
 		child := child_.Box()
 		if !child.IsFlexItem {
 			continue
@@ -671,7 +671,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			for _, v := range line.line {
 				child := v.box.Box()
 				alignSelf := child.Style.GetAlignSelf()
-				if strings.HasPrefix(string(box.Style.GetFlexDirection()), "row") && alignSelf == "baseline" &&
+				if strings.HasPrefix(string(box.Style.GetFlexDirection()), "row") && alignSelf.Intersects("baseline") &&
 					child.MarginTop != pr.AutoF && child.MarginBottom != pr.AutoF {
 					collectedItems = append(collectedItems, child)
 				} else {
@@ -729,13 +729,17 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	// Step 9
-	if box.Style.GetAlignContent() == "stretch" {
+	alignContent := box.Style.GetAlignContent()
+	if alignContent.Intersects("normal") {
+		alignContent = pr.Strings{"stretch"}
+	}
+	if alignContent.Intersects("stretch") {
 		var definiteCrossSize pr.MaybeFloat
-		if he := box.Style.GetHeight(); cross == pr.PHeight && he.String != "auto" {
+		if he := box.Style.GetHeight(); cross == pr.PHeight && he.S != "auto" {
 			definiteCrossSize = he.Value
 		} else if cross == pr.PWidth {
 			if bo.FlexT.IsInstance(box_) {
-				if box.Style.GetWidth().String == "auto" {
+				if box.Style.GetWidth().S == "auto" {
 					definiteCrossSize = availableCrossSpace
 				} else {
 					definiteCrossSize = box.Style.GetWidth().Value
@@ -759,16 +763,22 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	// TODO: Step 10
 
 	// Step 11
+	alignItems := box.Style.GetAlignItems()
+	if alignItems.Intersects("normal") {
+		alignItems = pr.Strings{"stretch"}
+	}
 	for _, line := range flexLines {
 		for _, v := range line.line {
 			child := v.box.Box()
 			alignSelf := child.Style.GetAlignSelf()
-			if alignSelf == "auto" {
-				alignSelf = box.Style.GetAlignItems()
+			if alignSelf.Intersects("normal") {
+				alignSelf = pr.Strings{"stretch"}
+			} else if alignSelf.Intersects("auto") {
+				alignSelf = alignItems
 			}
-			if alignSelf == "stretch" && getCross(child, cross).String == "auto" {
+			if alignSelf.Intersects("stretch") && getCross(child, cross).S == "auto" {
 				crossMargins := getCrossMargins(child, cross)
-				if getCross(child, cross).String == "auto" {
+				if getCross(child, cross).S == "auto" {
 					if !(crossMargins[0] == pr.AutoF || crossMargins[1] == pr.AutoF) {
 						crossSize := line.crossSize
 						if cross == pr.PHeight {
@@ -791,18 +801,19 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 
 	// Step 12
-	// TODO: handle rtl
 	originalPositionAxis := box.ContentBoxY()
 	if axis == pr.PWidth {
 		originalPositionAxis = box.ContentBoxX()
 	}
-
 	justifyContent := box.Style.GetJustifyContent()
+	if justifyContent.Intersects("normal") {
+		justifyContent = pr.Strings{"flex-start"}
+	}
 	if strings.HasSuffix(string(box.Style.GetFlexDirection()), "-reverse") {
-		if justifyContent == "flex-start" {
-			justifyContent = "flex-end"
-		} else if justifyContent == "flex-end" {
-			justifyContent = "flex-start"
+		if justifyContent.Intersects("flex-start") {
+			justifyContent = pr.Strings{"flex-end"}
+		} else if justifyContent.Intersects("flex-end") {
+			justifyContent = pr.Strings{"flex-start"}
 		}
 	}
 
@@ -881,13 +892,13 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			freeSpace = -freeSpace
 		}
 
-		if justifyContent == "flex-end" {
+		if justifyContent.Intersects("flex-end", "end", "right") {
 			positionAxis += freeSpace
-		} else if justifyContent == "center" {
+		} else if justifyContent.Intersects("center") {
 			positionAxis += freeSpace / 2
-		} else if justifyContent == "space-around" {
+		} else if justifyContent.Intersects("space-around") {
 			positionAxis += freeSpace / pr.Float(len(line.line)) / 2
-		} else if justifyContent == "space-evenly" {
+		} else if justifyContent.Intersects("space-evenly") {
 			positionAxis += freeSpace / (pr.Float(len(line.line)) + 1)
 		}
 
@@ -895,7 +906,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			child := v.box.Box()
 			if axis == pr.PWidth {
 				child.PositionX = positionAxis
-				if justifyContent == "stretch" {
+				if justifyContent.Intersects("stretch") {
 					child.Width = child.Width.V() + freeSpace/pr.Float(len(line.line))
 				}
 
@@ -913,13 +924,13 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 				positionAxis += child.MarginHeight()
 			}
 
-			if justifyContent == "space-around" {
+			if justifyContent.Intersects("space-around") {
 				positionAxis += freeSpace / pr.Float(len(line.line))
-			} else if justifyContent == "space-between" {
+			} else if justifyContent.Intersects("space-between") {
 				if len(line.line) > 1 {
 					positionAxis += freeSpace / (pr.Float(len(line.line)) - 1)
 				}
-			} else if justifyContent == "space-evenly" {
+			} else if justifyContent.Intersects("space-evenly") {
 				positionAxis += freeSpace / (pr.Float(len(line.line)) + 1)
 			}
 		}
@@ -936,10 +947,10 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		for _, v := range line.line {
 			child := v.box.Box()
 			alignSelf := child.Style.GetAlignSelf()
-			if alignSelf == "auto" {
+			if alignSelf.Intersects("auto") {
 				alignSelf = box.Style.GetAlignItems()
 			}
-			if alignSelf == "baseline" && axis == pr.PWidth {
+			if alignSelf.Intersects("baseline") && axis == pr.PWidth {
 				// TODO: handle vertical text
 				child.Baseline = child.Baseline.V() - positionCross
 				line.lowerBaseline = pr.Max(line.lowerBaseline, child.Baseline.V())
@@ -1014,33 +1025,35 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			} else {
 				// Step 14
 				alignSelf := child.Style.GetAlignSelf()
-				if alignSelf == "auto" {
-					alignSelf = box.Style.GetAlignItems()
+				if alignSelf.Intersects("normal") {
+					alignSelf = pr.Strings{"stretch"}
+				} else if alignSelf.Intersects("auto") {
+					alignSelf = alignItems
 				}
 				if cross == pr.PHeight {
 					child.PositionY = positionCross
 				} else {
 					child.PositionX = positionCross
 				}
-				if alignSelf == "flex-end" {
+				if alignSelf.Intersects("end", "self-end", "flex-end") {
 					if cross == pr.PHeight {
 						child.PositionY += line.crossSize - child.MarginHeight()
 					} else {
 						child.PositionX += line.crossSize - child.MarginWidth()
 					}
-				} else if alignSelf == "center" {
+				} else if alignSelf.Intersects("center") {
 					if cross == pr.PHeight {
 						child.PositionY += (line.crossSize - child.MarginHeight()) / 2
 					} else {
 						child.PositionX += (line.crossSize - child.MarginWidth()) / 2
 					}
-				} else if alignSelf == "baseline" {
+				} else if alignSelf.Intersects("baseline") {
 					if cross == pr.PHeight {
 						child.PositionY += line.lowerBaseline - child.Baseline.V()
 					}
 					// else Handle vertical text
-				} else if alignSelf == "stretch" {
-					if getCross(child, cross).String == "auto" {
+				} else if alignSelf.Intersects("stretch") {
+					if getCross(child, cross).S == "auto" {
 						var margins pr.Float
 						if cross == pr.PHeight {
 							margins = child.MarginTop.V() + child.MarginBottom.V()
@@ -1069,7 +1082,7 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 
 	sc := sumCross(flexLines)
 	// Step 15
-	if getCross(box, cross).String == "auto" {
+	if getCross(box, cross).S == "auto" {
 		// TODO: handle min-max
 		if cross == pr.PHeight {
 			box.Height = sc
@@ -1082,7 +1095,6 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		if cross == pr.PHeight {
 			direction = "positionY"
 		}
-		boxAlignContent := box.Style.GetAlignContent()
 		if extraCrossSize > 0 {
 			var crossTranslate pr.Float
 			for _, line := range flexLines {
@@ -1096,24 +1108,24 @@ func flexLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 						currentValue += crossTranslate
 						setDirection(child, direction, currentValue)
 
-						switch boxAlignContent {
-						case "flex-end":
+						switch {
+						case alignContent.Intersects("end", "flex-end"):
 							setDirection(child, direction, currentValue+extraCrossSize)
-						case "center":
+						case alignContent.Intersects("center"):
 							setDirection(child, direction, currentValue+extraCrossSize/2)
-						case "space-around":
+						case alignContent.Intersects("space-around"):
 							setDirection(child, direction, currentValue+extraCrossSize/pr.Float(len(flexLines))/2)
-						case "space-evenly":
+						case alignContent.Intersects("space-evenly"):
 							setDirection(child, direction, currentValue+extraCrossSize/(pr.Float(len(flexLines))+1))
 						}
 					}
 				}
-				switch boxAlignContent {
-				case "space-between":
+				switch {
+				case alignContent.Intersects("space-between"):
 					crossTranslate += extraCrossSize / (pr.Float(len(flexLines)) - 1)
-				case "space-around":
+				case alignContent.Intersects("space-around"):
 					crossTranslate += extraCrossSize / pr.Float(len(flexLines))
-				case "space-evenly":
+				case alignContent.Intersects("space-evenly"):
 					crossTranslate += extraCrossSize / (pr.Float(len(flexLines)) + 1)
 				}
 			}

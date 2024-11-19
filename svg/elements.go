@@ -3,9 +3,9 @@ package svg
 import (
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/benoitkugler/webrender/backend"
+	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/matrix"
 	"github.com/benoitkugler/webrender/utils"
@@ -120,8 +120,8 @@ func (r rect) draw(dst backend.Canvas, attrs *attributes, _ *SVGImage, dims draw
 
 	// Inspired by Cairo Cookbook
 	// http://cairographics.org/cookbook/roundedrectangles/
-	const ARC_TO_BEZIER = 4 * (math.Sqrt2 - 1) / 3
-	c1, c2 := ARC_TO_BEZIER*rx, ARC_TO_BEZIER*ry
+	const arcToBezier = 4 * (math.Sqrt2 - 1) / 3
+	c1, c2 := arcToBezier*rx, arcToBezier*ry
 
 	dst.MoveTo(x+rx, y)
 	dst.LineTo(x+width-rx, y)
@@ -330,8 +330,8 @@ func (s svg) draw(dst backend.Canvas, attrs *attributes, img *SVGImage, dims dra
 type image struct {
 	// width, height are common attributes
 
-	img                 backend.Image
-	preserveAspectRatio [2]string
+	img           backend.Image
+	preserveRatio preserveAspectRatio
 }
 
 func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
@@ -350,24 +350,54 @@ func newImage(node *cascadedNode, context *svgContext) (drawable, error) {
 		return nil, fmt.Errorf("failed to load image: %s", err)
 	}
 
-	aspectRatio, has := node.attrs["preserveAspectRatio"]
-	if !has {
-		aspectRatio = "xMidYMid"
-	}
-	l := strings.Fields(aspectRatio)
-	if len(l) > 2 {
-		return nil, fmt.Errorf("invalid preserveAspectRatio property: %s", aspectRatio)
-	}
 	var out image
-	copy(out.preserveAspectRatio[:], l)
 	out.img = img
+	out.preserveRatio = node.attrs.aspectRatio()
 
 	return out, nil
 }
 
-func (img image) draw(dst backend.Canvas, _ *attributes, _ *SVGImage, _ drawingDims) []vertex {
-	// TODO: support nested images
-	logger.WarningLogger.Println("nested image are not supported")
+func (img image) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
+	x, y := dims.point(attrs.x, attrs.y)
+	dst.State().Transform(matrix.Translation(x, y))
+	// base_url = node.get("{http://www.w3.org/XML/1998/namespace}base")
+	// url = node.get_href(base_url || svg.url)
+	// image = svg.context.get_image_from_uri(url, "image/*")
+	// if image == nil {
+	// 	return
+	// }
+
+	width, height := dims.point(attrs.width, attrs.height)
+	intrinsicWidth, intrinsicHeight, intrinsicRatio := img.img.GetIntrinsicSize(1, pr.Float(dims.fontSize))
+	if intrinsicWidth == nil && intrinsicHeight == nil {
+		if intrinsicRatio == nil || (width == 0 && height == 0) {
+			intrinsicWidth, intrinsicHeight = pr.Float(300), pr.Float(150)
+		} else if width == 0 {
+			intrinsicWidth, intrinsicHeight = intrinsicRatio.V()*pr.Float(height), pr.Float(height)
+		} else {
+			intrinsicWidth, intrinsicHeight = pr.Float(width), pr.Float(width)/intrinsicRatio.V()
+		}
+	} else if intrinsicWidth == nil {
+		intrinsicWidth = intrinsicRatio.V() * intrinsicHeight.V()
+	} else if intrinsicHeight == nil {
+		intrinsicHeight = intrinsicWidth.V() / intrinsicRatio.V()
+	}
+	intrinsic := Rectangle{0, 0, Fl(intrinsicWidth.V()), Fl(intrinsicHeight.V())}
+	if width == 0 {
+		width = intrinsic.Width
+	}
+	if height == 0 {
+		height = intrinsic.Height
+	}
+
+	scale_x, scale_y, translate_x, translate_y := img.preserveRatio.resolveTransforms(width, height, &intrinsic, nil)
+	dst.Rectangle(0, 0, width, height)
+	dst.State().Clip(false)
+	dst.OnNewStack(func() {
+		dst.State().Transform(matrix.Transform{A: scale_x, D: scale_y, E: translate_x, F: translate_y})
+		img.img.Draw(dst, svg.textContext, intrinsic.Width, intrinsic.Height, "auto")
+	})
+
 	return nil
 }
 

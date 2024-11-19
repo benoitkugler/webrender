@@ -419,18 +419,19 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 				// otherwise it is similar to a floated element."
 				if firstLetterStyle.GetFloat() == "none" {
 					letterBox := bo.NewInlineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
-					textBox_ := bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
-					letterBox.Children = []Box{&textBox_}
+					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
+					letterBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				} else {
 					letterBox := bo.NewBlockBox(firstLetterStyle, textBox.Element, "first-letter", nil)
 					letterBox.FirstLetterStyle = nil
 					lineBox := bo.NewLineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
 					letterBox.Children = []Box{&lineBox}
-					textBox_ := bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
-					lineBox.Children = []Box{&textBox_}
+					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
+					lineBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				}
+				bo.ProcessTextTransform(textBox)
 				if skipStack != nil && childSkipStack != nil {
 					index, _ := skipStack.Unpack()
 					childIndex, grandChildSkipStack := childSkipStack.Unpack()
@@ -662,13 +663,23 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 		preservedLineBreak = false
 		firstLetter = '\u2e80'
 		lastLetter = '\u2e80'
+	} else if bo.InlineGridT.IsInstance(box_) {
+		box.PositionX = positionX
+		box.PositionY = 0
+		resolveMarginAuto(box)
+		var v blockLayout
+		newBox, v = gridLayout(context, box_, -pr.Inf, skipStack, containingBlock.Box(), false, absoluteBoxes, fixedBoxes)
+		resumeAt = v.resumeAt
+		preservedLineBreak = false
+		firstLetter = '\u2e80'
+		lastLetter = '\u2e80'
 	} else { // pragma: no cover
 		logger.WarningLogger.Printf("Layout for %v not handled yet", box)
 		return splitedInline{}
 	}
 
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("end splitInlineLevel %s", resumeAt))
+		traceLogger.DumpTree(newBox, fmt.Sprintf("end splitInlineLevel %s", resumeAt))
 	}
 
 	return splitedInline{
@@ -1057,6 +1068,7 @@ func inlineOutOfFlowLayout(context *layoutContext, box Box, containingBlock Box,
 ) {
 	if traceMode {
 		traceLogger.DumpTree(box, "inlineOutOfFlowLayout")
+		traceLogger.Dump(fmt.Sprintf("is absolute: %v", child_.Box().IsAbsolutelyPositioned()))
 	}
 
 	child := child_.Box()
@@ -1241,9 +1253,9 @@ func lineBoxVerticality(context *layoutContext, box Box) (pr.Float, pr.Float) {
 		var dy pr.Float
 		if v.box.Box().IsFloated() {
 			dy = minY - v.box.Box().PositionY
-		} else if va.String == "top" {
+		} else if va.S == "top" {
 			dy = minY - v.min.V()
-		} else if va.String == "bottom" {
+		} else if va.S == "bottom" {
 			dy = maxY - v.max.V()
 		} else {
 			panic(fmt.Sprintf("expected top or bottom, got %v", va))
@@ -1256,7 +1268,7 @@ func lineBoxVerticality(context *layoutContext, box Box) (pr.Float, pr.Float) {
 func translateSubtree(box Box, dy pr.Float) {
 	if bo.InlineT.IsInstance(box) {
 		box.Box().PositionY += dy
-		if va := box.Box().Style.GetVerticalAlign().String; va == "top" || va == "bottom" {
+		if va := box.Box().Style.GetVerticalAlign().S; va == "top" || va == "bottom" {
 			for _, child := range box.Box().Children {
 				translateSubtree(child, dy)
 			}
@@ -1303,7 +1315,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 		}
 		var childBaselineY pr.Float
 		verticalAlign := child.Style.GetVerticalAlign()
-		switch verticalAlign.String {
+		switch verticalAlign.S {
 		case "baseline":
 			childBaselineY = baselineY
 		case "middle":
@@ -1333,7 +1345,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 
 		// the child’s `top` is `child.Baseline` above (lower y) its baseline.
 		top := childBaselineY - child.Baseline.V()
-		if bo.InlineBlockT.IsInstance(child_) || bo.InlineFlexT.IsInstance(child_) {
+		if bo.InlineBlockT.IsInstance(child_) || bo.InlineFlexT.IsInstance(child_) || bo.InlineGridT.IsInstance(child_) {
 			// This also includes table wrappers for inline tables.
 			child_.Translate(child_, 0, top-child.PositionY, false)
 		} else {
@@ -1341,7 +1353,7 @@ func inlineBoxVerticality(context *layoutContext, box_ Box, topBottomSubtrees *[
 			// grand-children for inline boxes are handled below
 		}
 
-		if verticalAlign.String == "top" || verticalAlign.String == "bottom" {
+		if verticalAlign.S == "top" || verticalAlign.S == "bottom" {
 			// top or bottom are special, they need to be handled in
 			// a later pass.
 			*topBottomSubtrees = append(*topBottomSubtrees, child_)
@@ -1484,9 +1496,9 @@ func isPhantomLinebox(linebox *bo.BoxFields) bool {
 				return false
 			}
 			for side := pr.KnownProp(0); side < 4; side++ {
-				m := child.Style.Get((pr.PMarginBottom + side*5).Key()).(pr.Value).Value
-				b := child.Style.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.Value).Value
-				p := child.Style.Get((pr.PPaddingBottom + side*5).Key()).(pr.Value).Value
+				m := child.Style.Get((pr.PMarginBottom + side*5).Key()).(pr.DimOrS).Value
+				b := child.Style.Get((pr.PBorderBottomWidth + side*5).Key()).(pr.DimOrS).Value
+				p := child.Style.Get((pr.PPaddingBottom + side*5).Key()).(pr.DimOrS).Value
 				if m != 0 || b != 0 || p != 0 {
 					return false
 				}

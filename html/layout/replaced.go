@@ -13,7 +13,7 @@ import (
 
 // Default sizing algorithm for the concrete object size.
 // https://drafts.csswg.org/csswg/css-images-3/#default-sizing
-func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
+func DefaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 	specifiedWidth, specifiedHeight pr.MaybeFloat, defaultWidth, defaultHeight pr.Float,
 ) (concreteWidth, concreteHeight pr.Float) {
 	if specifiedWidth == pr.AutoF {
@@ -45,7 +45,7 @@ func defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 		return concreteWidth, specifiedHeight.V()
 	} else {
 		if intrinsicWidth != nil || intrinsicHeight != nil {
-			return defaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
+			return DefaultImageSizing(intrinsicWidth, intrinsicHeight, intrinsicRatio,
 				intrinsicWidth, intrinsicHeight, defaultWidth, defaultHeight)
 		} else {
 			return containConstraintImageSizing(defaultWidth, defaultHeight, intrinsicRatio)
@@ -111,8 +111,8 @@ func LayoutReplacedBox(box_ bo.ReplacedBoxITF) (drawWidth, drawHeight, positionX
 	refX := box.Width.V() - drawWidth
 	refY := box.Height.V() - drawHeight
 
-	positionX = pr.ResoudPercentage(positionX_.ToValue(), refX).V()
-	positionY = pr.ResoudPercentage(positionY_.ToValue(), refY).V()
+	positionX = pr.ResolvePercentage(positionX_.ToValue(), refX).V()
+	positionY = pr.ResolvePercentage(positionY_.ToValue(), refY).V()
 	if originX == "right" {
 		positionX = refX - positionX
 	}
@@ -285,7 +285,7 @@ func inlineReplacedBoxLayout(box_ Box, containingBlock *bo.BoxFields) {
 }
 
 func inlineReplacedBoxWidthHeight(box Box, containingBlock containingBlock) {
-	if style := box.Box().Style; style.GetWidth().String == "auto" && style.GetHeight().String == "auto" {
+	if style := box.Box().Style; style.GetWidth().S == "auto" && style.GetHeight().S == "auto" {
 		replacedBoxWidth_(box, nil, containingBlock)
 		replacedBoxHeight_(box, nil, nil)
 		minMaxAutoReplaced(box.Box())
@@ -299,7 +299,7 @@ func inlineReplacedBoxWidthHeight(box Box, containingBlock containingBlock) {
 func blockReplacedBoxLayout(context *layoutContext, box_ bo.ReplacedBoxITF, containingBlock *bo.BoxFields) (bo.ReplacedBoxITF, blockLayout) {
 	box_ = box_.Copy().(bo.ReplacedBoxITF) // Copy is type stable
 	box := box_.Box()
-	if box.Style.GetWidth().String == "auto" && box.Style.GetHeight().String == "auto" {
+	if box.Style.GetWidth().S == "auto" && box.Style.GetHeight().S == "auto" {
 		computedMarginsL, computedMarginsR := box.MarginLeft, box.MarginRight
 		blockReplacedWidth_(box_, nil, containingBlock)
 		replacedBoxHeight_(box_, nil, nil)

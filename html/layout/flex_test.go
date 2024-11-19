@@ -28,8 +28,7 @@ func assertPosYEqual(t *testing.T, boxes ...Box) {
 }
 
 func TestFlexDirectionRow(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex">
@@ -38,21 +37,20 @@ func TestFlexDirectionRow(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "div1")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "div2")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "div3")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
 	assertPosYEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div1.Box().PositionX < div2.Box().PositionX, true, "div1")
-	tu.AssertEqual(t, div2.Box().PositionX < div3.Box().PositionX, true, "div1")
+	tu.AssertEqual(t, div1.Box().PositionX < div2.Box().PositionX, true)
+	tu.AssertEqual(t, div2.Box().PositionX < div3.Box().PositionX, true)
 }
 
 func TestFlexDirectionRowRtl(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; direction: rtl">
@@ -61,22 +59,21 @@ func TestFlexDirectionRowRtl(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "div1")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "div2")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "div3")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
 	assertPosYEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div1.Box().PositionX+div1.Box().Width.V(), article.Box().PositionX+article.Box().Width.V(), "div1")
-	tu.AssertEqual(t, div1.Box().PositionX > div2.Box().PositionX, true, "div1 > div2")
-	tu.AssertEqual(t, div2.Box().PositionX > div3.Box().PositionX, true, "div2 > div3")
+	tu.AssertEqual(t, div1.Box().PositionX+div1.Box().Width.V(), article.Box().PositionX+article.Box().Width.V())
+	tu.AssertEqual(t, div1.Box().PositionX > div2.Box().PositionX, true)
+	tu.AssertEqual(t, div2.Box().PositionX > div3.Box().PositionX, true)
 }
 
 func TestFlexDirectionRowReverse(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: row-reverse">
@@ -85,22 +82,21 @@ func TestFlexDirectionRowReverse(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "A")
 	assertPosYEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div3.Box().PositionX+div3.Box().Width.V(), article.Box().PositionX+article.Box().Width.V(), "")
-	tu.AssertEqual(t, div1.Box().PositionX < div2.Box().PositionX, true, "div1")
-	tu.AssertEqual(t, div2.Box().PositionX < div3.Box().PositionX, true, "div1")
+	tu.AssertEqual(t, div3.Box().PositionX+div3.Box().Width.V(), article.Box().PositionX+article.Box().Width.V())
+	tu.AssertEqual(t, div1.Box().PositionX < div2.Box().PositionX, true)
+	tu.AssertEqual(t, div2.Box().PositionX < div3.Box().PositionX, true)
 }
 
 func TestFlexDirectionRowReverseRtl(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: row-reverse;
@@ -110,22 +106,21 @@ func TestFlexDirectionRowReverseRtl(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "A")
 	assertPosYEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX, "")
-	tu.AssertEqual(t, div1.Box().PositionX > div2.Box().PositionX, true, "div1 > div2")
-	tu.AssertEqual(t, div2.Box().PositionX > div3.Box().PositionX, true, "div2 > div3")
+	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX)
+	tu.AssertEqual(t, div1.Box().PositionX > div2.Box().PositionX, true)
+	tu.AssertEqual(t, div2.Box().PositionX > div3.Box().PositionX, true)
 }
 
 func TestFlexDirectionColumn(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: column">
@@ -134,22 +129,21 @@ func TestFlexDirectionColumn(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
 	assertPosXEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div1.Box().PositionY, article.Box().PositionY, "")
-	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true, "div1")
-	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true, "div1")
+	tu.AssertEqual(t, div1.Box().PositionY, article.Box().PositionY)
+	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true)
+	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true)
 }
 
 func TestFlexDirectionColumnRtl(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: column;
@@ -159,23 +153,22 @@ func TestFlexDirectionColumnRtl(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
 	assertPosXEqual(t, div1, div2, div3, article)
 
-	tu.AssertEqual(t, div1.Box().PositionY, article.Box().PositionY, "")
-	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true, "div1")
-	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true, "div1")
+	tu.AssertEqual(t, div1.Box().PositionY, article.Box().PositionY)
+	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true)
+	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true)
 }
 
 func TestFlexDirectionColumnReverse(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: column-reverse">
@@ -184,22 +177,21 @@ func TestFlexDirectionColumnReverse(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "A")
 	assertPosXEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div3.Box().PositionY+div3.Box().Height.V(), article.Box().PositionY+article.Box().Height.V(), "")
-	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true, "div1")
-	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true, "div1")
+	tu.AssertEqual(t, div3.Box().PositionY+div3.Box().Height.V(), article.Box().PositionY+article.Box().Height.V())
+	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true)
+	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true)
 }
 
 func TestFlexDirectionColumnReverseRtl(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: column-reverse;
@@ -209,22 +201,21 @@ func TestFlexDirectionColumnReverseRtl(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "A")
 	assertPosXEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, div3.Box().PositionY+div3.Box().Height.V(), article.Box().PositionY+article.Box().Height.V(), "")
-	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true, "div1")
-	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true, "div1")
+	tu.AssertEqual(t, div3.Box().PositionY+div3.Box().Height.V(), article.Box().PositionY+article.Box().Height.V())
+	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true)
+	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true)
 }
 
 func TestFlexRowWrap(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-flow: wrap; width: 50px">
@@ -233,24 +224,23 @@ func TestFlexRowWrap(t *testing.T) {
         <div style="width: 20px">C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div1.Box().PositionY, div2.Box().PositionY, "")
-	tu.AssertEqual(t, div2.Box().PositionY, article.Box().PositionY, "")
-	tu.AssertEqual(t, div3.Box().PositionY, article.Box().PositionY+div2.Box().Height.V(), "")
-	tu.AssertEqual(t, div1.Box().PositionX, div3.Box().PositionX, "")
-	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX, "")
-	tu.AssertEqual(t, div1.Box().PositionX < div2.Box().PositionX, true, "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, div1.Box().PositionY, div2.Box().PositionY)
+	tu.AssertEqual(t, div2.Box().PositionY, article.Box().PositionY)
+	tu.AssertEqual(t, div3.Box().PositionY, article.Box().PositionY+div2.Box().Height.V())
+	tu.AssertEqual(t, div1.Box().PositionX, div3.Box().PositionX)
+	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX)
+	tu.AssertEqual(t, div1.Box().PositionX < div2.Box().PositionX, true)
 }
 
 func TestFlexColumnWrap(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-flow: column wrap; height: 50px">
@@ -259,22 +249,21 @@ func TestFlexColumnWrap(t *testing.T) {
         <div style="height: 20px">C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
 	assertPosXEqual(t, div1, div2, article)
-	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX+div2.Box().Width.V(), "")
+	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX+div2.Box().Width.V())
 	assertPosYEqual(t, div1, div3, article)
-	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true, "")
+	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true)
 }
 
 func TestFlexRowWrapReverse(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-flow: wrap-reverse; width: 50px">
@@ -283,23 +272,22 @@ func TestFlexRowWrapReverse(t *testing.T) {
         <div style="width: 20px">C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B")
 	assertPosYEqual(t, div1, article)
 	assertPosYEqual(t, div2, div3)
-	tu.AssertEqual(t, div3.Box().PositionY, article.Box().PositionY+div1.Box().Height.V(), "")
+	tu.AssertEqual(t, div3.Box().PositionY, article.Box().PositionY+div1.Box().Height.V())
 	assertPosXEqual(t, div1, div2, article)
-	tu.AssertEqual(t, div2.Box().PositionX < div3.Box().PositionX, true, "")
+	tu.AssertEqual(t, div2.Box().PositionX < div3.Box().PositionX, true)
 }
 
 func TestFlexColumnWrapReverse(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-flow: column wrap-reverse;
@@ -309,23 +297,22 @@ func TestFlexColumnWrapReverse(t *testing.T) {
         <div style="height: 20px">C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B")
 	assertPosXEqual(t, div1, article)
 	assertPosXEqual(t, div2, div3)
-	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX+div1.Box().Width.V(), "")
+	tu.AssertEqual(t, div3.Box().PositionX, article.Box().PositionX+div1.Box().Width.V())
 	assertPosYEqual(t, div1, div2, article)
-	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true, "")
+	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true)
 }
 
 func TestFlexDirectionColumnFixedHeightContainer(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <section style="height: 10px">
@@ -336,20 +323,20 @@ func TestFlexDirectionColumnFixedHeightContainer(t *testing.T) {
         </article>
       </section>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	section := body.Box().Children[0]
-	article := section.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	section := unpack1(body)
+	article := unpack1(section)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
 	assertPosXEqual(t, div1, div2, div3, article)
 	assertPosYEqual(t, div1, article)
-	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true, "")
-	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true, "")
-	tu.AssertEqual(t, section.Box().Height, pr.Float(10), "")
-	tu.AssertEqual(t, article.Box().Height.V() > 10, true, "")
+	tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY, true)
+	tu.AssertEqual(t, div2.Box().PositionY < div3.Box().PositionY, true)
+	tu.AssertEqual(t, section.Box().Height, Fl(10))
+	tu.AssertEqual(t, article.Box().Height.V() > 10, true)
 }
 
 // @pytest.mark.xfail
@@ -364,27 +351,26 @@ func TestFlexDirectionColumnFixedHeightContainer(t *testing.T) {
 //         <div>C</div>
 //       </article>
 //     `)
-//     html := page.Box().Children[0]
-//     body := html.Box().Children[0]
-//     article := body.Box().Children[0]
+//     html =  unpack1(page)
+//     body :=  unpack1(html)
+//     article := unpack1(body)
 //     div1, div2, div3 := unpack3(article)
-//     tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text , "A", "")
-//     tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text , "B", "")
-//     tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text , "C", "")
-//     tu.AssertEqual(t, (
+//     tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text , "A")
+//     tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text , "B")
+//     tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text , "C")
+//     (
 //         div1.Box().PositionX ,
 //         div2.Box().PositionX ,
 //         div3.Box().PositionX ,
 //         article.Box().PositionX)
-//     tu.AssertEqual(t, div1.Box().PositionY , article.Box().PositionY
-//     tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY < div3.Box().PositionY
-//     tu.AssertEqual(t, article.Box().Height.V() , 10
-//     tu.AssertEqual(t, div3.Box().PositionY > 10
+//     tu.AssertEqual(t, div1.Box().PositionY , article.Y
+//     tu.AssertEqual(t, div1.Box().PositionY < div2.Box().PositionY < div3.Y
+//     tu.AssertEqual(t, article.Box().Height.V0
+//     tu.AssertEqual(t, div3.Box().Positio0
 // }
 
 func TestFlexDirectionColumnFixedHeightWrap(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex; flex-direction: column; height: 10px;
@@ -394,23 +380,22 @@ func TestFlexDirectionColumnFixedHeightWrap(t *testing.T) {
         <div>C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div1.Box().PositionX != div2.Box().PositionX, true, "")
-	tu.AssertEqual(t, div2.Box().PositionX != div3.Box().PositionX, true, "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, div1.Box().PositionX != div2.Box().PositionX, true)
+	tu.AssertEqual(t, div2.Box().PositionX != div3.Box().PositionX, true)
 	assertPosYEqual(t, div1, article)
 	assertPosYEqual(t, div1, div2, div3, article)
-	tu.AssertEqual(t, article.Box().Height, pr.Float(10), "")
+	tu.AssertEqual(t, article.Box().Height, Fl(10))
 }
 
 func TestFlexItemMinWidth(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex">
@@ -419,25 +404,24 @@ func TestFlexItemMinWidth(t *testing.T) {
         <div style="min-width: 5px">C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div1.Box().PositionX, pr.Float(0), "div1")
-	tu.AssertEqual(t, div1.Box().Width, pr.Float(30), "div1")
-	tu.AssertEqual(t, div2.Box().PositionX, pr.Float(30), "div2")
-	tu.AssertEqual(t, div2.Box().Width, pr.Float(50), "div2")
-	tu.AssertEqual(t, div3.Box().PositionX, pr.Float(80), "div3")
-	tu.AssertEqual(t, div3.Box().Width.V() > pr.Float(5), true, "div3")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, div1.Box().PositionX, Fl(0))
+	tu.AssertEqual(t, div1.Box().Width, Fl(30))
+	tu.AssertEqual(t, div2.Box().PositionX, Fl(30))
+	tu.AssertEqual(t, div2.Box().Width, Fl(50))
+	tu.AssertEqual(t, div3.Box().PositionX, Fl(80))
+	tu.AssertEqual(t, div3.Box().Width.V() > Fl(5), true)
 	assertPosYEqual(t, div1, div2, div3, article)
 }
 
 func TestFlexItemMinHeight(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <article style="display: flex">
@@ -446,22 +430,21 @@ func TestFlexItemMinHeight(t *testing.T) {
         <div style="min-height: 5px">C</div>
       </article>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	article := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	article := unpack1(body)
 	div1, div2, div3 := unpack3(article)
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B", "")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "")
-	tu.AssertEqual(t, div1.Box().Height.V(), div2.Box().Height.V(), "")
-	tu.AssertEqual(t, div2.Box().Height.V(), div3.Box().Height.V(), "")
-	tu.AssertEqual(t, div3.Box().Height.V(), article.Box().Height.V(), "")
-	tu.AssertEqual(t, article.Box().Height.V(), pr.Float(50), "")
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "A")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "C")
+	tu.AssertEqual(t, div1.Box().Height.V(), div2.Box().Height.V())
+	tu.AssertEqual(t, div2.Box().Height.V(), div3.Box().Height.V())
+	tu.AssertEqual(t, div3.Box().Height.V(), article.Box().Height.V())
+	tu.AssertEqual(t, article.Box().Height.V(), Fl(50))
 }
 
 func TestFlexAutoMargin(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/800
 	_ = renderOnePage(t, `<div style="display: flex; margin: auto">`)
@@ -469,8 +452,7 @@ func TestFlexAutoMargin(t *testing.T) {
 }
 
 func TestFlexNoBaseline(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/765
 	_ = renderOnePage(t, `
@@ -480,8 +462,7 @@ func TestFlexNoBaseline(t *testing.T) {
 }
 
 func TestFlexAlignContent(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, data := range []struct {
 		align  string
@@ -516,44 +497,42 @@ func TestFlexAlignContent(t *testing.T) {
         <section><span>Lorem</span></section>
       </article>
     `, data.align, data.height))
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		article := body.Box().Children[0]
+		html := unpack1(page)
+		body := unpack1(html)
+		article := unpack1(body)
 		section1, section2 := unpack2(article)
-		line1 := section1.Box().Children[0]
-		line2 := section2.Box().Children[0]
-		span1 := line1.Box().Children[0]
-		span2 := line2.Box().Children[0]
-		tu.AssertEqual(t, section1.Box().PositionX, span1.Box().PositionX, "")
-		tu.AssertEqual(t, span1.Box().PositionX, pr.Float(0), "")
-		tu.AssertEqual(t, section1.Box().PositionY, span1.Box().PositionY, "")
-		tu.AssertEqual(t, span1.Box().PositionY, data.y1, "")
-		tu.AssertEqual(t, section2.Box().PositionX, span2.Box().PositionX, "")
-		tu.AssertEqual(t, span2.Box().PositionX, pr.Float(0), "")
-		tu.AssertEqual(t, section2.Box().PositionY, span2.Box().PositionY, "")
-		tu.AssertEqual(t, span2.Box().PositionY, data.y2, "")
+		line1 := unpack1(section1)
+		line2 := unpack1(section2)
+		span1 := unpack1(line1)
+		span2 := unpack1(line2)
+		tu.AssertEqual(t, section1.Box().PositionX, span1.Box().PositionX)
+		tu.AssertEqual(t, span1.Box().PositionX, Fl(0))
+		tu.AssertEqual(t, section1.Box().PositionY, span1.Box().PositionY)
+		tu.AssertEqual(t, span1.Box().PositionY, data.y1)
+		tu.AssertEqual(t, section2.Box().PositionX, span2.Box().PositionX)
+		tu.AssertEqual(t, span2.Box().PositionX, Fl(0))
+		tu.AssertEqual(t, section2.Box().PositionY, span2.Box().PositionY)
+		tu.AssertEqual(t, span2.Box().PositionY, data.y2)
 	}
 }
 
 func TestFlexItemPercentage(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/885
 	page := renderOnePage(t, `
       <div style="display: flex; font-size: 15px; line-height: 1">
         <div style="height: 100%">a</div>
       </div>`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	flex := body.Box().Children[0]
-	flexItem := flex.Box().Children[0]
-	tu.AssertEqual(t, flexItem.Box().Height, pr.Float(15), "")
+	html := unpack1(page)
+	body := unpack1(html)
+	flex := unpack1(body)
+	flexItem := unpack1(flex)
+	tu.AssertEqual(t, flexItem.Box().Height, Fl(15))
 }
 
 func TestFlexUndefinedPercentageHeightMultipleLines(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1204
 	_ = renderOnePage(t, `
@@ -564,12 +543,29 @@ func TestFlexUndefinedPercentageHeightMultipleLines(t *testing.T) {
 }
 
 func TestFlexAbsolute(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1536
 	_ = renderOnePage(t, `
       <div style="display: flex; position: absolute">
         <div>a</div>
       </div>`)
+}
+
+func TestFlexPercentHeight(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	page := renderOnePage(t, `
+	  <style>
+        .a { height: 10px; width: 10px; }
+        .b { height: 10%; width: 100%; display: flex; flex-direction: column; }
+      </style>
+      <div class="a"">
+        <div class="b"></div>
+      </div>`)
+	html := unpack1(page)
+	body := unpack1(html)
+	a := unpack1(body)
+	b := unpack1(a)
+	tu.AssertEqual(t, a.Box().Height, Fl(10))
+	tu.AssertEqual(t, b.Box().Height, Fl(1))
 }

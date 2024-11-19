@@ -13,14 +13,14 @@ import (
 
 func assertPos(t *testing.T, gotX, gotY, expX, expY pr.Float) {
 	t.Helper()
-	tu.AssertEqual(t, [2]pr.Float{gotX, gotY}, [2]pr.Float{expX, expY}, "")
+	tu.AssertEqual(t, [2]pr.Float{gotX, gotY}, [2]pr.Float{expX, expY})
 }
 
 func assertText(t *testing.T, box Box, exp string) {
 	t.Helper()
 	tb, ok := box.(*bo.TextBox)
-	tu.AssertEqual(t, ok, true, "expected TextBox")
-	tu.AssertEqual(t, tb.Text, exp, "")
+	tu.AssertEqual(t, ok, true)
+	tu.AssertEqual(t, tb.Text, exp)
 }
 
 func columnsMetrics(columns []Box) (widths, heights, xs, ys []pr.Float) {
@@ -34,8 +34,7 @@ func columnsMetrics(columns []Box) (widths, heights, xs, ys []pr.Float) {
 }
 
 func TestColumns(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, css := range []string{
 		"columns: 4",
@@ -59,15 +58,15 @@ func TestColumns(t *testing.T) {
         et turpis molestie tristique.
       </div>
     `, css))
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		div := body.Box().Children[0]
+		html := unpack1(page)
+		body := unpack1(html)
+		div := unpack1(body)
 		columns := div.Box().Children
-		tu.AssertEqual(t, len(columns), 4, "len")
+		tu.AssertEqual(t, len(columns), 4)
 		widths, _, xs, ys := columnsMetrics(columns)
-		tu.AssertEqual(t, widths, []pr.Float{100, 100, 100, 100}, "widths")
-		tu.AssertEqual(t, xs, []pr.Float{0, 100, 200, 300}, "xs")
-		tu.AssertEqual(t, ys, []pr.Float{0, 0, 0, 0}, "ys")
+		tu.AssertEqual(t, widths, []pr.Float{100, 100, 100, 100})
+		tu.AssertEqual(t, xs, []pr.Float{0, 100, 200, 300})
+		tu.AssertEqual(t, ys, []pr.Float{0, 0, 0, 0})
 	}
 }
 
@@ -96,22 +95,21 @@ func TestColumnGap(t *testing.T) {
         et turpis molestie tristique.
       </div>
     `, data.value))
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		div := body.Box().Children[0]
+		html := unpack1(page)
+		body := unpack1(html)
+		div := unpack1(body)
 		columns := div.Box().Children
-		tu.AssertEqual(t, len(columns), 3, "len")
+		tu.AssertEqual(t, len(columns), 3)
 		widths, _, xs, ys := columnsMetrics(columns)
 
-		tu.AssertEqual(t, widths, []pr.Float{100 - 2*data.width/3, 100 - 2*data.width/3, 100 - 2*data.width/3}, "widths")
-		tu.AssertEqual(t, xs, []pr.Float{0, 100 + data.width/3, 200 + 2*data.width/3}, "xs")
-		tu.AssertEqual(t, ys, []pr.Float{0, 0, 0}, "ys")
+		tu.AssertEqual(t, widths, []pr.Float{100 - 2*data.width/3, 100 - 2*data.width/3, 100 - 2*data.width/3})
+		tu.AssertEqual(t, xs, []pr.Float{0, 100 + data.width/3, 200 + 2*data.width/3})
+		tu.AssertEqual(t, ys, []pr.Float{0, 0, 0})
 	}
 }
 
 func TestColumnSpan1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -128,23 +126,22 @@ func TestColumnSpan1(t *testing.T) {
         ghi jkl
       </div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2, section1, section2, column3, column4 := unpack6(div)
-	tu.AssertEqual(t, [2]pr.Float{column1.Box().PositionX, column1.Box().PositionY}, [2]pr.Float{0, 0}, "column1")
-	tu.AssertEqual(t, [2]pr.Float{column2.Box().PositionX, column2.Box().PositionY}, [2]pr.Float{5 * 16, 0}, "column2")
-	tu.AssertEqual(t, [2]pr.Float{section1.Box().ContentBoxX(), section1.Box().ContentBoxY()}, [2]pr.Float{0, 32}, "section1")
-	tu.AssertEqual(t, [2]pr.Float{section2.Box().ContentBoxX(), section2.Box().ContentBoxY()}, [2]pr.Float{0, 64}, "section2")
-	tu.AssertEqual(t, [2]pr.Float{column3.Box().PositionX, column3.Box().PositionY}, [2]pr.Float{0, 96}, "column3")
-	tu.AssertEqual(t, [2]pr.Float{column4.Box().PositionX, column4.Box().PositionY}, [2]pr.Float{5 * 16, 96}, "column4")
+	tu.AssertEqual(t, [2]pr.Float{column1.Box().PositionX, column1.Box().PositionY}, [2]pr.Float{0, 0})
+	tu.AssertEqual(t, [2]pr.Float{column2.Box().PositionX, column2.Box().PositionY}, [2]pr.Float{5 * 16, 0})
+	tu.AssertEqual(t, [2]pr.Float{section1.Box().ContentBoxX(), section1.Box().ContentBoxY()}, [2]pr.Float{0, 32})
+	tu.AssertEqual(t, [2]pr.Float{section2.Box().ContentBoxX(), section2.Box().ContentBoxY()}, [2]pr.Float{0, 64})
+	tu.AssertEqual(t, [2]pr.Float{column3.Box().PositionX, column3.Box().PositionY}, [2]pr.Float{0, 96})
+	tu.AssertEqual(t, [2]pr.Float{column4.Box().PositionX, column4.Box().PositionY}, [2]pr.Float{5 * 16, 96})
 
-	tu.AssertEqual(t, column1.Box().Height, pr.Float(16), "column1")
+	tu.AssertEqual(t, column1.Box().Height, Fl(16))
 }
 
 func TestColumnSpan2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
 	<style>
@@ -162,21 +159,20 @@ func TestColumnSpan2(t *testing.T) {
 		stu vwx
 	</div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
 	section1, column1, column2 := unpack3(div)
-	tu.AssertEqual(t, [2]pr.Float{section1.Box().ContentBoxX(), section1.Box().ContentBoxY()}, [2]pr.Float{0, 16}, "section1")
-	tu.AssertEqual(t, [2]pr.Float{column1.Box().PositionX, column1.Box().PositionY}, [2]pr.Float{0, 3 * 16}, "column1")
-	tu.AssertEqual(t, [2]pr.Float{column2.Box().PositionX, column2.Box().PositionY}, [2]pr.Float{5 * 16, 3 * 16}, "column2")
+	tu.AssertEqual(t, [2]pr.Float{section1.Box().ContentBoxX(), section1.Box().ContentBoxY()}, [2]pr.Float{0, 16})
+	tu.AssertEqual(t, [2]pr.Float{column1.Box().PositionX, column1.Box().PositionY}, [2]pr.Float{0, 3 * 16})
+	tu.AssertEqual(t, [2]pr.Float{column2.Box().PositionX, column2.Box().PositionY}, [2]pr.Float{5 * 16, 3 * 16})
 
-	tu.AssertEqual(t, column1.Box().Height, pr.Float(16*4), "column1")
-	tu.AssertEqual(t, column2.Box().Height, pr.Float(16*4), "column1")
+	tu.AssertEqual(t, column1.Box().Height, Fl(16*4))
+	tu.AssertEqual(t, column2.Box().Height, Fl(16*4))
 }
 
 func TestColumnSpan3(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -194,36 +190,35 @@ func TestColumnSpan3(t *testing.T) {
       </div>
     `)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2, section := unpack3(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 2)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, column1.Box().Children[0].Box().Children[1].Box().Children[0], "def")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "ghi")
-	assertText(t, column2.Box().Children[0].Box().Children[1].Box().Children[0], "jkl")
-	assertText(t, section.Box().Children[0].Box().Children[0], "line1")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[1]), "def")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "ghi")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[1]), "jkl")
+	assertText(t, unpack1(section.Box().Children[0]), "line1")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	section, column1, column2 = unpack3(div)
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 0)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 1)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 1)
 
-	assertText(t, section.Box().Children[0].Box().Children[0], "line2")
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "mno")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "pqr")
+	assertText(t, unpack1(section.Box().Children[0]), "line2")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "mno")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "pqr")
 }
 
 func TestColumnSpan4(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1, page2 := renderTwoPages(t, `
       <style>
@@ -240,9 +235,9 @@ func TestColumnSpan4(t *testing.T) {
         mno pqr
       </div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2, section, column3, column4 := unpack5(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
@@ -250,26 +245,25 @@ func TestColumnSpan4(t *testing.T) {
 	assertPos(t, column3.Box().PositionX, column3.Box().PositionY, 0, 2)
 	assertPos(t, column4.Box().PositionX, column4.Box().PositionY, 4, 2)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "def")
-	assertText(t, section.Box().Children[0].Box().Children[0], "line1")
-	assertText(t, column3.Box().Children[0].Box().Children[0].Box().Children[0], "ghi")
-	assertText(t, column4.Box().Children[0].Box().Children[0].Box().Children[0], "jkl")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "def")
+	assertText(t, unpack1(section.Box().Children[0]), "line1")
+	assertText(t, unpack1(column3.Box().Children[0].Box().Children[0]), "ghi")
+	assertText(t, unpack1(column4.Box().Children[0].Box().Children[0]), "jkl")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	column1, column2 = unpack2(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "mno")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "pqr")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "mno")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "pqr")
 }
 
 func TestColumnSpan5(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -287,34 +281,33 @@ func TestColumnSpan5(t *testing.T) {
       </div>
     `)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2, section := unpack3(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 2)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, column1.Box().Children[0].Box().Children[1].Box().Children[0], "def")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "ghi")
-	assertText(t, column2.Box().Children[0].Box().Children[1].Box().Children[0], "jkl")
-	assertText(t, section.Box().Children[0].Box().Children[0], "line1")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[1]), "def")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "ghi")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[1]), "jkl")
+	assertText(t, unpack1(section.Box().Children[0]), "line1")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	column1, column2 = unpack2(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "mno")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "pqr")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "mno")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "pqr")
 }
 
 func TestColumnSpan6(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1, page2 := renderTwoPages(t, `
       <style>
@@ -331,31 +324,30 @@ func TestColumnSpan6(t *testing.T) {
         <section>line1</section>
       </div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2 := unpack2(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, column1.Box().Children[0].Box().Children[1].Box().Children[0], "def")
-	assertText(t, column1.Box().Children[0].Box().Children[2].Box().Children[0], "ghi")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "jkl")
-	assertText(t, column2.Box().Children[0].Box().Children[1].Box().Children[0], "mno")
-	assertText(t, column2.Box().Children[0].Box().Children[2].Box().Children[0], "pqr")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[1]), "def")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[2]), "ghi")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "jkl")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[1]), "mno")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[2]), "pqr")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
-	section := div.Box().Children[0]
-	assertText(t, section.Box().Children[0].Box().Children[0], "line1")
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
+	section := unpack1(div)
+	assertText(t, unpack1(section.Box().Children[0]), "line1")
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 0)
 }
 
 func TestColumnSpan7(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -374,34 +366,33 @@ func TestColumnSpan7(t *testing.T) {
     `)
 	page1, page2 := pages[0], pages[1]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2 := unpack2(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, column1.Box().Children[0].Box().Children[1].Box().Children[0], "def")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "ghi")
-	assertText(t, column2.Box().Children[0].Box().Children[1].Box().Children[0], "jkl")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[1]), "def")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "ghi")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[1]), "jkl")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	section, column1, column2 := unpack3(div)
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 0)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 2)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 2)
 
-	assertText(t, section.Box().Children[0].Box().Children[0], "l1")
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "mno")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "pqr")
+	assertText(t, unpack1(section.Box().Children[0]), "l1")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "mno")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "pqr")
 }
 
 func TestColumnSpan8(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -420,34 +411,33 @@ func TestColumnSpan8(t *testing.T) {
     `)
 	page1, page2 := pages[0], pages[1]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, column2 := unpack2(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, column1.Box().Children[0].Box().Children[1].Box().Children[0], "def")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "ghi")
-	assertText(t, column2.Box().Children[0].Box().Children[1].Box().Children[0], "jkl")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[1]), "def")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "ghi")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[1]), "jkl")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	column1, column2, section := unpack3(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 4, 0)
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 1)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "mno")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "pqr")
-	assertText(t, section.Box().Children[0].Box().Children[0], "line1")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "mno")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "pqr")
+	assertText(t, unpack1(section.Box().Children[0]), "line1")
 }
 
 func TestColumnSpan9(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -463,24 +453,54 @@ func TestColumnSpan9(t *testing.T) {
         def ghi
       </div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	column1, section, column2, column3 := unpack4(div)
 	assertPos(t, column1.Box().PositionX, column1.Box().PositionY, 0, 0)
 	assertPos(t, section.Box().PositionX, section.Box().PositionY, 0, 1)
 	assertPos(t, column2.Box().PositionX, column2.Box().PositionY, 0, 2)
 	assertPos(t, column3.Box().PositionX, column3.Box().PositionY, 4, 2)
 
-	assertText(t, column1.Box().Children[0].Box().Children[0].Box().Children[0], "abc")
-	assertText(t, section.Box().Children[0].Box().Children[0], "line1")
-	assertText(t, column2.Box().Children[0].Box().Children[0].Box().Children[0], "def")
-	assertText(t, column3.Box().Children[0].Box().Children[0].Box().Children[0], "ghi")
+	assertText(t, unpack1(column1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(section.Box().Children[0]), "line1")
+	assertText(t, unpack1(column2.Box().Children[0].Box().Children[0]), "def")
+	assertText(t, unpack1(column3.Box().Children[0].Box().Children[0]), "ghi")
+}
+
+func TestColumnSpanBalance(t *testing.T) {
+	page := renderOnePage(t, `
+      <style>
+        @font-face { src: url(weasyprint.otf); font-family: weasyprint }
+        @page { margin: 0; size: 8px 5px }
+        body { font-family: weasyprint; font-size: 1px }
+        div { columns: 2; column-gap: 0; line-height: 1; column-fill: auto }
+        section { column-span: all }
+      </style>
+      <div>
+        abc def
+        <section>line1</section>
+        ghi jkl
+      </div>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	column1, column2, section, column3 := unpack4(div)
+	tu.AssertEqual(t, [2]pr.Float{column1.Box().PositionX, column1.Box().PositionY}, [2]pr.Float{0, 0})
+	tu.AssertEqual(t, [2]pr.Float{column2.Box().PositionX, column2.Box().PositionY}, [2]pr.Float{4, 0})
+	tu.AssertEqual(t, [2]pr.Float{section.Box().PositionX, section.Box().PositionY}, [2]pr.Float{0, 1})
+	tu.AssertEqual(t, [2]pr.Float{column3.Box().PositionX, column3.Box().PositionY}, [2]pr.Float{0, 2})
+
+	assertText(t, unpack1(unpack1(column1)).Box().Children[0], "abc")
+	assertText(t, unpack1(unpack1(column2)).Box().Children[0], "def")
+	assertText(t, unpack1(unpack1(section)), "line1")
+	assertText(t, unpack1(unpack1(column3)).Box().Children[0], "ghi")
+	assertText(t, unpack1(column3).Box().Children[1].Box().Children[0], "jkl")
 }
 
 func TestColumnsMultipage(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -493,33 +513,32 @@ func TestColumnsMultipage(t *testing.T) {
       <div>a b c d e f g</div>
     `)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "len")
-	tu.AssertEqual(t, len(columns[0].Box().Children), 2, "len")
-	tu.AssertEqual(t, len(columns[1].Box().Children), 2, "len")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[1].Box().Children[0], "b")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[1].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	tu.AssertEqual(t, len(columns[0].Box().Children), 2)
+	tu.AssertEqual(t, len(columns[1].Box().Children), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[1]), "b")
+	assertText(t, unpack1(columns[1].Box().Children[0]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[1]), "d")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	columns = div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "len")
-	tu.AssertEqual(t, len(columns[0].Box().Children), 2, "len")
-	tu.AssertEqual(t, len(columns[1].Box().Children), 1, "len")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0], "e")
-	assertText(t, columns[0].Box().Children[1].Box().Children[0], "f")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0], "g")
+	tu.AssertEqual(t, len(columns), 2)
+	tu.AssertEqual(t, len(columns[0].Box().Children), 2)
+	tu.AssertEqual(t, len(columns[1].Box().Children), 1)
+	assertText(t, unpack1(columns[0].Box().Children[0]), "e")
+	assertText(t, unpack1(columns[0].Box().Children[1]), "f")
+	assertText(t, unpack1(columns[1].Box().Children[0]), "g")
 }
 
 func TestColumnsBreaks(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -533,28 +552,27 @@ func TestColumnsBreaks(t *testing.T) {
       <div>a<section>b</section><section>c</section></div>
     `)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	tu.AssertEqual(t, len(columns[0].Box().Children), 1, "")
-	tu.AssertEqual(t, len(columns[1].Box().Children), 1, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "b")
+	tu.AssertEqual(t, len(columns), 2)
+	tu.AssertEqual(t, len(columns[0].Box().Children), 1)
+	tu.AssertEqual(t, len(columns[1].Box().Children), 1)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "b")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
 	columns = div.Box().Children
-	tu.AssertEqual(t, len(columns), 1, "")
-	tu.AssertEqual(t, len(columns[0].Box().Children), 1, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "c")
+	tu.AssertEqual(t, len(columns), 1)
+	tu.AssertEqual(t, len(columns[0].Box().Children), 1)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "c")
 }
 
 func TestColumnsBreakAfterColumn_1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -567,20 +585,19 @@ func TestColumnsBreakAfterColumn_1(t *testing.T) {
       </style>
       <div>a b <section>c</section> d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[0].Box().Children[1].Box().Children[0], "b")
-	assertText(t, columns[0].Box().Children[1].Box().Children[0].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[1]), "b")
+	assertText(t, unpack1(columns[0].Box().Children[1].Box().Children[0]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "d")
 }
 
 func TestColumnsBreakAfterColumn_2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -593,20 +610,19 @@ func TestColumnsBreakAfterColumn_2(t *testing.T) {
       </style>
       <div><section>a</section> b c d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "b")
-	assertText(t, columns[1].Box().Children[0].Box().Children[1].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[2].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "b")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[1]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[2]), "d")
 }
 
 func TestColumnsBreakAfterAvoidColumn(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -619,20 +635,19 @@ func TestColumnsBreakAfterAvoidColumn(t *testing.T) {
       </style>
       <div>a <section>b</section> c d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[1].Box().Children[0].Box().Children[0], "b")
-	assertText(t, columns[0].Box().Children[2].Box().Children[0].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[1].Box().Children[0]), "b")
+	assertText(t, unpack1(columns[0].Box().Children[2].Box().Children[0]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "d")
 }
 
 func TestColumnsBreakBeforeColumn_1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -645,20 +660,19 @@ func TestColumnsBreakBeforeColumn_1(t *testing.T) {
       </style>
       <div>a b c <section>d</section></div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[0].Box().Children[1].Box().Children[0], "b")
-	assertText(t, columns[0].Box().Children[0].Box().Children[2].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[1]), "b")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[2]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "d")
 }
 
 func TestColumnsBreakBeforeColumn_2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -671,20 +685,19 @@ func TestColumnsBreakBeforeColumn_2(t *testing.T) {
       </style>
       <div>a <section>b</section> c d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "b")
-	assertText(t, columns[1].Box().Children[1].Box().Children[0].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[1].Box().Children[1].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "b")
+	assertText(t, unpack1(columns[1].Box().Children[1].Box().Children[0]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[1].Box().Children[1]), "d")
 }
 
 func TestColumnsBreakBeforeAvoidColumn(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -697,20 +710,19 @@ func TestColumnsBreakBeforeAvoidColumn(t *testing.T) {
       </style>
       <div>a b <section>c</section> d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[0].Box().Children[1].Box().Children[0], "b")
-	assertText(t, columns[0].Box().Children[1].Box().Children[0].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[1]), "b")
+	assertText(t, unpack1(columns[0].Box().Children[1].Box().Children[0]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "d")
 }
 
 func TestColumnsBreakInsideColumn_1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -723,20 +735,19 @@ func TestColumnsBreakInsideColumn_1(t *testing.T) {
       </style>
       <div><section>a b c</section> d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[0].Box().Children[1].Box().Children[0], "b")
-	assertText(t, columns[0].Box().Children[0].Box().Children[2].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[1]), "b")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[2]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "d")
 }
 
 func TestColumnsBreakInsideColumn_2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -749,20 +760,19 @@ func TestColumnsBreakInsideColumn_2(t *testing.T) {
       </style>
       <div>a <section>b c d</section></div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "b")
-	assertText(t, columns[1].Box().Children[0].Box().Children[1].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[2].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "b")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[1]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[2]), "d")
 }
 
 func TestColumnsBreakInsideColumnNotEmptyPage(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page1 := renderOnePage(t, `
       <style>
@@ -776,21 +786,20 @@ func TestColumnsBreakInsideColumnNotEmptyPage(t *testing.T) {
       <p>p</p>
       <div><section>a b c</section> d</div>
     `)
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page1)
+	body := unpack1(html)
 	p, div := unpack2(body)
-	assertText(t, p.Box().Children[0].Box().Children[0], "p")
+	assertText(t, unpack1(p.Box().Children[0]), "p")
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 2, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[0].Box().Children[0].Box().Children[1].Box().Children[0], "b")
-	assertText(t, columns[0].Box().Children[0].Box().Children[2].Box().Children[0], "c")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0].Box().Children[0], "d")
+	tu.AssertEqual(t, len(columns), 2)
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[1]), "b")
+	assertText(t, unpack1(columns[0].Box().Children[0].Box().Children[2]), "c")
+	assertText(t, unpack1(columns[1].Box().Children[0].Box().Children[0]), "d")
 }
 
 func TestColumnsNotEnoughContent(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -801,21 +810,20 @@ func TestColumnsNotEnoughContent(t *testing.T) {
       </style>
       <div>a b c</div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().Width, pr.Float(5), "div")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().Width, Fl(5))
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 3, "len")
+	tu.AssertEqual(t, len(columns), 3)
 	widths, _, xs, ys := columnsMetrics(columns)
-	tu.AssertEqual(t, widths, []pr.Float{1, 1, 1}, "widths")
-	tu.AssertEqual(t, xs, []pr.Float{0, 1, 2}, "xs")
-	tu.AssertEqual(t, ys, []pr.Float{0, 0, 0}, "ys")
+	tu.AssertEqual(t, widths, []pr.Float{1, 1, 1})
+	tu.AssertEqual(t, xs, []pr.Float{0, 1, 2})
+	tu.AssertEqual(t, ys, []pr.Float{0, 0, 0})
 }
 
 func TestColumnsHigherThanPage(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -827,32 +835,31 @@ func TestColumnsHigherThanPage(t *testing.T) {
       <div>a b c d e f g h</div>
     `)
 	page1, page2 := pages[0], pages[1]
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().Width, pr.Float(5), "")
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().Width, Fl(5))
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 5, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0], "a")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0], "b")
-	assertText(t, columns[2].Box().Children[0].Box().Children[0], "c")
-	assertText(t, columns[3].Box().Children[0].Box().Children[0], "d")
-	assertText(t, columns[4].Box().Children[0].Box().Children[0], "e")
+	tu.AssertEqual(t, len(columns), 5)
+	assertText(t, unpack1(columns[0].Box().Children[0]), "a")
+	assertText(t, unpack1(columns[1].Box().Children[0]), "b")
+	assertText(t, unpack1(columns[2].Box().Children[0]), "c")
+	assertText(t, unpack1(columns[3].Box().Children[0]), "d")
+	assertText(t, unpack1(columns[4].Box().Children[0]), "e")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().Width, pr.Float(5), "")
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
+	tu.AssertEqual(t, div.Box().Width, Fl(5))
 	columns = div.Box().Children
-	tu.AssertEqual(t, len(columns), 3, "")
-	assertText(t, columns[0].Box().Children[0].Box().Children[0], "f")
-	assertText(t, columns[1].Box().Children[0].Box().Children[0], "g")
-	assertText(t, columns[2].Box().Children[0].Box().Children[0], "h")
+	tu.AssertEqual(t, len(columns), 3)
+	assertText(t, unpack1(columns[0].Box().Children[0]), "f")
+	assertText(t, unpack1(columns[1].Box().Children[0]), "g")
+	assertText(t, unpack1(columns[2].Box().Children[0]), "h")
 }
 
 func TestColumnsEmpty(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -863,18 +870,17 @@ func TestColumnsEmpty(t *testing.T) {
       </style>
       <div></div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().Width, pr.Float(3), "div")
-	tu.AssertEqual(t, div.Box().Height, pr.Float(0), "div")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().Width, Fl(3))
+	tu.AssertEqual(t, div.Box().Height, Fl(0))
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 0, "len")
+	tu.AssertEqual(t, len(columns), 0)
 }
 
 func TestColumnsFixedHeight(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, prop := range []string{"height", "min-height"} {
 		page := renderOnePage(t, fmt.Sprintf(`
@@ -886,25 +892,24 @@ func TestColumnsFixedHeight(t *testing.T) {
       </style>
       <div>a b c</div>
     `, prop))
-		html := page.Box().Children[0]
-		body := html.Box().Children[0]
-		div := body.Box().Children[0]
-		tu.AssertEqual(t, div.Box().Width, pr.Float(4), "div")
+		html := unpack1(page)
+		body := unpack1(html)
+		div := unpack1(body)
+		tu.AssertEqual(t, div.Box().Width, Fl(4))
 		columns := div.Box().Children
-		tu.AssertEqual(t, len(columns), 3, "len")
+		tu.AssertEqual(t, len(columns), 3)
 
 		widths, heights, xs, ys := columnsMetrics(columns)
 
-		tu.AssertEqual(t, widths, []pr.Float{1, 1, 1}, "widths")
-		tu.AssertEqual(t, heights, []pr.Float{10, 10, 10}, "heights")
-		tu.AssertEqual(t, xs, []pr.Float{0, 1, 2}, "xs")
-		tu.AssertEqual(t, ys, []pr.Float{0, 0, 0}, "ys")
+		tu.AssertEqual(t, widths, []pr.Float{1, 1, 1})
+		tu.AssertEqual(t, heights, []pr.Float{10, 10, 10})
+		tu.AssertEqual(t, xs, []pr.Float{0, 1, 2})
+		tu.AssertEqual(t, ys, []pr.Float{0, 0, 0})
 	}
 }
 
 func TestColumnsPadding(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -915,25 +920,24 @@ func TestColumnsPadding(t *testing.T) {
       </style>
       <div>a b c</div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().Width, pr.Float(4), "div.Width")
-	tu.AssertEqual(t, div.Box().Height, pr.Float(1), "div.Height")
-	tu.AssertEqual(t, div.Box().PaddingWidth(), pr.Float(6), "div.PaddingWidth")
-	tu.AssertEqual(t, div.Box().PaddingHeight(), pr.Float(3), "div.PaddingHeight")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().Width, Fl(4))
+	tu.AssertEqual(t, div.Box().Height, Fl(1))
+	tu.AssertEqual(t, div.Box().PaddingWidth(), Fl(6))
+	tu.AssertEqual(t, div.Box().PaddingHeight(), Fl(3))
 	columns := div.Box().Children
-	tu.AssertEqual(t, len(columns), 3, "len")
+	tu.AssertEqual(t, len(columns), 3)
 	widths, heights, xs, ys := columnsMetrics(columns)
-	tu.AssertEqual(t, widths, []pr.Float{1, 1, 1}, "widths")
-	tu.AssertEqual(t, heights, []pr.Float{1, 1, 1}, "heights")
-	tu.AssertEqual(t, xs, []pr.Float{1, 2, 3}, "xs")
-	tu.AssertEqual(t, ys, []pr.Float{1, 1, 1}, "ys")
+	tu.AssertEqual(t, widths, []pr.Float{1, 1, 1})
+	tu.AssertEqual(t, heights, []pr.Float{1, 1, 1})
+	tu.AssertEqual(t, xs, []pr.Float{1, 2, 3})
+	tu.AssertEqual(t, ys, []pr.Float{1, 1, 1})
 }
 
 func TestColumnsRelative(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -946,27 +950,26 @@ func TestColumnsRelative(t *testing.T) {
       </style>
       <div>a b c d<article>e</article></div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().Width, pr.Float(4), "div")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().Width, Fl(4))
 	columns := div.Box().Children
 	widths, _, xs, ys := columnsMetrics(columns)
-	tu.AssertEqual(t, widths, []pr.Float{1, 1, 1, 1}, "widths")
-	tu.AssertEqual(t, xs, []pr.Float{2, 3, 4, 5}, "xs")
-	tu.AssertEqual(t, ys, []pr.Float{1, 1, 1, 1}, "ys")
+	tu.AssertEqual(t, widths, []pr.Float{1, 1, 1, 1})
+	tu.AssertEqual(t, xs, []pr.Float{2, 3, 4, 5})
+	tu.AssertEqual(t, ys, []pr.Float{1, 1, 1, 1})
 	column4 := columns[len(columns)-1]
-	columnLine := column4.Box().Children[0]
+	columnLine := unpack1(column4)
 	absoluteArticle := columnLine.Box().Children[1]
-	absoluteLine := absoluteArticle.Box().Children[0]
-	span := absoluteLine.Box().Children[0]
-	tu.AssertEqual(t, span.Box().PositionX, pr.Float(5), "PositionX") // Default position of the 4th column
-	tu.AssertEqual(t, span.Box().PositionY, pr.Float(4), "PositionY") // div"s 1px + span"s 3px
+	absoluteLine := unpack1(absoluteArticle)
+	span := unpack1(absoluteLine)
+	tu.AssertEqual(t, span.Box().PositionX, Fl(5))
+	tu.AssertEqual(t, span.Box().PositionY, Fl(4))
 }
 
 func TestColumnsRegression1(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test #1 for https://github.com/Kozea/WeasyPrint/issues/659
 	pages := renderPages(t, `
@@ -984,38 +987,37 @@ func TestColumnsRegression1(t *testing.T) {
     `)
 	page1, page2, page3 := pages[0], pages[1], pages[2]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
-	tu.AssertEqual(t, div.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "A", "div")
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, unpack1(div.Box().Children[0]).(*bo.TextBox).Text, "A")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
 	column1, column2 := unpack2(div)
-	tu.AssertEqual(t, column1.Box().PositionY, pr.Float(0), "column1")
-	tu.AssertEqual(t, column2.Box().PositionY, pr.Float(0), "column2")
+	tu.AssertEqual(t, column1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, column2.Box().PositionY, Fl(0))
 	div1, div2 := unpack2(column1)
-	div3 := column2.Box().Children[0]
-	tu.AssertEqual(t, div1.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div3.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div2.Box().PositionY, pr.Float(20), "div2")
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B1", "div1")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B2", "div2")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B3", "div3")
+	div3 := unpack1(column2)
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div2.Box().PositionY, Fl(20))
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B1")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B2")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B3")
 
-	html = page3.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
-	tu.AssertEqual(t, div.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "C", "div")
+	html = unpack1(page3)
+	body = unpack1(html)
+	div = unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, unpack1(div.Box().Children[0]).(*bo.TextBox).Text, "C")
 }
 
 func TestColumnsRegression2(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test #2 for https://github.com/Kozea/WeasyPrint/issues/659
 	pages := renderPages(t, `
@@ -1032,37 +1034,36 @@ func TestColumnsRegression2(t *testing.T) {
     `)
 	page1, page2 := pages[0], pages[1]
 
-	html := page1.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
+	html := unpack1(page1)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
 	column1, column2 := unpack2(div)
-	tu.AssertEqual(t, column1.Box().PositionY, pr.Float(0), "column1")
-	tu.AssertEqual(t, column2.Box().PositionY, pr.Float(0), "column2")
+	tu.AssertEqual(t, column1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, column2.Box().PositionY, Fl(0))
 	div1, div2 := unpack2(column1)
-	div3 := column2.Box().Children[0]
-	tu.AssertEqual(t, div1.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div3.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div2.Box().PositionY, pr.Float(20), "div2")
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B1", "div1")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B2", "div2")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B3", "div3")
+	div3 := unpack1(column2)
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div2.Box().PositionY, Fl(20))
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B1")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B2")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B3")
 
-	html = page2.Box().Children[0]
-	body = html.Box().Children[0]
-	div = body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
-	column1 = div.Box().Children[0]
-	tu.AssertEqual(t, column1.Box().PositionY, pr.Float(0), "column1")
-	div1 = column1.Box().Children[0]
-	tu.AssertEqual(t, div1.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div3.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B4", "div1")
+	html = unpack1(page2)
+	body = unpack1(html)
+	div = unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
+	column1 = unpack1(div)
+	tu.AssertEqual(t, column1.Box().PositionY, Fl(0))
+	div1 = unpack1(column1)
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B4")
 }
 
 func TestColumnsRegression3(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test #3 for https://github.com/Kozea/WeasyPrint/issues/659
 	page := renderOnePage(t, `
@@ -1076,27 +1077,26 @@ func TestColumnsRegression3(t *testing.T) {
         <div style="height:60px">B3</div>
       </div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
 	column1, column2 := unpack2(div)
-	tu.AssertEqual(t, column1.Box().PositionY, pr.Float(0), "column1")
-	tu.AssertEqual(t, column2.Box().PositionY, pr.Float(0), "column1")
+	tu.AssertEqual(t, column1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, column2.Box().PositionY, Fl(0))
 	div1, div2 := unpack2(column1)
-	div3 := column2.Box().Children[0]
-	tu.AssertEqual(t, div1.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div3.Box().PositionY, pr.Float(0), "div1")
-	tu.AssertEqual(t, div2.Box().PositionY, pr.Float(30), "div2")
-	tu.AssertEqual(t, div.Box().Height, pr.Float(5+20+5+60), "div")
-	tu.AssertEqual(t, div1.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B1", "div1")
-	tu.AssertEqual(t, div2.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B2", "div2")
-	tu.AssertEqual(t, div3.Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "B3", "div3")
+	div3 := unpack1(column2)
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
+	tu.AssertEqual(t, div2.Box().PositionY, Fl(30))
+	tu.AssertEqual(t, div.Box().Height, Fl(5+20+5+60))
+	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B1")
+	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B2")
+	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B3")
 }
 
 func TestColumnsRegression4(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/897
 	page := renderOnePage(t, `
@@ -1106,19 +1106,18 @@ func TestColumnsRegression4(t *testing.T) {
         </div>
       </div>
     `)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	div := body.Box().Children[0]
-	tu.AssertEqual(t, div.Box().PositionY, pr.Float(0), "div")
-	column1 := div.Box().Children[0]
-	tu.AssertEqual(t, column1.Box().PositionY, pr.Float(0), "column1")
-	div1 := column1.Box().Children[0]
-	tu.AssertEqual(t, div1.Box().PositionY, pr.Float(0), "div1")
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
+	column1 := unpack1(div)
+	tu.AssertEqual(t, column1.Box().PositionY, Fl(0))
+	div1 := unpack1(column1)
+	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
 }
 
 func TestColumnsRegression5(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1191
 	_ = renderPages(t, `
@@ -1136,5 +1135,16 @@ func TestColumnsRegression5(t *testing.T) {
         </div>
       </div>
       <div style="height: 50px"></div>
+    `)
+}
+
+func TestColumnsRegression_6(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	// Regression test for https://github.com/Kozea/WeasyPrint/issues/2103
+	renderPages(t, `
+      <style>
+        @page {width: 100px; height: 100px}
+      </style>
+      <div style="columns: 2; column-width: 100px; width: 10px">abc def</div>
     `)
 }

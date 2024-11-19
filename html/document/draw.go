@@ -103,14 +103,9 @@ const (
 `
 )
 
-type Bleed struct {
-	Top, Bottom, Left, Right fl
-}
-
-// FIXME: check gofpdf support for SVG
 type svgArgs struct {
 	Width, Height    fl
-	Bleed, HalfBleed Bleed
+	Bleed, HalfBleed bo.Bleed
 }
 
 // Transform a HSV color to a RGB color.
@@ -202,29 +197,12 @@ func (ctx drawContext) StrutLayoutsCache() map[text.StrutLayoutKey][2]pr.Float {
 
 // Draw the given PageBox.
 func (ctx drawContext) drawPage(page *bo.PageBox) {
-	bleed := Bleed{
-		Top:    fl(page.Style.GetBleedTop().Value),
-		Bottom: fl(page.Style.GetBleedBottom().Value),
-		Left:   fl(page.Style.GetBleedLeft().Value),
-		Right:  fl(page.Style.GetBleedRight().Value),
-	}
 	marks := page.Style.GetMarks()
 	stackingContext := NewStackingContextFromPage(page)
-	ctx.drawBackground(stackingContext.box.Box().Background, false, bleed, marks)
-	ctx.drawBackground(page.CanvasBackground, false, Bleed{}, pr.Marks{})
+	ctx.drawBackground(stackingContext.box.Box().Background, false, page.Bleed(), marks)
+	ctx.drawBackground(page.CanvasBackground, false, bo.Bleed{}, pr.Marks{})
 	ctx.drawBorder(page)
 	ctx.drawStackingContext(stackingContext)
-}
-
-func (ctx drawContext) drawBoxBackgroundAndBorder(box Box) error {
-	if box_, ok := box.(bo.TableBoxITF); ok {
-		ctx.drawTable(box_.Table())
-	} else {
-		ctx.drawBackgroundDefaut(box.Box().Background)
-		ctx.drawBorder(box)
-	}
-
-	return nil
 }
 
 // Draw a “stackingContext“ on “context“.
@@ -243,16 +221,16 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 		if clips := box.Style.GetClip(); box.IsAbsolutelyPositioned() && len(clips) != 0 {
 			top, right, bottom, left := clips[0], clips[1], clips[2], clips[3]
-			if top.String == "auto" {
+			if top.S == "auto" {
 				top.Value = 0
 			}
-			if right.String == "auto" {
+			if right.S == "auto" {
 				right.Value = 0
 			}
-			if bottom.String == "auto" {
+			if bottom.S == "auto" {
 				bottom.Value = box.BorderHeight()
 			}
-			if left.String == "auto" {
+			if left.S == "auto" {
 				left.Value = box.BorderWidth()
 			}
 			ctx.dst.Rectangle(
@@ -285,9 +263,10 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 		// Point 2
 		if bo.BlockT.IsInstance(box_) || bo.MarginT.IsInstance(box_) ||
 			bo.InlineBlockT.IsInstance(box_) || bo.TableCellT.IsInstance(box_) ||
-			bo.FlexContainerT.IsInstance(box_) {
-			// The canvas background was removed by layoutBackground
-			ctx.drawBoxBackgroundAndBorder(box_)
+			bo.FlexContainerT.IsInstance(box_) || bo.ReplacedT.IsInstance(box_) {
+			// The canvas background was removed by layoutBackgrounds
+			ctx.drawBackgroundDefaut(box_.Box().Background)
+			ctx.drawBorder(box_)
 		}
 
 		ctx.dst.OnNewStack(func() {
@@ -307,7 +286,12 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 
 			// Point 4
 			for _, block := range stackingContext.blockLevelBoxes {
-				ctx.drawBoxBackgroundAndBorder(block)
+				if box_, ok := block.(bo.TableBoxITF); ok {
+					ctx.drawTable(box_.Table())
+				} else {
+					ctx.drawBackgroundDefaut(block.Box().Background)
+					ctx.drawBorder(block)
+				}
 			}
 
 			// Point 5
@@ -323,7 +307,6 @@ func (ctx drawContext) drawStackingContext(stackingContext StackingContext) {
 			// Point 7
 			for _, block := range append([]Box{box_}, stackingContext.blocksAndCells...) {
 				if blockRep, ok := block.(bo.ReplacedBoxITF); ok {
-					ctx.drawBorder(blockRep)
 					ctx.drawReplacedbox(blockRep)
 				} else if children := block.Box().Children; len(children) != 0 {
 					if bo.LineT.IsInstance(children[len(children)-1]) {
@@ -411,14 +394,14 @@ func reversed(in []bo.BackgroundLayer) []bo.BackgroundLayer {
 }
 
 func (ctx drawContext) drawBackgroundDefaut(bg *bo.Background) {
-	ctx.drawBackground(bg, true, Bleed{}, pr.Marks{})
+	ctx.drawBackground(bg, true, bo.Bleed{}, pr.Marks{})
 }
 
 // Draw the background color and image
 // If “clipBox“ is set to “false“, the background is not clipped to the
 // border box of the background, but only to the painting area
 // clipBox=true bleed=nil marks=()
-func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Bleed, marks pr.Marks) {
+func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed bo.Bleed, marks pr.Marks) {
 	if bg == nil {
 		return
 	}
@@ -436,31 +419,15 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 			ctx.dst.OnNewStack(func() {
 				ctx.dst.State().SetColorRgba(bg.Color, false)
 				paintingArea := bg.Layers[len(bg.Layers)-1].PaintingArea
-				if !paintingArea.IsNone() {
-					if (bleed != Bleed{}) {
-						// Painting area is the PDF BleedBox
-						ptx, pty, ptw, pth := paintingArea.Unpack()
-						paintingArea = pr.Rectangle{
-							pr.Float(ptx - bleed.Left),
-							pr.Float(pty - bleed.Top),
-							pr.Float(ptw + bleed.Left + bleed.Right),
-							pr.Float(pth + bleed.Top + bleed.Bottom),
-						}
-					}
-					ctx.dst.Rectangle(paintingArea.Unpack())
-					ctx.dst.State().Clip(false)
-				}
+				ctx.dst.Rectangle(paintingArea.Unpack())
+				ctx.dst.State().Clip(false)
 				ctx.dst.Rectangle(paintingArea.Unpack())
 				ctx.dst.Paint(backend.FillNonZero)
 			})
 		}
 
-		if (bleed != Bleed{}) && !marks.IsNone() {
+		if (bleed != bo.Bleed{}) && !marks.IsNone() {
 			x, y, width, height := bg.Layers[len(bg.Layers)-1].PaintingArea.Unpack()
-			x -= bleed.Left
-			y -= bleed.Top
-			width += bleed.Left + bleed.Right
-			height += bleed.Top + bleed.Bottom
 			svg := headerSVG
 			if marks.Crop {
 				svg += crop
@@ -469,7 +436,7 @@ func (ctx drawContext) drawBackground(bg *bo.Background, clipBox bool, bleed Ble
 				svg += cross
 			}
 			svg += "</svg>"
-			halfBleed := Bleed{
+			halfBleed := bo.Bleed{
 				Top:    bleed.Top * 0.5,
 				Bottom: bleed.Bottom * 0.5,
 				Left:   bleed.Left * 0.5,
@@ -573,7 +540,7 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 		mat := matrix.New(1, 0, 0, 1, X, Y) // translate
 		ctx.dst.State().SetColorPattern(patttern, imageWidth, imageHeight, mat, false)
 		if layer.Unbounded {
-			x1, y1, x2, y2 := ctx.dst.GetRectangle()
+			x1, y1, x2, y2 := ctx.dst.GetBoundingBox()
 			ctx.dst.Rectangle(x1, y1, x2-x1, y2-y1)
 		} else {
 			ctx.dst.Rectangle(paintingX, paintingY, paintingWidth, paintingHeight)
@@ -582,21 +549,21 @@ func (ctx drawContext) drawBackgroundImage(layer bo.BackgroundLayer, imageRender
 	})
 }
 
-func styledColor(style pr.String, color Color, side pr.KnownProp) []Color {
+func styledColor(style pr.String, color Color, side pr.KnownProp) [2]Color {
 	if style == "inset" || style == "outset" {
 		doLighten := (side == top || side == left) != (style == "inset")
 		if doLighten {
-			return []Color{lighten(color)}
+			return [2]Color{lighten(color)}
 		}
-		return []Color{darken(color)}
+		return [2]Color{darken(color)}
 	} else if style == "ridge" || style == "groove" {
 		if (side == top || side == left) != (style == "ridge") {
-			return []Color{lighten(color), darken(color)}
+			return [2]Color{lighten(color), darken(color)}
 		} else {
-			return []Color{darken(color), lighten(color)}
+			return [2]Color{darken(color), lighten(color)}
 		}
 	}
-	return []Color{color}
+	return [2]Color{color}
 }
 
 // Draw the box border
@@ -607,7 +574,7 @@ func (ctx drawContext) drawBorder(box_ Box) {
 
 	// Draw column borders.
 	drawColumnBorder := func() {
-		columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().String != "auto" || box.Style.GetColumnCount().String != "auto")
+		columns := bo.BlockContainerT.IsInstance(box_) && (box.Style.GetColumnWidth().S != "auto" || box.Style.GetColumnCount().String != "auto")
 		if crw := box.Style.GetColumnRuleWidth(); columns && !crw.IsNone() {
 			borderWidths := pr.Rectangle{0, 0, 0, crw.Value}
 
@@ -649,6 +616,13 @@ func (ctx drawContext) drawBorder(box_ Box) {
 		return
 	}
 
+	// If there's a border image, that takes precedence.
+	if box.BorderImage != nil {
+		ctx.drawBorderImage(box)
+		drawColumnBorder()
+		return
+	}
+
 	widths := pr.Rectangle{box.BorderTopWidth.V(), box.BorderRightWidth.V(), box.BorderBottomWidth.V(), box.BorderLeftWidth.V()}
 
 	// No border, return early.
@@ -674,15 +648,16 @@ func (ctx drawContext) drawBorder(box_ Box) {
 	// The 4 sides are solid or double, and they have the same color. Oh yeah!
 	// We can draw them so easily!
 	if len(stylesSet) == 1 && (stylesSet.Has("solid") || stylesSet.Has("double")) && len(colorsSet) == 1 {
-		ctx.drawRoundedBorder(box, styles[0], []Color{colors[0]})
+		ctx.drawRoundedBorder(box, styles[0], [2]Color{colors[0]})
 		drawColumnBorder()
 		return
 	}
 
-	// We"re not smart enough to find a good way to draw the borders :/. We must
-	// draw them side by side.
-	for i, side := range sides {
-		width, color, style := widths[i], colors[i], styles[i]
+	// We're not smart enough to find a good way to draw the borders :/. We must
+	// draw them side by side. Order is not specified, but this one seems to be
+	// close to what other browsers do.
+	for _, i := range [...]uint8{2, 3, 1, 0} {
+		side, width, color, style := sides[i], widths[i], colors[i], styles[i]
 		if width == 0 || color.IsNone() {
 			continue
 		}
@@ -697,6 +672,233 @@ func (ctx drawContext) drawBorder(box_ Box) {
 	}
 
 	drawColumnBorder()
+}
+
+// Draw [box] border image on stream
+func (ctx drawContext) drawBorderImage(box *bo.BoxFields) {
+	// See https://drafts.csswg.org/css-backgrounds-3/#border-images
+	image := box.BorderImage
+	width, height, ratio := image.GetIntrinsicSize(
+		box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
+	intrinsicWidth_, intrinsicHeight_ := layout.DefaultImageSizing(width, height, ratio, nil, nil,
+		box.BorderWidth(), box.BorderHeight())
+	intrinsicWidth, intrinsicHeight := fl(intrinsicWidth_), fl(intrinsicHeight_)
+
+	imageSlice := box.Style.GetBorderImageSlice()[:4]
+	shouldFill := box.Style.GetBorderImageSlice()[4]
+
+	computeSliceDimension := func(dimension pr.DimOrS, intrinsic pr.Float) fl {
+		if dimension.Unit == pr.Scalar {
+			return fl(pr.Min(dimension.Value, intrinsic))
+		} else {
+			// assert dimension.unit == "%"
+			return fl(pr.Min(100, dimension.Value) / 100 * intrinsic)
+		}
+	}
+
+	sliceTop := computeSliceDimension(imageSlice[0], intrinsicHeight_)
+	sliceRight := computeSliceDimension(imageSlice[1], intrinsicWidth_)
+	sliceBottom := computeSliceDimension(imageSlice[2], intrinsicHeight_)
+	sliceLeft := computeSliceDimension(imageSlice[3], intrinsicWidth_)
+
+	styleRepeat := box.Style.GetBorderImageRepeat()
+
+	bBox := box.RoundedBorderBox()
+	x, y, w, h := fl(bBox.X), fl(bBox.Y), fl(bBox.Width), fl(bBox.Height)
+	paddingBox := box.RoundedPaddingBox()
+	borderLeft := fl(paddingBox.X) - x
+	borderTop := fl(paddingBox.Y) - y
+	borderRight := w - fl(paddingBox.Width) - borderLeft
+	borderBottom := h - fl(paddingBox.Height) - borderTop
+
+	computeOutsetDimension := func(dimension pr.DimOrS, fromBorder fl) fl {
+		if dimension.Unit == pr.Scalar {
+			return fl(dimension.Value) * fromBorder
+		} else {
+			// assert dimension.unit == "px"
+			return fl(dimension.Value)
+		}
+	}
+
+	outsets := box.Style.GetBorderImageOutset()
+	outsetTop := computeOutsetDimension(outsets[0], borderTop)
+	outsetRight := computeOutsetDimension(outsets[1], borderRight)
+	outsetBottom := computeOutsetDimension(outsets[2], borderBottom)
+	outsetLeft := computeOutsetDimension(outsets[3], borderLeft)
+
+	x -= outsetLeft
+	y -= outsetTop
+	w += outsetLeft + outsetRight
+	h += outsetTop + outsetBottom
+
+	computeWidthAdjustment := func(dimension pr.DimOrS, original, intrinsic, areaDimension fl) fl {
+		if dimension.S == "auto" {
+			return fl(intrinsic)
+		} else if dimension.Unit == pr.Scalar {
+			return fl(dimension.Value) * original
+		} else if dimension.Unit == pr.Perc {
+			return fl(dimension.Value) / 100 * areaDimension
+		} else {
+			// assert dimension.unit == "px"
+			return fl(dimension.Value)
+		}
+	}
+
+	// We make adjustments to the border* variables after handling outsets
+	// because numerical outsets are relative to border-width, not
+	// border-image-width. Also, the border image area that is used
+	// for percentage-based border-image-width values includes any expanded
+	// area due to border-image-outset.
+	widths := box.Style.GetBorderImageWidth()
+	borderTop = computeWidthAdjustment(widths[0], borderTop, sliceTop, h)
+	borderRight = computeWidthAdjustment(widths[1], borderRight, sliceRight, w)
+	borderBottom = computeWidthAdjustment(widths[2], borderBottom, sliceBottom, h)
+	borderLeft = computeWidthAdjustment(widths[3], borderLeft, sliceLeft, w)
+
+	// repeatX="stretch", repeatY="stretch",
+	// scaleX=None, scaleY=None
+	drawBorderImage := func(x, y, width, height, sliceX, sliceY,
+		sliceWidth, sliceHeight fl,
+		repeatX, repeatY string,
+		scaleX, scaleY fl,
+	) (_, _ fl) {
+		var (
+			nRepeatsX, nRepeatsY int
+			extraDx, extraDy     fl
+		)
+		if intrinsicWidth == 0 || width == 0 || sliceWidth == 0 {
+			scaleX = 0
+		} else {
+			extraDx = 0
+			if scaleX == 0 {
+				scaleX = 1
+				if height != 0 && sliceHeight != 0 {
+					scaleX = (height / sliceHeight)
+				}
+			}
+			switch repeatX {
+			case "repeat":
+				nRepeatsX = int(utils.Ceil(width / sliceWidth / scaleX))
+			case "space":
+				nRepeatsX = int(utils.Floor(width / sliceWidth / scaleX))
+				// Space is before the first repeat && after the last,
+				// so there"s one more space than repeat.
+				extraDx = ((width/scaleX - fl(nRepeatsX)*sliceWidth) / (fl(nRepeatsX) + 1))
+			case "round":
+				nRepeatsX = utils.MaxInt(1, int(utils.Round(width/sliceWidth/scaleX)))
+				scaleX = width / (fl(nRepeatsX) * sliceWidth)
+			default:
+				nRepeatsX = 1
+				scaleX = width / sliceWidth
+			}
+		}
+
+		if intrinsicHeight == 0 || height == 0 || sliceHeight == 0 {
+			scaleY = 0
+		} else {
+			extraDy = 0
+			if scaleY == 0 {
+				scaleY = 1
+				if width != 0 && sliceWidth != 0 {
+					scaleY = (width / sliceWidth)
+				}
+			}
+
+			switch repeatY {
+			case "repeat":
+				nRepeatsY = int(utils.Ceil(height / sliceHeight / scaleY))
+			case "space":
+				nRepeatsY = int(utils.Floor(height / sliceHeight / scaleY))
+				// Space is before the first repeat and after the last,
+				// so there"s one more space than repeat.
+				extraDy = ((height/scaleY - fl(nRepeatsY)*sliceHeight) / (fl(nRepeatsY) + 1))
+			case "round":
+				nRepeatsY = utils.MaxInt(1, int(utils.Round(height/sliceHeight/scaleY)))
+				scaleY = height / (fl(nRepeatsY) * sliceHeight)
+			default:
+				nRepeatsY = 1
+				scaleY = height / sliceHeight
+			}
+		}
+
+		if scaleX == 0 || scaleY == 0 {
+			return scaleX, scaleY
+		}
+
+		renderedWidth := intrinsicWidth * scaleX
+		renderedHeight := intrinsicHeight * scaleY
+		offsetX := renderedWidth * sliceX / intrinsicWidth
+		offsetY := renderedHeight * sliceY / intrinsicHeight
+
+		ctx.dst.OnNewStack(func() {
+			ctx.dst.Rectangle(x, y, width, height)
+			ctx.dst.State().Clip(false)
+			ctx.dst.State().Transform(matrix.Translation(x-offsetX+extraDx, y-offsetY+extraDy))
+			ctx.dst.State().Transform(matrix.Scaling(scaleX, scaleY))
+			for i := 0; i < nRepeatsX; i++ {
+				for j := 0; j < nRepeatsY; j++ {
+					ctx.dst.OnNewStack(func() {
+						translateX := fl(i) * (sliceWidth + extraDx)
+						translateY := fl(j) * (sliceHeight + extraDy)
+						ctx.dst.State().Transform(matrix.Translation(translateX, translateY))
+						ctx.dst.Rectangle(offsetX/scaleX, offsetY/scaleY, sliceWidth, sliceHeight)
+						ctx.dst.State().Clip(false)
+						image.Draw(ctx.dst, ctx, intrinsicWidth, intrinsicHeight,
+							string(box.Style.GetImageRendering()))
+					})
+				}
+			}
+		})
+
+		return scaleX, scaleY
+	}
+
+	// Top left.
+	scaleLeft, scaleTop := drawBorderImage(x, y, borderLeft, borderTop, 0, 0, sliceLeft, sliceTop, "", "", 0, 0)
+	// Top right.
+	drawBorderImage(x+w-borderRight, y, borderRight, borderTop, intrinsicWidth-sliceRight, 0, sliceRight, sliceTop, "", "", 0, 0)
+	// Bottom right.
+	scaleRight, scaleBottom := drawBorderImage(x+w-borderRight, y+h-borderBottom, borderRight, borderBottom,
+		intrinsicWidth-sliceRight, intrinsicHeight-sliceBottom, sliceRight, sliceBottom, "", "", 0, 0)
+	// Bottom left.
+	drawBorderImage(x, y+h-borderBottom, borderLeft, borderBottom,
+		0, intrinsicHeight-sliceBottom, sliceLeft, sliceBottom, "", "", 0, 0)
+	if sliceLeft+sliceRight < intrinsicWidth {
+		// Top middle.
+		drawBorderImage(
+			x+borderLeft, y, w-borderLeft-borderRight, borderTop,
+			sliceLeft, 0, intrinsicWidth-sliceLeft-sliceRight,
+			sliceTop, styleRepeat[0], "", 0, 0)
+		// Bottom middle.
+		drawBorderImage(
+			x+borderLeft, y+h-borderBottom,
+			w-borderLeft-borderRight, borderBottom,
+			sliceLeft, intrinsicHeight-sliceBottom,
+			intrinsicWidth-sliceLeft-sliceRight, sliceBottom,
+			styleRepeat[0], "", 0, 0)
+	}
+	if sliceTop+sliceBottom < intrinsicHeight {
+		// Right middle.
+		drawBorderImage(x+w-borderRight, y+borderTop, borderRight, h-borderTop-borderBottom,
+			intrinsicWidth-sliceRight, sliceTop, sliceRight, intrinsicHeight-sliceTop-sliceBottom,
+			"", styleRepeat[1], 0, 0)
+		// Left middle.
+		drawBorderImage(x, y+borderTop, borderLeft, h-borderTop-borderBottom, 0, sliceTop, sliceLeft,
+			intrinsicHeight-sliceTop-sliceBottom,
+			"", styleRepeat[1], 0, 0)
+	}
+	if !shouldFill.IsNone() && sliceLeft+sliceRight < intrinsicWidth && sliceTop+sliceBottom < intrinsicHeight {
+		// Fill middle.
+		if scaleLeft == 0 {
+			scaleLeft = scaleRight
+		}
+		if sliceTop == 0 {
+			sliceTop = scaleBottom
+		}
+		drawBorderImage(x+borderLeft, y+borderTop, w-borderLeft-borderRight, h-borderTop-borderBottom, sliceLeft, sliceTop,
+			intrinsicWidth-sliceLeft-sliceRight, intrinsicHeight-sliceTop-sliceBottom,
+			styleRepeat[0], styleRepeat[1], scaleLeft, scaleTop)
+	}
 }
 
 // Clip one segment of box border (border_widths=nil, radii=nil).
@@ -816,9 +1018,9 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side p
 				// 2x - 1/2 dashes
 				dash = length / (dashLength + utils.FloatModulo(dashLength, 2) - 0.5)
 			}
-			dashes1 := int(math.Ceil(float64((chl1 - dash/2) / dash)))
-			dashes2 := int(math.Ceil(float64((chl2 - dash/2) / dash)))
-			line := int(math.Floor(float64(lineLength / dash)))
+			dashes1 := int(utils.Ceil((chl1 - dash/2) / dash))
+			dashes2 := int(utils.Ceil((chl2 - dash/2) / dash))
+			line := int(utils.Floor(lineLength / dash))
 
 			drawDots := func(dashes, line int, way, x, y, px, py, chl fl) (int, fl) {
 				if dashes == 0 {
@@ -918,7 +1120,7 @@ func clipBorderSegment(context backend.Canvas, style pr.String, width fl, side p
 	context.State().Clip(true)
 }
 
-func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, colors []Color) {
+func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, colors [2]Color) {
 	if style == "ridge" || style == "groove" {
 		ctx.dst.State().SetColorRgba(colors[0], false)
 		roundedBoxPath(ctx.dst, box.RoundedPaddingBox())
@@ -941,7 +1143,7 @@ func (ctx drawContext) drawRoundedBorder(box *bo.BoxFields, style pr.String, col
 	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
-func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String, color []Color) {
+func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String, color [2]Color) {
 	bbx, bby, bbw, bbh := box.Unpack()
 	bt, br, bb, bl := widths.Unpack()
 	if style == "ridge" || style == "groove" {
@@ -965,6 +1167,79 @@ func (ctx drawContext) drawRectBorder(box, widths pr.Rectangle, style pr.String,
 	ctx.dst.Paint(backend.FillEvenOdd)
 }
 
+// Only works for vertical or horizontal lines : x1 == x2 or y1 == y2
+func (ctx drawContext) drawLine(x1, y1, x2, y2, thickness pr.Fl, style pr.String, colors [2]Color, offset fl) {
+	ctx.dst.OnNewStack(func() {
+		if !(style == "ridge" || style == "groove") {
+			ctx.dst.State().SetColorRgba(colors[0], true)
+		}
+
+		if style == "dashed" {
+			ctx.dst.State().SetDash([]fl{5 * thickness}, offset)
+		} else if style == "dotted" {
+			ctx.dst.State().SetDash([]fl{thickness}, offset)
+		}
+
+		if style == "double" {
+			ctx.dst.State().SetLineWidth(thickness / 3)
+			if x1 == x2 {
+				ctx.dst.MoveTo(x1-thickness/3, y1)
+				ctx.dst.LineTo(x2-thickness/3, y2)
+				ctx.dst.MoveTo(x1+thickness/3, y1)
+				ctx.dst.LineTo(x2+thickness/3, y2)
+			} else if y1 == y2 {
+				ctx.dst.MoveTo(x1, y1-thickness/3)
+				ctx.dst.LineTo(x2, y2-thickness/3)
+				ctx.dst.MoveTo(x1, y1+thickness/3)
+				ctx.dst.LineTo(x2, y2+thickness/3)
+			}
+		} else if style == "ridge" || style == "groove" {
+			ctx.dst.State().SetLineWidth(thickness / 2)
+			ctx.dst.State().SetColorRgba(colors[0], true)
+			if x1 == x2 {
+				ctx.dst.MoveTo(x1+thickness/4, y1)
+				ctx.dst.LineTo(x2+thickness/4, y2)
+			} else if y1 == y2 {
+				ctx.dst.MoveTo(x1, y1+thickness/4)
+				ctx.dst.LineTo(x2, y2+thickness/4)
+			}
+			ctx.dst.Paint(backend.Stroke)
+			ctx.dst.State().SetColorRgba(colors[1], true)
+			if x1 == x2 {
+				ctx.dst.MoveTo(x1-thickness/4, y1)
+				ctx.dst.LineTo(x2-thickness/4, y2)
+			} else if y1 == y2 {
+				ctx.dst.MoveTo(x1, y1-thickness/4)
+				ctx.dst.LineTo(x2, y2-thickness/4)
+			}
+		} else if style == "wavy" {
+			// assert y1 == y2  # Only allowed for text decoration
+			var up pr.Fl = 1
+			radius := 0.75 * thickness
+
+			ctx.dst.Rectangle(x1, y1-2*radius, x2-x1, 4*radius)
+			ctx.dst.State().Clip(false)
+
+			x := x1 - offset
+			ctx.dst.MoveTo(x, y1)
+
+			for x < x2 {
+				ctx.dst.CubicTo(x+radius/2, y1+up*radius,
+					x+3*radius/2, y1+up*radius,
+					x+2*radius, y1)
+				x += 2 * radius
+				up *= -1
+			}
+		} else {
+			ctx.dst.State().SetLineWidth(thickness)
+			ctx.dst.MoveTo(x1, y1)
+			ctx.dst.LineTo(x2, y2)
+		}
+
+		ctx.dst.Paint(backend.Stroke)
+	})
+}
+
 func (ctx drawContext) drawOutlines(box_ Box) {
 	box := box_.Box()
 	width_ := box.Style.GetOutlineWidth()
@@ -985,11 +1260,9 @@ func (ctx drawContext) drawOutlines(box_ Box) {
 		}
 	}
 
-	if bo.ParentT.IsInstance(box_) {
-		for _, child := range box.Children {
-			if child.IsClassicalBox() {
-				ctx.drawOutlines(child)
-			}
+	for _, child := range box.Children {
+		if child.Type().IsClassical() {
+			ctx.drawOutlines(child)
 		}
 	}
 }
@@ -1151,7 +1424,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		}
 		segments = append(segments, segment{
 			Border: border, side: left,
-			borderBox: pr.Rectangle{posX - pr.Float(border.Width)/2, posY1, 0, posY2 - posY1},
+			borderBox: pr.Rectangle{posX, posY1, 0, posY2 - posY1},
 		})
 	}
 
@@ -1181,7 +1454,7 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 		}
 		segments = append(segments, segment{
 			Border: border, side: top,
-			borderBox: pr.Rectangle{posX1, posY - pr.Float(border.Width)/2, posX2 - posX1, 0},
+			borderBox: pr.Rectangle{posX1, posY, posX2 - posX1, 0},
 		})
 	}
 
@@ -1205,15 +1478,10 @@ func (ctx drawContext) drawCollapsedBorders(table *bo.TableBox) {
 	})
 
 	for _, segment := range segments {
-		widths := pr.Rectangle{0, 0, 0, pr.Float(segment.Width)}
-		if segment.side == top {
-			widths = pr.Rectangle{pr.Float(segment.Width), 0, 0, 0}
-		}
 		ctx.dst.OnNewStack(func() {
-			clipBorderSegment(ctx.dst, segment.Style, segment.Width, segment.side, segment.borderBox,
-				&widths, nil)
-			ctx.drawRectBorder(segment.borderBox, widths, segment.Style,
-				styledColor(segment.Style, segment.Color.RGBA, segment.side))
+			bx, by, bw, bh := segment.borderBox.Unpack()
+			ctx.drawLine(bx, by, bx+bw, by+bh, segment.Width, segment.Style,
+				styledColor(segment.Style, segment.Color.RGBA, segment.side), 0)
 		})
 	}
 }
@@ -1231,9 +1499,8 @@ func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 	}
 
 	ctx.dst.OnNewStack(func() {
-		roundedBoxPath(ctx.dst, box.RoundedContentBox())
-		ctx.dst.State().Clip(false)
-		ctx.dst.State().Transform(matrix.New(1, 0, 0, 1, pr.Fl(drawX), pr.Fl(drawY)))
+		ctx.dst.State().SetAlpha(1, false)
+		ctx.dst.State().Transform(matrix.Translation(fl(drawX), fl(drawY)))
 		ctx.dst.OnNewStack(func() {
 			box.Replacement.Draw(ctx.dst, ctx, pr.Fl(drawWidth), pr.Fl(drawHeight), string(box.Style.GetImageRendering()))
 		})
@@ -1243,7 +1510,7 @@ func (ctx drawContext) drawReplacedbox(box_ bo.ReplacedBoxITF) {
 // offsetX=0, textOverflow="clip"
 func (ctx drawContext) drawInlineLevel(page *bo.PageBox, box_ Box, offsetX fl, textOverflow string, blockEllipsis pr.TaggedString) {
 	if stackingContext, ok := box_.(StackingContext); ok {
-		if !(bo.InlineBlockT.IsInstance(stackingContext.box) || bo.InlineFlexT.IsInstance(stackingContext.box)) {
+		if !(bo.InlineBlockT.IsInstance(stackingContext.box) || bo.InlineFlexT.IsInstance(stackingContext.box) || bo.InlineGridT.IsInstance(stackingContext.box)) {
 			panic(fmt.Sprintf("expected InlineBlock or InlineFlex, got %v", stackingContext.box))
 		}
 		ctx.drawStackingContext(stackingContext)
@@ -1289,10 +1556,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	// Draw text decoration
 
 	decoration := textbox.Style.GetTextDecorationLine()
-	color := textbox.Style.GetTextDecorationColor()
-	if color.Type == parser.ColorCurrentColor {
-		color = textbox.Style.GetColor()
-	}
+	color := tree.ResolveColor(textbox.Style, pr.PTextDecorationColor)
 
 	var offsetY pr.Float
 
@@ -1334,60 +1598,12 @@ func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, b
 	}
 
 	textContext := drawText.Context{Output: ctx.dst, Fonts: ctx.fonts}
-	text := textContext.CreateFirstLine(textbox.TextLayout, textOverflow, blockEllipsis, x, y, 0)
+	text := textContext.CreateFirstLine(textbox.TextLayout, textOverflow, blockEllipsis, 1, x, y, 0)
 	ctx.dst.DrawText([]backend.TextDrawing{text})
-}
-
-func (ctx drawContext) drawWave(x, y, width, offsetX, radius pr.Fl) {
-	var up pr.Fl = 1
-	maxX := x + width
-	ctx.dst.Rectangle(x, y-2*radius, width, 4*radius)
-	ctx.dst.State().Clip(false)
-
-	x -= offsetX
-	ctx.dst.MoveTo(x, y)
-
-	for x < maxX {
-		ctx.dst.CubicTo(x+radius/2, y+up*radius,
-			x+3*radius/2, y+up*radius,
-			x+2*radius, y)
-		x += 2 * radius
-		up *= -1
-	}
 }
 
 // Draw text-decoration of “textbox“ to a “context“.
 func (ctx drawContext) drawTextDecoration(textbox *bo.TextBox, offsetX, offsetY, thickness pr.Fl, color Color) {
-	style := textbox.Style.GetTextDecorationStyle()
-
-	ctx.dst.OnNewStack(func() {
-		ctx.dst.State().SetColorRgba(color, true)
-		ctx.dst.State().SetLineWidth(thickness)
-
-		if style == "dashed" {
-			ctx.dst.State().SetDash([]fl{5 * thickness}, offsetX)
-		} else if style == "dotted" {
-			ctx.dst.State().SetDash([]fl{thickness}, offsetX)
-		}
-
-		posX, posY, width := fl(textbox.PositionX), fl(textbox.PositionY), fl(textbox.Width.V())
-
-		if style == "wavy" {
-			thickness *= 0.75
-			ctx.drawWave(posX, posY+offsetY, width, offsetX, thickness)
-		} else {
-			ctx.dst.MoveTo(posX, posY+offsetY)
-			ctx.dst.LineTo(posX+width, posY+offsetY)
-		}
-
-		ctx.dst.State().SetLineWidth(thickness)
-
-		if style == "double" {
-			delta := 2 * thickness
-			ctx.dst.MoveTo(posX, posY+offsetY+delta)
-			ctx.dst.LineTo(posX+width, posY+offsetY+delta)
-		}
-
-		ctx.dst.Paint(backend.Stroke)
-	})
+	ctx.drawLine(fl(textbox.PositionX), fl(textbox.PositionY)+offsetY, fl(textbox.PositionX)+fl(textbox.Width.V()), fl(textbox.PositionY)+offsetY,
+		thickness, textbox.Style.GetTextDecorationStyle(), [2]parser.RGBA{color}, offsetX)
 }

@@ -51,7 +51,7 @@ func (f *pangoFont) Description() backend.FontDescription {
 }
 
 func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
-	textOverflow string, blockEllipsis pr.TaggedString, x, y, angle pr.Fl,
+	textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
 	fts := ctx.Fonts.(*text.FontConfigurationPango)
 	style := layout.Style
@@ -105,6 +105,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 	fontSize := style.FontDescription.Size
 
 	output.FontSize = fontSize
+	output.ScaleX = scaleX
 	output.X, output.Y = x, y
 	output.Angle = angle
 
@@ -150,6 +151,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 			}
 
 			outGlyph.Offset = pr.Fl(glyphInfo.Geometry.XOffset) / fontSize
+			outGlyph.Rise = pr.Fl(glyphInfo.Geometry.YOffset)
 			outGlyph.Glyph = backend.GID(glyph.GID())
 
 			// Ink bounding box and logical widths in font
@@ -203,6 +205,7 @@ func drawEmojiPango(font_ *pangoFont, glyph backend.GID, extents backend.GlyphEx
 	data := face.GlyphData(fonts.GID(glyph), font.XPpem, font.YPpem)
 
 	switch data := data.(type) {
+	// TODO: more formats
 	case fonts.GlyphBitmap:
 		if data.Format == fonts.PNG {
 			img := backend.RasterImage{

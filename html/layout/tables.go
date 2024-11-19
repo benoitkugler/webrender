@@ -206,6 +206,10 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 					}
 				}
 
+				if traceMode {
+					traceLogger.DumpTree(cell_, fmt.Sprintf("cell %d (before layout)", indexCell))
+				}
+
 				// First try to render content as if there was already something
 				// on the page to avoid hitting block_level_layout’s TODO. Then
 				// force to render something if the page is actually empty, or
@@ -222,6 +226,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				} else {
 					cell_ = newCell
 				}
+
+				if traceMode {
+					traceLogger.DumpTree(cell_, fmt.Sprintf("cell %d", indexCell))
+				}
+
 				cell = cell_.Box()
 				cell_.RemoveDecoration(cell, cellSkipStack != nil, cellResumeAt != nil)
 				if cellResumeAt != nil {
@@ -265,8 +274,8 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			for _, cell_ := range row.Children {
 				cell := cell_.Box()
 				verticalAlign := cell.Style.GetVerticalAlign()
-				if verticalAlign.String == "top" || verticalAlign.String == "middle" || verticalAlign.String == "bottom" {
-					cell.VerticalAlign = verticalAlign.String
+				if verticalAlign.S == "top" || verticalAlign.S == "middle" || verticalAlign.S == "bottom" {
+					cell.VerticalAlign = verticalAlign.S
 				} else {
 					// Assume "baseline" for any other value
 					cell.VerticalAlign = "baseline"
@@ -290,13 +299,19 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 			}
 
+			if traceMode {
+				traceLogger.DumpTree(row_, fmt.Sprintf("row %d (before height)", indexRow))
+			}
+
 			// row height
 			for _, cell := range row.Children {
 				endingCellsByRow[cell.Box().Rowspan-1] = append(endingCellsByRow[cell.Box().Rowspan-1], cell)
 			}
-			endingCells := endingCellsByRow[0]
-			endingCellsByRow = endingCellsByRow[1:]
-			var rowBottomY pr.Float
+			var (
+				rowBottomY  pr.Float
+				endingCells []Box
+			)
+			endingCells, endingCellsByRow = endingCellsByRow[0], endingCellsByRow[1:]
 			if len(endingCells) != 0 { // in this row
 				if row.Height == pr.AutoF {
 					for _, cell := range endingCells {
@@ -308,7 +323,7 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				} else {
 					var m pr.Float
 					for _, rowCell := range endingCells {
-						if v := rowCell.Box().Height.V(); v > m {
+						if v := rowCell.Box().BorderHeight(); v > m {
 							m = v
 						}
 					}
@@ -356,6 +371,10 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 				}
 			}
 
+			if traceMode {
+				traceLogger.DumpTree(row_, fmt.Sprintf("row %d", indexRow))
+			}
+
 			nextPositionY := row.PositionY + row.Height.V()
 			if resumeAt == nil {
 				nextPositionY += borderSpacingY
@@ -385,6 +404,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 			// Break if this row overflows the page, unless there is no
 			// other content on the page.
 			if !pageIsEmpty && context.overflowsPage(bottomSpace, nextPositionY) {
+				for _, descendant := range bo.Descendants(row_) {
+					if footnote := descendant.Box().Footnote; footnote != nil {
+						context.unlayoutFootnote(footnote)
+					}
+				}
 				if len(newGroupChildren) != 0 {
 					previousRow := newGroupChildren[len(newGroupChildren)-1]
 					pageBreak := blockLevelPageBreak(previousRow, row_)
@@ -426,6 +450,11 @@ func tableLayout(context *layoutContext, table_ bo.TableBoxITF, bottomSpace pr.F
 		// Do not keep the row group if we made a page break
 		// before any of its rows or with "avoid"
 		if bi := group.Style.GetBreakInside(); resumeAt != nil && !originalPageIsEmpty && (avoidPageBreak(string(bi), context) || len(newGroupChildren) == 0) {
+			for _, descendant := range bo.Descendants(group_) {
+				if footnote := descendant.Box().Footnote; footnote != nil {
+					context.unlayoutFootnote(footnote)
+				}
+			}
 			return nil, nil, nextPage
 		}
 
@@ -924,6 +953,7 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 		&minContentGuess, &minContentPercentageGuess,
 		&minContentSpecifiedGuess, &maxContentGuess,
 	}
+	// https://www.w3.org/TR/css-tables-3/#width-distribution-algorithm
 	for i := range tmp.grid {
 		if tmp.columnIntrinsicPercentages[i] != 0 {
 			minContentPercentageGuess[i] = pr.Max(
@@ -932,7 +962,9 @@ func autoTableLayout(context *layoutContext, box_ Box, containingBlock bo.Point)
 			minContentSpecifiedGuess[i] = minContentPercentageGuess[i]
 			maxContentGuess[i] = minContentPercentageGuess[i]
 		} else if tmp.constrainedness[i] {
-			minContentSpecifiedGuess[i] = tmp.columnMinContentWidths[i]
+			// any other column that is constrained is assigned
+			// its max-content width
+			minContentSpecifiedGuess[i] = tmp.columnMaxContentWidths[i]
 		}
 	}
 
@@ -1039,7 +1071,7 @@ func cellBaseline(cell Box) pr.Float {
 
 // Return the absolute Y position for the first (or last) in-flow baseline
 // if any or nil. Can't return "auto".
-// last=false, baselinesT=(boxes.LineBox,)
+// [last] defaults to false, baselinesT to nothing
 func findInFlowBaseline(box Box, last bool, baselinesT ...bo.BoxType) pr.MaybeFloat {
 	if len(baselinesT) == 0 {
 		baselinesT = []bo.BoxType{bo.LineT}
@@ -1051,17 +1083,19 @@ func findInFlowBaseline(box Box, last bool, baselinesT ...bo.BoxType) pr.MaybeFl
 			return box.Box().PositionY + box.Box().Baseline.V()
 		}
 	}
-	if bo.ParentT.IsInstance(box) && !bo.TableCaptionT.IsInstance(box) {
-		children := box.Box().Children
-		if last {
-			children = reversedBoxes(children)
-		}
-		for _, child := range children {
-			if child.Box().IsInNormalFlow() {
-				result := findInFlowBaseline(child, last, baselinesT...)
-				if result != nil {
-					return result
-				}
+	if bo.TableCaptionT.IsInstance(box) {
+		return nil
+	}
+
+	children := box.Box().Children
+	if last {
+		children = reversedBoxes(children)
+	}
+	for _, child := range children {
+		if child.Box().IsInNormalFlow() {
+			result := findInFlowBaseline(child, last, baselinesT...)
+			if result != nil {
+				return result
 			}
 		}
 	}

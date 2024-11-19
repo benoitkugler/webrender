@@ -22,7 +22,7 @@ func processColorStops(gradientLineSize pr.Float, positions_ []pr.Dimension) []p
 	L := len(positions_)
 	positions := make([]pr.MaybeFloat, L)
 	for i, position := range positions_ {
-		positions[i] = pr.ResoudPercentage(position.ToValue(), gradientLineSize)
+		positions[i] = pr.ResolvePercentage(position.ToValue(), gradientLineSize)
 	}
 	// First and last default to 100%
 	if positions[0] == nil {
@@ -206,7 +206,7 @@ func (lg LinearGradient) Layout(width, height pr.Float) backend.GradientLayout {
 
 	// Round dx and dy to avoid floating points errors caused by
 	// trigonometry and angle units conversions
-	dx, dy = utils.Round(dx), utils.Round(dy)
+	dx, dy = utils.Round6(dx), utils.Round6(dy)
 
 	// Distance between center && ending point,
 	// ie. half of between the starting point && ending point :
@@ -282,8 +282,8 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 		return backend.GradientLayout{ScaleY: 1, GradientKind: backend.GradientKind{Kind: "solid"}, Colors: []parser.RGBA{rg.colors[0]}}
 	}
 	originX, centerX_, originY, centerY_ := rg.center.OriginX, rg.center.Pos[0], rg.center.OriginY, rg.center.Pos[1]
-	centerX := pr.ResoudPercentage(centerX_.ToValue(), width).V()
-	centerY := pr.ResoudPercentage(centerY_.ToValue(), height).V()
+	centerX := pr.ResolvePercentage(centerX_.ToValue(), width).V()
+	centerY := pr.ResolvePercentage(centerY_.ToValue(), height).V()
 	if originX == "right" {
 		centerX = width - centerX
 	}
@@ -373,8 +373,8 @@ func (rg RadialGradient) Layout(width, height pr.Float) backend.GradientLayout {
 func (rg RadialGradient) resolveSize(width, height, centerX, centerY pr.Float) (pr.Float, pr.Float) {
 	if rg.size.IsExplicit() {
 		sizeX, sizeY := rg.size.Explicit[0], rg.size.Explicit[1]
-		sizeX_ := pr.ResoudPercentage(sizeX.ToValue(), width).V()
-		sizeY_ := pr.ResoudPercentage(sizeY.ToValue(), height).V()
+		sizeX_ := pr.ResolvePercentage(sizeX.ToValue(), width).V()
+		sizeY_ := pr.ResolvePercentage(sizeY.ToValue(), height).V()
 		return sizeX_, sizeY_
 	}
 	left := pr.Abs(centerX)

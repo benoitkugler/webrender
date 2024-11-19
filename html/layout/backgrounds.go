@@ -43,11 +43,9 @@ func boxRectangle(box bo.BoxFields, whichRectangle string) [4]pr.Float {
 
 // emulate Python itertools.cycle
 // i is the current iteration index, N the length of the target slice.
-func cycle(i, N int) int {
-	return i % N
-}
+func cycle(i, N int) int { return i % N }
 
-func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.Gifu) images.Image {
+func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.ImageFetcher) images.Image {
 	switch img := image.(type) {
 	case nil, pr.NoneImage:
 		return nil
@@ -63,7 +61,7 @@ func resolveImage(image pr.Image, orientation pr.SBoolFloat, getImageFromUri bo.
 }
 
 // Fetch and position background images.
-func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, layoutChildren bool, style pr.ElementStyle) {
+func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.ImageFetcher, layoutChildren bool, style pr.ElementStyle) {
 	// Resolve percentages in border-radius properties
 	box := box_.Box()
 	resolveRadiiPercentages(box)
@@ -77,6 +75,10 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 	if style == nil {
 		style = box.Style
 	}
+
+	// This is for the border image, not the background, but this is a
+	// convenient place to get the image.
+	box.BorderImage = resolveImage(style.GetBorderImageSource(), pr.SBoolFloat{}, getImageFromUri)
 
 	var (
 		color     parser.RGBA // transparent
@@ -129,10 +131,14 @@ func layoutBoxBackgrounds(page *bo.PageBox, box_ Box, getImageFromUri bo.Gifu, l
 		)
 	}
 
+	if traceMode {
+		traceLogger.Dump(fmt.Sprintf("background: %v", layers))
+	}
+
 	box.Background = &bo.Background{Color: color, ImageRendering: style.GetImageRendering(), Layers: layers}
 }
 
-func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, image images.Image, size pr.Size, clip string, repeat [2]string,
+func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.DimOrS, image images.Image, size pr.Size, clip string, repeat [2]string,
 	origin string, position pr.Center, attachment string,
 ) bo.BackgroundLayer {
 	var (
@@ -141,8 +147,10 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 	)
 	box := box_.Box()
 	if box_ == page {
-		paintingArea = [4]pr.Float{0, 0, page.MarginWidth(), page.MarginHeight()}
-		clippedBoxes = []bo.RoundedBox{box.RoundedBorderBox()}
+		// [The page’s] background painting area is the bleed area […]
+		// regardless of background-clip.
+		// https://drafts.csswg.org/css-page-3/#painting
+		paintingArea = page.BleedArea()
 	} else if bo.TableRowGroupT.IsInstance(box_) {
 		clippedBoxes = nil
 		var totalHeight pr.Float
@@ -228,7 +236,14 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 	var positioningArea [4]pr.Float
 	if attachment == "fixed" {
 		// Initial containing block
-		positioningArea = boxRectangle(page.BoxFields, "content-box")
+		if bo.PageT.IsInstance(box_) {
+			// […] if background-attachment is fixed then the image is
+			// positioned relative to the page box including its margins […].
+			// https://drafts.csswg.org/css-page/#painting
+			positioningArea = [4]pr.Float{0, 0, box.MarginWidth(), box.MarginHeight()}
+		} else {
+			positioningArea = boxRectangle(page.BoxFields, "content-box")
+		}
 	} else {
 		positioningArea = boxRectangle(*box, origin)
 	}
@@ -242,15 +257,15 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 	} else {
 		sizeWidth, sizeHeight := size.Width, size.Height
 		iwidth, iheight, iratio := image.GetIntrinsicSize(resolution.Value, box.Style.GetFontSize().Value)
-		imageWidth, imageHeight = defaultImageSizing(iwidth, iheight, iratio,
-			pr.ResoudPercentage(sizeWidth, positioningWidth), pr.ResoudPercentage(sizeHeight, positioningHeight), positioningWidth, positioningHeight)
+		imageWidth, imageHeight = DefaultImageSizing(iwidth, iheight, iratio,
+			pr.ResolvePercentage(sizeWidth, positioningWidth), pr.ResolvePercentage(sizeHeight, positioningHeight), positioningWidth, positioningHeight)
 	}
 
 	originX, positionX_, originY, positionY_ := position.OriginX, position.Pos[0], position.OriginY, position.Pos[1]
 	refX := positioningWidth - imageWidth
 	refY := positioningHeight - imageHeight
-	positionX := pr.ResoudPercentage(positionX_.ToValue(), refX)
-	positionY := pr.ResoudPercentage(positionY_.ToValue(), refY)
+	positionX := pr.ResolvePercentage(positionX_.ToValue(), refX)
+	positionY := pr.ResolvePercentage(positionY_.ToValue(), refY)
 	if originX == "right" {
 		positionX = refX - positionX.V()
 	}
@@ -264,7 +279,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 		nRepeats := utils.MaxInt(1, int(math.Round(float64(positioningWidth/imageWidth))))
 		newWidth := positioningWidth / pr.Float(nRepeats)
 		positionX = pr.Float(0) // Ignore background-position for this dimension
-		if repeatY != "round" && size.Height.String == "auto" {
+		if repeatY != "round" && size.Height.S == "auto" {
 			imageHeight *= newWidth / imageWidth
 		}
 		imageWidth = newWidth
@@ -273,7 +288,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 		nRepeats := utils.MaxInt(1, int(math.Round(float64(positioningHeight/imageHeight))))
 		newHeight := positioningHeight / pr.Float(nRepeats)
 		positionY = pr.Float(0) // Ignore background-position for this dimension
-		if repeatX != "round" && size.Width.String == "auto" {
+		if repeatX != "round" && size.Width.S == "auto" {
 			imageWidth *= newHeight / imageHeight
 		}
 		imageHeight = newHeight
@@ -297,7 +312,7 @@ func layoutBackgroundLayer(box_ Box, page *bo.PageBox, resolution pr.Value, imag
 // elememt or a <body> child of the root element.
 //
 // See https://www.w3.org/TR/CSS21/colors.html#background
-func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.Gifu) {
+func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.ImageFetcher) {
 	layoutBoxBackgrounds(page, page, getImageFromUri, true, nil)
 
 	rootBox_ := page.Children[0]
@@ -316,7 +331,7 @@ func layoutBackgrounds(page *bo.PageBox, getImageFromUri bo.Gifu) {
 	}
 	chosenBox := chosenBox_.Box()
 	if chosenBox.Background != nil {
-		paintingArea := boxRectangle(page.BoxFields, "padding-box")
+		paintingArea := boxRectangle(page.BoxFields, "border-box")
 		originalBackground := page.Background
 		layoutBoxBackgrounds(page, page, getImageFromUri, false, chosenBox.Style)
 		canvasBg := *page.Background

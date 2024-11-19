@@ -36,7 +36,7 @@ func init() {
 
 func TestStacking(t *testing.T) {
 	var s StackingContext
-	if s.IsClassicalBox() {
+	if s.Type().IsClassical() {
 		t.Fatal("should not be a classical box")
 	}
 }
@@ -172,7 +172,7 @@ func TestLeaderCrash(t *testing.T) {
 		div::after {
 		color: blue;
 		/* RTL Mark used in second space */
-		content: ' ' leader(dotted) '‏ ' counter(count, lower-roman);
+		content: ' ' leader(dotted) '\u200f ' counter(count, lower-roman);
 		counter-increment: count;
 		}
   	</style>
@@ -190,11 +190,25 @@ func TestLeaderCrash(t *testing.T) {
 
 func TestDebug(t *testing.T) {
 	input := `
-	<style>
-         @page { size: 2px; background: red; bleed: 1px }
+	 <style>
+        @page {
+          size: 20px 6px;
+          margin: 1px;
+        }
+        @font-face {
+          src: url(../resources_test/weasyprint.otb_fixed);
+          font-family: weasyprint-otb;
+        }
+        body {
+          color: red;
+          font-family: weasyprint-otb;
+          font-size: 4px;
+          line-height: 0.8;
+        }
       </style>
-      <body>`
-	doc, err := tree.NewHTML(utils.InputString(input), ".", nil, "")
+      AaA`
+
+	doc, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

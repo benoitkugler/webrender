@@ -24,7 +24,7 @@ func (c abstractPseudoClass) PseudoElement() string {
 }
 
 type relativePseudoClassSelector struct {
-	name  string // one of "not", "has", "haschild"
+	name  string // one of "is", "not", "has", "haschild"
 	match SelectorGroup
 }
 
@@ -33,6 +33,8 @@ func (s relativePseudoClassSelector) Match(n *html.Node) bool {
 		return false
 	}
 	switch s.name {
+	case "is":
+		return s.match.Match(n)
 	case "not":
 		// matches elements that do not match a.
 		return !s.match.Match(n)

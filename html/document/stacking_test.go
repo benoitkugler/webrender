@@ -44,8 +44,7 @@ func serializeStacking(context StackingContext) serializedStacking {
 }
 
 func TestNested(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, data := range []struct {
 		source   string
@@ -78,13 +77,12 @@ func TestNested(t *testing.T) {
 	} {
 		page := renderPages(t, data.source)[0]
 		html := page.Box().Children[0]
-		tu.AssertEqual(t, serializeStacking(NewStackingContextFromBox(html, page, nil)), data.contexts, "")
+		tu.AssertEqual(t, serializeStacking(NewStackingContextFromBox(html, page, nil)), data.contexts)
 	}
 }
 
 func TestImageContexts(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderPages(t, `
       <body>Some text: <img style="position: relative" src=pattern.png>`)[0]
@@ -111,7 +109,7 @@ func TestImageContexts(t *testing.T) {
 				},
 			},
 		},
-	}, "")
+	})
 	// ... but in a sub-context {
 	var boxes []bo.Box
 	for _, c := range context.zeroZContexts {
@@ -120,5 +118,5 @@ func TestImageContexts(t *testing.T) {
 	got := bo.Serialize(boxes)
 	tu.AssertEqual(t, got, []bo.SerBox{
 		{Tag: "img", Type: bo.InlineReplacedT, Content: bo.BC{Text: "<replaced>"}},
-	}, "")
+	})
 }

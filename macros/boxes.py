@@ -19,6 +19,7 @@ ABSTRACT_TYPES = [
     "AtomicInlineLevelBox",
     "BlockLevelBox",
     "InlineLevelBox",
+    "GridContainerBox"
 ]
 
 
@@ -96,9 +97,6 @@ def get_itf_and_type_code(class_: type) -> str:
         itf_code += f"""func (b {class_name}) Copy() Box {{ return &b }}
         """
 
-        itf_code += f"""func ({class_name}) IsClassicalBox() bool {{ return true }}
-        """
-
         itf_code += f"""func ({class_name}) is{class_name}() {{ }}
         """
 
@@ -131,9 +129,6 @@ import "github.com/benoitkugler/webrender/html/tree"
 """
 
 type_constants = """
-// BoxType represents a box type.
-type BoxType uint8
-
 const(
     invalidType BoxType=iota
     {types}
@@ -168,7 +163,7 @@ type_anonymous = """
 func(t BoxType) AnonymousFrom(parent Box, children []Box) Box {{
     switch t {{
         {type_anonymous_switches}}}
-    return nil
+    panic("unsupported box type in AnonymousFrom " + t.String())
 }}
 """
 
@@ -193,6 +188,13 @@ for c in CLASSES:
         type_anonymous_switches += f"""case {type_name}:
         return {class_name}AnonymousFrom(parent, children)
     """
+
+type_strings += """ 
+    case AbsolutePlaceholderT:
+        return "AbsolutePlaceholder"
+    case StackingContextT:
+        return "StackingContext"
+"""
 
 output += type_constants.format(types=types)
 output += type_is_instance.format(switches=switches)

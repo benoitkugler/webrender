@@ -13,19 +13,19 @@ import (
 
 func TestDefaultValues(t *testing.T) {
 	ts := NewTextStyle(pr.InitialValues, false)
-	tu.AssertEqual(t, ts.FontDescription.Family, []string{"serif"}, "")
-	tu.AssertEqual(t, ts.FontDescription.Style, FSyNormal, "")
-	tu.AssertEqual(t, ts.FontDescription.Stretch, FSeNormal, "")
-	tu.AssertEqual(t, ts.FontDescription.Weight, uint16(400), "")
-	tu.AssertEqual(t, ts.FontDescription.Size, pr.Fl(16), "")
-	tu.AssertEqual(t, ts.FontDescription.VariationSettings, []Variation(nil), "")
+	tu.AssertEqual(t, ts.FontDescription.Family, []string{"serif"})
+	tu.AssertEqual(t, ts.FontDescription.Style, FSyNormal)
+	tu.AssertEqual(t, ts.FontDescription.Stretch, FSeNormal)
+	tu.AssertEqual(t, ts.FontDescription.Weight, uint16(400))
+	tu.AssertEqual(t, ts.FontDescription.Size, pr.Fl(16))
+	tu.AssertEqual(t, ts.FontDescription.VariationSettings, []Variation(nil))
 
-	tu.AssertEqual(t, ts.FontLanguageOverride, fontLanguageOverride{}, "")
-	tu.AssertEqual(t, ts.Lang, "", "")
-	tu.AssertEqual(t, ts.TextDecorationLine, pr.Decorations{}, "")
-	tu.AssertEqual(t, ts.WhiteSpace, WNormal, "")
-	tu.AssertEqual(t, ts.LetterSpacing, pr.Fl(0), "")
-	tu.AssertEqual(t, ts.FontFeatures, []Feature(nil), "")
+	tu.AssertEqual(t, ts.FontLanguageOverride, fontLanguageOverride{})
+	tu.AssertEqual(t, ts.Lang, "")
+	tu.AssertEqual(t, ts.TextDecorationLine, pr.Decorations{})
+	tu.AssertEqual(t, ts.WhiteSpace, WNormal)
+	tu.AssertEqual(t, ts.LetterSpacing, pr.Fl(0))
+	tu.AssertEqual(t, ts.FontFeatures, []Feature(nil))
 }
 
 func TestCollectStyles(t *testing.T) {

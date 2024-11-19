@@ -45,6 +45,10 @@ func (o orientedBox) outer() pr.Float {
 	return o.sugar() + o.inner.V()
 }
 
+func (o *orientedBox) setOuter(newOuterWidth pr.Float) {
+	o.inner = pr.Min(pr.Max(o.minContentSize(), newOuterWidth-o.sugar()), o.maxContentSize())
+}
+
 func (o orientedBox) outerMinContentSize() pr.Float {
 	if o.inner == pr.AutoF {
 		return o.sugar() + o.minContentSize()
@@ -57,10 +61,6 @@ func (o orientedBox) outerMaxContentSize() pr.Float {
 		return o.sugar() + o.maxContentSize()
 	}
 	return o.sugar() + o.inner.V()
-}
-
-func (o *orientedBox) shrinkToFit(available pr.Float) {
-	o.inner = pr.Min(pr.Max(o.minContentSize(), available), o.maxContentSize())
 }
 
 type verticalBox struct {
@@ -254,9 +254,9 @@ func computeFixedDimension(context *layoutContext, box_ *bo.MarginBox, outer pr.
 //     true to set height, margin-top and margin-bottom; false for width,
 //     margin-left and margin-right
 //
-//   - outerSum:
-//     The target total outer dimension (max box width or height)
-func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBox, vertical bool, outerSum pr.Float) {
+//   - availableSize:
+//     The distance between the page box’s left right border edges
+func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBox, vertical bool, availableSize pr.Float) {
 	var sideBoxes [3]orientedBoxITF
 	for i, box_ := range sideBoxes_ {
 		if vertical {
@@ -277,72 +277,98 @@ func computeVariableDimension(context *layoutContext, sideBoxes_ [3]*bo.MarginBo
 		}
 	}
 
-	if boxB.box.(*bo.MarginBox).IsGenerated {
-		if boxB.inner == pr.AutoF {
-			acMaxContentSize := 2 * pr.Max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
-			if outerSum >= (boxB.outerMaxContentSize() + acMaxContentSize) {
-				boxB.inner = boxB.maxContentSize()
-			} else {
-				acMinContentSize := 2 * pr.Max(boxA.outerMinContentSize(), boxC.outerMinContentSize())
-				boxB.inner = boxB.minContentSize()
-				available := outerSum - boxB.outer() - acMinContentSize
-				if available > 0 {
-					weightAc := acMaxContentSize - acMinContentSize
-					weightB := boxB.maxContentSize() - boxB.minContentSize()
-					weightSum := weightAc + weightB
-					// By definition of maxContentSize and minContentSize,
-					// weights can not be negative. weightSum == 0 implies that
-					// maxContentSize == minContentSize for each box, in
-					// which case the sum can not be both <= and > outerSum
-					// Therefore, one of the last two "if" statements would not
-					// have lead us here.
-					if weightSum <= 0 {
-						panic(fmt.Sprintf("weightSum must be > 0, got %f", weightSum))
-					}
-					boxB.inner = boxB.inner.V() + available*weightB/weightSum
-				}
-			}
-		}
-		if boxA.inner == pr.AutoF {
-			boxA.shrinkToFit((outerSum-boxB.outer())/2 - boxA.sugar())
-		}
-		if boxC.inner == pr.AutoF {
-			boxC.shrinkToFit((outerSum-boxB.outer())/2 - boxC.sugar())
-		}
-	} else {
+	if !boxB.box.(*bo.MarginBox).IsGenerated {
 		// Non-generated boxes get zero for every box-model property
 		if boxB.inner.V() != 0 {
 			panic(fmt.Sprintf("expected boxB.inner == 0, got %v", boxB.inner))
 		}
 		if boxA.inner == pr.AutoF && boxC.inner == pr.AutoF {
-			if outerSum >= (boxA.outerMaxContentSize() + boxC.outerMaxContentSize()) {
-				boxA.inner = boxA.maxContentSize()
-				boxC.inner = boxC.maxContentSize()
+			// A and C both have 'width: auto'
+			if availableSize > (boxA.outerMaxContentSize() + boxC.outerMaxContentSize()) {
+				// sum of the outer max-content widths
+				// is less than the available width
+				flexSpace := availableSize - boxA.outerMaxContentSize() - boxC.outerMaxContentSize()
+				flexFactorA := boxA.outerMaxContentSize()
+				flexFactorC := boxC.outerMaxContentSize()
+				flexFactorSum := flexFactorA + flexFactorC
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxA.setOuter(boxA.maxContentSize() + (flexSpace * flexFactorA / flexFactorSum))
+				boxC.setOuter(boxC.maxContentSize() + (flexSpace * flexFactorC / flexFactorSum))
+			} else if availableSize > (boxA.outerMinContentSize() + boxC.outerMinContentSize()) {
+				// sum of the outer min-content widths
+				// is less than the available width
+				flexSpace := availableSize - boxA.outerMinContentSize() - boxC.outerMinContentSize()
+				flexFactorA := boxA.maxContentSize() - boxA.minContentSize()
+				flexFactorC := boxC.maxContentSize() - boxC.minContentSize()
+				flexFactorSum := flexFactorA + flexFactorC
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxA.setOuter(boxA.minContentSize() + (flexSpace * flexFactorA / flexFactorSum))
+				boxC.setOuter(boxC.minContentSize() + (flexSpace * flexFactorC / flexFactorSum))
 			} else {
-				boxA.inner = boxA.minContentSize()
-				boxC.inner = boxC.minContentSize()
-				available := outerSum - boxA.outer() - boxC.outer()
-				if available > 0 {
-					weightA := boxA.maxContentSize() - boxA.minContentSize()
-					weightC := boxC.maxContentSize() - boxC.minContentSize()
-					weightSum := weightA + weightC
-					// By definition of maxContentSize and minContentSize,
-					// weights can ! be negative. weightSum == 0 implies that
-					// maxContentSize == minContentSize for each box, in
-					// which case the sum can ! be both <= and > outerSum
-					// Therefore, one of the last two "if" statements would not
-					// have lead us here.
-					if weightSum <= 0 {
-						panic(fmt.Sprintf("weightSum must be > 0, got %f", weightSum))
+				// otherwise
+				flexSpace := availableSize - boxA.outerMinContentSize() - boxC.outerMinContentSize()
+				flexFactorA := boxA.minContentSize()
+				flexFactorC := boxC.minContentSize()
+				flexFactorSum := flexFactorA + flexFactorC
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxA.setOuter(boxA.minContentSize() + (flexSpace * flexFactorA / flexFactorSum))
+				boxC.setOuter(boxC.minContentSize() + (flexSpace * flexFactorC / flexFactorSum))
+			}
+		} else {
+			// only one box has 'width: auto'
+			if boxA.inner == pr.AutoF {
+				boxA.setOuter(availableSize - boxC.outer())
+			} else if boxC.inner == pr.AutoF {
+				boxC.setOuter(availableSize - boxA.outer())
+			}
+		}
+	} else {
+		if boxB.inner == pr.AutoF {
+			// resolve any auto width of the middle box (B)
+			acMaxContentSize := 2 * pr.Max(boxA.outerMaxContentSize(), boxC.outerMaxContentSize())
+			if availableSize > (boxB.outerMaxContentSize() + acMaxContentSize) {
+				flexSpace := availableSize - boxB.outerMaxContentSize() - acMaxContentSize
+				flexFactorB := boxB.outerMaxContentSize()
+				flexFactorAc := acMaxContentSize
+				flexFactorSum := flexFactorB + flexFactorAc
+				if flexFactorSum == 0 {
+					flexFactorSum = 1
+				}
+				boxB.setOuter(boxB.maxContentSize() + (flexSpace * flexFactorB / flexFactorSum))
+			} else {
+				acMinContentSize := 2 * pr.Max(boxA.outerMinContentSize(), boxC.outerMinContentSize())
+				if availableSize > (boxB.outerMinContentSize() + acMinContentSize) {
+					flexSpace := availableSize - boxB.outerMinContentSize() - acMinContentSize
+					flexFactorB := boxB.maxContentSize() - boxB.minContentSize()
+					flexFactorAc := acMaxContentSize - acMinContentSize
+					flexFactorSum := flexFactorB + flexFactorAc
+					if flexFactorSum == 0 {
+						flexFactorSum = 1
 					}
-					boxA.inner = boxA.inner.V() + available*weightA/weightSum
-					boxC.inner = boxC.inner.V() + available*weightC/weightSum
+					boxB.setOuter(boxB.minContentSize() + (flexSpace * flexFactorB / flexFactorSum))
+				} else {
+					flexSpace := availableSize - boxB.outerMinContentSize() - acMinContentSize
+					flexFactorB := boxB.minContentSize()
+					flexFactorAc := acMinContentSize
+					flexFactorSum := flexFactorB + flexFactorAc
+					if flexFactorSum == 0 {
+						flexFactorSum = 1
+					}
+					boxB.setOuter(boxB.minContentSize() + (flexSpace * flexFactorB / flexFactorSum))
 				}
 			}
-		} else if boxA.inner == pr.AutoF {
-			boxA.shrinkToFit(outerSum - boxC.outer() - boxA.sugar())
-		} else if boxC.inner == pr.AutoF {
-			boxC.shrinkToFit(outerSum - boxA.outer() - boxC.sugar())
+		}
+		if boxA.inner == pr.AutoF {
+			boxA.setOuter((availableSize - boxB.outer()) / 2)
+		}
+		if boxC.inner == pr.AutoF {
+			boxC.setOuter((availableSize - boxB.outer()) / 2)
 		}
 	}
 
@@ -549,7 +575,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 	box := newBox_.Box()
 	verticalAlign := box.Style.GetVerticalAlign()
 	// Every other value is read as "top", ie. no change.
-	if L := len(box.Children); (verticalAlign.String == "middle" || verticalAlign.String == "bottom") && L != 0 {
+	if L := len(box.Children); (verticalAlign.S == "middle" || verticalAlign.S == "bottom") && L != 0 {
 		firstChild := box.Children[0]
 		lastChild := box.Children[L-1].Box()
 		top := firstChild.Box().PositionY
@@ -558,7 +584,7 @@ func marginBoxContentLayout(context *layoutContext, mBox *bo.MarginBox) Box {
 		bottom := lastChild.PositionY + lastChild.MarginHeight()
 		contentHeight := bottom - top
 		offset := box.Height.V() - contentHeight
-		if verticalAlign.String == "middle" {
+		if verticalAlign.S == "middle" {
 			offset /= 2
 		}
 		for _, child := range box.Children {
@@ -668,8 +694,8 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	// TODO: handle cases where the root element is something else.
 	// See https://www.w3.org/TR/CSS21/visuren.html#dis-pos-flo
-	if !(bo.BlockT.IsInstance(rootBox) || bo.FlexContainerT.IsInstance(rootBox)) {
-		panic(fmt.Sprintf("expected Block or FlexContainer, got %s", rootBox))
+	if !(bo.BlockT.IsInstance(rootBox) || bo.FlexContainerT.IsInstance(rootBox) || bo.GridContainerT.IsInstance(rootBox)) {
+		panic(fmt.Sprintf("expected Block, FlexContainer or GridContainer, got %s", rootBox))
 	}
 	context.createBlockFormattingContext()
 	context.currentPage = pageNumber
@@ -732,7 +758,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	footnoteArea = bo.CreateAnonymousBox(bo.Deepcopy(footnoteArea)).(*bo.FootnoteAreaBox)
 	tmpBox, _, _ := blockLevelLayout(
 		context, footnoteArea, -pr.Inf, nil, &footnoteArea.Page.BoxFields,
-		true, &positionedBoxes, &positionedBoxes, new([]pr.Float), false, -1)
+		true, &positionedBoxes, &positionedBoxes, nil, false, -1)
 	footnoteArea = tmpBox.(*bo.FootnoteAreaBox)
 	footnoteArea.Translate(footnoteArea, 0, -footnoteArea.MarginHeight(), false)
 
@@ -748,10 +774,6 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 	context.finishBlockFormattingContext(rootBox)
 
 	page.Children = []Box{rootBox, footnoteArea}
-	descendants := bo.Descendants(page)
-	for _, child := range positionedBoxes {
-		descendants = append(descendants, bo.Descendants(child)...)
-	}
 
 	// Update page counter values
 	standardizePageBasedCounters(style, "")
@@ -779,7 +801,7 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 		}
 	}
 
-	for _, child := range descendants {
+	for _, child := range bo.DescendantsPlaceholders(page, true) {
 		// Cache target's page counters
 		anchor := string(child.Box().Style.GetAnchor())
 		if anchor != "" && !cachedAnchors.Has(anchor) {
@@ -867,10 +889,12 @@ func (context *layoutContext) makePage(rootBox bo.BlockLevelBoxITF, pageType uti
 
 	if pageType.Blank {
 		resumeAt = previousResumeAt
+		tmp.nextPage = pageMaker[pageNumber-1].InitialNextPage
 	}
 
 	if traceMode {
 		traceLogger.DumpTree(page, "makePage done")
+		traceLogger.Dump(fmt.Sprintf("makePage: resume at %s, nextPage %s", resumeAt, tmp.nextPage))
 	}
 
 	return page, resumeAt, tmp.nextPage
@@ -889,7 +913,6 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	// PageType for current page, values for pageMaker[index + 1].
 	// Don't modify actual pageMaker[index] values!
 	pageState := tmp.InitialPageState.Copy()
-	nextPageName := tmp.InitialNextPage.Page.String
 	first := index == 0
 	var nextPageSide string
 	switch tmp.InitialNextPage.Break {
@@ -906,6 +929,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	blank := (nextPageSide == "left" && tmp.RightPage) || (nextPageSide == "right" && !tmp.RightPage) ||
 		(len(context.reportedFootnotes) != 0 && tmp.InitialResumeAt == nil)
 
+	nextPageName := string(tmp.InitialNextPage.Page)
 	if blank {
 		nextPageName = ""
 	}
@@ -916,7 +940,7 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	pageType := utils.PageElement{Side: side, Blank: blank, First: first, Index: index, Name: nextPageName}
 	context.styleFor.SetPageComputedStylesT(pageType, html)
 
-	context.forcedBreak = tmp.InitialNextPage.Break != "any" || tmp.InitialNextPage.Page.String != ""
+	context.forcedBreak = tmp.InitialNextPage.Break != "any" || tmp.InitialNextPage.Page != ""
 	context.marginClearance = false
 
 	// makePage wants a pageNumber of index + 1
@@ -927,10 +951,8 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	if (nextPage == tree.PageBreak{}) {
 		panic("expected nextPage")
 	}
-	if blank {
-		nextPage.Page = tmp.InitialNextPage.Page
-	}
-	rightPage := !tmp.RightPage
+
+	tmp.RightPage = !tmp.RightPage
 
 	// Check whether we need to append or update the next pageMaker item
 	var pageMakerNextChanged bool
@@ -940,12 +962,12 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 	} else {
 		// Check whether something changed
 		// TODO: Find what we need to compare. Is resumeAt enough?
-		tmp := context.pageMaker[index+1]
+		next := context.pageMaker[index+1]
 		// (nextResumeAt, nextNextPage, nextRightPage,nextPageState, )
-		pageMakerNextChanged = !tmp.InitialResumeAt.Equals(resumeAt) ||
-			tmp.InitialNextPage != nextPage ||
-			tmp.RightPage != rightPage ||
-			!tmp.InitialPageState.Equal(pageState)
+		pageMakerNextChanged = !next.InitialResumeAt.Equals(resumeAt) ||
+			next.InitialNextPage != nextPage ||
+			next.RightPage != tmp.RightPage ||
+			!next.InitialPageState.Equal(pageState)
 	}
 
 	if pageMakerNextChanged {
@@ -953,11 +975,11 @@ func (context *layoutContext) remakePage(index int, rootBox bo.BlockLevelBoxITF,
 		remakeState := tree.RemakeState{}
 		// Setting contentChanged to true ensures remake.
 		// If resumeAt  == nil  (last page) it must be false to prevent endless
-		// loops && list index out of range (see #794).
+		// loops and list index out of range (see #794).
 		remakeState.ContentChanged = resumeAt != nil
 		// pageState is already a deepcopy
 		item := tree.PageMaker{
-			InitialResumeAt: resumeAt, InitialNextPage: nextPage, RightPage: rightPage,
+			InitialResumeAt: resumeAt, InitialNextPage: nextPage, RightPage: tmp.RightPage,
 			InitialPageState: pageState, RemakeState: remakeState,
 		}
 		if index+1 >= len(context.pageMaker) {

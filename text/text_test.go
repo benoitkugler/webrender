@@ -84,8 +84,7 @@ func makeText(text string, width pr.MaybeFloat, style pr.Properties) FirstLine {
 }
 
 func TestLineContent(t *testing.T) {
-	cl := tu.CaptureLogs()
-	defer cl.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	for _, v := range []struct {
 		remaining string
@@ -103,8 +102,7 @@ func TestLineContent(t *testing.T) {
 }
 
 func TestLineWithAnyWidth(t *testing.T) {
-	cl := tu.CaptureLogs()
-	defer cl.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	sp1 := makeText("some text", nil, nil)
 	sp2 := makeText("some text some text", nil, nil)
@@ -112,8 +110,7 @@ func TestLineWithAnyWidth(t *testing.T) {
 }
 
 func TestLineBreaking(t *testing.T) {
-	cl := tu.CaptureLogs()
-	defer cl.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	str := "Thïs is a text for test"
 	// These two tests do not really rely on installed fonts
@@ -128,8 +125,7 @@ func TestLineBreaking(t *testing.T) {
 }
 
 func TestLineBreakingRTL(t *testing.T) {
-	cl := tu.CaptureLogs()
-	defer cl.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	str := "لوريم ايبسوم دولا"
 	// These two tests do not really rely on installed fonts
@@ -141,8 +137,7 @@ func TestLineBreakingRTL(t *testing.T) {
 }
 
 func TestTextDimension(t *testing.T) {
-	cl := tu.CaptureLogs()
-	defer cl.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	str := "This is a text for test. This is a test for text.py"
 	sp1 := makeText(str, pr.Float(200), pr.Properties{pr.PFontSize: pr.FToV(12)})

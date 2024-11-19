@@ -13,16 +13,17 @@ import (
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
-func toValidated(d pr.Properties) map[pr.KnownProp]pr.ValidatedProperty {
-	out := make(map[pr.KnownProp]pr.ValidatedProperty)
+func toValidated(d pr.Properties) map[pr.KnownProp]pr.DeclaredValue {
+	out := make(map[pr.KnownProp]pr.DeclaredValue)
 	for k, v := range d {
-		out[k] = pr.AsCascaded(v).AsValidated()
+		out[k] = v
 	}
 	return out
 }
 
 // Helper to test shorthand properties expander functions.
-func expandToDict(t *testing.T, css string, expectedError string) map[pr.KnownProp]pr.ValidatedProperty {
+// --var are not supported
+func expandToDict(t *testing.T, css string, expectedError string) map[pr.KnownProp]pr.DeclaredValue {
 	t.Helper()
 
 	declarations := parser.ParseDeclarationListString(css, false, false)
@@ -41,9 +42,9 @@ func expandToDict(t *testing.T, css string, expectedError string) map[pr.KnownPr
 	} else {
 		capt.AssertNoLogs(t)
 	}
-	out := map[pr.KnownProp]pr.ValidatedProperty{}
+	out := map[pr.KnownProp]pr.DeclaredValue{}
 	for _, v := range validated {
-		if v.Value.SpecialProperty != nil || v.Value.ToCascaded().Default != pr.Initial {
+		if v.Value != pr.Initial {
 			out[v.Name.KnownProp] = v.Value
 		}
 	}
@@ -60,7 +61,7 @@ func assertInvalid(t *testing.T, css, message string) {
 	}
 }
 
-func assertValidDict(t *testing.T, css string, ref map[pr.KnownProp]pr.ValidatedProperty) {
+func assertValidDict(t *testing.T, css string, ref map[pr.KnownProp]pr.DeclaredValue) {
 	t.Helper()
 
 	got := expandToDict(t, css, "")
@@ -70,35 +71,39 @@ func assertValidDict(t *testing.T, css string, ref map[pr.KnownProp]pr.Validated
 }
 
 func TestNotPrint(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	assertInvalid(t, "volume: 42", "the property does not apply for the print media")
 }
 
 func TestUnstablePrefix(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	d := expandToDict(t, "-weasy-max-lines: 3",
 		"prefixes on unstable attributes are deprecated")
 
-	tu.AssertEqual(t, d, toValidated(pr.Properties{pr.PMaxLines: pr.TaggedInt{I: 3}}), "unstable prefix")
+	tu.AssertEqual(t, d, toValidated(pr.Properties{pr.PMaxLines: pr.TaggedInt{I: 3}}))
 }
 
 func TestNormalPrefix(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertInvalid(t, "-weasy-display: block", "prefix on this attribute is not supported")
 }
 
 func TestUnknownPrefix(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertInvalid(t, "-unknown-display: block", "prefixed selectors are ignored")
 }
 
-func TestFunction(t *testing.T) {
+func TestEmptyPropertyValue(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for prop := range allValidators {
+		assertInvalid(t, fmt.Sprintf("%s:", prop), "Ignored")
+	}
+}
+
+func TestClip(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "clip: rect(1px, 3em, auto, auto)", toValidated(pr.Properties{
 		pr.PClip: pr.Values{
@@ -172,38 +177,9 @@ func TestSpacing(t *testing.T) {
 		pr.PWordSpacing: pr.Dimension{Value: 3, Unit: pr.Px}.ToValue(),
 	}))
 	capt.AssertNoLogs(t)
-	assertInvalid(t, "letter_spacing: normal", "did you mean letter-spacing")
+	assertInvalid(t, "letter_spacing: normal", "unknown property")
 	assertInvalid(t, "letter-spacing: 3", "invalid")
 	assertInvalid(t, "word-spacing: 3", "invalid")
-}
-
-func TestFootnote(t *testing.T) {
-	capt := tu.CaptureLogs()
-	assertValidDict(t, "footnote-policy: auto", toValidated(pr.Properties{
-		pr.PFootnotePolicy: pr.String("auto"),
-	}))
-	assertValidDict(t, "footnote-policy: line", toValidated(pr.Properties{
-		pr.PFootnotePolicy: pr.String("line"),
-	}))
-	assertValidDict(t, "footnote-policy: block", toValidated(pr.Properties{
-		pr.PFootnotePolicy: pr.String("block"),
-	}))
-
-	assertValidDict(t, "footnote-display: block", toValidated(pr.Properties{
-		pr.PFootnoteDisplay: pr.String("block"),
-	}))
-	assertValidDict(t, "footnote-display: inline", toValidated(pr.Properties{
-		pr.PFootnoteDisplay: pr.String("inline"),
-	}))
-	assertValidDict(t, "footnote-display: compact", toValidated(pr.Properties{
-		pr.PFootnoteDisplay: pr.String("compact"),
-	}))
-	capt.AssertNoLogs(t)
-
-	assertInvalid(t, "footnote_display: block", "did you mean footnote-display")
-	assertInvalid(t, "footnote-display: 3", "invalid")
-	assertInvalid(t, "footnote-policy: 3", "invalid")
-	assertInvalid(t, "footnote-policy: normal", "invalid")
 }
 
 func TestDecoration(t *testing.T) {
@@ -233,6 +209,35 @@ func TestDecoration(t *testing.T) {
 	}))
 
 	capt.AssertNoLogs(t)
+}
+
+func TestFootnote(t *testing.T) {
+	capt := tu.CaptureLogs()
+	assertValidDict(t, "footnote-policy: auto", toValidated(pr.Properties{
+		pr.PFootnotePolicy: pr.String("auto"),
+	}))
+	assertValidDict(t, "footnote-policy: line", toValidated(pr.Properties{
+		pr.PFootnotePolicy: pr.String("line"),
+	}))
+	assertValidDict(t, "footnote-policy: block", toValidated(pr.Properties{
+		pr.PFootnotePolicy: pr.String("block"),
+	}))
+
+	assertValidDict(t, "footnote-display: block", toValidated(pr.Properties{
+		pr.PFootnoteDisplay: pr.String("block"),
+	}))
+	assertValidDict(t, "footnote-display: inline", toValidated(pr.Properties{
+		pr.PFootnoteDisplay: pr.String("inline"),
+	}))
+	assertValidDict(t, "footnote-display: compact", toValidated(pr.Properties{
+		pr.PFootnoteDisplay: pr.String("compact"),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "footnote_display: block", "unknown property")
+	assertInvalid(t, "footnote-display: 3", "invalid")
+	assertInvalid(t, "footnote-policy: 3", "invalid")
+	assertInvalid(t, "footnote-policy: normal", "invalid")
 }
 
 func TestSize(t *testing.T) {
@@ -302,6 +307,10 @@ func TestTransforms(t *testing.T) {
 	assertInvalid(t, "transform: 6px", "invalid")
 }
 
+func TestBackgroundImage(t *testing.T) {
+	assertInvalid(t, "background-image: inexistent-gradient(blue, green)", "invalid")
+}
+
 type repeatable interface {
 	Repeat(int) pr.CssProperty
 }
@@ -310,7 +319,7 @@ func checkPosition(t *testing.T, css string, expected pr.Center) {
 	l := expandToDict(t, "background-position:"+css, "")
 	var (
 		name pr.KnownProp
-		v    pr.ValidatedProperty
+		v    pr.DeclaredValue
 	)
 	for name_, v_ := range l {
 		name = name_
@@ -319,14 +328,14 @@ func checkPosition(t *testing.T, css string, expected pr.Center) {
 	if name != pr.PBackgroundPosition {
 		t.Fatalf("expected background_position got %s", name)
 	}
-	exp := pr.AsCascaded(pr.Centers{expected}).AsValidated()
+	var exp pr.DeclaredValue = pr.Centers{expected}
 	if !reflect.DeepEqual(v, exp) {
 		t.Fatalf("expected %v got %v", exp, v)
 	}
 }
 
 // Test the “background-position“ property.
-func TestExpandBackgroundPosition(t *testing.T) {
+func TestBackgroundPosition(t *testing.T) {
 	capt := tu.CaptureLogs()
 
 	css_xs := [5]string{"left", "center", "right", "4.5%", "12px"}
@@ -382,6 +391,12 @@ func TestExpandBackgroundPosition(t *testing.T) {
 	assertInvalid(t, "background-position: bottom top", "invalid")
 }
 
+func TestFontFamily(t *testing.T) {
+	assertInvalid(t, `font-family: "My" Font, serif`, "invalid")
+	assertInvalid(t, `font-family: "My" "Font", serif`, "invalid")
+	assertInvalid(t, `font-family: "My", 12pt, serif`, "invalid")
+}
+
 // Test the “line-height“ property.
 func TestLineHeight(t *testing.T) {
 	capt := tu.CaptureLogs()
@@ -414,54 +429,170 @@ func TestLineHeight(t *testing.T) {
 	assertInvalid(t, "line-height: 1px 1px", "invalid")
 }
 
-func TestImageResolution(t *testing.T) {
-	capt := tu.CaptureLogs()
-	assertValidDict(t, "image-resolution: .5dppx", toValidated(pr.Properties{
-		pr.PImageResolution: pr.FToV(.5),
-	}))
-	capt.AssertNoLogs(t)
-
-	assertInvalid(t, "image-resolution: 1deg", "invalid")
-	assertInvalid(t, "image-resolution: -0.5%", "invalid")
-	assertInvalid(t, "image-resolution: 1px 1px", "invalid")
+func TestListStyleType(t *testing.T) {
+	for _, css := range []string{
+		`symbols()`,
+		`symbols(cyclic)`,
+		`symbols(symbolic)`,
+		`symbols(fixed)`,
+		`symbols(alphabetic "a")`,
+		`symbols(numeric "1")`,
+		`symbols(test "a" "b")`,
+		`symbols(fixed symbolic "a" "b")`,
+	} {
+		assertInvalid(t, fmt.Sprintf("list-style-type: %s", css), "invalid")
+	}
 }
 
-func TestObjectFit(t *testing.T) {
-	capt := tu.CaptureLogs()
-	assertValidDict(t, "object-fit: cover", toValidated(pr.Properties{
-		pr.PObjectFit: pr.String("cover"),
-	}))
-	capt.AssertNoLogs(t)
+func TestImageOrientation(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	assertValidDict(t, "image-orientation: none", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{String: "none"}}))
+	assertValidDict(t, "image-orientation: from-image", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{String: "from-image"}}))
+	assertValidDict(t, "image-orientation: 90deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 2, Bool: false}}))
+	assertValidDict(t, "image-orientation: 30deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 6, Bool: false}}))
+	assertValidDict(t, "image-orientation: 180deg flip", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi, Bool: true}}))
+	assertValidDict(t, "image-orientation: 0deg flip", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: 0, Bool: true}}))
+	assertValidDict(t, "image-orientation: flip 90deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 2, Bool: true}}))
+	assertValidDict(t, "image-orientation: flip", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: 0, Bool: true}}))
 
-	assertInvalid(t, "object-fit: 1deg", "invalid")
-	assertInvalid(t, "object-fit: -0.5%", "invalid")
-	assertInvalid(t, "object-fit: 1px 1px", "invalid")
+	assertInvalid(t, "image-orientation: none none", "invalid")
+	assertInvalid(t, "image-orientation: unknown", "invalid")
+	assertInvalid(t, "image-orientation: none flip", "invalid")
+	assertInvalid(t, "image-orientation: from-image flip", "invalid")
+	assertInvalid(t, "image-orientation: 10", "invalid")
+	assertInvalid(t, "image-orientation: 10 flip", "invalid")
+	assertInvalid(t, "image-orientation: flip 10", "invalid")
+	assertInvalid(t, "image-orientation: flip flip", "invalid")
+	assertInvalid(t, "image-orientation: 90deg flop", "invalid")
+	assertInvalid(t, "image-orientation: 90deg 180deg", "invalid")
 }
 
-func TestMinMaxWidthHeight(t *testing.T) {
-	capt := tu.CaptureLogs()
-	assertValidDict(t, "min-width: 30px", toValidated(pr.Properties{
-		pr.PMinWidth: pr.FToPx(30),
-	}))
-	assertValidDict(t, "min-height: 20px", toValidated(pr.Properties{
-		pr.PMinHeight: pr.FToPx(20),
-	}))
-	assertValidDict(t, "max-width: 30px", toValidated(pr.Properties{
-		pr.PMaxWidth: pr.FToPx(30),
-	}))
-	assertValidDict(t, "max-height: 20px", toValidated(pr.Properties{
-		pr.PMaxHeight: pr.FToPx(20),
-	}))
-	capt.AssertNoLogs(t)
+func TestBorderImageSlice(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	assertInvalid(t, "min-width: red", "invalid")
-	assertInvalid(t, "min-width: 1px 1px", "invalid")
-	assertInvalid(t, "min-height: red", "invalid")
-	assertInvalid(t, "min-height: 1px 1px", "invalid")
-	assertInvalid(t, "max-width: red", "invalid")
-	assertInvalid(t, "max-width: 1px 1px", "invalid")
-	assertInvalid(t, "max-height: red", "invalid")
-	assertInvalid(t, "max-height: 1px 1px", "invalid")
+	for _, test := range []struct {
+		css   string
+		value pr.Values
+	}{
+		{"1", pr.Values{pr.FToV(1)}},
+		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
+		{"50% 1000.1 0", pr.Values{pr.PercToV(50), pr.FToV(1000.1), pr.FToV(0)}},
+		{"1% 2% 3% 4%", pr.Values{pr.PercToV(1), pr.PercToV(2), pr.PercToV(3), pr.PercToV(4)}},
+		{"fill 10% 20", pr.Values{pr.SToV("fill"), pr.PercToV(10), pr.FToV(20)}},
+		{"0 1 0.5 fill", pr.Values{pr.FToV(0), pr.FToV(1), pr.FToV(0.5), pr.SToV("fill")}},
+	} {
+		assertValidDict(t, fmt.Sprintf("border-image-slice: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PBorderImageSlice: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"none",
+		"1, 2",
+		"-10",
+		"-10%",
+		"1 2 3 -10%",
+		"-0.3",
+		"1 fill 2",
+		"fill 1 2 3 fill",
+	} {
+		assertInvalid(t, fmt.Sprintf("border-image-slice: %s", css), "invalid")
+	}
+}
+
+func TestBorderImageWidth(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Values
+	}{
+		{"1", pr.Values{pr.FToV(1)}},
+		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
+		{"50% 1000.1 0", pr.Values{pr.PercToV(50), pr.FToV(1000.1), pr.FToV(0)}},
+		{"1% 2px 3em 4", pr.Values{pr.PercToV(1), pr.FToPx(2), pr.DimOrS{Dimension: pr.Dimension{3, pr.Em}}, pr.FToV(4)}},
+		{"auto", pr.Values{pr.SToV("auto")}},
+		{"1 auto", pr.Values{pr.FToV(1), pr.SToV("auto")}},
+		{"auto auto", pr.Values{pr.SToV("auto"), pr.SToV("auto")}},
+		{"auto auto auto 2", pr.Values{pr.SToV("auto"), pr.SToV("auto"), pr.SToV("auto"), pr.FToV(2)}},
+	} {
+		assertValidDict(t, fmt.Sprintf("border-image-width: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PBorderImageWidth: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"none",
+		"1, 2",
+		"1 -2",
+		"-10",
+		"-10%",
+		"1px 2px 3px -10%",
+		"-3px",
+		"auto auto auto auto auto",
+		"1 2 3 4 5",
+	} {
+		assertInvalid(t, fmt.Sprintf("border-image-width: %s", css), "invalid")
+	}
+}
+
+func TestBorderImageOutset(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Values
+	}{
+		{"1", pr.Values{pr.FToV(1)}},
+		{"1 2    3 4", pr.Values{pr.FToV(1), pr.FToV(2), pr.FToV(3), pr.FToV(4)}},
+		{"50px 1000.1 0", pr.Values{pr.FToPx(50), pr.FToV(1000.1), pr.FToV(0)}},
+		{"1in 2px 3em 4", pr.Values{pr.Dimension{1, pr.In}.ToValue(), pr.FToPx(2), pr.Dimension{3, pr.Em}.ToValue(), pr.FToV(4)}},
+	} {
+		assertValidDict(t, fmt.Sprintf("border-image-outset: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PBorderImageOutset: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"none",
+		"auto",
+		"1, 2",
+		"-10",
+		"1 -2",
+		"10%",
+		"1px 2px 3px -10px",
+		"-3px",
+		"1 2 3 4 5",
+	} {
+		assertInvalid(t, fmt.Sprintf("border-image-outset: %s", css), "invalid")
+	}
+}
+
+func TestBorderImageRepeat(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"stretch", pr.Strings{"stretch"}},
+		{"repeat repeat", pr.Strings{"repeat", "repeat"}},
+		{"round     space", pr.Strings{"round", "space"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("border-image-repeat: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PBorderImageRepeat: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"none",
+		"test",
+		"round round round",
+		"stretch space round",
+		"repeat test",
+	} {
+		assertInvalid(t, fmt.Sprintf("border-image-repeat: %s", css), "invalid")
+	}
 }
 
 // Test the “string-set“ property.
@@ -533,6 +664,22 @@ func TestStringSet(t *testing.T) {
 	assertInvalid(t, "string-set: test attr(id, class)", "invalid")
 }
 
+func TestOverflowWrap(t *testing.T) {
+	capt := tu.CaptureLogs()
+	assertValidDict(t, "overflow-wrap: normal", toValidated(pr.Properties{
+		pr.POverflowWrap: pr.String("normal"),
+	}))
+	assertValidDict(t, "overflow-wrap: break-word", toValidated(pr.Properties{
+		pr.POverflowWrap: pr.String("break-word"),
+	}))
+	assertValidDict(t, "overflow-wrap: inherit", map[pr.KnownProp]pr.DeclaredValue{
+		pr.POverflowWrap: pr.Inherit,
+	})
+	capt.AssertNoLogs(t)
+	assertInvalid(t, "overflow-wrap: none", "invalid")
+	assertInvalid(t, "overflow-wrap: normal, break-word", "invalid")
+}
+
 var (
 	red           = pr.NewColor(1, 0, 0, 1)
 	lime          = pr.NewColor(0, 1, 0, 1)
@@ -562,7 +709,7 @@ func checkGradientGeneric(t *testing.T, css string, expected pr.Image) {
 		expanded := expandToDict(t, fmt.Sprintf("background-image: %s%s-gradient(%s)", prefix, mode, css), "")
 		var image pr.Image
 		for _, v := range expanded {
-			image = v.ToCascaded().ToCSS().(pr.Images)[0]
+			image = v.(pr.Images)[0]
 		}
 		if !reflect.DeepEqual(image, expected) {
 			t.Fatalf("%s: expected %v got %v", css, expected, image)
@@ -643,19 +790,6 @@ func TestLinearGradient(t *testing.T) {
 	gradient(t, "to bottom right, blue", pr.DirectionType{Corner: "bottom_right"}, nil, nil)
 	gradient(t, "to right bottom, blue", pr.DirectionType{Corner: "bottom_right"}, nil, nil)
 	capt.AssertNoLogs(t)
-}
-
-func TestOverflowWrap(t *testing.T) {
-	capt := tu.CaptureLogs()
-	assertValidDict(t, "overflow-wrap: normal", toValidated(pr.Properties{
-		pr.POverflowWrap: pr.String("normal"),
-	}))
-	assertValidDict(t, "overflow-wrap: break-word", toValidated(pr.Properties{
-		pr.POverflowWrap: pr.String("break-word"),
-	}))
-	capt.AssertNoLogs(t)
-	assertInvalid(t, "overflow-wrap: none", "invalid")
-	assertInvalid(t, "overflow-wrap: normal, break-word", "invalid")
 }
 
 func TestRadialGradient(t *testing.T) {
@@ -755,28 +889,590 @@ func TestRadialGradient(t *testing.T) {
 		pr.Center{OriginX: "left", OriginY: "top", Pos: pr.Point{{Value: 100, Unit: pr.Perc}, {Value: 5, Unit: pr.Em}}}, nil, nil)
 }
 
-func TestImageOrientation(t *testing.T) {
-	capt := tu.CaptureLogs()
-	defer capt.AssertNoLogs(t)
-	assertValidDict(t, "image-orientation: none", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{String: "none"}}))
-	assertValidDict(t, "image-orientation: from-image", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{String: "from-image"}}))
-	assertValidDict(t, "image-orientation: 90deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 2, Bool: false}}))
-	assertValidDict(t, "image-orientation: 30deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 6, Bool: false}}))
-	assertValidDict(t, "image-orientation: 180deg flip", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi, Bool: true}}))
-	assertValidDict(t, "image-orientation: 0deg flip", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: 0, Bool: true}}))
-	assertValidDict(t, "image-orientation: flip 90deg", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: pi / 2, Bool: true}}))
-	assertValidDict(t, "image-orientation: flip", toValidated(pr.Properties{pr.PImageOrientation: pr.SBoolFloat{Float: 0, Bool: true}}))
+func TestGridAutoColumnsRows(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	assertInvalid(t, "image-orientation: none none", "invalid")
-	assertInvalid(t, "image-orientation: unknown", "invalid")
-	assertInvalid(t, "image-orientation: none flip", "invalid")
-	assertInvalid(t, "image-orientation: from-image flip", "invalid")
-	assertInvalid(t, "image-orientation: 10", "invalid")
-	assertInvalid(t, "image-orientation: 10 flip", "invalid")
-	assertInvalid(t, "image-orientation: flip 10", "invalid")
-	assertInvalid(t, "image-orientation: flip flip", "invalid")
-	assertInvalid(t, "image-orientation: 90deg flop", "invalid")
-	assertInvalid(t, "image-orientation: 90deg 180deg", "invalid")
+	for _, test := range []struct {
+		css   string
+		value pr.GridAuto
+	}{
+		{"40px", pr.GridAuto{pr.NewGridDimsValue(pr.FToPx(40))}},
+		{"2fr", pr.GridAuto{pr.NewGridDimsValue(pr.Dimension{2, pr.Fr}.ToValue())}},
+		{"18%", pr.GridAuto{pr.NewGridDimsValue(pr.PercToV(18))}},
+		{"auto", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("auto"))}},
+		{"min-content", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("min-content"))}},
+		{"max-content", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("max-content"))}},
+		{"fit-content(20%)", pr.GridAuto{pr.NewGridDimsFitcontent(pr.PercToD(20))}},
+		{"minmax(20px, 25px)", pr.GridAuto{pr.NewGridDimsMinmax(pr.FToPx(20), pr.FToPx(25))}},
+		{"minmax(min-content, max-content)", pr.GridAuto{pr.NewGridDimsMinmax(pr.SToV("min-content"), pr.SToV("max-content"))}},
+		{"min-content max-content", pr.GridAuto{pr.NewGridDimsValue(pr.SToV("min-content")), pr.NewGridDimsValue(pr.SToV("max-content"))}},
+	} {
+		assertValidDict(t, fmt.Sprintf("grid-auto-columns: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridAutoColumns: test.value,
+		})
+		assertValidDict(t, fmt.Sprintf("grid-auto-rows: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridAutoRows: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"40",
+		"coucou",
+		"fit-content",
+		"fit-content(min-content)",
+		"minmax(40px)",
+		"minmax(2fr, 1fr)",
+		"1fr 1fr coucou",
+		"fit-content()",
+		"fit-content(2%, 18%)",
+	} {
+		assertInvalid(t, fmt.Sprintf("grid-auto-columns: %s", css), "invalid")
+		assertInvalid(t, fmt.Sprintf("grid-auto-rows: %s", css), "invalid")
+	}
+}
+
+func TestGridAutoFlow(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"row", pr.Strings{"row"}},
+		{"column", pr.Strings{"column"}},
+		{"row dense", pr.Strings{"row", "dense"}},
+		{"column dense", pr.Strings{"column", "dense"}},
+		{"dense row", pr.Strings{"dense", "row"}},
+		{"dense column", pr.Strings{"dense", "column"}},
+		{"dense", pr.Strings{"dense", "row"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("grid-auto-flow: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridAutoFlow: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"row row",
+		"column column",
+		"dense dense",
+		"coucou",
+		"row column",
+		"column row",
+		"row coucou",
+		"column coucou",
+		"coucou row",
+		"coucou column",
+		"row column dense",
+	} {
+		assertInvalid(t, fmt.Sprintf("grid-auto-flow: %s", css), "invalid")
+	}
+}
+
+func TestGridTemplateColumnsRows(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.GridTemplate
+	}{
+		{"none", pr.GridTemplate{Tag: pr.None}},
+		{"subgrid", pr.GridTemplate{Tag: pr.Subgrid, Names: nil}},
+		{"subgrid [a] repeat(auto-fill, [b]) [c]", pr.GridTemplate{Tag: pr.Subgrid, Names: []pr.GridSpec{pr.GridNames{"a"}, pr.GridNameRepeat{Repeat: pr.RepeatAutoFill, Names: [][]string{{"b"}}}, pr.GridNames{"c"}}}},
+		{"subgrid [a] [a] [a] [a] repeat(auto-fill, [b]) [c] [c]", pr.GridTemplate{Tag: pr.Subgrid, Names: []pr.GridSpec{pr.GridNames{"a"}, pr.GridNames{"a"}, pr.GridNames{"a"}, pr.GridNames{"a"}, pr.GridNameRepeat{Repeat: pr.RepeatAutoFill, Names: [][]string{{"b"}}}, pr.GridNames{"c"}, pr.GridNames{"c"}}}},
+		{"subgrid [] [a]", pr.GridTemplate{Tag: pr.Subgrid, Names: []pr.GridSpec{pr.GridNames{}, pr.GridNames{"a"}}}},
+		{"subgrid [a] [b] [c] [d] [e] [f]", pr.GridTemplate{Tag: pr.Subgrid, Names: []pr.GridSpec{pr.GridNames{"a"}, pr.GridNames{"b"}, pr.GridNames{"c"}, pr.GridNames{"d"}, pr.GridNames{"e"}, pr.GridNames{"f"}}}},
+		{"[outer-edge] 20px [main-start] 1fr [center] 1fr max-content [main-end]", pr.GridTemplate{Names: []pr.GridSpec{
+			pr.GridNames{"outer-edge"},
+			pr.NewGridDimsValue(pr.FToPx(20)),
+			pr.GridNames{"main-start"},
+			pr.NewGridDimsValue(pr.NewDim(1, pr.Fr).ToValue()),
+			pr.GridNames{"center"},
+			pr.NewGridDimsValue(pr.NewDim(1, pr.Fr).ToValue()),
+			pr.GridNames{},
+			pr.NewGridDimsValue(pr.SToV("max-content")),
+			pr.GridNames{"main-end"},
+		}}},
+		{"repeat(auto-fill, minmax(25ch, 1fr))", pr.GridTemplate{
+			Names: []pr.GridSpec{
+				pr.GridNames{},
+				pr.GridRepeat{Repeat: pr.RepeatAutoFill, Names: []pr.GridSpec{
+					pr.GridNames{},
+					pr.NewGridDimsMinmax(pr.NewDim(25, pr.Ch).ToValue(), pr.NewDim(1, pr.Fr).ToValue()),
+					pr.GridNames{},
+				}},
+				pr.GridNames{},
+			},
+		}},
+		{"[a] auto [b] minmax(min-content, 1fr) [b c d] repeat(2, [e] 40px) repeat(5, auto)", pr.GridTemplate{Names: []pr.GridSpec{
+			pr.GridNames{"a"},
+			pr.NewGridDimsValue(pr.SToV("auto")),
+			pr.GridNames{"b"},
+			pr.NewGridDimsMinmax(pr.SToV("min-content"), pr.NewDim(1, pr.Fr).ToValue()),
+			pr.GridNames{"b", "c", "d"},
+			pr.GridRepeat{Repeat: 2, Names: []pr.GridSpec{
+				pr.GridNames{"e"},
+				pr.NewGridDimsValue(pr.FToPx(40)),
+				pr.GridNames{},
+			}},
+			pr.GridNames{},
+			pr.GridRepeat{Repeat: 5, Names: []pr.GridSpec{
+				pr.GridNames{},
+				pr.NewGridDimsValue(pr.SToV("auto")),
+				pr.GridNames{},
+			}},
+			pr.GridNames{},
+		}}},
+	} {
+
+		assertValidDict(t, fmt.Sprintf("grid-template-columns: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridTemplateColumns: test.value,
+		})
+		assertValidDict(t, fmt.Sprintf("grid-template-rows: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridTemplateRows: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"coucou",
+		"subgrid subgrid",
+		"subgrid coucou",
+		"subgrid [coucou] repeat(0, [wow])",
+		"subgrid [coucou] repeat(auto-fit [wow])",
+		"fit-content(18%) repeat(auto-fill, 15em)",
+		"[coucou] [wow]",
+	} {
+		assertInvalid(t, fmt.Sprintf("grid-template-columns: %s", css), "invalid")
+		assertInvalid(t, fmt.Sprintf("grid-template-rows: %s", css), "invalid")
+	}
+}
+
+func TestGridTemplateAreas(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.GridTemplateAreas
+	}{
+		{"none", pr.GridTemplateAreas{}},
+		{`"head head" "nav main" "foot ...."`, pr.GridTemplateAreas{{"head", "head"}, {"nav", "main"}, {"foot", ""}}},
+		{`"title board" "stats board"`, pr.GridTemplateAreas{{"title", "board"}, {"stats", "board"}}},
+		{`". a" "b a" ".a"`, pr.GridTemplateAreas{{"", "a"}, {"b", "a"}, {"", "a"}}},
+	} {
+		assertValidDict(t, fmt.Sprintf("grid-template-areas: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridTemplateAreas: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		`"head head coucou" "nav main" "foot ...."`,
+		`". a" "b c" ". a"`,
+		`". a" "b a" "a a"`,
+		`"a a a a" "a b b a" "a a a a"`,
+		`" "`,
+	} {
+		assertInvalid(t, fmt.Sprintf("grid-template-areas: %s", css), "invalid")
+	}
+}
+
+func TestGridLine(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.GridLine
+	}{
+		{"auto", pr.GridLine{Tag: pr.Auto}},
+		{"4", pr.GridLine{Val: 4}},
+		{"C", pr.GridLine{Ident: "c"}},
+		{"4 c", pr.GridLine{Val: 4, Ident: "c"}},
+		{"col -4", pr.GridLine{Val: -4, Ident: "col"}},
+		{"span c 4", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "c"}},
+		{"span 4 c", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "c"}},
+		{"4 span c", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "c"}},
+		{"super 4 span", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "super"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("grid-row-start: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridRowStart: test.value,
+		})
+		assertValidDict(t, fmt.Sprintf("grid-row-end: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridRowEnd: test.value,
+		})
+		assertValidDict(t, fmt.Sprintf("grid-column-start: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridColumnStart: test.value,
+		})
+		assertValidDict(t, fmt.Sprintf("grid-column-end: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PGridColumnEnd: test.value,
+		})
+	}
+
+	for _, css := range [...]string{
+		"span",
+		"0",
+		"1.1",
+		"span 0",
+		"span -1",
+		"span 2.1",
+		"span auto",
+		"auto auto",
+		"-4 cOL span",
+		"span 1.1 col",
+	} {
+		assertInvalid(t, fmt.Sprintf("grid-row-start: %s", css), "invalid")
+		assertInvalid(t, fmt.Sprintf("grid-row-end: %s", css), "invalid")
+		assertInvalid(t, fmt.Sprintf("grid-column-start: %s", css), "invalid")
+		assertInvalid(t, fmt.Sprintf("grid-column-end: %s", css), "invalid")
+	}
+}
+
+func TestAlignContent(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"normal", pr.Strings{"normal"}},
+		{"baseline", pr.Strings{"first", "baseline"}},
+		{"first baseline", pr.Strings{"first", "baseline"}},
+		{"last baseline", pr.Strings{"last", "baseline"}},
+		{"baseline last", pr.Strings{"baseline", "last"}},
+		{"space-between", pr.Strings{"space-between"}},
+		{"space-around", pr.Strings{"space-around"}},
+		{"space-evenly", pr.Strings{"space-evenly"}},
+		{"stretch", pr.Strings{"stretch"}},
+		{"center", pr.Strings{"center"}},
+		{"start", pr.Strings{"start"}},
+		{"end", pr.Strings{"end"}},
+		{"flex-start", pr.Strings{"flex-start"}},
+		{"flex-end", pr.Strings{"flex-end"}},
+		{"safe center", pr.Strings{"safe", "center"}},
+		{"unsafe start", pr.Strings{"unsafe", "start"}},
+		{"safe end", pr.Strings{"safe", "end"}},
+		{"safe flex-start", pr.Strings{"safe", "flex-start"}},
+		{"unsafe flex-start", pr.Strings{"unsafe", "flex-start"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("align-content: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PAlignContent: test.value,
+		})
+	}
+
+	for _, css := range []string{
+		"auto",
+		"none",
+		"auto auto",
+		"first last",
+		"baseline baseline",
+		"start safe",
+		"start end",
+		"safe unsafe",
+		"left",
+		"right",
+	} {
+		assertInvalid(t, fmt.Sprintf("align-content: %s", css), "invalid")
+	}
+}
+
+func TestAlignItems(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"normal", pr.Strings{"normal"}},
+		{"stretch", pr.Strings{"stretch"}},
+		{"baseline", pr.Strings{"first", "baseline"}},
+		{"first baseline", pr.Strings{"first", "baseline"}},
+		{"last baseline", pr.Strings{"last", "baseline"}},
+		{"baseline last", pr.Strings{"baseline", "last"}},
+		{"center", pr.Strings{"center"}},
+		{"self-start", pr.Strings{"self-start"}},
+		{"self-end", pr.Strings{"self-end"}},
+		{"start", pr.Strings{"start"}},
+		{"end", pr.Strings{"end"}},
+		{"flex-start", pr.Strings{"flex-start"}},
+		{"flex-end", pr.Strings{"flex-end"}},
+		{"safe center", pr.Strings{"safe", "center"}},
+		{"unsafe start", pr.Strings{"unsafe", "start"}},
+		{"safe end", pr.Strings{"safe", "end"}},
+		{"unsafe self-start", pr.Strings{"unsafe", "self-start"}},
+		{"safe self-end", pr.Strings{"safe", "self-end"}},
+		{"safe flex-start", pr.Strings{"safe", "flex-start"}},
+		{"unsafe flex-start", pr.Strings{"unsafe", "flex-start"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("align-items: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PAlignItems: test.value,
+		})
+	}
+
+	for _, css := range []string{
+		"auto",
+		"none",
+		"auto auto",
+		"first last",
+		"baseline baseline",
+		"start safe",
+		"start end",
+		"safe unsafe",
+		"left",
+		"right",
+		"space-between",
+	} {
+		assertInvalid(t, fmt.Sprintf("align-items: %s", css), "invalid")
+	}
+}
+
+func TestAlignSelf(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"auto", pr.Strings{"auto"}},
+		{"normal", pr.Strings{"normal"}},
+		{"stretch", pr.Strings{"stretch"}},
+		{"baseline", pr.Strings{"first", "baseline"}},
+		{"first baseline", pr.Strings{"first", "baseline"}},
+		{"last baseline", pr.Strings{"last", "baseline"}},
+		{"baseline last", pr.Strings{"baseline", "last"}},
+		{"center", pr.Strings{"center"}},
+		{"self-start", pr.Strings{"self-start"}},
+		{"self-end", pr.Strings{"self-end"}},
+		{"start", pr.Strings{"start"}},
+		{"end", pr.Strings{"end"}},
+		{"flex-start", pr.Strings{"flex-start"}},
+		{"flex-end", pr.Strings{"flex-end"}},
+		{"safe center", pr.Strings{"safe", "center"}},
+		{"unsafe start", pr.Strings{"unsafe", "start"}},
+		{"safe end", pr.Strings{"safe", "end"}},
+		{"unsafe self-start", pr.Strings{"unsafe", "self-start"}},
+		{"safe self-end", pr.Strings{"safe", "self-end"}},
+		{"safe flex-start", pr.Strings{"safe", "flex-start"}},
+		{"unsafe flex-start", pr.Strings{"unsafe", "flex-start"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("align-self: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PAlignSelf: test.value,
+		})
+	}
+
+	for _, css := range []string{
+		"none",
+		"auto auto",
+		"first last",
+		"baseline baseline",
+		"start safe",
+		"start end",
+		"safe unsafe",
+		"left",
+		"right",
+		"space-between",
+	} {
+		assertInvalid(t, fmt.Sprintf("align-self: %s", css), "invalid")
+	}
+}
+
+func TestJustifyContent(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"normal", pr.Strings{"normal"}},
+		{"space-between", pr.Strings{"space-between"}},
+		{"space-around", pr.Strings{"space-around"}},
+		{"space-evenly", pr.Strings{"space-evenly"}},
+		{"stretch", pr.Strings{"stretch"}},
+		{"center", pr.Strings{"center"}},
+		{"left", pr.Strings{"left"}},
+		{"right", pr.Strings{"right"}},
+		{"start", pr.Strings{"start"}},
+		{"end", pr.Strings{"end"}},
+		{"flex-start", pr.Strings{"flex-start"}},
+		{"flex-end", pr.Strings{"flex-end"}},
+		{"safe center", pr.Strings{"safe", "center"}},
+		{"unsafe start", pr.Strings{"unsafe", "start"}},
+		{"safe end", pr.Strings{"safe", "end"}},
+		{"unsafe left", pr.Strings{"unsafe", "left"}},
+		{"safe right", pr.Strings{"safe", "right"}},
+		{"safe flex-start", pr.Strings{"safe", "flex-start"}},
+		{"unsafe flex-start", pr.Strings{"unsafe", "flex-start"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("justify-content: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PJustifyContent: test.value,
+		})
+	}
+
+	for _, css := range []string{
+		"auto",
+		"none",
+		"baseline",
+		"auto auto",
+		"first last",
+		"baseline baseline",
+		"start safe",
+		"start end",
+		"safe unsafe",
+	} {
+		assertInvalid(t, fmt.Sprintf("justify-content: %s", css), "invalid")
+	}
+}
+
+func TestJustifyItems(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"normal", pr.Strings{"normal"}},
+		{"stretch", pr.Strings{"stretch"}},
+		{"baseline", pr.Strings{"first", "baseline"}},
+		{"first baseline", pr.Strings{"first", "baseline"}},
+		{"last baseline", pr.Strings{"last", "baseline"}},
+		{"baseline last", pr.Strings{"baseline", "last"}},
+		{"center", pr.Strings{"center"}},
+		{"self-start", pr.Strings{"self-start"}},
+		{"self-end", pr.Strings{"self-end"}},
+		{"start", pr.Strings{"start"}},
+		{"end", pr.Strings{"end"}},
+		{"left", pr.Strings{"left"}},
+		{"right", pr.Strings{"right"}},
+		{"flex-start", pr.Strings{"flex-start"}},
+		{"flex-end", pr.Strings{"flex-end"}},
+		{"safe center", pr.Strings{"safe", "center"}},
+		{"unsafe start", pr.Strings{"unsafe", "start"}},
+		{"safe end", pr.Strings{"safe", "end"}},
+		{"unsafe self-start", pr.Strings{"unsafe", "self-start"}},
+		{"safe self-end", pr.Strings{"safe", "self-end"}},
+		{"safe flex-start", pr.Strings{"safe", "flex-start"}},
+		{"unsafe flex-start", pr.Strings{"unsafe", "flex-start"}},
+		{"legacy", pr.Strings{"legacy"}},
+		{"legacy left", pr.Strings{"legacy", "left"}},
+		{"left legacy", pr.Strings{"left", "legacy"}},
+		{"legacy center", pr.Strings{"legacy", "center"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("justify-items: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PJustifyItems: test.value,
+		})
+	}
+
+	for _, css := range []string{
+		"auto",
+		"none",
+		"auto auto",
+		"first last",
+		"baseline baseline",
+		"start safe",
+		"start end",
+		"safe unsafe",
+		"space-between",
+	} {
+		assertInvalid(t, fmt.Sprintf("justify-items: %s", css), "invalid")
+	}
+}
+
+func TestJustifySelf(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	for _, test := range []struct {
+		css   string
+		value pr.Strings
+	}{
+		{"auto", pr.Strings{"auto"}},
+		{"normal", pr.Strings{"normal"}},
+		{"stretch", pr.Strings{"stretch"}},
+		{"baseline", pr.Strings{"first", "baseline"}},
+		{"first baseline", pr.Strings{"first", "baseline"}},
+		{"last baseline", pr.Strings{"last", "baseline"}},
+		{"baseline last", pr.Strings{"baseline", "last"}},
+		{"center", pr.Strings{"center"}},
+		{"self-start", pr.Strings{"self-start"}},
+		{"self-end", pr.Strings{"self-end"}},
+		{"start", pr.Strings{"start"}},
+		{"end", pr.Strings{"end"}},
+		{"left", pr.Strings{"left"}},
+		{"right", pr.Strings{"right"}},
+		{"flex-start", pr.Strings{"flex-start"}},
+		{"flex-end", pr.Strings{"flex-end"}},
+		{"safe center", pr.Strings{"safe", "center"}},
+		{"unsafe start", pr.Strings{"unsafe", "start"}},
+		{"safe end", pr.Strings{"safe", "end"}},
+		{"unsafe left", pr.Strings{"unsafe", "left"}},
+		{"safe right", pr.Strings{"safe", "right"}},
+		{"unsafe self-start", pr.Strings{"unsafe", "self-start"}},
+		{"safe self-end", pr.Strings{"safe", "self-end"}},
+		{"safe flex-start", pr.Strings{"safe", "flex-start"}},
+		{"unsafe flex-start", pr.Strings{"unsafe", "flex-start"}},
+	} {
+		assertValidDict(t, fmt.Sprintf("justify-self: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
+			pr.PJustifySelf: test.value,
+		})
+	}
+
+	for _, css := range []string{
+		"none",
+		"auto auto",
+		"first last",
+		"baseline baseline",
+		"start safe",
+		"start end",
+		"safe unsafe",
+		"space-between",
+	} {
+		assertInvalid(t, fmt.Sprintf("justify-self: %s", css), "invalid")
+	}
+}
+
+func TestImageResolution(t *testing.T) {
+	capt := tu.CaptureLogs()
+	assertValidDict(t, "image-resolution: .5dppx", toValidated(pr.Properties{
+		pr.PImageResolution: pr.FToV(.5),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "image-resolution: 1deg", "invalid")
+	assertInvalid(t, "image-resolution: -0.5%", "invalid")
+	assertInvalid(t, "image-resolution: 1px 1px", "invalid")
+}
+
+func TestObjectFit(t *testing.T) {
+	capt := tu.CaptureLogs()
+	assertValidDict(t, "object-fit: cover", toValidated(pr.Properties{
+		pr.PObjectFit: pr.String("cover"),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "object-fit: 1deg", "invalid")
+	assertInvalid(t, "object-fit: -0.5%", "invalid")
+	assertInvalid(t, "object-fit: 1px 1px", "invalid")
+}
+
+func TestMinMaxWidthHeight(t *testing.T) {
+	capt := tu.CaptureLogs()
+	assertValidDict(t, "min-width: 30px", toValidated(pr.Properties{
+		pr.PMinWidth: pr.FToPx(30),
+	}))
+	assertValidDict(t, "min-height: 20px", toValidated(pr.Properties{
+		pr.PMinHeight: pr.FToPx(20),
+	}))
+	assertValidDict(t, "max-width: 30px", toValidated(pr.Properties{
+		pr.PMaxWidth: pr.FToPx(30),
+	}))
+	assertValidDict(t, "max-height: 20px", toValidated(pr.Properties{
+		pr.PMaxHeight: pr.FToPx(20),
+	}))
+	capt.AssertNoLogs(t)
+
+	assertInvalid(t, "min-width: red", "invalid")
+	assertInvalid(t, "min-width: 1px 1px", "invalid")
+	assertInvalid(t, "min-height: red", "invalid")
+	assertInvalid(t, "min-height: 1px 1px", "invalid")
+	assertInvalid(t, "max-width: red", "invalid")
+	assertInvalid(t, "max-width: 1px 1px", "invalid")
+	assertInvalid(t, "max-height: red", "invalid")
+	assertInvalid(t, "max-height: 1px 1px", "invalid")
 }
 
 func TestBackgroundOriginClip(t *testing.T) {

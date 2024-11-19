@@ -44,25 +44,15 @@ func init() {
 	badPairs[[2]string{"/", "*"}] = true
 }
 
-// Serialize nodes to CSS syntax.
-// This should be used for `ComponentValue` as it takes care of corner cases such as “;“ between declarations,
-// and consecutive identifiers that would otherwise parse back as the same token.
-func Serialize(nodes []Token) string {
-	var tmp strings.Builder
-	serializeTo(nodes, &tmp)
-	return tmp.String()
-}
-
-// Serialize this node to CSS syntax
-func SerializeOne(node Token) string {
-	var tmp strings.Builder
-	node.serializeTo(&tmp)
-	return tmp.String()
+func Serialize(l []Token) string {
+	var w strings.Builder
+	serializeTo(l, &w)
+	return w.String()
 }
 
 // Serialize any string as a CSS identifier
 // Returns an Unicode string
-// that would parse as an `IdentToken`
+// that would parse as an `Ident`
 // whose value attribute equals the passed `value` argument.
 func serializeIdentifier(value string) string {
 	if value == "-" {
@@ -187,72 +177,19 @@ func serializeURL(value string) string {
 	return chuncks.String()
 }
 
-// http://drafts.csswg.org/csswg/css-syntax/#serialization-tables
-// Serialize an iterable of nodes to CSS syntax,
-// writing chunks as Unicode string
-// by calling the provided `write` callback.
-func serializeTo(nodes []Token, writer io.StringWriter) {
-	var previousType string
-	for _, node := range nodes {
-		serializationType := string(node.Type())
-		if literal, ok := node.(LiteralToken); ok {
-			serializationType = literal.Value
-		}
-		if badPairs[[2]string{previousType, serializationType}] {
-			writer.WriteString("/**/")
-		} else if previousType == "\\" {
-			whitespace, ok := node.(WhitespaceToken)
-			ok = ok && strings.HasPrefix(whitespace.Value, "\n")
-			if !ok {
-				writer.WriteString("\n")
-			}
-		}
-		node.serializeTo(writer)
-		if serializationType == string(DeclarationT) {
-			writer.WriteString(";")
-		}
-		previousType = serializationType
-	}
-}
-
-func (t QualifiedRule) serializeTo(writer io.StringWriter) {
-	serializeTo(*t.Prelude, writer)
-	writer.WriteString("{")
-	serializeTo(*t.Content, writer)
-	writer.WriteString("}")
-}
-
-func (t AtRule) serializeTo(writer io.StringWriter) {
-	writer.WriteString("@")
-	writer.WriteString(serializeIdentifier(string(t.AtKeyword)))
-	serializeTo(*t.Prelude, writer)
-	if t.Content == nil {
-		writer.WriteString(";")
-	} else {
-		writer.WriteString("{")
-		serializeTo(*t.Content, writer)
-		writer.WriteString("}")
-	}
-}
-
-func (t Declaration) serializeTo(writer io.StringWriter) {
-	writer.WriteString(serializeIdentifier(string(t.Name)))
-	writer.WriteString(":")
-	serializeTo(t.Value, writer)
-	if t.Important {
-		writer.WriteString("!important")
-	}
+func (t Literal) serializeTo(writer io.StringWriter) {
+	writer.WriteString(t.Value)
 }
 
 func (t ParseError) serializeTo(writer io.StringWriter) {
-	switch t.Kind {
-	case "bad-string":
+	switch t.kind {
+	case errBadString:
 		writer.WriteString("\"[bad string]\n")
-	case "bad-url":
+	case errBadURL:
 		writer.WriteString("url([bad url])")
-	case ")", "]", "}":
-		writer.WriteString(t.Kind)
-	case "eof-in-string", "eof-in-url":
+	case errP, errB, errC:
+		writer.WriteString(string(t.kind))
+	case errEofInString, errEofInUrl:
 		// pass
 	default: // pragma: no cover
 		panic(fmt.Sprint("Can not serialize token", t))
@@ -265,51 +202,47 @@ func (t Comment) serializeTo(writer io.StringWriter) {
 	writer.WriteString("*/")
 }
 
-func (t WhitespaceToken) serializeTo(writer io.StringWriter) {
+func (t Whitespace) serializeTo(writer io.StringWriter) {
 	writer.WriteString(t.Value)
 }
 
-func (t LiteralToken) serializeTo(writer io.StringWriter) {
-	writer.WriteString(t.Value)
+func (t Ident) serializeTo(writer io.StringWriter) {
+	writer.WriteString(serializeIdentifier(t.Value))
 }
 
-func (t IdentToken) serializeTo(writer io.StringWriter) {
-	writer.WriteString(serializeIdentifier(string(t.Value)))
-}
-
-func (t AtKeywordToken) serializeTo(writer io.StringWriter) {
+func (t AtKeyword) serializeTo(writer io.StringWriter) {
 	writer.WriteString("@")
-	writer.WriteString(serializeIdentifier(string(t.Value)))
+	writer.WriteString(serializeIdentifier(t.Value))
 }
 
-func (t HashToken) serializeTo(writer io.StringWriter) {
+func (t Hash) serializeTo(writer io.StringWriter) {
 	writer.WriteString("#")
-	if t.IsIdentifier {
+	if t.isIdentifier() {
 		writer.WriteString(serializeIdentifier(t.Value))
 	} else {
 		writer.WriteString(serializeName(t.Value))
 	}
 }
 
-func (t StringToken) serializeTo(writer io.StringWriter) {
+func (t String) serializeTo(writer io.StringWriter) {
 	writer.WriteString(`"`)
 	writer.WriteString(serializeStringValue(t.Value))
-	if !t.isError {
+	if !t.isError() {
 		writer.WriteString(`"`)
 	}
 }
 
-func (t URLToken) serializeTo(writer io.StringWriter) {
+func (t URL) serializeTo(writer io.StringWriter) {
 	tmp := `url(` + serializeURL(t.Value) + ")"
-	if t.isError == errorInString {
+	if t.flag&isErrorInString != 0 {
 		tmp = tmp[:len(tmp)-2]
-	} else if t.isError == errorInURL {
+	} else if t.flag&isErrorInURL != 0 {
 		tmp = tmp[:len(tmp)-1]
 	}
 	writer.WriteString(tmp)
 }
 
-func (t UnicodeRangeToken) serializeTo(writer io.StringWriter) {
+func (t UnicodeRange) serializeTo(writer io.StringWriter) {
 	if t.End == t.Start {
 		writer.WriteString(fmt.Sprintf("U+%X", t.Start))
 	} else {
@@ -317,61 +250,114 @@ func (t UnicodeRangeToken) serializeTo(writer io.StringWriter) {
 	}
 }
 
-func (t NumberToken) serializeTo(writer io.StringWriter) {
-	writer.WriteString(t.Representation)
+func (t Number) serializeTo(writer io.StringWriter) {
+	writer.WriteString(t.Value)
 }
 
-func (t PercentageToken) serializeTo(writer io.StringWriter) {
-	writer.WriteString(t.Representation)
+func (t Percentage) serializeTo(writer io.StringWriter) {
+	writer.WriteString(t.Value)
 	writer.WriteString("%")
 }
 
-func (t DimensionToken) serializeTo(writer io.StringWriter) {
-	writer.WriteString(t.Representation)
+func (t Dimension) serializeTo(writer io.StringWriter) {
+	writer.WriteString(t.Value)
 	// Disambiguate with scientific notation
-	unit := string(t.Unit)
-	if unit == "e" || unit == "E" || strings.HasPrefix(unit, "e-") || strings.HasPrefix(unit, "E-") {
+	if t.Unit == "e" || t.Unit == "E" || strings.HasPrefix(t.Unit, "e-") || strings.HasPrefix(t.Unit, "E-") {
 		writer.WriteString("\\65 ")
-		writer.WriteString(serializeName(unit[1:]))
+		writer.WriteString(serializeName(t.Unit[1:]))
 	} else {
-		writer.WriteString(serializeIdentifier(unit))
+		writer.WriteString(serializeIdentifier(t.Unit))
 	}
 }
 
 func (t ParenthesesBlock) serializeTo(writer io.StringWriter) {
 	writer.WriteString("(")
-	serializeTo(*t.Content, writer)
+	serializeTo(t.Arguments, writer)
 	writer.WriteString(")")
 }
 
 func (t SquareBracketsBlock) serializeTo(writer io.StringWriter) {
 	writer.WriteString("[")
-	serializeTo(*t.Content, writer)
+	serializeTo(t.Arguments, writer)
 	writer.WriteString("]")
 }
 
 func (t CurlyBracketsBlock) serializeTo(writer io.StringWriter) {
 	writer.WriteString("{")
-	serializeTo(*t.Content, writer)
+	serializeTo(t.Arguments, writer)
 	writer.WriteString("}")
 }
 
 func (t FunctionBlock) serializeTo(writer io.StringWriter) {
 	writer.WriteString(serializeIdentifier(string(t.Name)))
 	writer.WriteString("(")
-	serializeTo(*t.Arguments, writer)
-	if t.Arguments != nil {
-		var fn Token = t
-		for asFn, ok := fn.(FunctionBlock); ok; asFn, ok = fn.(FunctionBlock) {
-			if len(*asFn.Arguments) == 0 {
-				break
-			}
-			lastArg := (*asFn.Arguments)[len(*asFn.Arguments)-1]
-			if asParse, ok := lastArg.(ParseError); ok && asParse.Kind == "eof-in-string" {
-				return
-			}
-			fn = lastArg
+	serializeTo(t.Arguments, writer)
+
+	// recursively check for a parsing error
+	var argVal Token = t
+	for fn, ok := argVal.(FunctionBlock); ok; fn, ok = argVal.(FunctionBlock) {
+		if len(fn.Arguments) == 0 {
+			break
 		}
+		lastArg := (fn.Arguments)[len(fn.Arguments)-1]
+		if asParse, ok := lastArg.(ParseError); ok && asParse.kind == errEofInString {
+			return
+		}
+		argVal = lastArg
 	}
 	writer.WriteString(")")
+}
+
+// http://drafts.csswg.org/csswg/css-syntax/#serialization-tables
+// Serialize an iterable of nodes to CSS syntax,
+// writing chunks as Unicode string
+// by calling the provided `write` callback.
+func serializeTo(nodes []Token, writer io.StringWriter) {
+	var previousType string
+	for _, node := range nodes {
+		serializationType := node.Kind().String()
+		if literal, ok := node.(Literal); ok {
+			serializationType = literal.Value
+		}
+		if badPairs[[2]string{previousType, serializationType}] {
+			writer.WriteString("/**/")
+		} else if previousType == "\\" {
+			whitespace, ok := node.(Whitespace)
+			ok = ok && strings.HasPrefix(whitespace.Value, "\n")
+			if !ok {
+				writer.WriteString("\n")
+			}
+		}
+		node.serializeTo(writer)
+		previousType = serializationType
+	}
+}
+
+func (t QualifiedRule) serializeTo(writer io.StringWriter) {
+	serializeTo(t.Prelude, writer)
+	writer.WriteString("{")
+	serializeTo(t.Content, writer)
+	writer.WriteString("}")
+}
+
+func (t AtRule) serializeTo(writer io.StringWriter) {
+	writer.WriteString("@")
+	writer.WriteString(serializeIdentifier(t.AtKeyword))
+	serializeTo(t.Prelude, writer)
+	if t.Content == nil {
+		writer.WriteString(";")
+	} else {
+		writer.WriteString("{")
+		serializeTo(t.Content, writer)
+		writer.WriteString("}")
+	}
+}
+
+func (t Declaration) serializeTo(writer io.StringWriter) {
+	writer.WriteString(serializeIdentifier(t.Name))
+	writer.WriteString(":")
+	serializeTo(t.Value, writer)
+	if t.Important {
+		writer.WriteString("!important")
+	}
 }

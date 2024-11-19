@@ -1,7 +1,7 @@
 class Box:
     """Abstract base class for all boxes."""
     # Definitions for the rules generating anonymous table boxes
-    # http://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
+    # https://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
     proper_table_child = False
     internal_table_or_caption = False
     tabular_container = False
@@ -13,26 +13,38 @@ class Box:
     # Default, may be overriden on instances.
     is_table_wrapper = False
     is_flex_item = False
+    is_grid_item = False
     is_for_root_element = False
     is_column = False
     is_leader = False
-    is_attachment = False
 
     # Other properties
     transformation_matrix = None
     bookmark_label = None
     string_set = None
-    download_name = None
+    footnote = None
+    cached_counter_values = None
+    missing_link = None
 
     # Default, overriden on some subclasses
     def all_children(self):
-        return ()
+        return self.children
+
+    def descendants(self, placeholders=False):
+        """A flat generator for a box, its children and descendants."""
+        yield self
+        for child in self.children:
+            if placeholders or isinstance(child, Box):
+                yield from child.descendants(placeholders)
+            else:
+                yield child
 
     def __init__(self, element_tag, style, element):
         self.element_tag = element_tag
         self.element = element
         self.style = style
         self.remove_decoration_sides = set()
+        self.children = []
 
     def __repr__(self):
         return f'<{type(self).__name__} {self.element_tag}>'
@@ -65,7 +77,7 @@ class Box:
 
         """
         # Overridden in ParentBox to also translate children, if any.
-        if dx == 0 and dy == 0:
+        if dx == dy == 0:
             return
         self.position_x += dx
         self.position_y += dy
@@ -132,7 +144,7 @@ class Box:
     def hit_area(self):
         """Return the (x, y, w, h) rectangle where the box is clickable."""
         # "Border area. That's the area that hit-testing is done on."
-        # http://lists.w3.org/Archives/Public/www-style/2012Jun/0318.html
+        # https://lists.w3.org/Archives/Public/www-style/2012Jun/0318.html
         # TODO: manage the border radii, use outer_border_radii instead
         return (self.border_box_x(), self.border_box_y(),
                 self.border_width(), self.border_height())
@@ -164,15 +176,15 @@ class Box:
         height = self.border_height() - bt - bb
 
         # Fix overlapping curves
-        # See http://www.w3.org/TR/css-backgrounds-3/#corner-overlap
+        # See https://www.w3.org/TR/css-backgrounds-3/#corner-overlap
         ratio = min([1] + [
             extent / sum_radii
-            for extent, sum_radii in [
+            for extent, sum_radii in (
                 (width, tlrx + trrx),
                 (width, blrx + brrx),
                 (height, tlry + blry),
                 (height, trry + brry),
-            ]
+            )
             if sum_radii > 0
         ])
         return (
@@ -213,7 +225,11 @@ class Box:
 
     def is_floated(self):
         """Return whether this box is floated."""
-        return self.style['float'] != 'none'
+        return self.style['float'] in ('left', 'right')
+
+    def is_footnote(self):
+        """Return whether this box is a footnote."""
+        return self.style['float'] == 'footnote'
 
     def is_absolutely_positioned(self):
         """Return whether this box is in the absolute positioning scheme."""
@@ -227,13 +243,43 @@ class Box:
         """Return whether this box is in normal flow."""
         return not (
             self.is_floated() or self.is_absolutely_positioned() or
-            self.is_running())
+            self.is_running() or self.is_footnote())
+
+    def is_monolithic(self):
+        """Return whether this box is monolithic."""
+        # https://www.w3.org/TR/css-break-3/#monolithic
+        return (
+            isinstance(self, AtomicInlineLevelBox) or
+            isinstance(self, ReplacedBox) or
+            self.style['overflow'] in ('auto', 'scroll') or
+            (self.style['overflow'] == 'hidden' and
+             self.style['height'] != 'auto'))
 
     # Start and end page values for named pages
 
     def page_values(self):
         """Return start and end page values."""
         return (self.style['page'], self.style['page'])
+
+    # PDF attachments
+
+    def is_attachment(self):
+        """Return whether this link should be stored as a PDF attachment."""
+        from ..html import element_has_link_type
+
+        if self.element is not None and self.element.tag == 'a':
+            return element_has_link_type(self.element, 'attachment')
+        return False
+
+    # Forms
+
+    def is_input(self):
+        """Return whether this box is a form input."""
+        # https://html.spec.whatwg.org/multipage/forms.html#category-submit
+        if self.style['appearance'] == 'auto' and self.element is not None:
+            if self.element.tag in ('button', 'input', 'select', 'textarea'):
+                return not isinstance(self, (LineBox, TextBox))
+        return False
 
 
 class ParentBox(Box):
@@ -242,9 +288,6 @@ class ParentBox(Box):
     def __init__(self, element_tag, style, element, children):
         super().__init__(element_tag, style, element)
         self.children = tuple(children)
-
-    def all_children(self):
-        return self.children
 
     def _reset_spacing(self, side):
         """Set to 0 the margin, padding and border of ``side``."""
@@ -264,7 +307,7 @@ class ParentBox(Box):
     def copy_with_children(self, new_children):
         """Create a new equivalent box with given ``new_children``."""
         new_box = self.copy()
-        new_box.children = tuple(new_children)
+        new_box.children = new_children
 
         # Clear and reset removed decorations as we don't want to keep the
         # previous data, for example when a box is split between two pages.
@@ -274,18 +317,8 @@ class ParentBox(Box):
 
     def deepcopy(self):
         result = self.copy()
-        result.children = tuple(child.deepcopy() for child in self.children)
+        result.children = list(child.deepcopy() for child in self.children)
         return result
-
-    def descendants(self):
-        """A flat generator for a box, its children and descendants."""
-        yield self
-        for child in self.children:
-            if isinstance(child, ParentBox):
-                for grand_child in child.descendants():
-                    yield grand_child
-            else:
-                yield child
 
     def get_wrapped_table(self):
         """Get the table wrapped by the box."""
@@ -298,13 +331,18 @@ class ParentBox(Box):
 
     def page_values(self):
         start_value, end_value = super().page_values()
-        if self.children:
-            if len(self.children) == 1:
-                page_values = self.children[0].page_values()
+        # TODO: We should find Class A possible page breaks according to
+        # https://drafts.csswg.org/css-page-3/#propdef-page
+        # Keep only children in normal flow for now.
+        children = [
+            child for child in self.children if child.is_in_normal_flow()]
+        if children:
+            if len(children) == 1:
+                page_values = children[0].page_values()
                 start_value = page_values[0] or start_value
                 end_value = page_values[1] or end_value
             else:
-                start_box, end_box = self.children[0], self.children[-1]
+                start_box, end_box = children[0], children[-1]
                 start_value = start_box.page_values()[0] or start_value
                 end_value = end_box.page_values()[1] or end_value
         return start_value, end_value
@@ -394,6 +432,7 @@ class InlineBox(InlineLevelBox, ParentBox):
     inline box.
 
     """
+    link_annotation = None
 
     def hit_area(self):
         """Return the (x, y, w, h) rectangle where the box is clickable."""
@@ -411,25 +450,9 @@ class TextBox(InlineLevelBox):
     """
     justification_spacing = 0
 
-    # http://stackoverflow.com/questions/16317534/
-    ascii_to_wide = {i: chr(i + 0xfee0) for i in range(0x21, 0x7f)}
-    ascii_to_wide.update({0x20: '\u3000', 0x2D: '\u2212'})
-
     def __init__(self, element_tag, style, element, text):
         assert text
         super().__init__(element_tag, style, element)
-        self.original_text = text
-        text_transform = style['text_transform']
-        if text_transform != 'none':
-            text = {
-                'uppercase': lambda t: t.upper(),
-                'lowercase': lambda t: t.lower(),
-                # Python’s unicode.captitalize is not the same.
-                'capitalize': lambda t: t.title(),
-                'full-width': lambda t: t.translate(self.ascii_to_wide),
-            }[text_transform](text)
-        if style['hyphens'] == 'none':
-            text = text.replace('\u00AD', '')  # U+00AD SOFT HYPHEN (SHY)
         self.text = text
 
     def copy_with_text(self, text):
@@ -494,7 +517,7 @@ class InlineReplacedBox(ReplacedBox, AtomicInlineLevelBox):
 class TableBox(BlockLevelBox, ParentBox):
     """Box for elements with ``display: table``"""
     # Definitions for the rules generating anonymous table boxes
-    # http://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
+    # https://www.w3.org/TR/CSS21/tables.html#anonymous-boxes
     tabular_container = True
 
     def all_children(self):
@@ -539,9 +562,6 @@ class TableColumnGroupBox(ParentBox):
     internal_table_or_caption = True
     proper_parents = (TableBox, InlineTableBox)
 
-    # Default value. May be overriden on instances.
-    span = 1
-
     # Columns groups never have margins or paddings
     margin_top = 0
     margin_bottom = 0
@@ -558,6 +578,16 @@ class TableColumnGroupBox(ParentBox):
         return [
             cell for column in self.children for cell in column.get_cells()]
 
+    @property
+    def span(self):
+        if self.children:
+            return len(self.children)
+        else:
+            try:
+                return max(int(self.element.get('span', '').strip()), 1)
+            except ValueError:
+                return 1
+
 
 # Not really a parent box, but pretending to be removes some corner cases.
 class TableColumnBox(ParentBox):
@@ -565,9 +595,6 @@ class TableColumnBox(ParentBox):
     proper_table_child = True
     internal_table_or_caption = True
     proper_parents = (TableBox, InlineTableBox, TableColumnGroupBox)
-
-    # Default value. May be overriden on instances.
-    span = 1
 
     # Columns never have margins or paddings
     margin_top = 0
@@ -586,6 +613,14 @@ class TableColumnBox(ParentBox):
         Is set on instances.
 
         """
+        raise NotImplementedError
+
+    @property
+    def span(self):
+        try:
+            return max(int(self.element.get('span', '').strip()), 1)
+        except ValueError:
+            return 1
 
 
 class TableCellBox(BlockContainerBox):
@@ -620,6 +655,19 @@ class PageBox(ParentBox):
 
     def __repr__(self):
         return f'<{type(self).__name__} {self.page_type}>'
+
+    @property
+    def bleed(self):
+        return {
+            side: self.style[f'bleed_{side}'].value
+            for side in ('top', 'right', 'bottom', 'left')}
+
+    @property
+    def bleed_area(self):
+        return (
+            -self.bleed['left'], -self.bleed['top'],
+            self.margin_width() + self.bleed['left'] + self.bleed['right'],
+            self.margin_height() + self.bleed['top'] + self.bleed['bottom'])
 
 
 class MarginBox(BlockContainerBox):
@@ -664,5 +712,25 @@ class InlineFlexBox(FlexContainerBox, InlineLevelBox):
     """A box that is both inline-level and a flex container.
 
     It behaves as inline on the outside and as a flex container on the inside.
+
+    """
+
+
+class GridContainerBox(ParentBox):
+    """A box that contains only grid-items."""
+
+
+class GridBox(GridContainerBox, BlockLevelBox):
+    """A box that is both block-level and a grid container.
+
+    It behaves as block on the outside and as a grid container on the inside.
+
+    """
+
+
+class InlineGridBox(GridContainerBox, InlineLevelBox):
+    """A box that is both inline-level and a grid container.
+
+    It behaves as inline on the outside and as a grid container on the inside.
 
     """

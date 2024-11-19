@@ -10,7 +10,8 @@ import (
 
 	"github.com/benoitkugler/webrender/css/counters"
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/utils/testutils"
+	tu "github.com/benoitkugler/webrender/utils/testutils"
+	"golang.org/x/net/html/atom"
 
 	"github.com/benoitkugler/webrender/css/parser"
 	"github.com/benoitkugler/webrender/css/selector"
@@ -26,7 +27,7 @@ func fakeHTML(html HTML) *HTML {
 
 func TestDescriptors(t *testing.T) {
 	stylesheet := parser.ParseStylesheetBytes([]byte("@font-face{}"), false, false)
-	logs := testutils.CaptureLogs()
+	logs := tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -34,7 +35,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face{src: url(test.woff)}"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -42,7 +43,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face{font-family: test}"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -50,7 +51,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face { font-family: test; src: wrong }"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -59,7 +60,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face { font-family: good, bad; src: url(test.woff) }"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -68,7 +69,7 @@ func TestDescriptors(t *testing.T) {
 	}, t)
 
 	stylesheet = parser.ParseStylesheetBytes([]byte("@font-face { font-family: good, bad; src: really bad }"), false, false)
-	logs = testutils.CaptureLogs()
+	logs = tu.CaptureLogs()
 	preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 		nil, nil, false)
 	logs.CheckEqual([]string{
@@ -89,8 +90,7 @@ func rsplit(s, sep string) string {
 }
 
 func TestFindStylesheets(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html_, err := newHtml(utils.InputFilename(resourceFilename("doc1.html")))
 	if err != nil {
@@ -117,7 +117,7 @@ func TestFindStylesheets(t *testing.T) {
 		pagesRules []PageRule
 	)
 	for _, sheet := range sheets {
-		for _, sheetRules := range sheet.Matcher {
+		for _, sheetRules := range sheet.matcher {
 			rules = append(rules, sheetRules.selector...)
 		}
 		pagesRules = append(pagesRules, sheet.pageRules...)
@@ -130,13 +130,13 @@ func TestFindStylesheets(t *testing.T) {
 
 // @assertNoLogs
 func TestExpandShorthands(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	sheet, err := NewCSSDefault(utils.InputFilename(resourceFilename("sheet2.css")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var sels []selector.Sel
-	for _, match := range sheet.Matcher {
+	for _, match := range sheet.matcher {
 		sels = append(sels, match.selector...)
 	}
 	if len(sels) != 1 {
@@ -146,41 +146,41 @@ func TestExpandShorthands(t *testing.T) {
 		t.Errorf("expected 'li' got %s", sels[0].String())
 	}
 
-	m := (sheet.Matcher)[0].declarations
+	m := (sheet.matcher)[0].declarations
 	if m[0].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[0].Name)
 	}
-	if (m[0].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 3, Unit: pr.Em}.ToValue()) {
+	if (m[0].Value.(pr.DimOrS) != pr.Dimension{Value: 3, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[0].Value)
 	}
 	if m[1].Name != pr.PMarginTop.Key() {
 		t.Errorf("expected margin_top got %s", m[1].Name)
 	}
-	if (m[1].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
+	if (m[1].Value.(pr.DimOrS) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[1].Value)
 	}
 	if m[2].Name != pr.PMarginRight.Key() {
 		t.Errorf("expected margin_right got %s", m[2].Name)
 	}
-	if (m[2].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
+	if (m[2].Value.(pr.DimOrS) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
 		t.Errorf("expected got %v", m[2].Value)
 	}
 	if m[3].Name != pr.PMarginBottom.Key() {
 		t.Errorf("expected margin_bottom got %s", m[3].Name)
 	}
-	if (m[3].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
+	if (m[3].Value.(pr.DimOrS) != pr.Dimension{Value: 2, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[3].Value)
 	}
 	if m[4].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[4].Name)
 	}
-	if (m[4].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
+	if (m[4].Value.(pr.DimOrS) != pr.Dimension{Value: 0, Unit: pr.Scalar}.ToValue()) {
 		t.Errorf("expected got %v", m[4].Value)
 	}
 	if m[5].Name != pr.PMarginLeft.Key() {
 		t.Errorf("expected margin_left got %s", m[5].Name)
 	}
-	if (m[5].Value.ToCascaded().ToCSS().(pr.Value) != pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()) {
+	if (m[5].Value.(pr.DimOrS) != pr.Dimension{Value: 4, Unit: pr.Em}.ToValue()) {
 		t.Errorf("expected got %v", m[5].Value)
 	}
 	capt.AssertNoLogs(t)
@@ -196,8 +196,7 @@ func assertProp(t *testing.T, got pr.ElementStyle, name pr.KnownProp, expected p
 
 // @assertNoLogs
 func TestAnnotateDocument(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	document_, err := newHtml(utils.InputFilename(resourceFilename("doc1.html")))
 	if err != nil {
@@ -302,8 +301,7 @@ func TestAnnotateDocument(t *testing.T) {
 
 // @assertNoLogs
 func TestPage(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	document_, err := newHtml(utils.InputFilename(resourceFilename("doc1.html")))
 	if err != nil {
@@ -436,7 +434,7 @@ var tests = []testPageSelector{
 }
 
 func TestPageSelectors(t *testing.T) {
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	for _, te := range tests {
 		atRule_ := parser.ParseStylesheetBytes([]byte(te.sel), false, false)[0]
 		atRule, ok := atRule_.(parser.QualifiedRule)
@@ -488,7 +486,7 @@ var testsWarnings = [6]testWarnings{
 func TestWarnings(t *testing.T) {
 	for _, te := range testsWarnings {
 
-		capt := testutils.CaptureLogs()
+		capt := tu.CaptureLogs()
 		_, err := NewCSSDefault(utils.InputString(te.sel))
 		if err != nil {
 			t.Fatal(err)
@@ -508,7 +506,7 @@ func TestWarnings(t *testing.T) {
 // @assertNoLogs
 func TestWarningsStylesheet(t *testing.T) {
 	ml := "<link rel=stylesheet href=invalid-protocol://absolute>"
-	capt := testutils.CaptureLogs()
+	capt := tu.CaptureLogs()
 	html, err := newHtml(utils.InputString(ml))
 	if err != nil {
 		t.Fatal(err)
@@ -556,8 +554,7 @@ func isClose(a, b pr.Float) bool {
 }
 
 func TestFontSize(t *testing.T) {
-	capt := testutils.CaptureLogs()
-	defer capt.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	html_, err := newHtml(utils.InputString("<p>a<span>b"))
 	if err != nil {
@@ -591,7 +588,7 @@ func TestCounterStyleInvalid(t *testing.T) {
 	}
 	for _, rule := range inputs {
 		stylesheet := parser.ParseStylesheetBytes([]byte(rule), false, false)
-		cp := testutils.CaptureLogs()
+		cp := tu.CaptureLogs()
 
 		preprocessStylesheet("print", "http://wp.org/foo/", stylesheet, nil, nil, nil,
 			nil, make(counters.CounterStyle), false)
@@ -599,4 +596,25 @@ func TestCounterStyleInvalid(t *testing.T) {
 			t.Fatal("expected logs")
 		}
 	}
+}
+
+func TestNestingCSS(t *testing.T) {
+	const input = `<style>
+		div { p { width: 10px } }
+	</style>
+	<div><p id="inner"></p></div><p id="outer"></p>`
+
+	html, err := newHtml(utils.InputString(input))
+	tu.AssertNoErr(t, err)
+	styleFor := GetAllComputedStyles(html, nil, false, nil, nil, nil, nil, false, nil)
+	iter := html.Root.Iter(atom.P)
+	_, p1 := iter.HasNext(), iter.Next()
+	_, p2 := iter.HasNext(), iter.Next()
+	tu.AssertEqual(t, p1.Get("id"), "inner")
+	tu.AssertEqual(t, p2.Get("id"), "outer")
+	s1 := styleFor.Get(p1, "") // outside
+	s2 := styleFor.Get(p2, "")
+
+	tu.AssertEqual(t, s1.GetWidth(), pr.FToPx(10))
+	tu.AssertEqual(t, s2.GetWidth(), pr.SToV("auto"))
 }

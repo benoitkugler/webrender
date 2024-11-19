@@ -33,7 +33,6 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 	style := box_.Box().Style
 	width_ := style.GetColumnWidth()
 	count_ := style.GetColumnCount()
-	gap := style.GetColumnGap().Value
 	height_ := style.GetHeight()
 	originalBottomSpace := bottomSpace
 
@@ -44,13 +43,20 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		absoluteBoxes = &[]*AbsolutePlaceholder{}
 	}
 
+	gapV := style.GetColumnGap()
+	gap := gapV.Value
+	if gapV.S == "normal" {
+		// 1em because in column context
+		gap = style.GetFontSize().Value
+	}
+
 	box_ = bo.CopyWithChildren(box_, box_.Box().Children).(bo.BlockBoxITF) // CopyWithChildren preserves the concrete type of box_
 	box := box_.Box()
 	box.PositionY += collapseMargin(adjoiningMargins) - box.MarginTop.V()
 
 	// Set height if defined
 	heightDefined := false
-	if height_.String != "auto" && height_.Unit != pr.Perc {
+	if height_.S != "auto" && height_.Unit != pr.Perc {
 		if height_.Unit != pr.Px {
 			panic(fmt.Sprintf("expected Px got %v", height_))
 		}
@@ -67,14 +73,14 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		width pr.Float
 		count int
 	)
-	if width_.String == "auto" && count_.String != "auto" {
+	if width_.S == "auto" && count_.String != "auto" {
 		count = count_.Int
 		width = pr.Max(0, availableWidth-(pr.Float(count)-1)*gap) / pr.Float(count)
-	} else if width_.String != "auto" && count_.String == "auto" {
+	} else if width_.S != "auto" && count_.String == "auto" {
 		count = int(pr.Max(1, pr.Floor((availableWidth+gap)/(width_.Value+gap))))
 		width = (availableWidth+gap)/pr.Float(count) - gap
 	} else { // overconstrained, with width != 'auto' and count != 'auto'
-		count = int(pr.Min(pr.Float(count_.Int), pr.Floor((availableWidth+gap)/(width_.Value+gap))))
+		count = int(pr.Max(1, pr.Min(pr.Float(count_.Int), pr.Floor((availableWidth+gap)/(width_.Value+gap)))))
 		width = (availableWidth+gap)/pr.Float(count) - gap
 	}
 
@@ -160,13 +166,13 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 			block.Box().PositionY = currentPositionY
 			newChild, tmp, _ := blockLevelLayout(context, block, originalBottomSpace, skipStack,
 				containingBlock, pageIsEmpty, absoluteBoxes, fixedBoxes, &adjoiningMargins, false, -1)
+			nextPage, adjoiningMargins = tmp.nextPage, tmp.adjoiningMargins
 			skipStack = nil
 			if newChild == nil {
 				lastLoop = true
 				breakPage = true
 				break
 			}
-			adjoiningMargins = tmp.adjoiningMargins
 			newChildren = append(newChildren, newChild)
 			currentPositionY = newChild.Box().BorderHeight() + newChild.Box().BorderBoxY()
 			adjoiningMargins = append(adjoiningMargins, newChild.Box().MarginBottom.V())
@@ -215,6 +221,11 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 					false, -1)
 				resumeAt := tmp.resumeAt
 				nextPage = tmp.nextPage
+
+				if traceMode {
+					traceLogger.Dump(fmt.Sprintf("column %d -> %s %s", i, resumeAt, nextPage))
+				}
+
 				if newBox == nil {
 					// We didn't render anything, retry
 					columnSkipStack = tree.ResumeStack{0: nil}
@@ -324,7 +335,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 					// Everything fits, start expanding columns at the average
 					// of the column heights
 					maxHeight -= lastFootnotesHeight
-					if style.GetColumnFill() == "balance" {
+					if style.GetColumnFill() == "balance" || index < columnsAndBlocks[len(columnsAndBlocks)-1].index {
 						balancing = true
 						height = sum(consumedHeights) / pr.Float(count)
 					} else {
@@ -366,7 +377,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 			columnNextPage := tmp.nextPage
 
 			if traceMode {
-				traceLogger.Dump(fmt.Sprintf("column %d -> %s", i, columnSkipStack))
+				traceLogger.Dump(fmt.Sprintf("column %d -> %s %s", i, columnSkipStack, tmp.nextPage))
 			}
 
 			if newChild == nil {
@@ -469,7 +480,7 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 	context.inColumn = false
 
 	if traceMode {
-		traceLogger.Dump(fmt.Sprintf("columnsLayout -> %s", skipStack))
+		traceLogger.Dump(fmt.Sprintf("columnsLayout -> %s, %s", skipStack, nextPage))
 	}
 
 	return box_, blockLayout{resumeAt: skipStack, nextPage: nextPage}

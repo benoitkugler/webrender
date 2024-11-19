@@ -34,13 +34,13 @@ func (c InputFilename) String() string {
 
 func (c InputUrl) String() string {
 	if strings.HasPrefix(string(c), "data:") {
-		return fmt.Sprintf("data url of len. %d", len(c))
+		return fmt.Sprintf("data url (%d B)", len(c))
 	}
 	return string(c)
 }
 
 func (c InputString) String() string {
-	return fmt.Sprintf("string of len. %d", len(c))
+	return fmt.Sprintf("string (%d B)", len(c))
 }
 
 func (c InputReader) String() string {

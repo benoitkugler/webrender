@@ -14,9 +14,12 @@ var Inf = Float(math.Inf(+1))
 type Tag uint8
 
 const (
-	_    Tag = iota
-	Auto     // "auto"
-	None     // "none"
+	_       Tag = iota
+	Auto        // "auto"
+	None        // "none"
+	Span        // "span"
+	Subgrid     // "subgrid"
+	Attr        // "attr()"
 )
 
 // --------------- Values  -----------------------------------------------
@@ -33,24 +36,26 @@ func (p Point) ToPixels() Point {
 }
 
 // ToValue wraps `d` to a Value object.
-func (d Dimension) ToValue() Value {
-	return Value{Dimension: d}
+func (d Dimension) ToValue() DimOrS {
+	return DimOrS{Dimension: d}
 }
 
-func FToD(f Fl) Dimension      { return Dimension{Value: Float(f), Unit: Scalar} }
-func SToV(s string) Value      { return Value{String: s} }
-func FToV(f Fl) Value          { return FToD(f).ToValue() }
-func (f Float) ToValue() Value { return FToV(Fl(f)) }
+func FToD(f Fl) Dimension       { return Dimension{Value: Float(f), Unit: Scalar} }
+func PercToD(f Fl) Dimension    { return Dimension{Value: Float(f), Unit: Perc} }
+func PercToV(f Fl) DimOrS       { return DimOrS{Dimension: Dimension{Value: Float(f), Unit: Perc}} }
+func SToV(s string) DimOrS      { return DimOrS{S: s} }
+func FToV(f Fl) DimOrS          { return FToD(f).ToValue() }
+func (f Float) ToValue() DimOrS { return FToV(Fl(f)) }
 
-func (v Value) ToMaybeFloat() MaybeFloat {
-	if v.String == "auto" {
+func (v DimOrS) ToMaybeFloat() MaybeFloat {
+	if v.S == "auto" {
 		return AutoF
 	}
 	return v.Value
 }
 
 // FToPx returns `f` as pixels.
-func FToPx(f Float) Value { return Dimension{Unit: Px, Value: f}.ToValue() }
+func FToPx(f Float) DimOrS { return Dimension{Unit: Px, Value: f}.ToValue() }
 
 func NewColor(r, g, b, a Fl) Color {
 	return Color{RGBA: parser.RGBA{R: r, G: g, B: b, A: a}, Type: parser.ColorRGBA}
@@ -87,14 +92,10 @@ func (s GradientSize) IsExplicit() bool {
 
 // -------------- Images ------------------------
 
-func (i NoneImage) isCssProperty()      {}
-func (i UrlImage) isCssProperty()       {}
-func (i LinearGradient) isCssProperty() {}
-func (i RadialGradient) isCssProperty() {}
-func (i NoneImage) isImage()            {}
-func (i UrlImage) isImage()             {}
-func (i LinearGradient) isImage()       {}
-func (i RadialGradient) isImage()       {}
+func (i NoneImage) isImage()      {}
+func (i UrlImage) isImage()       {}
+func (i LinearGradient) isImage() {}
+func (i RadialGradient) isImage() {}
 
 // -------------------------- Content Property --------------------------
 // func (i NoneImage) copyAsInnerContent() InnerContent      { return i }
@@ -177,6 +178,14 @@ func (c ContentProperty) AsQuote() Quote {
 }
 
 // ------------------------- Usefull for test ---------------------------
+
+func (bs Values) Repeat(n int) Values {
+	var out Values
+	for i := 0; i < n; i++ {
+		out = append(out, bs...)
+	}
+	return out
+}
 
 func (bs Images) Repeat(n int) CssProperty {
 	var out Images

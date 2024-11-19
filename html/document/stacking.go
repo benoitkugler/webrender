@@ -189,4 +189,4 @@ func NewStackingContextFromBox(box Box, page *bo.PageBox, childContexts *[]Stack
 	return NewStackingContext(box, children, blocks, floats, blocksAndCells, page)
 }
 
-func (StackingContext) IsClassicalBox() bool { return false }
+func (StackingContext) Type() bo.BoxType { return bo.StackingContextT }

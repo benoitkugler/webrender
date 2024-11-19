@@ -68,6 +68,7 @@ func GetImageFromUri(cache Cache, fetcher utils.UrlFetcher, optimizeSize bool, u
 	return img
 }
 
+// without caching
 func getImageFromUri(fetcher utils.UrlFetcher, optimizeSize bool, url, forcedMimeType string, orientation pr.SBoolFloat) (Image, error) {
 	var (
 		img     Image
@@ -175,9 +176,12 @@ func NewSVGImage(svgData io.Reader, baseURL string, urlFetcher utils.UrlFetcher)
 		baseURL = ""
 	}
 
+	imageLoader := func(url string) (backend.Image, error) {
+		return getImageFromUri(urlFetcher, false, url, "", pr.SBoolFloat{})
+	}
+
 	var err error
-	// FIXME: imageLoader : for now, nested image are not supported
-	icon, err := svg.Parse(svgData, baseURL, nil, urlFetcher)
+	icon, err := svg.Parse(svgData, baseURL, imageLoader, urlFetcher)
 	if err != nil {
 		return SVGImage{}, imageLoadingError(err)
 	}
@@ -190,9 +194,12 @@ func NewSVGImageFromNode(node *html.Node, baseURL string, urlFetcher utils.UrlFe
 		baseURL = ""
 	}
 
+	imageLoader := func(url string) (backend.Image, error) {
+		return getImageFromUri(urlFetcher, false, url, "", pr.SBoolFloat{})
+	}
+
 	var err error
-	// FIXME: imageLoader : for now, nested image are not supported
-	icon, err := svg.ParseNode(node, baseURL, nil, urlFetcher)
+	icon, err := svg.ParseNode(node, baseURL, imageLoader, urlFetcher)
 	if err != nil {
 		return SVGImage{}, imageLoadingError(err)
 	}

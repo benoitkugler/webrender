@@ -7,6 +7,7 @@ import (
 
 	fc "github.com/benoitkugler/textprocessing/fontconfig"
 	"github.com/benoitkugler/textprocessing/pango/fcfonts"
+	pr "github.com/benoitkugler/webrender/css/properties"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
@@ -70,39 +71,44 @@ func renderTwoPages(t *testing.T, htmlContent string) (page1, page2 *bo.PageBox)
 	return pages[0], pages[1]
 }
 
+// unpack 1 children
+func unpack1(box Box) (c1 Box) {
+	return box.Box().Children[0]
+}
+
 // unpack 2 children
 func unpack2(box Box) (c1, c2 Box) {
-	return box.Box().Children[0], box.Box().Children[1]
+	return unpack1(box), box.Box().Children[1]
 }
 
 // unpack 3 children
 func unpack3(box Box) (c1, c2, c3 Box) {
-	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2]
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2]
 }
 
 // unpack 4 children
 func unpack4(box Box) (c1, c2, c3, c4 Box) {
-	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2], box.Box().Children[3]
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3]
 }
 
 // unpack 5 children
 func unpack5(box Box) (c1, c2, c3, c4, c5 Box) {
-	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4]
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4]
 }
 
 // unpack 6 children
 func unpack6(box Box) (c1, c2, c3, c4, c5, c6 Box) {
-	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5]
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5]
 }
 
 // unpack 7 children
 func unpack7(box Box) (c1, c2, c3, c4, c5, c6, c7 Box) {
-	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6]
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6]
 }
 
 // unpack 8 children
 func unpack8(box Box) (c1, c2, c3, c4, c5, c6, c7, c8 Box) {
-	return box.Box().Children[0], box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6], box.Box().Children[7]
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6], box.Box().Children[7]
 }
 
 func asBoxes(pages []*bo.PageBox) []Box {
@@ -155,8 +161,7 @@ func treePosition(boxList []Box, matcher func(Box) bool) nodePos {
 }
 
 func TestMarginBoxes(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
 		<style>
@@ -178,8 +183,8 @@ func TestMarginBoxes(t *testing.T) {
 		t.Fatalf("expected 2 pages, got %v", pages)
 	}
 	page1, page2 := pages[0], pages[1]
-	tu.AssertEqual(t, page1.Children[0].Box().ElementTag(), "html", "page1")
-	tu.AssertEqual(t, page2.Children[0].Box().ElementTag(), "html", "page2")
+	tu.AssertEqual(t, page1.Children[0].Box().ElementTag(), "html")
+	tu.AssertEqual(t, page2.Children[0].Box().ElementTag(), "html")
 
 	var marginBoxes1, marginBoxes2 []string
 	for _, box := range page1.Children[1:] {
@@ -188,21 +193,20 @@ func TestMarginBoxes(t *testing.T) {
 	for _, box := range page2.Children[1:] {
 		marginBoxes2 = append(marginBoxes2, box.(*bo.MarginBox).AtKeyword)
 	}
-	tu.AssertEqual(t, marginBoxes1, []string{"@top-center", "@bottom-left", "@bottom-left-corner"}, "marginBoxes1")
-	tu.AssertEqual(t, marginBoxes2, []string{"@top-center"}, "marginBoxes2")
+	tu.AssertEqual(t, marginBoxes1, []string{"@top-center", "@bottom-left", "@bottom-left-corner"})
+	tu.AssertEqual(t, marginBoxes2, []string{"@top-center"})
 
 	if len(page2.Children) != 2 {
 		t.Fatalf("expected two children, got %v", page2.Children)
 	}
 	_, topCenter := page2.Children[0], page2.Children[1]
-	lineBox := topCenter.Box().Children[0]
-	textBox, _ := lineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "Title", "textBox")
+	lineBox := unpack1(topCenter)
+	textBox, _ := unpack1(lineBox).(*bo.TextBox)
+	tu.AssertEqual(t, textBox.Text, "Title")
 }
 
 func TestMarginBoxStringSet1(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Test that both pages get string in the `bottom-center` margin box
 	pages := renderPages(t, `
@@ -229,23 +233,22 @@ func TestMarginBoxStringSet1(t *testing.T) {
 		t.Fatalf("expected two children, got %v", page2.Children)
 	}
 	_, bottomCenter := page2.Children[0], page2.Children[1]
-	lineBox := bottomCenter.Box().Children[0]
-	textBox, _ := lineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first assignment", "textBox")
+	lineBox := unpack1(bottomCenter)
+	textBox, _ := unpack1(lineBox).(*bo.TextBox)
+	tu.AssertEqual(t, textBox.Text, "first assignment")
 
 	if len(page1.Children) != 2 {
 		t.Fatalf("expected two children, got %v", page1.Children)
 	}
 	_, bottomCenter = page1.Children[0], page1.Children[1]
 
-	lineBox = bottomCenter.Box().Children[0]
-	textBox, _ = lineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first assignment", "textBox")
+	lineBox = unpack1(bottomCenter)
+	textBox, _ = unpack1(lineBox).(*bo.TextBox)
+	tu.AssertEqual(t, textBox.Text, "first assignment")
 }
 
 func TestMarginBoxStringSet2(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	simpleStringSetTest := func(contentVal, extraStyle string) {
 		page1 := renderOnePage(t, fmt.Sprintf(`
@@ -262,12 +265,12 @@ func TestMarginBoxStringSet2(t *testing.T) {
         `, contentVal, extraStyle))
 
 		topCenter := page1.Children[1]
-		lineBox := topCenter.Box().Children[0]
-		textBox := lineBox.Box().Children[0].(*bo.TextBox)
+		lineBox := unpack1(topCenter)
+		textBox := unpack1(lineBox).(*bo.TextBox)
 		if contentVal == "before" || contentVal == "after" {
-			tu.AssertEqual(t, textBox.Text, "pseudo", "textBox")
+			tu.AssertEqual(t, textBox.Text, "pseudo")
 		} else {
-			tu.AssertEqual(t, textBox.Text, "first assignment", "textBox")
+			tu.AssertEqual(t, textBox.Text, "first assignment")
 		}
 	}
 
@@ -282,8 +285,7 @@ func TestMarginBoxStringSet2(t *testing.T) {
 }
 
 func TestMarginBoxStringSet3(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Test `first` (default value) ie. use the first assignment on the page
 	page1 := renderOnePage(t, `
       <style>
@@ -299,14 +301,13 @@ func TestMarginBoxStringSet3(t *testing.T) {
     } `)
 
 	topCenter := page1.Children[1]
-	lineBox := topCenter.Box().Children[0]
-	textBox := lineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first assignment", "textBox")
+	lineBox := unpack1(topCenter)
+	textBox := unpack1(lineBox).(*bo.TextBox)
+	tu.AssertEqual(t, textBox.Text, "first assignment")
 }
 
 func TestMarginBoxStringSet4(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// test `first-except` ie. exclude from page on which value is assigned
 	pages := renderPages(t, `
@@ -330,17 +331,16 @@ func TestMarginBoxStringSet4(t *testing.T) {
 	page1, page2 := pages[0], pages[1]
 
 	topCenter := page1.Box().Children[1]
-	tu.AssertEqual(t, len(topCenter.Box().Children), 0, "Children")
+	tu.AssertEqual(t, len(topCenter.Box().Children), 0)
 
 	topCenter = page2.Box().Children[1]
-	lineBox := topCenter.Box().Children[0]
-	textBox := lineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first_excepted", "textBox")
+	lineBox := unpack1(topCenter)
+	textBox := unpack1(lineBox).(*bo.TextBox)
+	tu.AssertEqual(t, textBox.Text, "first_excepted")
 }
 
 func TestMarginBoxStringSet5(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Test `last` ie. use the most-recent assignment
 	page1 := renderOnePage(t, `
       <style>
@@ -356,14 +356,13 @@ func TestMarginBoxStringSet5(t *testing.T) {
     `)
 
 	topCenter := page1.Children[1]
-	lineBox := topCenter.Box().Children[0]
-	textBox := lineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "Second assignment", "textBox")
+	lineBox := unpack1(topCenter)
+	textBox := unpack1(lineBox).(*bo.TextBox)
+	tu.AssertEqual(t, textBox.Text, "Second assignment")
 }
 
 func TestMarginBoxStringSet6(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Test multiple complex string-set values
 	page1 := renderOnePage(t, `
@@ -396,13 +395,13 @@ func TestMarginBoxStringSet6(t *testing.T) {
     `)
 
 	topCenter, bottomCenter := page1.Children[1], page1.Children[2]
-	topLineBox := topCenter.Box().Children[0]
-	topTextBox := topLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, topTextBox.Text, "before!-first-after!I.1", "topTextBox")
+	topLineBox := unpack1(topCenter)
+	topTextBox := unpack1(topLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, topTextBox.Text, "before!-first-after!I.1")
 
-	bottomLineBox := bottomCenter.Box().Children[0]
-	bottomTextBox := bottomLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, bottomTextBox.Text, "before!last-secondclass2|1/I", "bottomTextBox")
+	bottomLineBox := unpack1(bottomCenter)
+	bottomTextBox := unpack1(bottomLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, bottomTextBox.Text, "before!last-secondclass2|1/I")
 }
 
 func TestMarginBoxStringSet7(t *testing.T) {
@@ -419,18 +418,17 @@ func TestMarginBoxStringSet7(t *testing.T) {
     `)
 
 	topLeft, topRight := page1.Children[1], page1.Children[2]
-	leftLineBox := topLeft.Box().Children[0]
-	leftTextBox := leftLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[Chocolate]", "leftTextBox")
+	leftLineBox := unpack1(topLeft)
+	leftTextBox := unpack1(leftLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, leftTextBox.Text, "[Chocolate]")
 
-	rightLineBox := topRight.Box().Children[0]
-	rightTextBox := rightLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, rightTextBox.Text, "{Cake}", "rightTextBox")
+	rightLineBox := unpack1(topRight)
+	rightTextBox := unpack1(rightLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, rightTextBox.Text, "{Cake}")
 }
 
 func TestMarginBoxStringSet8(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Test regression: https://github.com/Kozea/WeasyPrint/issues/726
 	pages := renderPages(t, `
@@ -452,24 +450,23 @@ func TestMarginBoxStringSet8(t *testing.T) {
 	page1, page2, page3 := pages[0], pages[1], pages[2]
 
 	topLeft := page1.Box().Children[1]
-	leftLineBox := topLeft.Box().Children[0]
-	leftTextBox := leftLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[initial]", "leftTextBox")
+	leftLineBox := unpack1(topLeft)
+	leftTextBox := unpack1(leftLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, leftTextBox.Text, "[initial]")
 
 	topLeft = page2.Box().Children[1]
-	leftLineBox = topLeft.Box().Children[0]
-	leftTextBox = leftLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[]", "leftTextBox")
+	leftLineBox = unpack1(topLeft)
+	leftTextBox = unpack1(leftLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, leftTextBox.Text, "[]")
 
 	topLeft = page3.Box().Children[1]
-	leftLineBox = topLeft.Box().Children[0]
-	leftTextBox = leftLineBox.Box().Children[0].(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[ ]", "leftTextBox")
+	leftLineBox = unpack1(topLeft)
+	leftTextBox = unpack1(leftLineBox).(*bo.TextBox)
+	tu.AssertEqual(t, leftTextBox.Text, "[ ]")
 }
 
 func TestMarginBoxStringSet9(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 	// Test that named strings are case-sensitive
 	// See https://github.com/Kozea/WeasyPrint/pull/827
 	page1 := renderOnePage(t, `
@@ -488,15 +485,14 @@ func TestMarginBoxStringSet9(t *testing.T) {
     `)
 
 	topCenter := page1.Children[1]
-	lineBox := topCenter.Box().Children[0]
-	textBox := lineBox.Box().Children[0].(*bo.TextBox)
+	lineBox := unpack1(topCenter)
+	textBox := unpack1(lineBox).(*bo.TextBox)
 
-	tu.AssertEqual(t, textBox.Text, "first assignment second assignment", "textBox")
+	tu.AssertEqual(t, textBox.Text, "first assignment second assignment")
 }
 
 func TestMarginBoxStringSet10(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
 	<style>
@@ -516,26 +512,25 @@ func TestMarginBoxStringSet10(t *testing.T) {
 	page1, page2, page3, page4 := pages[0], pages[1], pages[2], pages[3]
 
 	topLeft := page1.Children[1]
-	leftLineBox := topLeft.Box().Children[0]
-	assertText(t, leftLineBox.Box().Children[0], "[]")
+	leftLineBox := unpack1(topLeft)
+	assertText(t, unpack1(leftLineBox), "[]")
 
 	topLeft = page2.Children[1]
-	leftLineBox = topLeft.Box().Children[0]
-	assertText(t, leftLineBox.Box().Children[0], "[1]")
+	leftLineBox = unpack1(topLeft)
+	assertText(t, unpack1(leftLineBox), "[1]")
 
 	topLeft = page3.Children[1]
-	leftLineBox = topLeft.Box().Children[0]
-	assertText(t, leftLineBox.Box().Children[0], "[3]")
+	leftLineBox = unpack1(topLeft)
+	assertText(t, unpack1(leftLineBox), "[3]")
 
 	topLeft = page4.Children[1]
-	leftLineBox = topLeft.Box().Children[0]
-	assertText(t, leftLineBox.Box().Children[0], "[3]")
+	leftLineBox = unpack1(topLeft)
+	assertText(t, unpack1(leftLineBox), "[3]")
 }
 
 // Test page-based counters.
 func TestPageCounters(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
       <style>
@@ -554,9 +549,19 @@ func TestPageCounters(t *testing.T) {
 	for pageIndex, page := range pages {
 		pageNumber := pageIndex + 1
 		bottomCenter := page.Box().Children[1]
-		lineBox := bottomCenter.Box().Children[0]
-		textBox := lineBox.Box().Children[0].(*bo.TextBox)
+		lineBox := unpack1(bottomCenter)
 		exp := fmt.Sprintf("Page %d of 3.", pageNumber)
-		tu.AssertEqual(t, textBox.Text, exp, fmt.Sprintf("page index %d", pageIndex))
+		assertText(t, unpack1(lineBox), exp)
 	}
+}
+
+func TestBackground(t *testing.T) {
+	page := renderOnePage(t, `
+	<style>
+	   @page { size: 4px; bleed: 1px; margin: 1px; marks: crop }
+	</style>
+	<body>`)
+	layers := page.Background.Layers
+	tu.AssertEqual(t, len(layers), 1)
+	tu.AssertEqual(t, layers[0].PaintingArea, pr.Rectangle{-1, -1, 6, 6})
 }

@@ -27,8 +27,7 @@ func TestTestCounterSymbols(t *testing.T) {
 }
 
 func testCounterSymbols(t *testing.T, arguments string, values [4]string) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, fmt.Sprintf(`
       <style>
@@ -42,19 +41,18 @@ func testCounterSymbols(t *testing.T, arguments string, values [4]string) {
       </ol>
     `, arguments))
 
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	ol := body.Box().Children[0].Box()
+	html := unpack1(page)
+	body := unpack1(html)
+	ol := unpack1(body).Box()
 	li1, li2, li3, li4 := ol.Children[0], ol.Children[1], ol.Children[2], ol.Children[3]
-	tu.AssertEqual(t, li1.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, values[0], fmt.Sprintf("symbols %s and item %d", arguments, 0))
-	tu.AssertEqual(t, li2.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, values[1], fmt.Sprintf("symbols %s and item %d", arguments, 1))
-	tu.AssertEqual(t, li3.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, values[2], fmt.Sprintf("symbols %s and item %d", arguments, 2))
-	tu.AssertEqual(t, li4.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, values[3], fmt.Sprintf("symbols %s and item %d", arguments, 3))
+	tu.AssertEqual(t, unpack1(li1.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[0])
+	tu.AssertEqual(t, unpack1(li2.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[1])
+	tu.AssertEqual(t, unpack1(li3.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[2])
+	tu.AssertEqual(t, unpack1(li4.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[3])
 }
 
 func TestCounterSet(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
       <style>
@@ -91,37 +89,36 @@ func TestCounterSet(t *testing.T) {
       </article>
     `)
 
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
 	chs := body.Box().Children
 	art1, art2, art3, art4, art5, art6 := chs[0], chs[1], chs[2], chs[3], chs[4], chs[5]
 
-	h1 := art1.Box().Children[0]
-	tu.AssertEqual(t, h1.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "1", "h1")
+	h1 := unpack1(art1)
+	assertText(t, unpack1(unpack1(unpack1(h1))), "1")
 
-	h2, h3 := art2.Box().Children[0], art2.Box().Children[1]
-	tu.AssertEqual(t, h2.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "3", "h2")
-	tu.AssertEqual(t, h3.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "4", "h3")
+	h2, h3 := unpack1(art2), art2.Box().Children[1]
+	assertText(t, unpack1(unpack1(unpack1(h2))), "3")
+	assertText(t, unpack1(unpack1(unpack1(h3))), "4")
 
-	h3 = art3.Box().Children[0]
-	tu.AssertEqual(t, h3.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "5", "h3")
+	h3 = unpack1(art3)
+	assertText(t, unpack1(unpack1(unpack1(h3))), "5")
 
-	h2 = art4.Box().Children[0]
-	tu.AssertEqual(t, h2.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "3", "h2")
+	h2 = unpack1(art4)
+	assertText(t, unpack1(unpack1(unpack1(h2))), "3")
 
-	h31, h32 := art5.Box().Children[0], art5.Box().Children[1]
-	tu.AssertEqual(t, h31.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "4", "h31")
-	tu.AssertEqual(t, h32.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "5", "h32")
+	h31, h32 := unpack1(art5), art5.Box().Children[1]
+	assertText(t, unpack1(unpack1(unpack1(h31))), "4")
+	assertText(t, unpack1(unpack1(unpack1(h32))), "5")
 
-	h1, h2, h3 = art6.Box().Children[0], art6.Box().Children[1], art6.Box().Children[2]
-	tu.AssertEqual(t, h1.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "1", "h1")
-	tu.AssertEqual(t, h2.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "3", "h2")
-	tu.AssertEqual(t, h3.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "4", "h3")
+	h1, h2, h3 = unpack1(art6), art6.Box().Children[1], art6.Box().Children[2]
+	assertText(t, unpack1(unpack1(unpack1(h1))), "1")
+	assertText(t, unpack1(unpack1(unpack1(h2))), "3")
+	assertText(t, unpack1(unpack1(unpack1(h3))), "4")
 }
 
 func TestCounterMultipleExtends(t *testing.T) {
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	// Inspired by W3C failing test system-extends-invalid
 	page := renderOnePage(t, `
@@ -167,26 +164,25 @@ func TestCounterMultipleExtends(t *testing.T) {
       </ol>
     `)
 
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	olC := body.Box().Children[0].Box().Children
+	html := unpack1(page)
+	body := unpack1(html)
+	olC := unpack1(body).Box().Children
 	li1, li2, li3, li4, li5, li6, li7, li8 := olC[0], olC[1], olC[2], olC[3], olC[4], olC[5], olC[6], olC[7]
-	tu.AssertEqual(t, li1.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "a1b", "li1")
-	tu.AssertEqual(t, li2.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "2b", "li2")
-	tu.AssertEqual(t, li3.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "c3. ", "li3")
-	tu.AssertEqual(t, li4.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "d4. ", "li4")
-	tu.AssertEqual(t, li5.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "e5. ", "li5")
-	tu.AssertEqual(t, li6.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "6. ", "li6")
-	tu.AssertEqual(t, li7.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "7. ", "li7")
-	tu.AssertEqual(t, li8.Box().Children[0].Box().Children[0].Box().Children[0].(*bo.TextBox).Text, "8. ", "li8")
+	assertText(t, unpack1(unpack1(unpack1(li1))), "a1b")
+	assertText(t, unpack1(unpack1(unpack1(li2))), "2b")
+	assertText(t, unpack1(unpack1(unpack1(li3))), "c3. ")
+	assertText(t, unpack1(unpack1(unpack1(li4))), "d4. ")
+	assertText(t, unpack1(unpack1(unpack1(li5))), "e5. ")
+	assertText(t, unpack1(unpack1(unpack1(li6))), "6. ")
+	assertText(t, unpack1(unpack1(unpack1(li7))), "7. ")
+	assertText(t, unpack1(unpack1(unpack1(li8))), "8. ")
 }
 
 func TestCounters9(t *testing.T) {
 	// See https://github.com/Kozea/WeasyPrint/issues/1685
 	t.Skip("nested counters are broken")
 
-	cp := tu.CaptureLogs()
-	defer cp.AssertNoLogs(t)
+	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	page := renderOnePage(t, `
 		  <ol>
@@ -200,15 +196,15 @@ func TestCounters9(t *testing.T) {
 			<li></li>
 		  </ol>
 		`)
-	html := page.Box().Children[0]
-	body := html.Box().Children[0]
-	ol1 := body.Box().Children[0]
+	html := unpack1(page)
+	body := unpack1(html)
+	ol1 := unpack1(body)
 	oli1, oli2, oli3 := unpack3(ol1)
 	_, ol2 := unpack2(oli2)
 	oli21, oli22 := unpack2(ol2)
-	assertText(t, oli1.Box().Children[0].Box().Children[0].Box().Children[0], "1. ")
-	assertText(t, oli2.Box().Children[0].Box().Children[0].Box().Children[0], "2. ")
-	assertText(t, oli21.Box().Children[0].Box().Children[0].Box().Children[0], "1. ")
-	assertText(t, oli22.Box().Children[0].Box().Children[0].Box().Children[0], "2. ")
-	assertText(t, oli3.Box().Children[0].Box().Children[0].Box().Children[0], "3. ")
+	assertText(t, unpack1(oli1.Box().Children[0].Box().Children[0]), "1. ")
+	assertText(t, unpack1(oli2.Box().Children[0].Box().Children[0]), "2. ")
+	assertText(t, unpack1(oli21.Box().Children[0].Box().Children[0]), "1. ")
+	assertText(t, unpack1(oli22.Box().Children[0].Box().Children[0]), "2. ")
+	assertText(t, unpack1(oli3.Box().Children[0].Box().Children[0]), "3. ")
 }

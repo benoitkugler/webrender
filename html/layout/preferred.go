@@ -25,15 +25,16 @@ import (
 // for width of the *content area*, not margin area.
 // https://www.w3.org/TR/CSS21/visudet.html#float-width
 func shrinkToFit(context *layoutContext, box Box, availableContentWidth pr.Float) pr.Float {
-	return pr.Min(
+	out := pr.Min(
 		pr.Max(minContentWidth(context, box, false), availableContentWidth),
 		maxContentWidth(context, box, false),
 	)
+	return out
 }
 
 // Return the min-content width for “box“.
 // This is the width by breaking at every line-break opportunity.
-// outer should default to true
+// [outer] defaults to true
 func minContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 	if box.Box().IsTableWrapper {
 		return tableAndColumnsPreferredWidths(context, box, outer).tableMinContentWidth
@@ -49,6 +50,8 @@ func minContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return replacedMinContentWidth(rep.Replaced(), outer)
 	} else if bo.FlexContainerT.IsInstance(box) {
 		return flexMinContentWidth(context, box, outer)
+	} else if bo.GridContainerT.IsInstance(box) {
+		return blockMinContentWidth(context, box, outer)
 	} else {
 		panic(fmt.Sprintf("min-content width for %T not handled yet", box))
 	}
@@ -73,6 +76,8 @@ func maxContentWidth(context *layoutContext, box Box, outer bool) pr.Float {
 		return replacedMaxContentWidth(rep.Replaced(), outer)
 	} else if bo.FlexContainerT.IsInstance(box) {
 		return flexMaxContentWidth(context, box, outer)
+	} else if bo.GridContainerT.IsInstance(box) {
+		return blockMaxContentWidth(context, box, outer)
 	} else {
 		logger.WarningLogger.Printf("max-content width for %T not handled yet", box)
 		return 0
@@ -85,7 +90,7 @@ type fnBlock = func(*layoutContext, Box, bool) pr.Float
 func blockContentWidth(context *layoutContext, box Box, function fnBlock, outer bool) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var widthValue pr.Float
-	if width.String == "auto" || width.Unit == pr.Perc {
+	if width.S == "auto" || width.Unit == pr.Perc {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic
@@ -114,12 +119,12 @@ func minMax(box Box, width pr.Float) pr.Float {
 	minWidth := box.Box().Style.GetMinWidth()
 	maxWidth := box.Box().Style.GetMaxWidth()
 	var resMin, resMax pr.Float
-	if minWidth.String == "auto" || minWidth.Unit == pr.Perc {
+	if minWidth.S == "auto" || minWidth.Unit == pr.Perc {
 		resMin = 0
 	} else {
 		resMin = minWidth.Value
 	}
-	if maxWidth.String == "auto" || maxWidth.Unit == pr.Perc {
+	if maxWidth.S == "auto" || maxWidth.Unit == pr.Perc {
 		resMax = pr.Inf
 	} else {
 		resMax = maxWidth.Value
@@ -129,11 +134,11 @@ func minMax(box Box, width pr.Float) pr.Float {
 		_, _, ratio := replaced.Replaced().Replacement.GetIntrinsicSize(1, box.Box().Style.GetFontSize().Value)
 		if ratio != nil {
 			minHeight := box.Box().Style.GetMinHeight()
-			if minHeight.String != "auto" && minHeight.Unit != pr.Perc {
+			if minHeight.S != "auto" && minHeight.Unit != pr.Perc {
 				resMin = pr.Max(resMin, minHeight.Value*ratio.V())
 			}
 			maxHeight := box.Box().Style.GetMaxHeight()
-			if maxHeight.String != "auto" && maxHeight.Unit != pr.Perc {
+			if maxHeight.S != "auto" && maxHeight.Unit != pr.Perc {
 				resMax = pr.Min(resMax, maxHeight.Value*ratio.V())
 			}
 		}
@@ -145,6 +150,11 @@ func minMax(box Box, width pr.Float) pr.Float {
 // Add box paddings, borders and margins to “width“.
 // left=true, right=true
 func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
+	// See https://drafts.csswg.org/css-tables-3/#cell-intrinsic-offsets
+	// It is a set of computed values for border-left-width, padding-left,
+	// padding-right, and border-right-width (along with zero values for
+	// margin-left and margin-right)
+
 	var percentages pr.Float
 	var cases []pr.KnownProp
 	if left {
@@ -154,8 +164,8 @@ func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
 		cases = append(cases, pr.PMarginRight, pr.PPaddingRight)
 	}
 	for _, value := range cases {
-		styleValue := box.Style.Get(value.Key()).(pr.Value)
-		if styleValue.String != "auto" {
+		styleValue := box.Style.Get(value.Key()).(pr.DimOrS)
+		if styleValue.S != "auto" {
 			switch styleValue.Unit {
 			case pr.Px:
 				width += styleValue.Value
@@ -167,11 +177,27 @@ func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
 		}
 	}
 
+	collapse := box.Style.GetBorderCollapse() == "collapse"
 	if left {
-		width += box.Style.GetBorderLeftWidth().Value
+		if collapse && box.BorderLeftWidth != 0 {
+			// In collapsed-borders mode: the computed horizontal padding of the
+			// cell and, for border values, the used border-width values of the
+			// cell (half the winning border-width)
+			width += box.BorderLeftWidth
+		} else {
+			// In separated-borders mode: the computed horizontal padding and
+			// border of the table-cell
+			width += box.Style.GetBorderLeftWidth().Value
+		}
 	}
 	if right {
-		width += box.Style.GetBorderRightWidth().Value
+		if collapse && box.BorderRightWidth != 0 {
+			// [...] the used border-width values of the cell
+			width += box.BorderRightWidth
+		} else {
+			// [...] the computed border of the table-cell
+			width += box.Style.GetBorderRightWidth().Value
+		}
 	}
 
 	if percentages < 100 {
@@ -182,7 +208,7 @@ func marginWidth(box *bo.BoxFields, width pr.Float, left, right bool) pr.Float {
 	}
 }
 
-// Respect min/max && adjust width depending on “outer“.
+// Respect min/max and adjust [width] depending on “outer“.
 // If “outer“ is set to “true“, return margin width, else return content
 // width.
 // left=true, right=true
@@ -222,6 +248,7 @@ func inlineMinContentWidth(context *layoutContext, box_ Box, outer bool, skipSta
 	if firstLine {
 		widths = widths[0:1]
 	}
+
 	return adjust(box_, outer, pr.Maxs(widths...), true, true)
 }
 
@@ -239,7 +266,7 @@ func inlineMaxContentWidth(context *layoutContext, box_ Box, outer, isLineStart 
 func columnGroupContentWidth(box Box) pr.Float {
 	width := box.Box().Style.GetWidth()
 	var width_ pr.Float
-	if width.String == "auto" || width.Unit == pr.Perc {
+	if width.S == "auto" || width.Unit == pr.Perc {
 		width_ = 0
 	} else if width.Unit == pr.Px {
 		width_ = width.Value
@@ -252,6 +279,10 @@ func columnGroupContentWidth(box Box) pr.Float {
 
 // Return the min-content width for a “TableCellBox“.
 func tableCellMinContentWidth(context *layoutContext, box_ Box, outer bool) pr.Float {
+	// See https://www.w3.org/TR/css-tables-3/#outer-min-content
+	// The outer min-content width of a table-cell is
+	// max(min-width, min-content width) adjusted by
+	// the cell intrinsic offsets.
 	box := box_.Box()
 	var maxChildrenWidths pr.Float
 	for _, child := range box.Children {
@@ -262,15 +293,8 @@ func tableCellMinContentWidth(context *layoutContext, box_ Box, outer bool) pr.F
 			}
 		}
 	}
-	childrenMinWidth := marginWidth(box, maxChildrenWidths, true, true)
-
-	width := box.Style.GetWidth()
-	var cellMinWidth pr.Float
-	if width.String != "auto" && width.Unit == pr.Px {
-		cellMinWidth = adjust(box_, outer, width.Value, true, true)
-	}
-
-	return pr.Max(childrenMinWidth, cellMinWidth)
+	childrenMinWidth := adjust(box_, outer, maxChildrenWidths, true, true)
+	return childrenMinWidth
 }
 
 // Return the max-content width for a “TableCellBox“.
@@ -341,20 +365,20 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 				if minimum {
 					maxWidth = pr.Float(0)
 				}
-				resumeAt := 0
-				newResumeAt := 0
+				resumeIndex := 0
+				newResumeIndex := 0
 				textRunes := []rune(childText)
-				for newResumeAt != -1 {
-					resumeAt += newResumeAt
-					tmp := text.SplitFirstLine(string(textRunes[resumeAt:]), textBox.Style,
+				for newResumeIndex != -1 {
+					resumeIndex += newResumeIndex
+					tmp := text.SplitFirstLine(string(textRunes[resumeIndex:]), textBox.Style,
 						context, maxWidth, true, isLineStart)
-					newResumeAt = tmp.ResumeAt
+					newResumeIndex = tmp.ResumeAt
 					lines = append(lines, tmp.Width)
 					if firstLine {
 						break
 					}
 				}
-				if firstLine && newResumeAt != -1 && newResumeAt != 0 {
+				if firstLine && newResumeIndex != -1 && newResumeIndex != 0 {
 					currentLine += lines[0]
 					break
 				}
@@ -397,13 +421,13 @@ func percentageContribution(box bo.BoxFields) pr.Float {
 	var minWidth, width pr.Float
 	maxWidth := pr.Inf
 	miw, maw, w := box.Style.GetMinWidth(), box.Style.GetMaxWidth(), box.Style.GetWidth()
-	if miw.String != "auto" && miw.Unit == pr.Perc {
+	if miw.S != "auto" && miw.Unit == pr.Perc {
 		minWidth = miw.Value
 	}
-	if maw.String != "auto" && maw.Unit == pr.Perc {
+	if maw.S != "auto" && maw.Unit == pr.Perc {
 		maxWidth = maw.Value
 	}
-	if w.String != "auto" && w.Unit == pr.Perc {
+	if w.S != "auto" && w.Unit == pr.Perc {
 		width = w.Value
 	}
 	return pr.Max(minWidth, pr.Min(width, maxWidth))
@@ -614,20 +638,20 @@ outerLoop:
 	constrainedness := make([]bool, gridWidth)
 	for i := range constrainedness {
 		if columnGroups[i] != nil {
-			if wid := columnGroups[i].Box().Style.GetWidth(); wid.String != "auto" && wid.Unit != pr.Perc {
+			if wid := columnGroups[i].Box().Style.GetWidth(); wid.S != "auto" && wid.Unit != pr.Perc {
 				constrainedness[i] = true
 				continue
 			}
 		}
 		if columns[i] != nil {
-			if wid := columns[i].Box().Style.GetWidth(); wid.String != "auto" && wid.Unit != pr.Perc {
+			if wid := columns[i].Box().Style.GetWidth(); wid.S != "auto" && wid.Unit != pr.Perc {
 				constrainedness[i] = true
 				continue
 			}
 		}
 		for _, cell := range zippedGrid[i] {
 			if cell != nil {
-				if wid := cell.Box().Style.GetWidth(); cell.Box().Colspan == 1 && wid.String != "auto" && wid.Unit != pr.Perc {
+				if wid := cell.Box().Style.GetWidth(); cell.Box().Colspan == 1 && wid.S != "auto" && wid.Unit != pr.Perc {
 					constrainedness[i] = true
 					break
 				}
@@ -716,7 +740,7 @@ outerLoop:
 
 	tableMinWidth := tableMinContentWidth
 	tableMaxWidth := tableMaxContentWidth
-	if wid := table.Style.GetWidth(); wid.String != "auto" && wid.Unit == pr.Px {
+	if wid := table.Style.GetWidth(); wid.S != "auto" && wid.Unit == pr.Px {
 		// "percentages on the following properties are treated instead as
 		// though they were the following: width: auto"
 		// https://dbaron.org/css/intrinsic/#outer-intrinsic
@@ -759,22 +783,22 @@ func replacedMinContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		h pr.MaybeFloat
 		w pr.Float
 	)
-	if width.String == "auto" {
+	if width.S == "auto" {
 		height := box.Style.GetHeight()
-		if height.String == "auto" || height.Unit == pr.Perc {
+		if height.S == "auto" || height.Unit == pr.Perc {
 			h = pr.AutoF
 		} else if height.Unit == pr.Px {
 			h = height.Value
 		} else {
 			panic(fmt.Sprintf("expected Px got %d", height.Unit))
 		}
-		if mw := box.Style.GetMaxWidth(); mw.String != "auto" && mw.Unit == pr.Perc {
+		if mw := box.Style.GetMaxWidth(); mw.S != "auto" && mw.Unit == pr.Perc {
 			// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
 			w = pr.Float(0)
 		} else {
 			image := box.Replacement
 			iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-			w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
+			w, _ = DefaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
 		}
 	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution
@@ -794,9 +818,9 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 		h pr.MaybeFloat
 		w pr.Float
 	)
-	if width.String == "auto" {
+	if width.S == "auto" {
 		height := box.Style.GetHeight()
-		if height.String == "auto" || height.Unit == pr.Perc {
+		if height.S == "auto" || height.Unit == pr.Perc {
 			h = pr.AutoF
 		} else if height.Unit == pr.Px {
 			h = height.Value
@@ -806,7 +830,7 @@ func replacedMaxContentWidth(box *bo.ReplacedBox, outer bool) pr.Float {
 
 		image := box.Replacement
 		iwidth, iheight, ratio := image.GetIntrinsicSize(box.Style.GetImageResolution().Value, box.Style.GetFontSize().Value)
-		w, _ = defaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
+		w, _ = DefaultImageSizing(iwidth, iheight, ratio, pr.AutoF, h, 300, 150)
 
 	} else if width.Unit == pr.Perc {
 		// See https://drafts.csswg.org/css-sizing/#intrinsic-contribution

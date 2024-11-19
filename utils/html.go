@@ -229,9 +229,8 @@ func (element HTMLNode) HasLinkType(linkType string) bool {
 // See http://www.w3.org/TR/html5/urls.html#document-base-url
 func FindBaseUrl(htmlDocument *html.Node, fallbackBaseUrl string) string {
 	iter := NewHtmlIterator(htmlDocument, atom.Base)
-	firstBaseElement := iter.Next()
-	if firstBaseElement != nil {
-		href := strings.TrimSpace(firstBaseElement.Get("href"))
+	if iter.HasNext() {
+		href := strings.TrimSpace(iter.Next().Get("href"))
 		if href != "" {
 			out, err := SafeUrljoin(fallbackBaseUrl, href, true)
 			if err != nil {

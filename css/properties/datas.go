@@ -1,8 +1,6 @@
 package properties
 
 import (
-	"github.com/benoitkugler/webrender/utils"
-
 	"github.com/benoitkugler/webrender/css/parser"
 )
 
@@ -25,6 +23,8 @@ const ( // zero field corresponds to null content
 	Turn
 	Deg
 	Grad
+
+	Fr
 )
 
 var (
@@ -171,48 +171,6 @@ var (
 		PWidows,
 		PWordSpacing,
 		PWordBreak,
-	)
-
-	// Not applicable to the print media
-	NotPrintMedia = utils.NewSet(
-		// Aural media
-		"azimuth",
-		"cue",
-		"cue-after",
-		"cue-before",
-		"elevation",
-		"pause",
-		"pause-after",
-		"pause-before",
-		"pitch-range",
-		"pitch",
-		"play-during",
-		"richness",
-		"speak-header",
-		"speak-numeral",
-		"speak-punctuation",
-		"speak",
-		"speech-rate",
-		"stress",
-		"voice-family",
-		"volume",
-		// Interactive
-		"cursor",
-		// Animations and transitions
-		"animation",
-		"animation-delay",
-		"animation-direction",
-		"animation-duration",
-		"animation-fill-mode",
-		"animation-iteration-count",
-		"animation-name",
-		"animation-play-state",
-		"animation-timing-function",
-		"transition",
-		"transition-delay",
-		"transition-duration",
-		"transition-property",
-		"transition-timing-function",
 	)
 
 	// http://www.w3.org/TR/CSS21/tables.html#model

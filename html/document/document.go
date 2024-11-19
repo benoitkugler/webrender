@@ -46,8 +46,8 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 	borderWidth := box.BorderWidth()
 	borderHeight := box.BorderHeight()
 	or := box.Style.GetTransformOrigin()
-	offsetX := pr.ResoudPercentage(or[0].ToValue(), borderWidth).V()
-	offsetY := pr.ResoudPercentage(or[1].ToValue(), borderHeight).V()
+	offsetX := pr.ResolvePercentage(or[0].ToValue(), borderWidth).V()
+	offsetY := pr.ResolvePercentage(or[1].ToValue(), borderHeight).V()
 	originX := fl(box.BorderBoxX() + offsetX)
 	originY := fl(box.BorderBoxY() + offsetY)
 
@@ -66,8 +66,8 @@ func getMatrix(box_ Box) (mt.Transform, bool) {
 		case "translate":
 			translateX, translateY := args[0], args[1]
 			rightMat.Translate(
-				fl(pr.ResoudPercentage(translateX.ToValue(), borderWidth).V()),
-				fl(pr.ResoudPercentage(translateY.ToValue(), borderHeight).V()),
+				fl(pr.ResolvePercentage(translateX.ToValue(), borderWidth).V()),
+				fl(pr.ResolvePercentage(translateY.ToValue(), borderHeight).V()),
 			)
 		case "skew":
 			rightMat.Skew(toF(args[0]), toF(args[1]))
@@ -135,8 +135,8 @@ func gatherLinksAndBookmarks(box_ bo.Box, bookmarks *[]bookmarkData, links *[]Li
 	box := box_.Box()
 	bookmarkLabel := box.BookmarkLabel
 	bookmarkLevel := 0
-	if lvl := box.Style.GetBookmarkLevel(); lvl.String != "none" {
-		bookmarkLevel = lvl.Int
+	if lvl := box.Style.GetBookmarkLevel(); lvl.Tag != pr.None {
+		bookmarkLevel = lvl.I
 	}
 	state := box.Style.GetBookmarkState()
 	link := box.Style.GetLink()
@@ -201,7 +201,7 @@ type Page struct {
 	links []Link
 
 	// The page bleed widths with values in CSS pixels.
-	Bleed Bleed
+	Bleed bo.Bleed
 
 	// The page width, including margins, in CSS pixels.
 	Width fl
@@ -216,12 +216,7 @@ func newPage(pageBox *bo.PageBox) Page {
 	d.Width = fl(pageBox.MarginWidth())
 	d.Height = fl(pageBox.MarginHeight())
 
-	d.Bleed = Bleed{
-		Top:    fl(pageBox.Style.GetBleedTop().Value),
-		Right:  fl(pageBox.Style.GetBleedRight().Value),
-		Bottom: fl(pageBox.Style.GetBleedBottom().Value),
-		Left:   fl(pageBox.Style.GetBleedLeft().Value),
-	}
+	d.Bleed = pageBox.Bleed()
 	d.anchors = anchors{}
 
 	gatherLinksAndBookmarks(
@@ -491,8 +486,8 @@ func (d *Document) Write(target backend.Document, zoom pr.Fl, attachments []back
 	for i, page := range d.Pages {
 		pageWidth := scale * (page.Width + fl(page.Bleed.Left) + fl(page.Bleed.Right))
 		pageHeight := scale * (page.Height + fl(page.Bleed.Top) + fl(page.Bleed.Bottom))
-		left := -scale * page.Bleed.Left
-		top := -scale * page.Bleed.Top
+		left := -scale * fl(page.Bleed.Left)
+		top := -scale * fl(page.Bleed.Top)
 		right := left + pageWidth
 		bottom := top + pageHeight
 
@@ -505,7 +500,7 @@ func (d *Document) Write(target backend.Document, zoom pr.Fl, attachments []back
 
 		d.addHyperlinks(pagedLinks[i], outputPage, matrix)
 		d.scaleAnchors(pagedAnchors[i], matrix)
-		page.Bleed.setMediaBoxes([4]fl{left, top, right, bottom}, outputPage)
+		setMediaBoxes(page.Bleed, [4]fl{left, top, right, bottom}, outputPage)
 	}
 
 	target.CreateAnchors(pagedAnchors)
@@ -550,7 +545,7 @@ func (d *Document) embedFileAnnotations(pagedLinks [][]Link, context backend.Doc
 	}
 }
 
-func (bleed Bleed) setMediaBoxes(mediaBox [4]fl, target backend.Page) {
+func setMediaBoxes(bleed bo.Bleed, mediaBox [4]fl, target backend.Page) {
 	bleed.Top *= 0.75
 	bleed.Bottom *= 0.75
 	bleed.Left *= 0.75
@@ -559,17 +554,17 @@ func (bleed Bleed) setMediaBoxes(mediaBox [4]fl, target backend.Page) {
 	// Add bleed box
 	left, top, right, bottom := mediaBox[0], mediaBox[1], mediaBox[2], mediaBox[3]
 
-	trimLeft := left + bleed.Left
-	trimTop := top + bleed.Top
-	trimRight := right - bleed.Right
-	trimBottom := bottom - bleed.Bottom
+	trimLeft := left + fl(bleed.Left)
+	trimTop := top + fl(bleed.Top)
+	trimRight := right - fl(bleed.Right)
+	trimBottom := bottom - fl(bleed.Bottom)
 
 	// Arbitrarly set PDF BleedBox between CSS bleed box (PDF MediaBox) and
 	// CSS page box (PDF TrimBox), at most 10 px from the TrimBox.
-	bleedLeft := trimLeft - utils.MinF(10, bleed.Left)
-	bleedTop := trimTop - utils.MinF(10, bleed.Top)
-	bleedRight := trimRight + utils.MinF(10, bleed.Right)
-	bleedBottom := trimBottom + utils.MinF(10, bleed.Bottom)
+	bleedLeft := trimLeft - utils.MinF(10, fl(bleed.Left))
+	bleedTop := trimTop - utils.MinF(10, fl(bleed.Top))
+	bleedRight := trimRight + utils.MinF(10, fl(bleed.Right))
+	bleedBottom := trimBottom + utils.MinF(10, fl(bleed.Bottom))
 
 	target.SetMediaBox(left, top, right, bottom)
 	target.SetTrimBox(trimLeft, trimTop, trimRight, trimBottom)

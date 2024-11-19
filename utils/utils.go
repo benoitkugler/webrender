@@ -58,3 +58,12 @@ func Hash(s string) int {
 	h.Write([]byte(s))
 	return int(h.Sum32())
 }
+
+func IsIn(l []string, s string) bool {
+	for _, v := range l {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

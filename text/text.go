@@ -132,7 +132,7 @@ const (
 type StrutLayoutKey struct {
 	lang                 string
 	fontFamily           string // joined
-	lineHeight           pr.Value
+	lineHeight           pr.DimOrS
 	fontWeight           uint16
 	fontSize             pr.Fl
 	fontLanguageOverride fontLanguageOverride
@@ -171,7 +171,7 @@ func StrutLayout(style_ pr.StyleAccessor, context TextLayoutContext) (result [2]
 
 	height, baseline := context.Fonts().spaceHeight(style)
 
-	if lineHeight.String == "normal" {
+	if lineHeight.S == "normal" {
 		result = [2]pr.Float{height, baseline}
 	} else {
 		lineHeightV := lineHeight.Value

@@ -15,7 +15,7 @@ var (
 	// ColorKeywords maps color names to RGBA values
 	ColorKeywords = map[string]Color{}
 
-	hashRegexps = []hashRegexp{
+	hashRegexps = [...]hashRegexp{
 		{multiplier: 2., regexp: regexp.MustCompile(`(?i)^([\da-f])([\da-f])([\da-f])$`)},
 		{multiplier: 1., regexp: regexp.MustCompile(`(?i)^([\da-f]{2})([\da-f]{2})([\da-f]{2})$`)},
 	}
@@ -270,21 +270,6 @@ func (c Color) IsNone() bool {
 	return c.Type == ColorInvalid
 }
 
-func round(f utils.Fl) myFloat {
-	return myFloat(utils.Round(f))
-}
-
-func (c Color) toJson() jsonisable {
-	switch c.Type {
-	case ColorInvalid:
-		return nil
-	case ColorCurrentColor:
-		return myString("currentColor")
-	default:
-		return jsonList{round(c.RGBA.R), round(c.RGBA.G), round(c.RGBA.B), round(c.RGBA.A)}
-	}
-}
-
 type hashRegexp struct {
 	regexp     *regexp.Regexp
 	multiplier int
@@ -300,8 +285,8 @@ func mustParseHexa(s string) utils.Fl {
 
 // ParseColorString tokenize the input before calling `ParseColor`.
 func ParseColorString(color string) Color {
-	l := parseOneComponentValueString(color, true)
-	return ParseColor(l)
+	l := Tokenize([]byte(color), true)
+	return ParseColor(ParseOneComponentValue(l))
 }
 
 // Parse a color value as defined in `CSS Color Level 3  <http://www.w3.org/TR/css3-color/>`.
@@ -311,11 +296,11 @@ func ParseColorString(color string) Color {
 //   - RGBA color for every other values (including keywords, HSL && HSLA.)
 //     The alpha channel is clipped to [0, 1] but red, green, or blue can be out of range
 //     (eg. “rgb(-10%, 120%, 0%)“ is represented as “(-0.1, 1.2, 0, 1)“.
-func ParseColor(_token Token) Color {
-	switch token := _token.(type) {
-	case IdentToken:
-		return ColorKeywords[token.Value.Lower()]
-	case HashToken:
+func ParseColor(token Token) Color {
+	switch token := token.(type) {
+	case Ident:
+		return ColorKeywords[utils.AsciiLower(token.Value)]
+	case Hash:
 		for _, hashReg := range hashRegexps {
 			match := hashReg.regexp.FindStringSubmatch(token.Value)
 			if len(match) == 4 {
@@ -326,9 +311,9 @@ func ParseColor(_token Token) Color {
 			}
 		}
 	case FunctionBlock:
-		args := parseCommaSeparated(*token.Arguments)
+		args := parseCommaSeparated(token.Arguments)
 		if len(args) != 0 {
-			switch token.Name.Lower() {
+			switch utils.AsciiLower(token.Name) {
 			case "rgb":
 				rgba, ok := parseRgb(args, 1.)
 				if ok {
@@ -371,9 +356,9 @@ func ParseColor(_token Token) Color {
 // return its value clipped to the 0..1 range
 func parseAlpha(args []Token) (utils.Fl, bool) {
 	if len(args) == 1 {
-		token, ok := args[0].(NumberToken)
+		token, ok := args[0].(Number)
 		if ok {
-			return utils.MinF(1., utils.MaxF(0., token.Value)), true
+			return utils.MinF(1., utils.MaxF(0., token.ValueF)), true
 		}
 	}
 	return 0, false
@@ -385,18 +370,18 @@ func parseRgb(args []Token, alpha utils.Fl) (RGBA, bool) {
 	if len(args) != 3 {
 		return RGBA{}, false
 	}
-	nR, okR := args[0].(NumberToken)
-	nG, okG := args[1].(NumberToken)
-	nB, okB := args[2].(NumberToken)
-	if okR && okG && okB && nR.IsInteger && nG.IsInteger && nB.IsInteger {
-		return RGBA{R: nR.Value / 255, G: nG.Value / 255, B: nB.Value / 255, A: alpha}, true
+	nR, okR := args[0].(Number)
+	nG, okG := args[1].(Number)
+	nB, okB := args[2].(Number)
+	if okR && okG && okB && nR.IsInt() && nG.IsInt() && nB.IsInt() {
+		return RGBA{R: nR.ValueF / 255, G: nG.ValueF / 255, B: nB.ValueF / 255, A: alpha}, true
 	}
 
-	pR, okR := args[0].(PercentageToken)
-	pG, okG := args[1].(PercentageToken)
-	pB, okB := args[2].(PercentageToken)
+	pR, okR := args[0].(Percentage)
+	pG, okG := args[1].(Percentage)
+	pB, okB := args[2].(Percentage)
 	if okR && okG && okB {
-		return RGBA{R: pR.Value / 100, G: pG.Value / 100, B: pB.Value / 100, A: alpha}, true
+		return RGBA{R: pR.ValueF / 100, G: pG.ValueF / 100, B: pB.ValueF / 100, A: alpha}, true
 	}
 	return RGBA{}, false
 }
@@ -407,11 +392,11 @@ func parseHsl(args []Token, alpha utils.Fl) (RGBA, bool) {
 	if len(args) != 3 {
 		return RGBA{}, false
 	}
-	h, okH := args[0].(NumberToken)
-	s, okS := args[1].(PercentageToken)
-	l, okL := args[2].(PercentageToken)
-	if okH && okS && okL && h.IsInteger {
-		r, g, b := hslToRgb(h.IntValue(), s.Value, l.Value)
+	h, okH := args[0].(Number)
+	s, okS := args[1].(Percentage)
+	l, okL := args[2].(Percentage)
+	if okH && okS && okL && h.IsInt() {
+		r, g, b := hslToRgb(h.Int(), s.ValueF, l.ValueF)
 		return RGBA{R: r, G: g, B: b, A: alpha}, true
 	}
 	return RGBA{}, false
@@ -457,11 +442,11 @@ func hslToRgb(_hue int, saturation, lightness utils.Fl) (utils.Fl, utils.Fl, uti
 // as arguments made of a single token each, separated by mandatory commas,
 // with optional white space around each argument.
 // return the argument list without commas or white space;
-// or None if the function token content do not match the description above.
+// or `nil` if the function token content do not match the description above.
 func parseCommaSeparated(tokens []Token) []Token {
 	var filtered []Token
 	for _, token := range tokens {
-		if token.Type() != WhitespaceTokenT && token.Type() != CommentT {
+		if token.Kind() != KWhitespace && token.Kind() != KComment {
 			filtered = append(filtered, token)
 		}
 	}
@@ -472,7 +457,7 @@ func parseCommaSeparated(tokens []Token) []Token {
 		for i := 1; i < len(filtered); i += 2 {
 			token := filtered[i]
 			others = append(others, filtered[i+1])
-			litteral, ok := token.(LiteralToken)
+			litteral, ok := token.(Literal)
 			if !ok || litteral.Value != "," {
 				isAll = false
 				break
