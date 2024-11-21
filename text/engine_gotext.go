@@ -350,6 +350,9 @@ func (fc *FontConfigurationGotext) wrap(text []rune, style *TextStyle, maxWidth 
 	return fc.wrapWordBreak(text, style, maxWidth, false)
 }
 
+func floatToFixed(v pr.Fl) fixed.Int26_6    { return fixed.Int26_6(v * 64) }
+func fixedToFloat(v fixed.Int26_6) pr.Float { return pr.Float(v) / 64 }
+
 // same as wrap, but may allows break inside words
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
@@ -370,17 +373,18 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	// select the proper fonts
 	fc.fm.SetQuery(newQuery(style.FontDescription))
+
 	// segment the input text, with proper lang and size
 	inputs := fc.inputSeg.Split(shaping.Input{
 		Text:      text,
 		RunEnd:    len(text),
 		Language:  lang,
-		Size:      fixed.Int26_6(style.FontDescription.Size * 64),
+		Size:      floatToFixed(style.FontDescription.Size),
 		Direction: di.DirectionLTR, // default, will be overriden
 	}, fc.fm)
 
 	// TODO: lazy iterator
-	outputs := make([]shaping.Output, len(inputs))
+	outputs := make(shaping.Line, len(inputs))
 	for i, input := range inputs {
 		// the features are comming either from the style,
 		// or registred via CSS @font-face rule
@@ -391,6 +395,15 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		// shape !
 		output := fc.shaper.Shape(input)
 		outputs[i] = output
+	}
+
+	if style.LetterSpacing != 0 || style.WordSpacing != 0 {
+		ws, ls := floatToFixed(style.WordSpacing), floatToFixed(style.LetterSpacing)
+		shaping.AddSpacing(outputs, text, ws, ls)
+		// add letter spacing at the end, like other browers do
+		lastRun := &outputs[len(outputs)-1]
+		lastRun.Glyphs[len(lastRun.Glyphs)-1].XAdvance += ls
+		lastRun.RecomputeAdvance()
 	}
 
 	// now we can wrap the runs
@@ -447,16 +460,14 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		}
 	}
 
-	// TODO: properly handle letter spacing
-
 	return FirstLine{
 		Layout:       layoutGotext{text: text},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: firstLineRTL,
-		Width:        pr.Float(width) / 64,
-		Height:       pr.Float(height) / 64,
-		Baseline:     pr.Float(maxAscent) / 64,
+		Width:        fixedToFloat(width),
+		Height:       fixedToFloat(height),
+		Baseline:     fixedToFloat(maxAscent),
 	}
 }
 
