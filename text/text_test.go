@@ -584,13 +584,14 @@ func TestLetterAndWordSpacing(t *testing.T) {
 		},
 	}
 
-	fmt.Println(wrapPango(fcPango, "Sup ah ahhh", style, nil).Width)
-
-	style.LetterSpacing = 1
-	style.WordSpacing = 2
-	lineP := wrapPango(fcPango, "Sup ah ahhh", style, nil)
-	lineG := fcGotext.wrap([]rune("Sup ah ahhh"), style, pr.Inf)
-
-	fmt.Println(lineP.Width)
-	fmt.Println(lineG.Width)
+	const text = "Sup ah ahhh"
+	for _, ls := range [...]float32{0, 1, 2, 10} {
+		for _, ws := range [...]float32{0, 1, 2, 10} {
+			style.LetterSpacing = ls
+			style.WordSpacing = ws
+			lineP := wrapPango(fcPango, "Sup ah ahhh", style, nil)
+			lineG := fcGotext.wrap([]rune("Sup ah ahhh"), style, pr.Inf)
+			assertApprox(t, lineP.Width, lineG.Width, fmt.Sprintf("letter-spacing: %v, word-spacing: %v", ls, ws))
+		}
+	}
 }
