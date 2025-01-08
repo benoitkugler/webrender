@@ -93,13 +93,22 @@ func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
 	return -PangoUnitsToFloat(inkExtents.Y)
 }
 
+type runeProp uint8
+
+// bit mask
+const (
+	isWordEnd runeProp = 1 << iota
+	isWordStart
+	isLineBreak
+)
+
 func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
 	text = []rune(bidiMarkReplacer.Replace(string(text)))
 	logAttrs := pango.ComputeCharacterAttributes(text, -1)
 	out := make([]runeProp, len(logAttrs))
 	for i, p := range logAttrs {
-		if p.IsWordBoundary() {
-			out[i] |= isWordBoundary
+		if p.IsWordStart() {
+			out[i] |= isWordStart
 		}
 		if p.IsWordEnd() {
 			out[i] |= isWordEnd
@@ -729,7 +738,7 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 
 	var startWord, stopWord int
 	if hyphens == HAuto && lang != "" {
-		nextWordBoundaries := getNextWordBoundaries(fc, secondLineText)
+		nextWordBoundaries := fc.wordBoundaries(secondLineText)
 		if len(nextWordBoundaries) == 2 {
 			// We have a word to hyphenate
 			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
@@ -862,11 +871,11 @@ var bidiMarkReplacer = strings.NewReplacer(
 )
 
 // returns nil or [wordStart, wordEnd]
-func getNextWordBoundaries(fc *FontConfigurationPango, t []rune) []int {
+func (fc *FontConfigurationPango) wordBoundaries(t []rune) *[2]int {
 	if len(t) < 2 {
 		return nil
 	}
-	out := make([]int, 2)
+	var out [2]int
 	hasBroken := false
 	for i, attr := range fc.runeProps(t) {
 		if attr&isWordEnd != 0 {
@@ -874,14 +883,14 @@ func getNextWordBoundaries(fc *FontConfigurationPango, t []rune) []int {
 			hasBroken = true
 			break
 		}
-		if attr&isWordBoundary != 0 {
+		if attr&isWordStart != 0 {
 			out[0] = i // word start
 		}
 	}
 	if !hasBroken {
 		return nil
 	}
-	return out
+	return &out
 }
 
 // GetLastWordEnd returns the index in `t` of the last word,
@@ -1040,7 +1049,7 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 
 	var startWord, stopWord int
 	if hyphens == HAuto && lang != "" {
-		nextWordBoundaries := getNextWordBoundaries(fc, secondLineText)
+		nextWordBoundaries := fc.wordBoundaries(secondLineText)
 		if len(nextWordBoundaries) == 2 {
 			// We have a word to hyphenate
 			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]

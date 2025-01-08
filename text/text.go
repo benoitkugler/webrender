@@ -120,15 +120,6 @@ func SplitFirstLine(text string, style_ pr.StyleAccessor, context TextLayoutCont
 	return context.Fonts().splitFirstLine(context.HyphenCache(), text, style, maxWidth, minimum, isLineStart)
 }
 
-type runeProp uint8
-
-// bit mask
-const (
-	isWordEnd runeProp = 1 << iota
-	isWordBoundary
-	isLineBreak
-)
-
 type StrutLayoutKey struct {
 	lang                 string
 	fontFamily           string // joined

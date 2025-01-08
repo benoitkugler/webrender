@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 
 	bkLang "github.com/benoitkugler/textlayout/language"
 	pr "github.com/benoitkugler/webrender/css/properties"
@@ -157,6 +158,7 @@ func (f *FontConfigurationGotext) FontContent(font FontOrigin) []byte {
 
 type layoutGotext struct {
 	text []rune
+	line shaping.Line
 }
 
 // Text returns a readonly slice of the text in the layout
@@ -230,11 +232,12 @@ func (fc *FontConfigurationGotext) resolveFace(r rune, font FontDescription) *fo
 	return fc.fm.ResolveFace(r)
 }
 
+// sizeFactor is used to get a better precision
 const sizeFactor = 100
 
 // uses sizeFactor * font.Size
-func (fc *FontConfigurationGotext) shape(r rune, font FontDescription, features []Feature) ([]shaping.Glyph, shaping.Bounds) {
-	face := fc.resolveFace(r, font)
+func (fc *FontConfigurationGotext) shapeRune(r rune, desc FontDescription, features []Feature) ([]shaping.Glyph, shaping.Bounds) {
+	face := fc.resolveFace(r, desc)
 	if face == nil { // fontmap is broken
 		return nil, shaping.Bounds{}
 	}
@@ -248,37 +251,37 @@ func (fc *FontConfigurationGotext) shape(r rune, font FontDescription, features 
 		Language:     language.NewLanguage("en"),
 		Face:         face,
 		// float to fixed, the size factor is to get a better precision
-		Size: fixed.Int26_6(font.Size*64) * sizeFactor,
+		Size: floatToFixed(desc.Size) * sizeFactor,
 	})
 
 	return out.Glyphs, out.LineBounds
 }
 
 func (fc *FontConfigurationGotext) heightx(style *TextStyle) pr.Fl {
-	glyphs, _ := fc.shape('x', style.FontDescription, style.FontFeatures)
+	glyphs, _ := fc.shapeRune('x', style.FontDescription, style.FontFeatures)
 
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
 		return style.FontDescription.Size
 	}
 
-	return pr.Fl(glyphs[0].YBearing) / 64 / sizeFactor // fixed to float
+	return pr.Fl(fixedToFloat(glyphs[0].YBearing)) / sizeFactor // fixed to float
 }
 
 func (fc *FontConfigurationGotext) width0(style *TextStyle) pr.Fl {
-	glyphs, _ := fc.shape('0', style.FontDescription, style.FontFeatures)
+	glyphs, _ := fc.shapeRune('0', style.FontDescription, style.FontFeatures)
 
 	if len(glyphs) == 0 { // fontmap is broken, return a 'reasonnable' value
 		return style.FontDescription.Size
 	}
 
-	return pr.Fl(glyphs[0].XAdvance) / 64 / sizeFactor // fixed to float
+	return pr.Fl(fixedToFloat(glyphs[0].XAdvance)) / sizeFactor // fixed to float
 }
 
 func (fc *FontConfigurationGotext) spaceHeight(style *TextStyle) (height, baseline pr.Float) {
-	_, bounds := fc.shape(' ', style.FontDescription, style.FontFeatures)
+	_, bounds := fc.shapeRune(' ', style.FontDescription, style.FontFeatures)
 
-	height = pr.Float(bounds.Ascent-bounds.Descent) / 64 / sizeFactor
-	baseline = pr.Float(bounds.Ascent) / 64 / sizeFactor
+	height = fixedToFloat(bounds.Ascent-bounds.Descent) / sizeFactor
+	baseline = fixedToFloat(bounds.Ascent) / sizeFactor
 
 	return height, baseline
 }
@@ -304,10 +307,13 @@ func (fc *FontConfigurationGotext) wordBoundaries(t []rune) *[2]int {
 	if len(t) < 2 {
 		return nil
 	}
-	var out [2]int
-	// TODO: add word attr in typesetting
-	out[1] = len(t)
-	return &out
+	fc.unicodeSeg.Init(t)
+	iter := fc.unicodeSeg.WordIterator()
+	if iter.Next() {
+		word := iter.Word()
+		return &[2]int{word.Offset, word.Offset + len(word.Text)}
+	}
+	return nil
 }
 
 // returns the first occurence of c, or -1 if not found
@@ -449,6 +455,9 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	firstLineRTL := line[0].Direction.Progression() == di.TowardTopLeft
 
+	// sort the line by visual order
+	sort.Slice(line, func(i, j int) bool { return line[i].VisualIndex < line[j].VisualIndex })
+
 	var width, height, maxAscent fixed.Int26_6
 	for _, run := range line {
 		width += run.Advance
@@ -461,7 +470,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	return FirstLine{
-		Layout:       layoutGotext{text: text},
+		Layout:       layoutGotext{text: text, line: line},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: firstLineRTL,
