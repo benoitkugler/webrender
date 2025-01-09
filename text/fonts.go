@@ -3,6 +3,7 @@ package text
 import (
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
+	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
 )
 
@@ -36,6 +37,10 @@ type FontConfiguration interface {
 	// It returns the file name of the loaded file.
 	AddFontFace(ruleDescriptors validation.FontFaceDescriptors, urlFetcher utils.UrlFetcher) string
 
+	// CanBreakText returns True if there is a line break strictly inside [t], False otherwise.
+	// It should return nil if t has length < 2.
+	CanBreakText(t []rune) pr.MaybeBool
+
 	// returns the advance of the '0' char, using the font described by the given [style]
 	width0(style *TextStyle) pr.Fl
 	// returns the height of the 'x' char, using the font described by the given [style]
@@ -43,9 +48,12 @@ type FontConfiguration interface {
 	// returns the height and baseline of a line containing a single space (" ")
 	spaceHeight(style *TextStyle) (height, baseline pr.Float)
 
+	splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text_ string, style *TextStyle,
+		maxWidth pr.MaybeFloat, minimum, isLineStart bool) FirstLine
+
 	// compute the unicode propery of the given runes,
 	// returning a slice of length L + 1
 	// the returned slice is readonly, and valid only until the
 	// next call to runeProps
-	runeProps([]rune) []runeProp
+	// runeProps([]rune) []runeProp
 }

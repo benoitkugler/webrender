@@ -105,7 +105,9 @@ type Float Fl
 
 type Int int
 
-type Ints3 [3]int
+type Limits struct {
+	Total, Left, Right int
+}
 
 type Page string
 
@@ -464,8 +466,9 @@ func (v IntString) IsNone() bool {
 	return v == IntString{}
 }
 
-func (v Ints3) IsNone() bool {
-	return v == Ints3{}
+func (Limits) isCssProperty() {}
+func (v Limits) IsNone() bool {
+	return v == Limits{}
 }
 
 func (v Marks) IsNone() bool {
@@ -590,7 +593,6 @@ func (Float) isCssProperty()             {}
 func (Images) isCssProperty()            {}
 func (Int) isCssProperty()               {}
 func (IntString) isCssProperty()         {}
-func (Ints3) isCssProperty()             {}
 func (Marks) isCssProperty()             {}
 func (Decorations) isCssProperty()       {}
 func (NamedString) isCssProperty()       {}
@@ -635,7 +637,7 @@ func (Float) isDeclaredValue()             {}
 func (Images) isDeclaredValue()            {}
 func (Int) isDeclaredValue()               {}
 func (IntString) isDeclaredValue()         {}
-func (Ints3) isDeclaredValue()             {}
+func (Limits) isDeclaredValue()            {}
 func (Marks) isDeclaredValue()             {}
 func (Decorations) isDeclaredValue()       {}
 func (NamedString) isDeclaredValue()       {}

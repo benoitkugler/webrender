@@ -1,0 +1,987 @@
+[
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 18,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 22,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 18,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 22.4,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 36,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 12,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 14,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 18,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 1000,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 500,
+   "Size": 12,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 500,
+   "Size": 14,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 500,
+   "Size": 1000,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 12,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 14,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 18,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 20,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 24,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 600,
+   "Size": 32,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "Segoe UI",
+    "Noto Sans",
+    "Helvetica",
+    "Arial",
+    "sans-serif",
+    "Apple Color Emoji",
+    "Segoe UI Emoji"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Linux Libertine",
+    "Georgia",
+    "Times",
+    "Source Serif Pro",
+    "serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 12.8,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Linux Libertine",
+    "Georgia",
+    "Times",
+    "Source Serif Pro",
+    "serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Linux Libertine",
+    "Georgia",
+    "Times",
+    "Source Serif Pro",
+    "serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Linux Libertine",
+    "Georgia",
+    "Times",
+    "Source Serif Pro",
+    "serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 24,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Linux Libertine",
+    "Georgia",
+    "Times",
+    "Source Serif Pro",
+    "serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 33.333336,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Linux Libertine",
+    "Georgia",
+    "Times",
+    "Source Serif Pro",
+    "serif"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Material Icons"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 24,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Mononoki"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 14.933334,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Mononoki"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Rosario"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 14.933334,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Rosario"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 18.666668,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Rosario"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 28.000002,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Rosario"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 56.000004,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Rosario"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 18.666668,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "Rosario"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 41.06667,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "SFMono-Regular",
+    "Consolas",
+    "Liberation Mono",
+    "Menlo",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 13.28,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "SFMono-Regular",
+    "Consolas",
+    "Liberation Mono",
+    "Menlo",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "SFMono-Regular",
+    "Consolas",
+    "Liberation Mono",
+    "Menlo",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 1000,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "SFMono-Regular",
+    "Consolas",
+    "Liberation Mono",
+    "Menlo",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "SFMono-Regular",
+    "Consolas",
+    "Liberation Mono",
+    "Menlo",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 1000,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 10.666667,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 11,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 13,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 13.28,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 13.333334,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 14.222222,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 15,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 18,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 1000,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "arial",
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 13,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "monospace",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 10.666667,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "monospace",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "monospace",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 10.666667,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "monospace",
+    "monospace"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "monospace",
+    "monospace"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 10.666667,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "monospace",
+    "monospace"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 11.264,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 12.8,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 13.333334,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 14.08,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 1000,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 14.08,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 17.6,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 0,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 18.666668,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 400,
+   "Size": 16,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 13.6,
+   "VariationSettings": null
+  },
+  {
+   "Family": [
+    "sans-serif"
+   ],
+   "Style": 2,
+   "Stretch": 4,
+   "Weight": 700,
+   "Size": 1000,
+   "VariationSettings": null
+  }
+ ]

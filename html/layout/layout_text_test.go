@@ -478,7 +478,7 @@ func TestLetterSpacing1(t *testing.T) {
 	strong2 := unpack1(line)
 	tu.AssertEqual(t, strong2.Box().Width.V()-strong1.Box().Width.V(), Fl(34*11))
 
-	// an embedded tag should ! affect the single-line letter spacing
+	// an embedded tag should not affect the single-line letter spacing
 	page = renderOnePage(t,
 		"<style>strong { letter-spacing: 11px }</style>"+
 			"<body><strong>Supercali<span>fragilistic</span>expialidocious"+

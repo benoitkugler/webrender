@@ -3670,9 +3670,9 @@ func hyphenateLimitChars(tokens []Token, _ string) pr.CssProperty {
 		token := tokens[0]
 		keyword := getKeyword(token)
 		if keyword == "auto" {
-			return pr.Ints3{5, 2, 2}
+			return pr.Limits{Total: 5, Left: 2, Right: 2}
 		} else if number, ok := token.(pa.Number); ok && number.IsInt() {
-			return pr.Ints3{number.Int(), 2, 2}
+			return pr.Limits{Total: number.Int(), Left: 2, Right: 2}
 		}
 	case 2:
 		total, left := tokens[0], tokens[1]
@@ -3680,15 +3680,15 @@ func hyphenateLimitChars(tokens []Token, _ string) pr.CssProperty {
 		leftKeyword := getKeyword(left)
 		if totalNumber, ok := total.(pa.Number); ok && totalNumber.IsInt() {
 			if leftNumber, ok := left.(pa.Number); ok && leftNumber.IsInt() {
-				return pr.Ints3{totalNumber.Int(), leftNumber.Int(), leftNumber.Int()}
+				return pr.Limits{Total: totalNumber.Int(), Left: leftNumber.Int(), Right: leftNumber.Int()}
 			} else if leftKeyword == "auto" {
-				return pr.Ints3{totalNumber.Int(), 2, 2}
+				return pr.Limits{Total: totalNumber.Int(), Left: 2, Right: 2}
 			}
 		} else if totalKeyword == "auto" {
 			if leftNumber, ok := left.(pa.Number); ok && leftNumber.IsInt() {
-				return pr.Ints3{5, leftNumber.Int(), leftNumber.Int()}
+				return pr.Limits{Total: 5, Left: leftNumber.Int(), Right: leftNumber.Int()}
 			} else if leftKeyword == "auto" {
-				return pr.Ints3{5, 2, 2}
+				return pr.Limits{Total: 5, Left: 2, Right: 2}
 			}
 		}
 	case 3:
@@ -3711,7 +3711,7 @@ func hyphenateLimitChars(tokens []Token, _ string) pr.CssProperty {
 			if okR {
 				rightInt = rightNumber.Int()
 			}
-			return pr.Ints3{totalInt, leftInt, rightInt}
+			return pr.Limits{Total: totalInt, Left: leftInt, Right: rightInt}
 		}
 	}
 	return nil

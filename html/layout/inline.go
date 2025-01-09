@@ -897,7 +897,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			} else if first == letterFalse {
 				canBreak = pr.False
 			} else {
-				canBreak = text.CanBreakText(context.Fonts(), []rune{lastLetter, first})
+				canBreak = context.Fonts().CanBreakText([]rune{lastLetter, first})
 			}
 		}
 
@@ -1518,7 +1518,7 @@ func canBreakInside(ctx *layoutContext, box Box) pr.MaybeBool {
 	if bo.AtomicInlineLevelT.IsInstance(box) {
 		return pr.False
 	} else if textWrap && isTextBox {
-		return text.CanBreakText(ctx.Fonts(), []rune(textBox.Text))
+		return ctx.Fonts().CanBreakText([]rune(textBox.Text))
 	} else if textWrap && bo.ParentT.IsInstance(box) {
 		for _, child := range box.Box().Children {
 			if canBreakInside(ctx, child) == pr.True {

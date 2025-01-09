@@ -67,30 +67,48 @@ func (fc *FontConfigurationPango) width0(style *TextStyle) pr.Fl {
 
 	p.Layout.SetText("0") // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := p.GetFirstLine()
-
-	var inkExtents, logicalExtents pango.Rectangle
-	line.GetExtents(&inkExtents, &logicalExtents)
+	var logicalExtents pango.Rectangle
+	line.GetExtents(nil, &logicalExtents)
 	return PangoUnitsToFloat(logicalExtents.Width)
 }
+
+// var styles []*TextStyle
+
+// func dumpStyle(s *TextStyle) {
+// 	styles = append(styles, s)
+// 	f, _ := os.Create("styles.json")
+// 	enc := json.NewEncoder(f)
+// 	enc.SetIndent(" ", " ")
+// 	enc.Encode(styles)
+// 	f.Close()
+// }
 
 func (fc *FontConfigurationPango) heightx(style *TextStyle) pr.Fl {
 	p := newTextLayout(fc, style, nil)
 
 	p.Layout.SetText("x") // avoid recursion for letter-spacing and word-spacing properties
 	line, _ := p.GetFirstLine()
-
-	var inkExtents, logicalExtents pango.Rectangle
-	line.GetExtents(&inkExtents, &logicalExtents)
+	var inkExtents pango.Rectangle
+	line.GetExtents(&inkExtents, nil)
 	return -PangoUnitsToFloat(inkExtents.Y)
 }
+
+type runeProp uint8
+
+// bit mask
+const (
+	isWordEnd runeProp = 1 << iota
+	isWordStart
+	isLineBreak
+)
 
 func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
 	text = []rune(bidiMarkReplacer.Replace(string(text)))
 	logAttrs := pango.ComputeCharacterAttributes(text, -1)
 	out := make([]runeProp, len(logAttrs))
 	for i, p := range logAttrs {
-		if p.IsWordBoundary() {
-			out[i] |= isWordBoundary
+		if p.IsWordStart() {
+			out[i] |= isWordStart
 		}
 		if p.IsWordEnd() {
 			out[i] |= isWordEnd
@@ -100,6 +118,19 @@ func (fc *FontConfigurationPango) runeProps(text []rune) []runeProp {
 		}
 	}
 	return out
+}
+
+func (fc FontConfigurationPango) CanBreakText(t []rune) pr.MaybeBool {
+	if len(t) < 2 {
+		return nil
+	}
+	logs := fc.runeProps(t)
+	for _, l := range logs[1 : len(logs)-1] {
+		if l&isLineBreak != 0 {
+			return pr.True
+		}
+	}
+	return pr.False
 }
 
 // FontContent returns the content of the given face, which may be needed
@@ -212,26 +243,8 @@ func (f *FontConfigurationPango) loadOneFont(url pr.NamedString, ruleDescriptors
 		f.fontsContent[key.File] = content
 	}
 
-	features := pr.Properties{}
-	// avoid nil values
-	features.SetFontKerning("")
-	features.SetFontVariantLigatures(pr.SStrings{})
-	features.SetFontVariantPosition("")
-	features.SetFontVariantCaps("")
-	features.SetFontVariantNumeric(pr.SStrings{})
-	features.SetFontVariantAlternates("")
-	features.SetFontVariantEastAsian(pr.SStrings{})
-	features.SetFontFeatureSettings(pr.SIntStrings{})
-	for _, rules := range ruleDescriptors.FontVariant {
-		if value, ok := rules.Value.(pr.CssProperty); ok {
-			features[rules.Name] = value
-		}
-	}
-	if !ruleDescriptors.FontFeatureSettings.IsNone() {
-		features.SetFontFeatureSettings(ruleDescriptors.FontFeatureSettings)
-	}
 	featuresString := ""
-	for _, v := range getFontFeatures(features) {
+	for _, v := range getFontFaceFeatures(ruleDescriptors) {
 		featuresString += fmt.Sprintf("<string>%s=%d</string>", v.Tag[:], v.Value)
 	}
 	fontconfigStyle, ok := fcStyle[ruleDescriptors.FontStyle]
@@ -324,17 +337,17 @@ var (
 	}
 )
 
-func getFontDescription(style *TextStyle) pango.FontDescription {
+func getFontDescription(fd FontDescription) pango.FontDescription {
 	fontDesc := pango.NewFontDescription()
-	fontDesc.SetFamily(strings.Join(style.FontFamily, ","))
+	fontDesc.SetFamily(strings.Join(fd.Family, ","))
 
-	fontDesc.SetStyle(pango.Style(style.FontStyle))
-	fontDesc.SetStretch(pango.Stretch(style.FontStretch))
-	fontDesc.SetWeight(pango.Weight(style.FontWeight))
+	fontDesc.SetStyle(pango.Style(fd.Style))
+	fontDesc.SetStretch(pango.Stretch(fd.Stretch))
+	fontDesc.SetWeight(pango.Weight(fd.Weight))
 
-	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(style.FontSize))
+	fontDesc.SetAbsoluteSize(PangoUnitsFromFloat(fd.Size))
 
-	fontDesc.SetVariations(pangoFontVariations(style.FontVariationSettings))
+	fontDesc.SetVariations(pangoFontVariations(fd.VariationSettings))
 
 	return fontDesc
 }
@@ -357,7 +370,7 @@ func pangoFontFeatures(vs []Feature) string {
 
 func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayoutPango, resumeAt int, spaceCollapse bool,
 	style *TextStyle, hyphenated bool, hyphenationCharacter string,
-) Splitted {
+) FirstLine {
 	length := firstLine.Length
 	if hyphenated {
 		length -= len([]rune(hyphenationCharacter))
@@ -387,9 +400,14 @@ func firstLineMetrics(firstLine *pango.LayoutLine, text []rune, layout *TextLayo
 		}
 	}
 
+	// FIXME:
+	if resumeAt > len(text) {
+		resumeAt = len(text)
+	}
+
 	width, height := lineSize(firstLine, style.LetterSpacing)
 	baseline := PangoUnitsToFloat(layout.Layout.GetBaseline())
-	return Splitted{
+	return FirstLine{
 		Layout: layout,
 		Length: length, ResumeAt: resumeAt,
 		Width: pr.Float(width), Height: pr.Float(height), Baseline: pr.Float(baseline),
@@ -426,8 +444,7 @@ func newTextLayout(fonts FontConfiguration, style *TextStyle, maxWidth pr.MaybeF
 // or `nil` for unlimited width.
 func createLayout(text string, style *TextStyle, fonts FontConfiguration, maxWidth pr.MaybeFloat) *TextLayoutPango {
 	layout := newTextLayout(fonts, style, maxWidth)
-	ws := style.WhiteSpace
-	textWrap := ws == WNormal || ws == WPreWrap || ws == WPreLine
+	textWrap := style.textWrap()
 	if maxWidth, ok := maxWidth.(pr.Float); ok && textWrap && maxWidth < 2<<21 {
 		// Make sure that maxWidth * Pango.SCALE == maxWidth * 1024 fits in a
 		// signed integer. Treat bigger values same as None: unconstrained width.
@@ -455,7 +472,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 
 	var lang pango.Language
 	if flo := style.FontLanguageOverride; (flo != fontLanguageOverride{}) {
-		lang = lstToISO[flo]
+		lang = language.NewLanguage(lstToISO[flo])
 	} else if lg := style.Lang; lg != "" {
 		lang = language.NewLanguage(lg)
 	} else {
@@ -463,7 +480,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 	}
 	pc.SetLanguage(lang)
 
-	fontDesc := getFontDescription(style)
+	fontDesc := getFontDescription(style.FontDescription)
 	p.Layout = *pango.NewLayout(pc)
 	p.Layout.SetFontDescription(&fontDesc)
 
@@ -604,329 +621,29 @@ func lineSize(line *pango.LayoutLine, letterSpacing pr.Fl) (pr.Fl, pr.Fl) {
 	return width, height
 }
 
-// Language system tags
-// From https://docs.microsoft.com/typography/opentype/spec/languagetags
-var lstToISO = map[fontLanguageOverride]language.Language{
-	{'a', 'b', 'a'}:      "abq",
-	{'a', 'f', 'k'}:      "afr",
-	{'a', 'f', 'r'}:      "aar",
-	{'a', 'g', 'w'}:      "ahg",
-	{'a', 'l', 's'}:      "gsw",
-	{'a', 'l', 't'}:      "atv",
-	{'a', 'r', 'i'}:      "aiw",
-	{'a', 'r', 'k'}:      "mhv",
-	{'a', 't', 'h'}:      "apk",
-	{'a', 'v', 'r'}:      "ava",
-	{'b', 'a', 'd'}:      "bfq",
-	{'b', 'a', 'd', '0'}: "bad",
-	{'b', 'a', 'g'}:      "bfy",
-	{'b', 'a', 'l'}:      "krc",
-	{'b', 'a', 'u'}:      "bci",
-	{'b', 'c', 'h'}:      "bcq",
-	{'b', 'g', 'r'}:      "bul",
-	{'b', 'i', 'l'}:      "byn",
-	{'b', 'k', 'f'}:      "bla",
-	{'b', 'l', 'i'}:      "bal",
-	{'b', 'l', 'n'}:      "bjt",
-	{'b', 'l', 't'}:      "bft",
-	{'b', 'm', 'b'}:      "bam",
-	{'b', 'r', 'i'}:      "bra",
-	{'b', 'r', 'm'}:      "mya",
-	{'b', 's', 'h'}:      "bak",
-	{'b', 't', 'i'}:      "btb",
-	{'c', 'h', 'g'}:      "sgw",
-	{'c', 'h', 'h'}:      "hne",
-	{'c', 'h', 'i'}:      "nya",
-	{'c', 'h', 'k'}:      "ckt",
-	{'c', 'h', 'k', '0'}: "chk",
-	{'c', 'h', 'u'}:      "chv",
-	{'c', 'h', 'y'}:      "chy",
-	{'c', 'm', 'r'}:      "swb",
-	{'c', 'r', 'r'}:      "crx",
-	{'c', 'r', 't'}:      "crh",
-	{'c', 's', 'l'}:      "chu",
-	{'c', 's', 'y'}:      "ces",
-	{'d', 'c', 'r'}:      "cwd",
-	{'d', 'g', 'r'}:      "doi",
-	{'d', 'j', 'r'}:      "dje",
-	{'d', 'j', 'r', '0'}: "djr",
-	{'d', 'n', 'g'}:      "ada",
-	{'d', 'n', 'k'}:      "din",
-	{'d', 'r', 'i'}:      "prs",
-	{'d', 'u', 'n'}:      "dng",
-	{'d', 'z', 'n'}:      "dzo",
-	{'e', 'b', 'i'}:      "igb",
-	{'e', 'c', 'r'}:      "crj",
-	{'e', 'd', 'o'}:      "bin",
-	{'e', 'r', 'z'}:      "myv",
-	{'e', 's', 'p'}:      "spa",
-	{'e', 't', 'i'}:      "est",
-	{'e', 'u', 'q'}:      "eus",
-	{'e', 'v', 'k'}:      "evn",
-	{'e', 'v', 'n'}:      "eve",
-	{'f', 'a', 'n'}:      "acf",
-	{'f', 'a', 'n', '0'}: "fan",
-	{'f', 'a', 'r'}:      "fas",
-	{'f', 'j', 'i'}:      "fij",
-	{'f', 'l', 'e'}:      "vls",
-	{'f', 'n', 'e'}:      "enf",
-	{'f', 'o', 's'}:      "fao",
-	{'f', 'r', 'i'}:      "fry",
-	{'f', 'r', 'l'}:      "fur",
-	{'f', 'r', 'p'}:      "frp",
-	{'f', 't', 'a'}:      "fuf",
-	{'g', 'a', 'd'}:      "gaa",
-	{'g', 'a', 'e'}:      "gla",
-	{'g', 'a', 'l'}:      "glg",
-	{'g', 'a', 'w'}:      "gbm",
-	{'g', 'i', 'l'}:      "niv",
-	{'g', 'i', 'l', '0'}: "gil",
-	{'g', 'm', 'z'}:      "guk",
-	{'g', 'r', 'n'}:      "kal",
-	{'g', 'r', 'o'}:      "grt",
-	{'g', 'u', 'a'}:      "grn",
-	{'h', 'a', 'i'}:      "hat",
-	{'h', 'a', 'l'}:      "flm",
-	{'h', 'a', 'r'}:      "hoj",
-	{'h', 'b', 'n'}:      "amf",
-	{'h', 'm', 'a'}:      "mrj",
-	{'h', 'n', 'd'}:      "hno",
-	{'h', 'o'}:           "hoc",
-	{'h', 'r', 'i'}:      "har",
-	{'h', 'y', 'e', '0'}: "hye",
-	{'i', 'j', 'o'}:      "ijc",
-	{'i', 'n', 'g'}:      "inh",
-	{'i', 'n', 'u'}:      "iku",
-	{'i', 'r', 'i'}:      "gle",
-	{'i', 'r', 't'}:      "gle",
-	{'i', 's', 'm'}:      "smn",
-	{'i', 'w', 'r'}:      "heb",
-	{'j', 'a', 'n'}:      "jpn",
-	{'j', 'i', 'i'}:      "yid",
-	{'j', 'u', 'd'}:      "lad",
-	{'j', 'u', 'l'}:      "dyu",
-	{'k', 'a', 'b'}:      "kbd",
-	{'k', 'a', 'b', '0'}: "kab",
-	{'k', 'a', 'c'}:      "kfr",
-	{'k', 'a', 'l'}:      "kln",
-	{'k', 'a', 'r'}:      "krc",
-	{'k', 'e', 'b'}:      "ktb",
-	{'k', 'g', 'e'}:      "kat",
-	{'k', 'h', 'a'}:      "kjh",
-	{'k', 'h', 'k'}:      "kca",
-	{'k', 'h', 's'}:      "kca",
-	{'k', 'h', 'v'}:      "kca",
-	{'k', 'i', 's'}:      "kqs",
-	{'k', 'k', 'n'}:      "kex",
-	{'k', 'l', 'm'}:      "xal",
-	{'k', 'm', 'b'}:      "kam",
-	{'k', 'm', 'n'}:      "kfy",
-	{'k', 'm', 'o'}:      "kmw",
-	{'k', 'm', 's'}:      "kxc",
-	{'k', 'n', 'r'}:      "kau",
-	{'k', 'o', 'd'}:      "kfa",
-	{'k', 'o', 'h'}:      "okm",
-	{'k', 'o', 'n'}:      "ktu",
-	{'k', 'o', 'n', '0'}: "kon",
-	{'k', 'o', 'p'}:      "koi",
-	{'k', 'o', 'z'}:      "kpv",
-	{'k', 'p', 'l'}:      "kpe",
-	{'k', 'r', 'k'}:      "kaa",
-	{'k', 'r', 'm'}:      "kdr",
-	{'k', 'r', 'n'}:      "kar",
-	{'k', 'r', 't'}:      "kqy",
-	{'k', 's', 'h'}:      "kas",
-	{'k', 's', 'h', '0'}: "ksh",
-	{'k', 's', 'i'}:      "kha",
-	{'k', 's', 'm'}:      "sjd",
-	{'k', 'u', 'i'}:      "kxu",
-	{'k', 'u', 'l'}:      "kfx",
-	{'k', 'u', 'u'}:      "kru",
-	{'k', 'u', 'y'}:      "kdt",
-	{'k', 'y', 'k'}:      "kpy",
-	{'l', 'a', 'd'}:      "lld",
-	{'l', 'a', 'h'}:      "bfu",
-	{'l', 'a', 'k'}:      "lbe",
-	{'l', 'a', 'm'}:      "lmn",
-	{'l', 'a', 'z'}:      "lzz",
-	{'l', 'c', 'r'}:      "crm",
-	{'l', 'd', 'k'}:      "lbj",
-	{'l', 'm', 'a'}:      "mhr",
-	{'l', 'm', 'b'}:      "lif",
-	{'l', 'm', 'w'}:      "ngl",
-	{'l', 's', 'b'}:      "dsb",
-	{'l', 's', 'm'}:      "smj",
-	{'l', 't', 'h'}:      "lit",
-	{'l', 'u', 'h'}:      "luy",
-	{'l', 'v', 'i'}:      "lav",
-	{'m', 'a', 'j'}:      "mpe",
-	{'m', 'a', 'k'}:      "vmw",
-	{'m', 'a', 'n'}:      "mns",
-	{'m', 'a', 'p'}:      "arn",
-	{'m', 'a', 'w'}:      "mwr",
-	{'m', 'b', 'n'}:      "kmb",
-	{'m', 'c', 'h'}:      "mnc",
-	{'m', 'c', 'r'}:      "crm",
-	{'m', 'd', 'e'}:      "men",
-	{'m', 'e', 'n'}:      "mym",
-	{'m', 'i', 'z'}:      "lus",
-	{'m', 'k', 'r'}:      "mak",
-	{'m', 'l', 'e'}:      "mdy",
-	{'m', 'l', 'n'}:      "mlq",
-	{'m', 'l', 'r'}:      "mal",
-	{'m', 'l', 'y'}:      "msa",
-	{'m', 'n', 'd'}:      "mnk",
-	{'m', 'n', 'g'}:      "mon",
-	{'m', 'n', 'k'}:      "man",
-	{'m', 'n', 'x'}:      "glv",
-	{'m', 'o', 'k'}:      "mdf",
-	{'m', 'o', 'n'}:      "mnw",
-	{'m', 't', 'h'}:      "mai",
-	{'m', 't', 's'}:      "mlt",
-	{'m', 'u', 'n'}:      "unr",
-	{'n', 'a', 'n'}:      "gld",
-	{'n', 'a', 's'}:      "nsk",
-	{'n', 'c', 'r'}:      "csw",
-	{'n', 'd', 'g'}:      "ndo",
-	{'n', 'h', 'c'}:      "csw",
-	{'n', 'i', 's'}:      "dap",
-	{'n', 'k', 'l'}:      "nyn",
-	{'n', 'k', 'o'}:      "nqo",
-	{'n', 'o', 'r'}:      "nob",
-	{'n', 's', 'm'}:      "sme",
-	{'n', 't', 'a'}:      "nod",
-	{'n', 't', 'o'}:      "epo",
-	{'n', 'y', 'n'}:      "nno",
-	{'o', 'c', 'r'}:      "ojs",
-	{'o', 'j', 'b'}:      "oji",
-	{'o', 'r', 'o'}:      "orm",
-	{'p', 'a', 'a'}:      "sam",
-	{'p', 'a', 'l'}:      "pli",
-	{'p', 'a', 'p'}:      "plp",
-	{'p', 'a', 'p', '0'}: "pap",
-	{'p', 'a', 's'}:      "pus",
-	{'p', 'g', 'r'}:      "ell",
-	{'p', 'i', 'l'}:      "fil",
-	{'p', 'l', 'g'}:      "pce",
-	{'p', 'l', 'k'}:      "pol",
-	{'p', 't', 'g'}:      "por",
-	{'q', 'i', 'n'}:      "bgr",
-	{'r', 'b', 'u'}:      "bxr",
-	{'r', 'c', 'r'}:      "atj",
-	{'r', 'm', 's'}:      "roh",
-	{'r', 'o', 'm'}:      "ron",
-	{'r', 'o', 'y'}:      "rom",
-	{'r', 's', 'y'}:      "rue",
-	{'r', 'u', 'a'}:      "kin",
-	{'s', 'a', 'd'}:      "sck",
-	{'s', 'a', 'y'}:      "chp",
-	{'s', 'e', 'k'}:      "xan",
-	{'s', 'e', 'l'}:      "sel",
-	{'s', 'g', 'o'}:      "sag",
-	{'s', 'g', 's'}:      "sgs",
-	{'s', 'i', 'b'}:      "sjo",
-	{'s', 'i', 'g'}:      "xst",
-	{'s', 'k', 's'}:      "sms",
-	{'s', 'k', 'y'}:      "slk",
-	{'s', 'l', 'a'}:      "scs",
-	{'s', 'm', 'l'}:      "som",
-	{'s', 'n', 'a'}:      "seh",
-	{'s', 'n', 'a', '0'}: "sna",
-	{'s', 'n', 'h'}:      "sin",
-	{'s', 'o', 'g'}:      "gru",
-	{'s', 'r', 'b'}:      "srp",
-	{'s', 's', 'l'}:      "xsl",
-	{'s', 's', 'm'}:      "sma",
-	{'s', 'u', 'r'}:      "suq",
-	{'s', 'v', 'e'}:      "swe",
-	{'s', 'w', 'a'}:      "aii",
-	{'s', 'w', 'k'}:      "swa",
-	{'s', 'w', 'z'}:      "ssw",
-	{'s', 'x', 't'}:      "ngo",
-	{'t', 'a', 'j'}:      "tgk",
-	{'t', 'c', 'r'}:      "cwd",
-	{'t', 'g', 'n'}:      "ton",
-	{'t', 'g', 'r'}:      "tig",
-	{'t', 'g', 'y'}:      "tir",
-	{'t', 'h', 't'}:      "tah",
-	{'t', 'i', 'b'}:      "bod",
-	{'t', 'k', 'm'}:      "tuk",
-	{'t', 'm', 'n'}:      "tem",
-	{'t', 'n', 'a'}:      "tsn",
-	{'t', 'n', 'e'}:      "enh",
-	{'t', 'n', 'g'}:      "toi",
-	{'t', 'o', 'd'}:      "xal",
-	{'t', 'o', 'd', '0'}: "tod",
-	{'t', 'r', 'k'}:      "tur",
-	{'t', 's', 'g'}:      "tso",
-	{'t', 'u', 'a'}:      "tru",
-	{'t', 'u', 'l'}:      "tcy",
-	{'t', 'u', 'v'}:      "tyv",
-	{'t', 'w', 'i'}:      "aka",
-	{'u', 's', 'b'}:      "hsb",
-	{'u', 'y', 'g'}:      "uig",
-	{'v', 'i', 't'}:      "vie",
-	{'v', 'r', 'o'}:      "vro",
-	{'w', 'a'}:           "wbm",
-	{'w', 'a', 'g'}:      "wbr",
-	{'w', 'c', 'r'}:      "crk",
-	{'w', 'e', 'l'}:      "cym",
-	{'w', 'l', 'f'}:      "wol",
-	{'x', 'b', 'd'}:      "khb",
-	{'x', 'h', 's'}:      "xho",
-	{'y', 'a', 'k'}:      "sah",
-	{'y', 'b', 'a'}:      "yor",
-	{'y', 'c', 'r'}:      "cre",
-	{'y', 'i', 'm'}:      "iii",
-	{'z', 'h', 'h'}:      "zho",
-	{'z', 'h', 'p'}:      "zho",
-	{'z', 'h', 's'}:      "zho",
-	{'z', 'h', 't'}:      "zho",
-	{'z', 'n', 'd'}:      "zne",
-}
-
-func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
+func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text_ string, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
-) Splitted {
-	fmt.Println("splitFirstLine", text_, maxWidth)
-	style := NewTextStyle(style_, false)
+) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
 		ws               = style.WhiteSpace
-		textWrap         = ws == WNormal || ws == WPreWrap || ws == WPreLine
+		textWrap         = style.textWrap()
 		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
 		originalMaxWidth = maxWidth
 		layout           *TextLayoutPango
-		fontSize         = pr.Float(style.FontSize)
+		fontSize         = pr.Float(style.Size)
 		firstLine        *pango.LayoutLine
 		resumeIndex      int
-		fc               = context.Fonts()
 	)
 	if !textWrap {
 		maxWidth = nil
 	}
 	// Step #1: Get a draft layout with the first line
-	if maxWidthF, ok := maxWidth.(pr.Float); ok && maxWidthF != pr.Inf && fontSize != 0 {
-		// shortText := text_
-		cut := len(text_)
-		if maxWidthF <= 0 {
-			// Trying to find minimum size, let's naively split on spaces and
-			// keep one word + one letter
-
-			if spaceIndex := strings.IndexByte(text_, ' '); spaceIndex != -1 {
-				cut = spaceIndex + 2 // index + space + one letter
-			}
-		} else {
-			cut = int(maxWidthF / fontSize * 2.5)
-		}
-
-		if cut > len(text_) {
-			cut = len(text_)
-		}
-		shortText := text_[:cut]
-
+	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
 		// Try to use a small amount of text instead of the whole text
-		layout = createLayout(shortText, style, fc, maxWidthF)
+		shortText := shortTextHint(text_, maxWidth, fontSize)
+
+		layout = createLayout(shortText, style, fc, maxWidth)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && shortText != text_ {
 			// The small amount of text fits in one line, give up and use the whole text
@@ -958,22 +675,18 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	// https://mail.gnome.org/archives/gtk-i18n-list/2013-September/msg00006
 	// is a good thread related to this problem.
 
-	var firstLineText string
-	if resumeIndex == -1 {
-		firstLineText = string(text[:len(text)-1])
-	} else if resumeIndex <= len(text) {
+	firstLineText := text_
+	if resumeIndex != -1 && resumeIndex <= len(text) {
 		firstLineText = string(text[:resumeIndex])
-	} else {
-		firstLineText = text_
 	}
 	firstLineFits := (firstLineWidth <= maxWidthV ||
 		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
-		CanBreakText(fc, []rune(strings.TrimSpace(firstLineText))) == pr.True)
+		fc.CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
 	var secondLineText []rune
 	if firstLineFits {
 		// The first line fits but may have been cut too early by Pango
 		if resumeIndex == -1 {
-			secondLineText = text[len(text)-1:]
+			secondLineText = text
 		} else {
 			secondLineText = text[resumeIndex:]
 		}
@@ -1020,7 +733,6 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	}
 	limit := style.HyphenateLimitChars
 	hyphenateCharacter := style.HyphenateCharacter
-	total, left, right := limit[0], limit[1], limit[2]
 	hyphenated := false
 	softHyphen := '\u00ad'
 
@@ -1031,12 +743,12 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 
 	var startWord, stopWord int
 	if hyphens == HAuto && lang != "" {
-		nextWordBoundaries := getNextWordBoundaries(fc, secondLineText)
+		nextWordBoundaries := fc.wordBoundaries(secondLineText)
 		if len(nextWordBoundaries) == 2 {
 			// We have a word to hyphenate
 			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
 			nextWord = string(secondLineText[startWord:stopWord])
-			if stopWord-startWord >= total {
+			if stopWord-startWord >= limit.Total {
 				// This word is long enough
 				firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
 				space := maxWidthV - firstLineWidth
@@ -1074,13 +786,13 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 				firstLineText, nextWord = "", firstLineText
 			}
 		}
-		dictionaryIterations = hyphenDictionaryIterations(nextWord, softHyphen)
+		dictionaryIterations = hyphenDictionaryIterationsOld(nextWord, softHyphen)
 	} else if autoHyphenation {
-		dictionaryKey := HyphenDictKey{lang, left, right, total}
-		dictionary, ok := context.HyphenCache()[dictionaryKey]
+		dictionaryKey := HyphenDictKey{lang, limit}
+		dictionary, ok := hyphenCache[dictionaryKey]
 		if !ok {
-			dictionary = hyphen.NewHyphener(lang, left, right)
-			context.HyphenCache()[dictionaryKey] = dictionary
+			dictionary = hyphen.NewHyphener(lang, limit.Left, limit.Right)
+			hyphenCache[dictionaryKey] = dictionary
 		}
 		dictionaryIterations = dictionary.Iterate(nextWord)
 	}
@@ -1164,11 +876,11 @@ var bidiMarkReplacer = strings.NewReplacer(
 )
 
 // returns nil or [wordStart, wordEnd]
-func getNextWordBoundaries(fc FontConfiguration, t []rune) []int {
+func (fc *FontConfigurationPango) wordBoundaries(t []rune) *[2]int {
 	if len(t) < 2 {
 		return nil
 	}
-	out := make([]int, 2)
+	var out [2]int
 	hasBroken := false
 	for i, attr := range fc.runeProps(t) {
 		if attr&isWordEnd != 0 {
@@ -1176,19 +888,19 @@ func getNextWordBoundaries(fc FontConfiguration, t []rune) []int {
 			hasBroken = true
 			break
 		}
-		if attr&isWordBoundary != 0 {
+		if attr&isWordStart != 0 {
 			out[0] = i // word start
 		}
 	}
 	if !hasBroken {
 		return nil
 	}
-	return out
+	return &out
 }
 
 // GetLastWordEnd returns the index in `t` of the last word,
 // or -1
-func GetLastWordEnd(fc FontConfiguration, t []rune) int {
+func GetLastWordEnd(fc *FontConfigurationPango, t []rune) int {
 	if len(t) < 2 {
 		return -1
 	}
@@ -1200,4 +912,268 @@ func GetLastWordEnd(fc FontConfiguration, t []rune) int {
 		}
 	}
 	return -1
+}
+
+func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
+	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
+) FirstLine {
+	style := NewTextStyle(style_, false)
+	// See https://www.w3.org/TR/css-text-3/#white-space-property
+	var (
+		ws               = style.WhiteSpace
+		textWrap         = ws == WNormal || ws == WPreWrap || ws == WPreLine
+		spaceCollapse    = ws == WNormal || ws == WNowrap || ws == WPreLine
+		originalMaxWidth = maxWidth
+		layout           *TextLayoutPango
+		fontSize         = pr.Float(style.FontDescription.Size)
+		firstLine        *pango.LayoutLine
+		resumeIndex      int
+		fc               = context.Fonts().(*FontConfigurationPango)
+	)
+	if !textWrap {
+		maxWidth = nil
+	}
+	// Step #1: Get a draft layout with the first line
+	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
+		// shortText := text_
+		cut := len(text_)
+		if maxWidth <= 0 {
+			// Trying to find minimum size, let's naively split on spaces and
+			// keep one word + one letter
+
+			if spaceIndex := strings.IndexByte(text_, ' '); spaceIndex != -1 {
+				cut = spaceIndex + 2 // index + space + one letter
+			}
+		} else {
+			cut = int(maxWidth / fontSize * 2.5)
+		}
+
+		if cut > len(text_) {
+			cut = len(text_)
+		}
+		shortText := text_[:cut]
+
+		// Try to use a small amount of text instead of the whole text
+		layout = createLayout(shortText, style, fc, maxWidth)
+		firstLine, resumeIndex = layout.GetFirstLine()
+		if resumeIndex == -1 && shortText != text_ {
+			// The small amount of text fits in one line, give up and use the whole text
+			layout.SetText(text_)
+			firstLine, resumeIndex = layout.GetFirstLine()
+		}
+	} else {
+		layout = createLayout(text_, style, fc, originalMaxWidth)
+		firstLine, resumeIndex = layout.GetFirstLine()
+	}
+
+	text := []rune(text_)
+
+	// Step #2: Don't split lines when it's not needed
+	if maxWidth == nil {
+		// The first line can take all the place needed
+		return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
+	}
+	maxWidthV := pr.Fl(maxWidth.V())
+
+	firstLineWidth, _ := lineSize(firstLine, style.LetterSpacing)
+
+	if resumeIndex == -1 && firstLineWidth <= maxWidthV {
+		// The first line fits in the available width
+		return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
+	}
+
+	// Step #3: Try to put the first word of the second line on the first line
+	// https://mail.gnome.org/archives/gtk-i18n-list/2013-September/msg00006
+	// is a good thread related to this problem.
+
+	firstLineText := text_
+	if resumeIndex != -1 && resumeIndex <= len(text) {
+		firstLineText = string(text[:resumeIndex])
+	}
+	firstLineFits := (firstLineWidth <= maxWidthV ||
+		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
+		fc.CanBreakText([]rune(strings.TrimSpace(firstLineText))) == pr.True)
+	var secondLineText []rune
+	if firstLineFits {
+		// The first line fits but may have been cut too early by Pango
+		if resumeIndex == -1 {
+			secondLineText = text
+		} else {
+			secondLineText = text[resumeIndex:]
+		}
+	} else {
+		// The line can't be split earlier, try to hyphenate the first word.
+		firstLineText = ""
+		secondLineText = text
+	}
+
+	nextWord := strings.SplitN(string(secondLineText), " ", 2)[0]
+	if nextWord != "" {
+		if spaceCollapse {
+			// nextWord might fit without a space afterwards
+			// only try when space collapsing is allowed
+			newFirstLineText := firstLineText + nextWord
+			layout.SetText(newFirstLineText)
+			firstLine, resumeIndex = layout.GetFirstLine()
+			// firstLineWidth, _ = lineSize(firstLine, style.GetLetterSpacing())
+			if resumeIndex == -1 {
+				if firstLineText != "" {
+					// The next word fits in the first line, keep the layout
+					resumeIndex = len([]rune(newFirstLineText)) + 1
+					return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
+				} else {
+					// Second line is none
+					resumeIndex = firstLine.Length + 1
+					if resumeIndex >= len(text) {
+						resumeIndex = -1
+					}
+				}
+			}
+		}
+	} else if firstLineText != "" {
+		// We found something on the first line but we did not find a word on
+		// the next line, no need to hyphenate, we can keep the current layout
+		return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, false, "")
+	}
+
+	// Step #4: Try to hyphenate
+	hyphens := style.Hyphens
+	lang := language.NewLanguage(style.Lang)
+	if lang != "" {
+		lang = hyphen.LanguageFallback(lang)
+	}
+	limit := style.HyphenateLimitChars
+	hyphenateCharacter := style.HyphenateCharacter
+	hyphenated := false
+	softHyphen := '\u00ad'
+
+	autoHyphenation, manualHyphenation := false, false
+	if hyphens != HNone {
+		manualHyphenation = strings.ContainsRune(firstLineText, softHyphen) || strings.ContainsRune(nextWord, softHyphen)
+	}
+
+	var startWord, stopWord int
+	if hyphens == HAuto && lang != "" {
+		nextWordBoundaries := fc.wordBoundaries(secondLineText)
+		if len(nextWordBoundaries) == 2 {
+			// We have a word to hyphenate
+			startWord, stopWord = nextWordBoundaries[0], nextWordBoundaries[1]
+			nextWord = string(secondLineText[startWord:stopWord])
+			if stopWord-startWord >= limit.Total {
+				// This word is long enough
+				firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
+				space := maxWidthV - firstLineWidth
+				zone := style.HyphenateLimitZone
+				limitZone := zone.Limit
+				if zone.IsPercentage {
+					limitZone = (maxWidthV * zone.Limit / 100.)
+				}
+				if space > limitZone || space < 0 {
+					// Available space is worth the try, or the line is even too
+					// long to fit: try to hyphenate
+					autoHyphenation = true
+				}
+			}
+		}
+	}
+
+	// Automatic hyphenation opportunities within a word must be ignored if the
+	// word contains a conditional hyphen, in favor of the conditional
+	// hyphen(s).
+	// See https://drafts.csswg.org/css-text-3/#valdef-hyphens-auto
+	var dictionaryIterations []string
+	if manualHyphenation {
+		// Manual hyphenation: check that the line ends with a soft
+		// hyphen and add the missing hyphen
+		if strings.HasSuffix(firstLineText, string(softHyphen)) {
+			// The first line has been split on a soft hyphen
+			if id := strings.LastIndexByte(firstLineText, ' '); id != -1 {
+				firstLineText, nextWord = firstLineText[:id], firstLineText[id+1:]
+				nextWord = " " + nextWord
+				layout.SetText(firstLineText)
+				firstLine, _ = layout.GetFirstLine()
+				resumeIndex = len([]rune(firstLineText + " "))
+			} else {
+				firstLineText, nextWord = "", firstLineText
+			}
+		}
+		dictionaryIterations = hyphenDictionaryIterations([]rune(nextWord), softHyphen)
+	} else if autoHyphenation {
+		dictionaryKey := HyphenDictKey{lang, limit}
+		dictionary, ok := context.HyphenCache()[dictionaryKey]
+		if !ok {
+			dictionary = hyphen.NewHyphener(lang, limit.Left, limit.Right)
+			context.HyphenCache()[dictionaryKey] = dictionary
+		}
+		dictionaryIterations = dictionary.Iterate(nextWord)
+	}
+
+	if len(dictionaryIterations) != 0 {
+		var newFirstLineText, hyphenatedFirstLineText string
+		for _, firstWordPart := range dictionaryIterations {
+			newFirstLineText = (firstLineText + string(secondLineText[:startWord]) + firstWordPart)
+			hyphenatedFirstLineText = (newFirstLineText + hyphenateCharacter)
+			newLayout := createLayout(hyphenatedFirstLineText, style, fc, maxWidth)
+			newFirstLine, newIndex := newLayout.GetFirstLine()
+			newFirstLineWidth, _ := lineSize(newFirstLine, style.LetterSpacing)
+			newSpace := maxWidthV - newFirstLineWidth
+			hyphenated = newIndex == -1 && (newSpace >= 0 || firstWordPart == dictionaryIterations[len(dictionaryIterations)-1])
+			if hyphenated {
+				layout = newLayout
+				firstLine = newFirstLine
+				resumeIndex = len([]rune(newFirstLineText))
+				break
+			}
+		}
+
+		if !hyphenated && firstLineText == "" {
+			// Recreate the layout with no maxWidth to be sure that
+			// we don't break before or inside the hyphenate character
+			hyphenated = true
+			layout.SetText(hyphenatedFirstLineText)
+			layout.Layout.SetWidth(-1)
+			firstLine, _ = layout.GetFirstLine()
+			resumeIndex = len([]rune(newFirstLineText))
+			if text[resumeIndex] == softHyphen {
+				resumeIndex += 1
+			}
+		}
+	}
+
+	if !hyphenated && strings.HasSuffix(firstLineText, string(softHyphen)) {
+		// Recreate the layout with no maxWidth to be sure that
+		// we don't break inside the hyphenate-character string
+		hyphenated = true
+		hyphenatedFirstLineText := firstLineText + hyphenateCharacter
+		layout.SetText(hyphenatedFirstLineText)
+		layout.Layout.SetWidth(-1)
+		firstLine, _ = layout.GetFirstLine()
+		resumeIndex = len([]rune(firstLineText))
+	}
+
+	// Step 5: Try to break word if it's too long for the line
+	overflowWrap, wordBreak := style.OverflowWrap, style.WordBreak
+	firstLineWidth, _ = lineSize(firstLine, style.LetterSpacing)
+	space := maxWidthV - firstLineWidth
+	// If we can break words and the first line is too long
+	canBreak := wordBreak == WBBreakAll ||
+		(isLineStart && (overflowWrap == OAnywhere || (overflowWrap == OBreakWord && !minimum)))
+	if space < 0 && canBreak {
+		// Is it really OK to remove hyphenation for word-break ?
+		hyphenated = false
+		layout.SetText(string(text))
+		layout.Layout.SetWidth(pango.Unit(PangoUnitsFromFloat(maxWidthV)))
+		layout.Layout.SetWrap(pango.WRAP_CHAR)
+		var index int
+		firstLine, index = layout.GetFirstLine()
+		resumeIndex = index
+		if resumeIndex == 0 {
+			resumeIndex = firstLine.Length
+		}
+		if resumeIndex >= len(text) {
+			resumeIndex = -1
+		}
+	}
+
+	return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, hyphenated, hyphenateCharacter)
 }
