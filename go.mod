@@ -1,6 +1,6 @@
 module github.com/benoitkugler/webrender
 
-go 1.16
+go 1.19
 
 require (
 	github.com/benoitkugler/pstokenizer v1.0.1 // indirect
