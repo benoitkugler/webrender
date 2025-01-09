@@ -888,6 +888,7 @@ var lstToISO = map[fontLanguageOverride]language.Language{
 func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutContext,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) Splitted {
+	fmt.Println("splitFirstLine", text_, maxWidth)
 	style := NewTextStyle(style_, false)
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
 	var (
@@ -905,10 +906,10 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		maxWidth = nil
 	}
 	// Step #1: Get a draft layout with the first line
-	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
+	if maxWidthF, ok := maxWidth.(pr.Float); ok && maxWidthF != pr.Inf && fontSize != 0 {
 		// shortText := text_
 		cut := len(text_)
-		if maxWidth <= 0 {
+		if maxWidthF <= 0 {
 			// Trying to find minimum size, let's naively split on spaces and
 			// keep one word + one letter
 
@@ -916,7 +917,7 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 				cut = spaceIndex + 2 // index + space + one letter
 			}
 		} else {
-			cut = int(maxWidth / fontSize * 2.5)
+			cut = int(maxWidthF / fontSize * 2.5)
 		}
 
 		if cut > len(text_) {
@@ -925,7 +926,7 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 		shortText := text_[:cut]
 
 		// Try to use a small amount of text instead of the whole text
-		layout = createLayout(shortText, style, fc, maxWidth)
+		layout = createLayout(shortText, style, fc, maxWidthF)
 		firstLine, resumeIndex = layout.GetFirstLine()
 		if resumeIndex == -1 && shortText != text_ {
 			// The small amount of text fits in one line, give up and use the whole text
@@ -957,9 +958,13 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	// https://mail.gnome.org/archives/gtk-i18n-list/2013-September/msg00006
 	// is a good thread related to this problem.
 
-	firstLineText := text_
-	if resumeIndex != -1 && resumeIndex <= len(text) {
+	var firstLineText string
+	if resumeIndex == -1 {
+		firstLineText = string(text[:len(text)-1])
+	} else if resumeIndex <= len(text) {
 		firstLineText = string(text[:resumeIndex])
+	} else {
+		firstLineText = text_
 	}
 	firstLineFits := (firstLineWidth <= maxWidthV ||
 		strings.ContainsRune(strings.TrimSpace(firstLineText), ' ') ||
@@ -968,7 +973,7 @@ func splitFirstLine(text_ string, style_ pr.StyleAccessor, context TextLayoutCon
 	if firstLineFits {
 		// The first line fits but may have been cut too early by Pango
 		if resumeIndex == -1 {
-			secondLineText = text
+			secondLineText = text[len(text)-1:]
 		} else {
 			secondLineText = text[resumeIndex:]
 		}

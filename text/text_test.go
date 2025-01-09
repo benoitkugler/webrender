@@ -203,10 +203,13 @@ func TestLayoutFirstLine(t *testing.T) {
 	newStyle.SetFontFamily(pr.Strings{"weasyprint"})
 	newStyle.SetFontSize(pr.FToV(16))
 	newStyle.SetWhiteSpace("normal")
+	ts := NewTextStyle(newStyle, false)
+
+	fmt.Println(ts)
 
 	ct := newContextWithWeasyFont(t)
 
-	layout := createLayout("a a ", NewTextStyle(newStyle, false), ct.Fonts(), pr.Float(63))
+	layout := createLayout("a a ", ts, ct.Fonts(), pr.Float(63))
 	_, index := layout.GetFirstLine()
 	if index != -1 {
 		t.Fatalf("unexpected first line index: %d", index)

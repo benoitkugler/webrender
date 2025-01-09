@@ -565,3 +565,24 @@ func TestBackground(t *testing.T) {
 	tu.AssertEqual(t, len(layers), 1)
 	tu.AssertEqual(t, layers[0].PaintingArea, pr.Rectangle{-1, -1, 6, 6})
 }
+
+func TestCrashSplitFirstLine(t *testing.T) {
+	const input = `
+	<style>
+	.wrapper {
+		min-height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
+	main {
+		flex-grow: 1;
+	}
+	</style>
+	<body class="wrapper">
+		<main>
+			<h5>Recommandations :</h5>
+		</main>
+	</body>
+	`
+	_ = renderPages(t, input)
+}
