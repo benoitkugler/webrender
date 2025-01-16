@@ -55,7 +55,9 @@ type FirstLine struct {
 	// Width is the width in pixels of the first line
 	Width pr.Float
 
-	// Height is the height in pixels of the first line
+	// Height is the height in pixels of the first line,
+	// computed by merging the font extents (y position and height)
+	// of each run in the line.
 	Height pr.Float
 
 	// Baseline is the baseline in pixels of the first line
