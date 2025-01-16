@@ -25,7 +25,10 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-var _ FontConfiguration = (*FontConfigurationGotext)(nil)
+var (
+	_ FontConfiguration = (*FontConfigurationGotext)(nil)
+	_ EngineLayout      = layoutGotext{}
+)
 
 type FontConfigurationGotext struct {
 	fm         *fontscan.FontMap
@@ -361,6 +364,16 @@ func fixedToFloat(v fixed.Int26_6) pr.Float { return pr.Float(v) / 64 }
 
 // same as wrap, but may allows break inside words
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
+	if len(text) == 0 {
+		return FirstLine{
+			Layout:   layoutGotext{},
+			Length:   0,
+			ResumeAt: -1,
+			Width:    0, Height: 0, Baseline: 0,
+			FirstLineRTL: false,
+		}
+	}
+
 	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
 	mw := math.MaxInt
 	if textWrap && maxWidth != pr.Inf {
@@ -413,7 +426,10 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	// now we can wrap the runs
-	config := shaping.WrapConfig{BreakPolicy: shaping.Never} // mimic the default pango behavior
+	config := shaping.WrapConfig{
+		Direction:   outputs[0].Direction, // overall direction of the text, deduced from the first runes
+		BreakPolicy: shaping.Never,        // mimic the default pango behavior
+	}
 	if allowWordBreak {
 		config.BreakPolicy = shaping.Always
 	}
@@ -437,6 +453,11 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		resumeAt = -1
 	}
 
+	firstLineRTL := line[0].Direction.Progression() == di.TowardTopLeft
+
+	// sort the line by visual order
+	sort.Slice(line, func(i, j int) bool { return line[i].VisualIndex < line[j].VisualIndex })
+
 	if !fitsOnFirstLine && spaceCollapse {
 		// remove the space runes...
 		text = trimTrailingSpaces(text[:firstLineLength])
@@ -453,20 +474,19 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		lastRun.RecalculateAll()
 	}
 
-	firstLineRTL := line[0].Direction.Progression() == di.TowardTopLeft
-
-	// sort the line by visual order
-	sort.Slice(line, func(i, j int) bool { return line[i].VisualIndex < line[j].VisualIndex })
-
-	var width, height, maxAscent fixed.Int26_6
+	var width, height, top fixed.Int26_6
 	for _, run := range line {
 		width += run.Advance
-		if a := run.LineBounds.Ascent; a > maxAscent {
-			maxAscent = a
+
+		bottom := top - height
+
+		if a := run.LineBounds.Ascent; a > top {
+			top = a
 		}
-		if h := run.LineBounds.Ascent - run.LineBounds.Descent; h > height {
-			height = h
+		if run.LineBounds.Descent < bottom {
+			bottom = run.LineBounds.Descent
 		}
+		height = top - bottom
 	}
 
 	return FirstLine{
@@ -476,7 +496,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		FirstLineRTL: firstLineRTL,
 		Width:        fixedToFloat(width),
 		Height:       fixedToFloat(height),
-		Baseline:     fixedToFloat(maxAscent),
+		Baseline:     fixedToFloat(top),
 	}
 }
 
