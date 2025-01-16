@@ -1,10 +1,12 @@
 package document
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"testing"
 	"text/template"
+	"time"
 
 	"github.com/benoitkugler/textprocessing/fontconfig"
 	"github.com/benoitkugler/textprocessing/pango/fcfonts"
@@ -13,6 +15,7 @@ import (
 	"github.com/benoitkugler/webrender/text"
 	"github.com/benoitkugler/webrender/utils"
 	"github.com/benoitkugler/webrender/utils/testutils/tracer"
+	"github.com/go-text/typesetting/fontscan"
 )
 
 const fontmapCache = "../../text/testdata/cache.fc"
@@ -234,5 +237,55 @@ func BenchmarkRenderAttestation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		out := Render(doc, nil, true, fc)
 		out.Write(tracer.NewDrawerNoOp(), 1, nil)
+	}
+}
+
+func TestLayoutTime(t *testing.T) {
+	logger.ProgressLogger.SetOutput(io.Discard)
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer func() {
+		logger.WarningLogger.SetOutput(os.Stdout)
+		logger.ProgressLogger.SetOutput(os.Stdout)
+	}()
+
+	fm := fontscan.NewFontMap(nil)
+	fm.UseSystemFonts(os.TempDir())
+	fcGotext := text.NewFontConfigurationGotext(fm)
+
+	doc, err := tree.NewHTML(utils.InputFilename("testdata/fiche_sanitaire_1.html"), baseUrl, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ti := time.Now()
+	// _ = Render(doc, nil, true, fc)
+	// fmt.Println(time.Since(ti))
+
+	// ti = time.Now()
+	_ = Render(doc, nil, true, fcGotext)
+	fmt.Println(time.Since(ti))
+}
+
+func Benchmark(b *testing.B) {
+	logger.ProgressLogger.SetOutput(io.Discard)
+	logger.WarningLogger.SetOutput(io.Discard)
+	defer func() {
+		logger.WarningLogger.SetOutput(os.Stdout)
+		logger.ProgressLogger.SetOutput(os.Stdout)
+	}()
+
+	fm := fontscan.NewFontMap(nil)
+	fm.UseSystemFonts(os.TempDir())
+	fcGotext := text.NewFontConfigurationGotext(fm)
+
+	doc, err := tree.NewHTML(utils.InputFilename("testdata/fiche_sanitaire_1.html"), baseUrl, nil, "")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_ = Render(doc, nil, true, fcGotext)
 	}
 }
