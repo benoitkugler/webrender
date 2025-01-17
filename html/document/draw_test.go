@@ -252,16 +252,16 @@ func TestLayoutTime(t *testing.T) {
 	fm.UseSystemFonts(os.TempDir())
 	fcGotext := text.NewFontConfigurationGotext(fm)
 
-	doc, err := tree.NewHTML(utils.InputFilename("testdata/fiche_sanitaire_1.html"), baseUrl, nil, "")
+	doc, err := tree.NewHTML(utils.InputFilename("testdata/fiche_sanitaire.html"), baseUrl, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ti := time.Now()
-	// _ = Render(doc, nil, true, fc)
-	// fmt.Println(time.Since(ti))
+	_ = Render(doc, nil, true, fc)
+	fmt.Println(time.Since(ti))
 
-	// ti = time.Now()
+	ti = time.Now()
 	_ = Render(doc, nil, true, fcGotext)
 	fmt.Println(time.Since(ti))
 }
