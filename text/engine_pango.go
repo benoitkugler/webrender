@@ -484,7 +484,7 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 	p.Layout = *pango.NewLayout(pc)
 	p.Layout.SetFontDescription(&fontDesc)
 
-	if !style.TextDecorationLine.IsNone() {
+	if style.TextDecorationLine != 0 {
 		metrics := pc.GetMetrics(&fontDesc, lang)
 		p.metrics = &LineMetrics{
 			Ascent:                 PangoUnitsToFloat(metrics.Ascent),

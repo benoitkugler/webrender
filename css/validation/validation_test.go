@@ -185,14 +185,14 @@ func TestSpacing(t *testing.T) {
 func TestDecoration(t *testing.T) {
 	capt := tu.CaptureLogs()
 	assertValidDict(t, "text-decoration-line: none", toValidated(pr.Properties{
-		pr.PTextDecorationLine: pr.Decorations{},
+		pr.PTextDecorationLine: pr.Decorations(0),
 	}))
 	assertValidDict(t, "text-decoration-line: overline", toValidated(pr.Properties{
-		pr.PTextDecorationLine: pr.Decorations(utils.NewSet("overline")),
+		pr.PTextDecorationLine: pr.Overline,
 	}))
 	// blink is accepted but ignored
 	assertValidDict(t, "text-decoration-line: overline blink line-through", toValidated(pr.Properties{
-		pr.PTextDecorationLine: pr.Decorations(utils.NewSet("blink", "line-through", "overline")),
+		pr.PTextDecorationLine: pr.Blink | pr.LineThrough | pr.Overline,
 	}))
 
 	assertValidDict(t, "text-decoration-style: solid", toValidated(pr.Properties{

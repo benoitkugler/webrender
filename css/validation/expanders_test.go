@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
-	"github.com/benoitkugler/webrender/utils"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -25,17 +24,17 @@ func TestTextDecoration(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	assertValidDict(t, "text-decoration: none", toValidated(pr.Properties{
-		pr.PTextDecorationLine: pr.Decorations{},
+		pr.PTextDecorationLine: pr.Decorations(0),
 	}))
 	assertValidDict(t, "text-decoration: overline", toValidated(pr.Properties{
-		pr.PTextDecorationLine: pr.Decorations(utils.NewSet("overline")),
+		pr.PTextDecorationLine: pr.Overline,
 	}))
 	assertValidDict(t, "text-decoration: overline solid", toValidated(pr.Properties{
-		pr.PTextDecorationLine:  pr.Decorations(utils.NewSet("overline")),
+		pr.PTextDecorationLine:  pr.Overline,
 		pr.PTextDecorationStyle: pr.String("solid"),
 	}))
 	assertValidDict(t, "text-decoration: overline blink line-through", toValidated(pr.Properties{
-		pr.PTextDecorationLine: pr.Decorations(utils.NewSet("blink", "line-through", "overline")),
+		pr.PTextDecorationLine: pr.Blink | pr.LineThrough | pr.Overline,
 	}))
 	assertValidDict(t, "text-decoration: red", toValidated(pr.Properties{
 		pr.PTextDecorationColor: pr.NewColor(1, 0, 0, 1),

@@ -2561,19 +2561,29 @@ func textAlignLast(tokens []Token, _ string) pr.CssProperty {
 // “text-decoration-line“ property validation.
 func textDecorationLine(tokens []Token, _ string) pr.CssProperty {
 	uniqKeywords := utils.Set{}
+	var out pr.Decorations
 	valid := true
 	for _, token := range tokens {
 		keyword := getKeyword(token)
-		if !(keyword == "underline" || keyword == "overline" || keyword == "line-through" || keyword == "blink") {
+		switch keyword {
+		case "underline":
+			out |= pr.Underline
+		case "overline":
+			out |= pr.Overline
+		case "line-through":
+			out |= pr.LineThrough
+		case "blink":
+			out |= pr.Blink
+		default:
 			valid = false
 		}
 		uniqKeywords.Add(keyword)
 	}
 	if _, in := uniqKeywords["none"]; len(uniqKeywords) == 1 && in { // then uniqKeywords == {"none"}
-		return pr.Decorations{}
+		return out
 	}
 	if valid && len(uniqKeywords) == len(tokens) {
-		return pr.Decorations(uniqKeywords)
+		return out
 	}
 	return nil
 }

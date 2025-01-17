@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	pa "github.com/benoitkugler/webrender/css/parser"
-	"github.com/benoitkugler/webrender/utils"
 )
 
 // ------------- Top levels types, implementing CssProperty ------------
@@ -44,16 +43,18 @@ type SContent struct {
 
 type Display [3]string
 
-type Decorations utils.Set
+// Decorations zero value means "none"
+type Decorations uint8
+
+const (
+	Underline Decorations = 1 << iota
+	Overline
+	LineThrough
+	Blink
+)
 
 // Union return the union of  [s] and [other]
-func (dec Decorations) Union(other Decorations) Decorations {
-	out := utils.Set(dec).Copy()
-	for k := range other {
-		out[k] = utils.Has
-	}
-	return Decorations(out)
-}
+func (dec Decorations) Union(other Decorations) Decorations { return dec | other }
 
 type Transforms []SDimensions
 
@@ -474,8 +475,6 @@ func (v Limits) IsNone() bool {
 func (v Marks) IsNone() bool {
 	return v == Marks{}
 }
-
-func (v Decorations) IsNone() bool { return len(v) == 0 }
 
 func (v NamedString) IsNone() bool {
 	return v == NamedString{}

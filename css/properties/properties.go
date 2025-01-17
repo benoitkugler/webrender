@@ -448,7 +448,7 @@ var InitialValues = Properties{
 	PRowGap:         DimOrS{S: "normal"},
 
 	// Text Decoration Module 3 (CR): https://www.w3.org/TR/css-text-decor-3/
-	PTextDecorationLine:  Decorations{},
+	PTextDecorationLine:  Decorations(0),
 	PTextDecorationColor: CurrentColor,
 	PTextDecorationStyle: String("solid"),
 

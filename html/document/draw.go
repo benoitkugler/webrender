@@ -1562,12 +1562,12 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 
 	metrics := textbox.TextLayout.Metrics()
 
-	if utils.Set(decoration).Has("overline") {
+	if decoration&pr.Overline != 0 {
 		thickness := metrics.UnderlineThickness
 		offsetY = textbox.Baseline.V() - pr.Float(metrics.Ascent) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
 	}
-	if utils.Set(decoration).Has("underline") {
+	if decoration&pr.Underline != 0 {
 		thickness := metrics.UnderlineThickness
 		offsetY = textbox.Baseline.V() - pr.Float(metrics.UnderlinePosition) + pr.Float(thickness)/2
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)
@@ -1579,7 +1579,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 	textbox.TextLayout.ApplyJustification()
 	ctx.drawFirstLine(textbox, textOverflow, blockEllipsis, x, y)
 
-	if utils.Set(decoration).Has("line-through") {
+	if decoration&pr.LineThrough != 0 {
 		thickness := metrics.StrikethroughThickness
 		offsetY = textbox.Baseline.V() - pr.Float(metrics.StrikethroughPosition)
 		ctx.drawTextDecoration(textbox, offsetX, pr.Fl(offsetY), thickness, color.RGBA)

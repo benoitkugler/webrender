@@ -22,7 +22,7 @@ func TestDefaultValues(t *testing.T) {
 
 	tu.AssertEqual(t, ts.FontLanguageOverride, fontLanguageOverride{})
 	tu.AssertEqual(t, ts.Lang, "")
-	tu.AssertEqual(t, ts.TextDecorationLine, pr.Decorations{})
+	tu.AssertEqual(t, ts.TextDecorationLine, pr.Decorations(0))
 	tu.AssertEqual(t, ts.WhiteSpace, WNormal)
 	tu.AssertEqual(t, ts.LetterSpacing, pr.Fl(0))
 	tu.AssertEqual(t, ts.FontFeatures, []Feature(nil))
