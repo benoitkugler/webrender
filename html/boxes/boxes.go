@@ -555,18 +555,22 @@ func IsMonolithic(box Box) bool {
 func (b *BoxFields) PageValues() (pr.Page, pr.Page) {
 	start := b.Style.GetPage()
 	end := start
-	var children []Box
+	var fistChild, lastChild Box
 	for _, child := range b.Children {
 		if child.Box().IsInNormalFlow() {
-			children = append(children, child)
+			if fistChild == nil {
+				fistChild = child
+				lastChild = child
+			} else {
+				lastChild = child
+			}
 		}
 	}
-	if len(children) > 0 {
-		startBox, endBox := children[0], children[len(children)-1]
-		if childStart, _ := startBox.PageValues(); childStart != "" {
+	if fistChild != nil {
+		if childStart, _ := fistChild.PageValues(); childStart != "" {
 			start = childStart
 		}
-		if _, childEnd := endBox.PageValues(); childEnd != "" {
+		if _, childEnd := lastChild.PageValues(); childEnd != "" {
 			end = childEnd
 		}
 	}
