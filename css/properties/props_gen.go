@@ -2,14 +2,14 @@ package properties
 
 // Code generated from properties/properties.go DO NOT EDIT
 
-func (s Properties) GetAlignContent() Strings  { return s[PAlignContent].(Strings) }
-func (s Properties) SetAlignContent(v Strings) { s[PAlignContent] = v }
+func (s Properties) GetAlignContent() JustifyOrAlign  { return s[PAlignContent].(JustifyOrAlign) }
+func (s Properties) SetAlignContent(v JustifyOrAlign) { s[PAlignContent] = v }
 
-func (s Properties) GetAlignItems() Strings  { return s[PAlignItems].(Strings) }
-func (s Properties) SetAlignItems(v Strings) { s[PAlignItems] = v }
+func (s Properties) GetAlignItems() JustifyOrAlign  { return s[PAlignItems].(JustifyOrAlign) }
+func (s Properties) SetAlignItems(v JustifyOrAlign) { s[PAlignItems] = v }
 
-func (s Properties) GetAlignSelf() Strings  { return s[PAlignSelf].(Strings) }
-func (s Properties) SetAlignSelf(v Strings) { s[PAlignSelf] = v }
+func (s Properties) GetAlignSelf() JustifyOrAlign  { return s[PAlignSelf].(JustifyOrAlign) }
+func (s Properties) SetAlignSelf(v JustifyOrAlign) { s[PAlignSelf] = v }
 
 func (s Properties) GetAnchor() String  { return s[PAnchor].(String) }
 func (s Properties) SetAnchor(v String) { s[PAnchor] = v }
@@ -348,14 +348,14 @@ func (s Properties) SetImageRendering(v String) { s[PImageRendering] = v }
 func (s Properties) GetImageResolution() DimOrS  { return s[PImageResolution].(DimOrS) }
 func (s Properties) SetImageResolution(v DimOrS) { s[PImageResolution] = v }
 
-func (s Properties) GetJustifyContent() Strings  { return s[PJustifyContent].(Strings) }
-func (s Properties) SetJustifyContent(v Strings) { s[PJustifyContent] = v }
+func (s Properties) GetJustifyContent() JustifyOrAlign  { return s[PJustifyContent].(JustifyOrAlign) }
+func (s Properties) SetJustifyContent(v JustifyOrAlign) { s[PJustifyContent] = v }
 
-func (s Properties) GetJustifyItems() Strings  { return s[PJustifyItems].(Strings) }
-func (s Properties) SetJustifyItems(v Strings) { s[PJustifyItems] = v }
+func (s Properties) GetJustifyItems() JustifyOrAlign  { return s[PJustifyItems].(JustifyOrAlign) }
+func (s Properties) SetJustifyItems(v JustifyOrAlign) { s[PJustifyItems] = v }
 
-func (s Properties) GetJustifySelf() Strings  { return s[PJustifySelf].(Strings) }
-func (s Properties) SetJustifySelf(v Strings) { s[PJustifySelf] = v }
+func (s Properties) GetJustifySelf() JustifyOrAlign  { return s[PJustifySelf].(JustifyOrAlign) }
+func (s Properties) SetJustifySelf(v JustifyOrAlign) { s[PJustifySelf] = v }
 
 func (s Properties) GetLang() TaggedString  { return s[PLang].(TaggedString) }
 func (s Properties) SetLang(v TaggedString) { s[PLang] = v }
@@ -544,14 +544,14 @@ func (s Properties) GetZIndex() IntString  { return s[PZIndex].(IntString) }
 func (s Properties) SetZIndex(v IntString) { s[PZIndex] = v }
 
 type StyleAccessor interface {
-	GetAlignContent() Strings
-	SetAlignContent(v Strings)
+	GetAlignContent() JustifyOrAlign
+	SetAlignContent(v JustifyOrAlign)
 
-	GetAlignItems() Strings
-	SetAlignItems(v Strings)
+	GetAlignItems() JustifyOrAlign
+	SetAlignItems(v JustifyOrAlign)
 
-	GetAlignSelf() Strings
-	SetAlignSelf(v Strings)
+	GetAlignSelf() JustifyOrAlign
+	SetAlignSelf(v JustifyOrAlign)
 
 	GetAnchor() String
 	SetAnchor(v String)
@@ -880,14 +880,14 @@ type StyleAccessor interface {
 	GetImageResolution() DimOrS
 	SetImageResolution(v DimOrS)
 
-	GetJustifyContent() Strings
-	SetJustifyContent(v Strings)
+	GetJustifyContent() JustifyOrAlign
+	SetJustifyContent(v JustifyOrAlign)
 
-	GetJustifyItems() Strings
-	SetJustifyItems(v Strings)
+	GetJustifyItems() JustifyOrAlign
+	SetJustifyItems(v JustifyOrAlign)
 
-	GetJustifySelf() Strings
-	SetJustifySelf(v Strings)
+	GetJustifySelf() JustifyOrAlign
+	SetJustifySelf(v JustifyOrAlign)
 
 	GetLang() TaggedString
 	SetLang(v TaggedString)

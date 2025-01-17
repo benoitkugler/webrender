@@ -11,6 +11,7 @@ import (
 
 	pa "github.com/benoitkugler/webrender/css/parser"
 	pr "github.com/benoitkugler/webrender/css/properties"
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	"github.com/benoitkugler/webrender/css/selector"
 )
 
@@ -697,6 +698,13 @@ func getKeyword(token Token) string {
 		return utils.AsciiLower(ident.Value)
 	}
 	return ""
+}
+
+func getKeywordT(token Token) kw.Keyword {
+	if ident, ok := token.(pa.Ident); ok {
+		return kw.NewKeyword(utils.AsciiLower(ident.Value))
+	}
+	return 0
 }
 
 // If `tokens` is a 1-element list of [Ident], return its name.
@@ -3252,19 +3260,19 @@ func flexWrap(tokens []Token, _ string) pr.CssProperty {
 // “justify-content“ property validation.
 func justifyContent(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		switch keyword := getKeyword(tokens[0]); keyword {
-		case "center", "space-between", "space-around", "space-evenly",
-			"stretch", "normal", "flex-start", "flex-end",
-			"start", "end", "left", "right":
-			return pr.Strings{keyword}
+		switch keyword := getKeywordT(tokens[0]); keyword {
+		case kw.Center, kw.SpaceBetween, kw.SpaceAround, kw.SpaceEvenly,
+			kw.Stretch, kw.Normal, kw.FlexStart, kw.FlexEnd,
+			kw.Start, kw.End, kw.Left, kw.Right:
+			return pr.JustifyOrAlign{keyword}
 		}
 	} else if len(tokens) == 2 {
-		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
-		if kw1 == "safe" || kw1 == "unsafe" {
+		kw1, kw2 := getKeywordT(tokens[0]), getKeywordT(tokens[1])
+		if kw1 == kw.Safe || kw1 == kw.Unsafe {
 			switch kw2 {
-			case "center", "start", "end", "flex-start", "flex-end", "left",
-				"right":
-				return pr.Strings{kw1, kw2}
+			case kw.Center, kw.Start, kw.End, kw.FlexStart, kw.FlexEnd, kw.Left,
+				kw.Right:
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
 		}
 	}
@@ -3275,37 +3283,37 @@ func justifyContent(tokens []Token, _ string) pr.CssProperty {
 // “align-items“ property validation.
 func justifyItems(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		switch keyword := getKeyword(tokens[0]); keyword {
-		case "normal", "stretch", "center", "start", "end", "self-start",
-			"self-end", "flex-start", "flex-end", "left", "right",
-			"legacy":
-			return pr.Strings{keyword}
-		case "baseline":
-			return pr.Strings{"first", keyword}
+		switch keyword := getKeywordT(tokens[0]); keyword {
+		case kw.Normal, kw.Stretch, kw.Center, kw.Start, kw.End, kw.SelfStart,
+			kw.SelfEnd, kw.FlexStart, kw.FlexEnd, kw.Left, kw.Right,
+			kw.Legacy:
+			return pr.JustifyOrAlign{keyword}
+		case kw.Baseline:
+			return pr.JustifyOrAlign{kw.First, keyword}
 		}
 	} else if len(tokens) == 2 {
-		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
-		if kw1 == "safe" || kw1 == "unsafe" {
+		kw1, kw2 := getKeywordT(tokens[0]), getKeywordT(tokens[1])
+		if kw1 == kw.Safe || kw1 == kw.Unsafe {
 			switch kw2 {
-			case "center", "start", "end", "self-start", "self-end",
-				"flex-start", "flex-end", "left", "right":
-				return pr.Strings{kw1, kw2}
+			case kw.Center, kw.Start, kw.End, kw.SelfStart, kw.SelfEnd,
+				kw.FlexStart, kw.FlexEnd, kw.Left, kw.Right:
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw1 == "baseline" {
-			if kw2 == "first" || kw2 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw1 == kw.Baseline {
+			if kw2 == kw.First || kw2 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw2 == "baseline" {
-			if kw1 == "first" || kw1 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw2 == kw.Baseline {
+			if kw1 == kw.First || kw1 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw1 == "legacy" {
-			if kw2 == "left" || kw2 == "right" || kw2 == "center" {
-				return pr.Strings{kw1, kw2}
+		} else if kw1 == kw.Legacy {
+			if kw2 == kw.Left || kw2 == kw.Right || kw2 == kw.Center {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw2 == "legacy" {
-			if kw1 == "left" || kw1 == "right" || kw1 == "center" {
-				return pr.Strings{kw1, kw2}
+		} else if kw2 == kw.Legacy {
+			if kw1 == kw.Left || kw1 == kw.Right || kw1 == kw.Center {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
 		}
 	}
@@ -3313,32 +3321,32 @@ func justifyItems(tokens []Token, _ string) pr.CssProperty {
 }
 
 // @validator()
-// “align-items“ property validation.
+// align-items property validation.
 func justifySelf(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		switch keyword := getKeyword(tokens[0]); keyword {
-		case "auto", "normal", "stretch", "center", "start", "end",
-			"self-start", "self-end", "flex-start", "flex-end", "left",
-			"right":
-			return pr.Strings{keyword}
-		case "baseline":
-			return pr.Strings{"first", keyword}
+		switch keyword := getKeywordT(tokens[0]); keyword {
+		case kw.Auto, kw.Normal, kw.Stretch, kw.Center, kw.Start, kw.End,
+			kw.SelfStart, kw.SelfEnd, kw.FlexStart, kw.FlexEnd, kw.Left,
+			kw.Right:
+			return pr.JustifyOrAlign{keyword}
+		case kw.Baseline:
+			return pr.JustifyOrAlign{kw.First, keyword}
 		}
 	} else if len(tokens) == 2 {
-		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
-		if kw1 == "safe" || kw1 == "unsafe" {
+		kw1, kw2 := getKeywordT(tokens[0]), getKeywordT(tokens[1])
+		if kw1 == kw.Safe || kw1 == kw.Unsafe {
 			switch kw2 {
-			case "center", "start", "end", "self-start", "self-end",
-				"flex-start", "flex-end", "left", "right":
-				return pr.Strings{kw1, kw2}
+			case kw.Center, kw.Start, kw.End, kw.SelfStart, kw.SelfEnd,
+				kw.FlexStart, kw.FlexEnd, kw.Left, kw.Right:
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw1 == "baseline" {
-			if kw2 == "first" || kw2 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw1 == kw.Baseline {
+			if kw2 == kw.First || kw2 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw2 == "baseline" {
-			if kw1 == "first" || kw1 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw2 == kw.Baseline {
+			if kw1 == kw.First || kw1 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
 		}
 	}
@@ -3346,31 +3354,31 @@ func justifySelf(tokens []Token, _ string) pr.CssProperty {
 }
 
 // @validator()
-// “align-items“ property validation.
+// align-items property validation.
 func alignItems(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		switch keyword := getKeyword(tokens[0]); keyword {
-		case "normal", "stretch", "center", "start", "end", "self-start",
-			"self-end", "flex-start", "flex-end":
-			return pr.Strings{keyword}
-		case "baseline":
-			return pr.Strings{"first", keyword}
+		switch keyword := getKeywordT(tokens[0]); keyword {
+		case kw.Normal, kw.Stretch, kw.Center, kw.Start, kw.End, kw.SelfStart,
+			kw.SelfEnd, kw.FlexStart, kw.FlexEnd:
+			return pr.JustifyOrAlign{keyword}
+		case kw.Baseline:
+			return pr.JustifyOrAlign{kw.First, keyword}
 		}
 	} else if len(tokens) == 2 {
-		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
-		if kw1 == "safe" || kw1 == "unsafe" {
+		kw1, kw2 := getKeywordT(tokens[0]), getKeywordT(tokens[1])
+		if kw1 == kw.Safe || kw1 == kw.Unsafe {
 			switch kw2 {
-			case "center", "start", "end", "self-start", "self-end",
-				"flex-start", "flex-end":
-				return pr.Strings{kw1, kw2}
+			case kw.Center, kw.Start, kw.End, kw.SelfStart, kw.SelfEnd,
+				kw.FlexStart, kw.FlexEnd:
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw1 == "baseline" {
-			if kw2 == "first" || kw2 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw1 == kw.Baseline {
+			if kw2 == kw.First || kw2 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw2 == "baseline" {
-			if kw1 == "first" || kw1 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw2 == kw.Baseline {
+			if kw1 == kw.First || kw1 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
 		}
 	}
@@ -3379,31 +3387,31 @@ func alignItems(tokens []Token, _ string) pr.CssProperty {
 
 // @validator()
 // @singleKeyword
-// “align-self“ property validation.
+// align-self property validation.
 func alignSelf(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		switch keyword := getKeyword(tokens[0]); keyword {
-		case "auto", "normal", "stretch", "center", "start", "end",
-			"self-start", "self-end", "flex-start", "flex-end":
-			return pr.Strings{keyword}
-		case "baseline":
-			return pr.Strings{"first", keyword}
+		switch keyword := getKeywordT(tokens[0]); keyword {
+		case kw.Auto, kw.Normal, kw.Stretch, kw.Center, kw.Start, kw.End,
+			kw.SelfStart, kw.SelfEnd, kw.FlexStart, kw.FlexEnd:
+			return pr.JustifyOrAlign{keyword}
+		case kw.Baseline:
+			return pr.JustifyOrAlign{kw.First, keyword}
 		}
 	} else if len(tokens) == 2 {
-		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
-		if kw1 == "safe" || kw1 == "unsafe" {
+		kw1, kw2 := getKeywordT(tokens[0]), getKeywordT(tokens[1])
+		if kw1 == kw.Safe || kw1 == kw.Unsafe {
 			switch kw2 {
-			case "center", "start", "end", "self-start", "self-end",
-				"flex-start", "flex-end":
-				return pr.Strings{kw1, kw2}
+			case kw.Center, kw.Start, kw.End, kw.SelfStart, kw.SelfEnd,
+				kw.FlexStart, kw.FlexEnd:
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw1 == "baseline" {
-			if kw2 == "first" || kw2 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw1 == kw.Baseline {
+			if kw2 == kw.First || kw2 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw2 == "baseline" {
-			if kw1 == "first" || kw1 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw2 == kw.Baseline {
+			if kw1 == kw.First || kw1 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
 		}
 	}
@@ -3411,31 +3419,31 @@ func alignSelf(tokens []Token, _ string) pr.CssProperty {
 }
 
 // @validator()
-// “align-content“ property validation.
+// align-content property validation.
 func alignContent(tokens []Token, _ string) pr.CssProperty {
 	if len(tokens) == 1 {
-		switch keyword := getKeyword(tokens[0]); keyword {
-		case "center", "space-between", "space-around", "space-evenly",
-			"stretch", "normal", "flex-start", "flex-end",
-			"start", "end":
-			return pr.Strings{keyword}
-		case "baseline":
-			return pr.Strings{"first", keyword}
+		switch keyword := getKeywordT(tokens[0]); keyword {
+		case kw.Center, kw.SpaceBetween, kw.SpaceAround, kw.SpaceEvenly,
+			kw.Stretch, kw.Normal, kw.FlexStart, kw.FlexEnd,
+			kw.Start, kw.End:
+			return pr.JustifyOrAlign{keyword}
+		case kw.Baseline:
+			return pr.JustifyOrAlign{kw.First, keyword}
 		}
 	} else if len(tokens) == 2 {
-		kw1, kw2 := getKeyword(tokens[0]), getKeyword(tokens[1])
-		if kw1 == "safe" || kw1 == "unsafe" {
+		kw1, kw2 := getKeywordT(tokens[0]), getKeywordT(tokens[1])
+		if kw1 == kw.Safe || kw1 == kw.Unsafe {
 			switch kw2 {
-			case "center", "start", "end", "flex-start", "flex-end":
-				return pr.Strings{kw1, kw2}
+			case kw.Center, kw.Start, kw.End, kw.FlexStart, kw.FlexEnd:
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw1 == "baseline" {
-			if kw2 == "first" || kw2 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw1 == kw.Baseline {
+			if kw2 == kw.First || kw2 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
-		} else if kw2 == "baseline" {
-			if kw1 == "first" || kw1 == "last" {
-				return pr.Strings{kw1, kw2}
+		} else if kw2 == kw.Baseline {
+			if kw1 == kw.First || kw1 == kw.Last {
+				return pr.JustifyOrAlign{kw1, kw2}
 			}
 		}
 	}

@@ -4,45 +4,45 @@ package tree
 
 import pr "github.com/benoitkugler/webrender/css/properties"
 
-func (s *ComputedStyle) GetAlignContent() pr.Strings {
-	return s.Get(pr.PAlignContent.Key()).(pr.Strings)
+func (s *ComputedStyle) GetAlignContent() pr.JustifyOrAlign {
+	return s.Get(pr.PAlignContent.Key()).(pr.JustifyOrAlign)
 }
-func (s *ComputedStyle) SetAlignContent(v pr.Strings) {
+func (s *ComputedStyle) SetAlignContent(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PAlignContent] = v
 }
 
-func (s *AnonymousStyle) GetAlignContent() pr.Strings {
-	return s.Get(pr.PAlignContent.Key()).(pr.Strings)
+func (s *AnonymousStyle) GetAlignContent() pr.JustifyOrAlign {
+	return s.Get(pr.PAlignContent.Key()).(pr.JustifyOrAlign)
 }
-func (s *AnonymousStyle) SetAlignContent(v pr.Strings) {
+func (s *AnonymousStyle) SetAlignContent(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PAlignContent] = v
 }
 
-func (s *ComputedStyle) GetAlignItems() pr.Strings {
-	return s.Get(pr.PAlignItems.Key()).(pr.Strings)
+func (s *ComputedStyle) GetAlignItems() pr.JustifyOrAlign {
+	return s.Get(pr.PAlignItems.Key()).(pr.JustifyOrAlign)
 }
-func (s *ComputedStyle) SetAlignItems(v pr.Strings) {
+func (s *ComputedStyle) SetAlignItems(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PAlignItems] = v
 }
 
-func (s *AnonymousStyle) GetAlignItems() pr.Strings {
-	return s.Get(pr.PAlignItems.Key()).(pr.Strings)
+func (s *AnonymousStyle) GetAlignItems() pr.JustifyOrAlign {
+	return s.Get(pr.PAlignItems.Key()).(pr.JustifyOrAlign)
 }
-func (s *AnonymousStyle) SetAlignItems(v pr.Strings) {
+func (s *AnonymousStyle) SetAlignItems(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PAlignItems] = v
 }
 
-func (s *ComputedStyle) GetAlignSelf() pr.Strings {
-	return s.Get(pr.PAlignSelf.Key()).(pr.Strings)
+func (s *ComputedStyle) GetAlignSelf() pr.JustifyOrAlign {
+	return s.Get(pr.PAlignSelf.Key()).(pr.JustifyOrAlign)
 }
-func (s *ComputedStyle) SetAlignSelf(v pr.Strings) {
+func (s *ComputedStyle) SetAlignSelf(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PAlignSelf] = v
 }
 
-func (s *AnonymousStyle) GetAlignSelf() pr.Strings {
-	return s.Get(pr.PAlignSelf.Key()).(pr.Strings)
+func (s *AnonymousStyle) GetAlignSelf() pr.JustifyOrAlign {
+	return s.Get(pr.PAlignSelf.Key()).(pr.JustifyOrAlign)
 }
-func (s *AnonymousStyle) SetAlignSelf(v pr.Strings) {
+func (s *AnonymousStyle) SetAlignSelf(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PAlignSelf] = v
 }
 
@@ -1572,45 +1572,45 @@ func (s *AnonymousStyle) SetImageResolution(v pr.DimOrS) {
 	s.propsCache.known[pr.PImageResolution] = v
 }
 
-func (s *ComputedStyle) GetJustifyContent() pr.Strings {
-	return s.Get(pr.PJustifyContent.Key()).(pr.Strings)
+func (s *ComputedStyle) GetJustifyContent() pr.JustifyOrAlign {
+	return s.Get(pr.PJustifyContent.Key()).(pr.JustifyOrAlign)
 }
-func (s *ComputedStyle) SetJustifyContent(v pr.Strings) {
+func (s *ComputedStyle) SetJustifyContent(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PJustifyContent] = v
 }
 
-func (s *AnonymousStyle) GetJustifyContent() pr.Strings {
-	return s.Get(pr.PJustifyContent.Key()).(pr.Strings)
+func (s *AnonymousStyle) GetJustifyContent() pr.JustifyOrAlign {
+	return s.Get(pr.PJustifyContent.Key()).(pr.JustifyOrAlign)
 }
-func (s *AnonymousStyle) SetJustifyContent(v pr.Strings) {
+func (s *AnonymousStyle) SetJustifyContent(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PJustifyContent] = v
 }
 
-func (s *ComputedStyle) GetJustifyItems() pr.Strings {
-	return s.Get(pr.PJustifyItems.Key()).(pr.Strings)
+func (s *ComputedStyle) GetJustifyItems() pr.JustifyOrAlign {
+	return s.Get(pr.PJustifyItems.Key()).(pr.JustifyOrAlign)
 }
-func (s *ComputedStyle) SetJustifyItems(v pr.Strings) {
+func (s *ComputedStyle) SetJustifyItems(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PJustifyItems] = v
 }
 
-func (s *AnonymousStyle) GetJustifyItems() pr.Strings {
-	return s.Get(pr.PJustifyItems.Key()).(pr.Strings)
+func (s *AnonymousStyle) GetJustifyItems() pr.JustifyOrAlign {
+	return s.Get(pr.PJustifyItems.Key()).(pr.JustifyOrAlign)
 }
-func (s *AnonymousStyle) SetJustifyItems(v pr.Strings) {
+func (s *AnonymousStyle) SetJustifyItems(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PJustifyItems] = v
 }
 
-func (s *ComputedStyle) GetJustifySelf() pr.Strings {
-	return s.Get(pr.PJustifySelf.Key()).(pr.Strings)
+func (s *ComputedStyle) GetJustifySelf() pr.JustifyOrAlign {
+	return s.Get(pr.PJustifySelf.Key()).(pr.JustifyOrAlign)
 }
-func (s *ComputedStyle) SetJustifySelf(v pr.Strings) {
+func (s *ComputedStyle) SetJustifySelf(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PJustifySelf] = v
 }
 
-func (s *AnonymousStyle) GetJustifySelf() pr.Strings {
-	return s.Get(pr.PJustifySelf.Key()).(pr.Strings)
+func (s *AnonymousStyle) GetJustifySelf() pr.JustifyOrAlign {
+	return s.Get(pr.PJustifySelf.Key()).(pr.JustifyOrAlign)
 }
-func (s *AnonymousStyle) SetJustifySelf(v pr.Strings) {
+func (s *AnonymousStyle) SetJustifySelf(v pr.JustifyOrAlign) {
 	s.propsCache.known[pr.PJustifySelf] = v
 }
 

@@ -1,6 +1,9 @@
 package properties
 
-import "github.com/benoitkugler/webrender/css/parser"
+import (
+	"github.com/benoitkugler/webrender/css/parser"
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
+)
 
 // This file is used to generate typed accessors
 //go:generate go run gen/gen.go
@@ -437,12 +440,12 @@ var InitialValues = Properties{
 	PGridColumnEnd:       GridLine{Tag: Auto},
 
 	// CSS Box Alignment Module Level 3 (WD): https://www.w3.org/TR/css-align-3/
-	PAlignContent:   Strings{"normal"},
-	PAlignItems:     Strings{"normal"},
-	PAlignSelf:      Strings{"auto"},
-	PJustifyContent: Strings{"normal"},
-	PJustifyItems:   Strings{"normal"},
-	PJustifySelf:    Strings{"auto"},
+	PAlignContent:   JustifyOrAlign{kw.Normal},
+	PAlignItems:     JustifyOrAlign{kw.Normal},
+	PAlignSelf:      JustifyOrAlign{kw.Auto},
+	PJustifyContent: JustifyOrAlign{kw.Normal},
+	PJustifyItems:   JustifyOrAlign{kw.Normal},
+	PJustifySelf:    JustifyOrAlign{kw.Auto},
 	POrder:          Int(0),
 	PColumnGap:      DimOrS{S: "normal"},
 	PRowGap:         DimOrS{S: "normal"},

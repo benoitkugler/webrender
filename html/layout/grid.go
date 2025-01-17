@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
+	kw "github.com/benoitkugler/webrender/css/properties/keywords"
 	bo "github.com/benoitkugler/webrender/html/boxes"
 	"github.com/benoitkugler/webrender/html/tree"
 	"github.com/benoitkugler/webrender/logger"
@@ -781,8 +782,8 @@ func resolveTracksSizes(context *layoutContext, sizingFunctions [][2]pr.DimOrS, 
 	// 1.5 Expand stretched auto tracks.
 	justifyContent := containingBlock.Box().Style.GetJustifyContent()
 	alignContent := containingBlock.Box().Style.GetAlignContent()
-	xStretch := direction == 'x' && justifyContent.Intersects("normal", "stretch")
-	yStretch := direction == 'y' && alignContent.Intersects("normal", "stretch")
+	xStretch := direction == 'x' && justifyContent.Intersects(kw.Normal, kw.Stretch)
+	yStretch := direction == 'y' && alignContent.Intersects(kw.Normal, kw.Stretch)
 	if (xStretch || yStretch) && freeSpace != nil && freeSpace.V() > 0 {
 		var autoTracksSizes []*[2]pr.MaybeFloat
 		for i := range tracksSizes {
@@ -1341,32 +1342,32 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	freeWidth := pr.Max(0, box.Width.V()-sum0(columnsSizes))
 	columnsNumber := pr.Float(len(columnsSizes))
 	columnsPositions := make([]pr.Float, len(columnsSizes))
-	if justifyContent.Intersects("center") {
+	if justifyContent.Intersects(kw.Center) {
 		x += freeWidth / 2
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
 			x += size[0] + columnGap
 		}
-	} else if justifyContent.Intersects("right", "end", "flex-end") {
+	} else if justifyContent.Intersects(kw.Right, kw.End, kw.FlexEnd) {
 		x += freeWidth
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
 			x += size[0] + columnGap
 		}
-	} else if justifyContent.Intersects("space-around") {
+	} else if justifyContent.Intersects(kw.SpaceAround) {
 		x += freeWidth / 2 / columnsNumber
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
 			x += size[0] + freeWidth/columnsNumber + columnGap
 		}
-	} else if justifyContent.Intersects("space-between") {
+	} else if justifyContent.Intersects(kw.SpaceBetween) {
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
 			if columnsNumber >= 2 {
 				x += size[0] + freeWidth/(columnsNumber-1) + columnGap
 			}
 		}
-	} else if justifyContent.Intersects("space-evenly") {
+	} else if justifyContent.Intersects(kw.SpaceEvenly) {
 		x += freeWidth / (columnsNumber + 1)
 		for i, size := range columnsSizes {
 			columnsPositions[i] = x
@@ -1388,39 +1389,39 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 	}
 	rowsNumber := pr.Float(len(rowsSizes))
 	rowsPositions := make([]pr.Float, len(rowsSizes))
-	if alignContent.Intersects("center") {
+	if alignContent.Intersects(kw.Center) {
 		y += freeHeight / 2
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			y += size[0] + rowGap
 		}
-	} else if alignContent.Intersects("right", "end", "flex-end") {
+	} else if alignContent.Intersects(kw.Right, kw.End, kw.FlexEnd) {
 		y += freeHeight
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			y += size[0] + rowGap
 		}
-	} else if alignContent.Intersects("space-around") {
+	} else if alignContent.Intersects(kw.SpaceAround) {
 		y += freeHeight / 2 / rowsNumber
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			y += size[0] + freeHeight/rowsNumber + rowGap
 		}
-	} else if alignContent.Intersects("space-between") {
+	} else if alignContent.Intersects(kw.SpaceBetween) {
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			if rowsNumber >= 2 {
 				y += size[0] + freeHeight/(rowsNumber-1) + rowGap
 			}
 		}
-	} else if alignContent.Intersects("space-evenly") {
+	} else if alignContent.Intersects(kw.SpaceEvenly) {
 		y += freeHeight / (rowsNumber + 1)
 		for i, size := range rowsSizes {
 			rowsPositions[i] = y
 			y += size[0] + freeHeight/(rowsNumber+1) + rowGap
 		}
 	} else {
-		if alignContent.Intersects("baseline") {
+		if alignContent.Intersects(kw.Baseline) {
 			// TODO: Support baseline value.
 			logger.WarningLogger.Println("Baseline alignment is not supported for grid layout")
 		}
@@ -1505,19 +1506,19 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 			childB.MarginBottom.V() + childB.BorderBottomWidth + childB.PaddingBottom.V())
 
 		justifySelf := childB.Style.GetJustifySelf()
-		if justifySelf.Intersects("auto") {
+		if justifySelf.Intersects(kw.Auto) {
 			justifySelf = justifyItems
 		}
-		if justifySelf.Intersects("normal", "stretch") {
+		if justifySelf.Intersects(kw.Normal, kw.Stretch) {
 			if childB.Style.GetWidth().S == "auto" {
 				childB.Style.SetWidth(pr.FToPx(childWidth))
 			}
 		}
 		alignSelf := childB.Style.GetAlignSelf()
-		if alignSelf.Intersects("auto") {
+		if alignSelf.Intersects(kw.Auto) {
 			alignSelf = alignItems
 		}
-		if alignSelf.Intersects("normal", "stretch") {
+		if alignSelf.Intersects(kw.Normal, kw.Stretch) {
 			if childB.Style.GetHeight().S == "auto" {
 				childB.Style.SetHeight(pr.FToPx(childHeight))
 			}
@@ -1542,26 +1543,26 @@ func gridLayout(context *layoutContext, box_ Box, bottomSpace pr.Float, skipStac
 		}
 
 		// TODO: Apply auto margins.
-		if justifySelf.Intersects("normal", "stretch") {
+		if justifySelf.Intersects(kw.Normal, kw.Stretch) {
 			newChild.Box().Width = pr.Max(childWidth, newChild.Box().Width.V())
 		} else {
 			newChild.Box().Width = maxContentWidth(context, newChild, true)
 			diff := childWidth - newChild.Box().Width.V()
-			if justifySelf.Intersects("center") {
+			if justifySelf.Intersects(kw.Center) {
 				newChild.Translate(newChild, diff/2, 0, false)
-			} else if justifySelf.Intersects("right", "end", "flex-end", "self-end") {
+			} else if justifySelf.Intersects(kw.Right, kw.End, kw.FlexEnd, kw.SelfEnd) {
 				newChild.Translate(newChild, diff, 0, false)
 			}
 		}
 
 		// TODO: Apply auto margins.
-		if alignSelf.Intersects("normal", "stretch") {
+		if alignSelf.Intersects(kw.Normal, kw.Stretch) {
 			newChild.Box().Height = pr.Max(childHeight, newChild.Box().Height.V())
 		} else {
 			diff := childHeight - newChild.Box().Height.V()
-			if alignSelf.Intersects("center") {
+			if alignSelf.Intersects(kw.Center) {
 				newChild.Translate(newChild, 0, diff/2, false)
-			} else if alignSelf.Intersects("end", "flex-end", "self-end") {
+			} else if alignSelf.Intersects(kw.End, kw.FlexEnd, kw.SelfEnd) {
 				newChild.Translate(newChild, 0, diff, false)
 			}
 		}

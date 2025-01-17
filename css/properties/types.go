@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	pa "github.com/benoitkugler/webrender/css/parser"
+	"github.com/benoitkugler/webrender/css/properties/keywords"
 )
 
 // ------------- Top levels types, implementing CssProperty ------------
@@ -121,6 +122,22 @@ func (ft FontFeature) String() string {
 
 // An empty slice means 'normal'
 type FontFeatures []FontFeature
+
+// JustifyOrAlign stores properties for 'justify-*' or 'align-*'
+type JustifyOrAlign [2]keywords.Keyword
+
+func (ja JustifyOrAlign) Has(kw keywords.Keyword) bool { return ja[0] == kw || ja[1] == kw }
+
+// Intersects returns true if at least one value in [kws]
+// is also in the list.
+func (ja JustifyOrAlign) Intersects(kws ...keywords.Keyword) bool {
+	for _, kw := range kws {
+		if ja.Has(kw) {
+			return true
+		}
+	}
+	return false
+}
 
 type Page string
 
@@ -605,6 +622,7 @@ func (Images) isCssProperty()            {}
 func (Int) isCssProperty()               {}
 func (IntString) isCssProperty()         {}
 func (Marks) isCssProperty()             {}
+func (JustifyOrAlign) isCssProperty()    {}
 func (Decorations) isCssProperty()       {}
 func (NamedString) isCssProperty()       {}
 func (CounterStyleID) isCssProperty()    {}
@@ -651,6 +669,7 @@ func (Int) isDeclaredValue()               {}
 func (IntString) isDeclaredValue()         {}
 func (Limits) isDeclaredValue()            {}
 func (Marks) isDeclaredValue()             {}
+func (JustifyOrAlign) isDeclaredValue()    {}
 func (Decorations) isDeclaredValue()       {}
 func (NamedString) isDeclaredValue()       {}
 func (CounterStyleID) isDeclaredValue()    {}
