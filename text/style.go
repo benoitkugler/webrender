@@ -3,7 +3,6 @@ package text
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -43,21 +42,20 @@ type FontDescription struct {
 	VariationSettings []Variation // empty for 'normal'
 }
 
-func (fd FontDescription) hash(includeSize bool) []byte {
-	var hash []byte
+func (fd FontDescription) binary(dst []byte, includeSize bool) []byte {
 	for _, f := range fd.Family {
-		hash = append(hash, f...)
+		dst = append(dst, f...)
 	}
-	hash = append(hash, byte(fd.Style), byte(fd.Stretch))
-	hash = binary.BigEndian.AppendUint16(hash, fd.Weight)
+	dst = append(dst, byte(fd.Style), byte(fd.Stretch))
+	dst = binary.BigEndian.AppendUint16(dst, fd.Weight)
 	if includeSize {
-		hash = binary.BigEndian.AppendUint32(hash, math.Float32bits(fd.Size))
+		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(fd.Size))
 	}
 	for _, v := range fd.VariationSettings {
-		hash = append(hash, v.Tag[:]...)
-		hash = binary.BigEndian.AppendUint32(hash, math.Float32bits(v.Value))
+		dst = append(dst, v.Tag[:]...)
+		dst = binary.BigEndian.AppendUint32(dst, math.Float32bits(v.Value))
 	}
-	return hash
+	return dst
 }
 
 // textWrap returns true if the "white-space" property allows wrapping
@@ -79,7 +77,7 @@ type TextStyle struct {
 	TextDecorationLine pr.Decorations
 
 	// FontFeatures stores the resolved value
-	// for all the CSS properties related :
+	// for all the CSS properties related, sorted by tag :
 	// 	"font-kerning"
 	// 	"font-variant-ligatures"
 	// 	"font-variant-position"
@@ -147,6 +145,49 @@ func NewTextStyle(style pr.StyleAccessor, ignoreSpacing bool) *TextStyle {
 	return &out
 }
 
+type styleKey struct {
+	FontDescription string // serialized
+	FontFeatures    string // serialized
+
+	TextDecorationLine pr.Decorations
+
+	FontLanguageOverride fontLanguageOverride
+	Lang                 string
+
+	WhiteSpace   Whitespace
+	OverflowWrap OverflowWrap
+	WordBreak    WordBreak
+
+	Hyphens             Hyphens
+	HyphenateCharacter  string
+	HyphenateLimitChars pr.Limits
+	HyphenateLimitZone  HyphenateZone
+
+	WordSpacing   pr.Fl
+	LetterSpacing pr.Fl // 0 for 'normal'
+	TabSize       TabSize
+}
+
+func (ts *TextStyle) key() styleKey {
+	return styleKey{
+		string(ts.FontDescription.binary(nil, true)),
+		string(featuresBinary(ts.FontFeatures)),
+		ts.TextDecorationLine,
+		ts.FontLanguageOverride,
+		ts.Lang,
+		ts.WhiteSpace,
+		ts.OverflowWrap,
+		ts.WordBreak,
+		ts.Hyphens,
+		ts.HyphenateCharacter,
+		ts.HyphenateLimitChars,
+		ts.HyphenateLimitZone,
+		ts.WordSpacing,
+		ts.LetterSpacing,
+		ts.TabSize,
+	}
+}
+
 type TabSize struct {
 	Width      int
 	IsMultiple bool // true to use Width * <space character width>
@@ -159,16 +200,21 @@ func newTabSize(ts pr.DimOrS) TabSize {
 	}
 }
 
-type Feature struct {
-	Tag   [4]byte
-	Value int
+type Feature = pr.FontFeature
+
+func featuresBinary(ls pr.FontFeatures) []byte {
+	out := make([]byte, len(ls)*8)
+	for i, v := range ls {
+		out[8*i+0] = v.Tag[0]
+		out[8*i+1] = v.Tag[1]
+		out[8*i+2] = v.Tag[2]
+		out[8*i+3] = v.Tag[3]
+		binary.BigEndian.PutUint32(out[8*i+4:], v.Value)
+	}
+	return out
 }
 
-func (ft Feature) String() string {
-	return fmt.Sprintf("'%s'=%d", ft.Tag[:], ft.Value)
-}
-
-type featureSet map[[4]byte]int
+type featureSet map[[4]byte]uint32
 
 func newFeatureSet(fs []Feature) featureSet {
 	out := make(featureSet)
@@ -188,47 +234,47 @@ func (fs featureSet) merge(other []Feature) {
 func (fs featureSet) list() []Feature {
 	out := make([]Feature, 0, len(fs))
 	for k, v := range fs {
-		out = append(out, Feature{k, v})
+		out = append(out, Feature{Tag: k, Value: v})
 	}
 	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i].Tag[:], out[j].Tag[:]) == -1 })
 	return out
 }
 
 var (
-	ligatureKeys = map[string][]string{
-		"common-ligatures":        {"liga", "clig"},
-		"historical-ligatures":    {"hlig"},
-		"discretionary-ligatures": {"dlig"},
-		"contextual":              {"calt"},
+	ligatureKeys = map[string][]tag{
+		"common-ligatures":        {{'l', 'i', 'g', 'a'}, {'c', 'l', 'i', 'g'}},
+		"historical-ligatures":    {{'h', 'l', 'i', 'g'}},
+		"discretionary-ligatures": {{'d', 'l', 'i', 'g'}},
+		"contextual":              {{'c', 'a', 'l', 't'}},
 	}
-	capsKeys = map[string][]string{
-		"small-caps":      {"smcp"},
-		"all-small-caps":  {"c2sc", "smcp"},
-		"petite-caps":     {"pcap"},
-		"all-petite-caps": {"c2pc", "pcap"},
-		"unicase":         {"unic"},
-		"titling-caps":    {"titl"},
+	capsKeys = map[string][]tag{
+		"small-caps":      {{'s', 'm', 'c', 'p'}},
+		"all-small-caps":  {{'c', '2', 's', 'c'}, {'s', 'm', 'c', 'p'}},
+		"petite-caps":     {{'p', 'c', 'a', 'p'}},
+		"all-petite-caps": {{'c', '2', 'p', 'c'}, {'p', 'c', 'a', 'p'}},
+		"unicase":         {{'u', 'n', 'i', 'c'}},
+		"titling-caps":    {{'t', 'i', 't', 'l'}},
 	}
-	numericKeys = map[string]string{
-		"lining-nums":        "lnum",
-		"oldstyle-nums":      "onum",
-		"proportional-nums":  "pnum",
-		"tabular-nums":       "tnum",
-		"diagonal-fractions": "frac",
-		"stacked-fractions":  "afrc",
-		"ordinal":            "ordn",
-		"slashed-zero":       "zero",
+	numericKeys = map[string]tag{
+		"lining-nums":        {'l', 'n', 'u', 'm'},
+		"oldstyle-nums":      {'o', 'n', 'u', 'm'},
+		"proportional-nums":  {'p', 'n', 'u', 'm'},
+		"tabular-nums":       {'t', 'n', 'u', 'm'},
+		"diagonal-fractions": {'f', 'r', 'a', 'c'},
+		"stacked-fractions":  {'a', 'f', 'r', 'c'},
+		"ordinal":            {'o', 'r', 'd', 'n'},
+		"slashed-zero":       {'z', 'e', 'r', 'o'},
 	}
-	eastAsianKeys = map[string]string{
-		"jis78":              "jp78",
-		"jis83":              "jp83",
-		"jis90":              "jp90",
-		"jis04":              "jp04",
-		"simplified":         "smpl",
-		"traditional":        "trad",
-		"full-width":         "fwid",
-		"proportional-width": "pwid",
-		"ruby":               "ruby",
+	eastAsianKeys = map[string]tag{
+		"jis78":              {'j', 'p', '7', '8'},
+		"jis83":              {'j', 'p', '8', '3'},
+		"jis90":              {'j', 'p', '9', '0'},
+		"jis04":              {'j', 'p', '0', '4'},
+		"simplified":         {'s', 'm', 'p', 'l'},
+		"traditional":        {'t', 'r', 'a', 'd'},
+		"full-width":         {'f', 'w', 'i', 'd'},
+		"proportional-width": {'p', 'w', 'i', 'd'},
+		"ruby":               {'r', 'u', 'b', 'y'},
 	}
 )
 
@@ -238,6 +284,8 @@ func defaultFontFeature(f string) string {
 	}
 	return f
 }
+
+type tag = [4]byte
 
 // Get the font features from the different properties in style.
 // See https://www.w3.org/TR/css-fonts-3/#feature-precedence
@@ -249,7 +297,7 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	fontVariantCaps := defaultFontFeature(string(style.GetFontVariantCaps()))
 	fontVariantAlternates := defaultFontFeature(string(style.GetFontVariantAlternates()))
 
-	features := map[string]int{}
+	features := featureSet{}
 
 	// Step 1: getting the default, we rely on Pango for this
 	// Step 2: @font-face font-variant, done in fonts.addFontFace
@@ -258,9 +306,9 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	// Step 4: font-variant && OpenType features
 
 	if fontKerning != "auto" {
-		features["kern"] = 0
+		features[tag{'k', 'e', 'r', 'n'}] = 0
 		if fontKerning == "normal" {
-			features["kern"] = 1
+			features[tag{'k', 'e', 'r', 'n'}] = 1
 		}
 	}
 
@@ -273,7 +321,7 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 		}
 	} else if fontVariantLigatures.String != "normal" {
 		for _, ligatureType := range fontVariantLigatures.Strings {
-			value := 1
+			value := uint32(1)
 			if strings.HasPrefix(ligatureType, "no-") {
 				value = 0
 				ligatureType = ligatureType[3:]
@@ -286,9 +334,9 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 
 	if fontVariantPosition == "sub" {
 		// https://www.w3.org/TR/css-fonts-3/#font-variant-position-prop
-		features["subs"] = 1
+		features[tag{'s', 'u', 'b', 's'}] = 1
 	} else if fontVariantPosition == "super" {
-		features["sups"] = 1
+		features[tag{'s', 'u', 'p', 's'}] = 1
 	}
 
 	if fontVariantCaps != "normal" {
@@ -307,7 +355,7 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	if fontVariantAlternates != "normal" {
 		// See https://www.w3.org/TR/css-fonts-3/#font-variant-caps-prop
 		if fontVariantAlternates == "historical-forms" {
-			features["hist"] = 1
+			features[tag{'h', 'i', 's', 't'}] = 1
 		}
 	}
 
@@ -320,23 +368,13 @@ func getFontFeatures(style pr.StyleAccessor) []Feature {
 	// Step 5: incompatible non-OpenType features, already handled by Pango
 
 	// Step 6: font-feature-settings
-	for _, pair := range style.GetFontFeatureSettings().Values {
-		features[pair.String] = pair.Int
-	}
+	features.merge(style.GetFontFeatureSettings())
 
 	if len(features) == 0 {
 		return nil
 	}
 
-	out := make([]Feature, 0, len(features))
-	for k, v := range features {
-		var item Feature
-		copy(item.Tag[:], k)
-		item.Value = v
-		out = append(out, item)
-	}
-
-	return out
+	return features.list()
 }
 
 func getFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Feature {
@@ -349,7 +387,7 @@ func getFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Featu
 	props.SetFontVariantNumeric(pr.SStrings{})
 	props.SetFontVariantAlternates("")
 	props.SetFontVariantEastAsian(pr.SStrings{})
-	props.SetFontFeatureSettings(pr.SIntStrings{})
+	props.SetFontFeatureSettings(nil)
 	for _, rules := range ruleDescriptors.FontVariant {
 		prop, ok := rules.Value.(pr.CssProperty)
 		if !ok {
@@ -357,7 +395,7 @@ func getFontFaceFeatures(ruleDescriptors validation.FontFaceDescriptors) []Featu
 		}
 		props[rules.Name] = prop
 	}
-	if !ruleDescriptors.FontFeatureSettings.IsNone() {
+	if len(ruleDescriptors.FontFeatureSettings) != 0 {
 		props.SetFontFeatureSettings(ruleDescriptors.FontFeatureSettings)
 	}
 

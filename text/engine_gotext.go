@@ -40,13 +40,16 @@ type FontConfigurationGotext struct {
 
 	fontsContent  map[string][]byte        // to be embedded in the target
 	fontsFeatures map[*font.Font][]Feature // as requested by @font-face
+
+	textLayoutCache map[textKey]FirstLine
 }
 
 func NewFontConfigurationGotext(fm *fontscan.FontMap) *FontConfigurationGotext {
 	out := FontConfigurationGotext{
-		fm:            fm,
-		fontsContent:  make(map[string][]byte),
-		fontsFeatures: make(map[*font.Font][]Feature), // as loaded by loadOneFont
+		fm:              fm,
+		fontsContent:    make(map[string][]byte),
+		fontsFeatures:   make(map[*font.Font][]Feature), // as loaded by loadOneFont
+		textLayoutCache: make(map[textKey]FirstLine),
 	}
 	out.shaper.SetFontCacheSize(64)
 	return &out
@@ -223,7 +226,7 @@ func newFeatures(features []Feature) []shaping.FontFeature {
 	for i, f := range features {
 		fts[i] = shaping.FontFeature{
 			Tag:   opentype.NewTag(f.Tag[0], f.Tag[1], f.Tag[2], f.Tag[3]),
-			Value: uint32(f.Value),
+			Value: f.Value,
 		}
 	}
 	return fts
@@ -362,6 +365,13 @@ func (fc *FontConfigurationGotext) wrap(text []rune, style *TextStyle, maxWidth 
 func floatToFixed(v pr.Fl) fixed.Int26_6    { return fixed.Int26_6(v * 64) }
 func fixedToFloat(v fixed.Int26_6) pr.Float { return pr.Float(v) / 64 }
 
+type textKey struct {
+	text           string
+	style          styleKey
+	maxWidth       pr.Float
+	allowWordBreak bool
+}
+
 // same as wrap, but may allows break inside words
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	if len(text) == 0 {
@@ -372,6 +382,11 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 			Width:    0, Height: 0, Baseline: 0,
 			FirstLineRTL: false,
 		}
+	}
+
+	key := textKey{string(text), style.key(), maxWidth, allowWordBreak}
+	if l, ok := fc.textLayoutCache[key]; ok {
+		return l
 	}
 
 	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
@@ -489,8 +504,12 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		height = top - bottom
 	}
 
-	return FirstLine{
-		Layout:       layoutGotext{text: text, line: line},
+	// copy the line, owned by lineWrapper
+	outLine := make(shaping.Line, len(line))
+	copy(outLine, line)
+
+	out := FirstLine{
+		Layout:       layoutGotext{text: text, line: outLine},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: firstLineRTL,
@@ -498,6 +517,10 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		Height:       fixedToFloat(height),
 		Baseline:     fixedToFloat(top),
 	}
+
+	fc.textLayoutCache[key] = out
+
+	return out
 }
 
 // splitFirstLineGotext fit as much text from [text_] as possible in the available width given by [maxWidth].

@@ -45,13 +45,13 @@ func TestCollectStyles(t *testing.T) {
 	fmt.Println(len(styles))
 	m := map[string]FontDescription{}
 	for _, sty := range styles {
-		m[string(sty.FontDescription.hash(true))] = sty.FontDescription
+		m[string(sty.FontDescription.binary(nil, true))] = sty.FontDescription
 	}
 	var desc []FontDescription
 	for _, fd := range m {
 		desc = append(desc, fd)
 	}
-	sort.Slice(desc, func(i, j int) bool { return string(desc[i].hash(true)) < string(desc[j].hash(true)) })
+	sort.Slice(desc, func(i, j int) bool { return string(desc[i].binary(nil, true)) < string(desc[j].binary(nil, true)) })
 	f, err = os.Create("testdata/font_descriptions.json")
 	if err != nil {
 		t.Fatal(err)

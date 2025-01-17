@@ -1,7 +1,6 @@
 package text
 
 import (
-	"fmt"
 	"math"
 	"strings"
 
@@ -215,5 +214,5 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 }
 
 func (style *TextStyle) cacheKey() string {
-	return string(append(style.FontDescription.hash(false), fmt.Sprint(style.FontFeatures)...))
+	return string(append(style.FontDescription.binary(nil, false), featuresBinary(style.FontFeatures)...))
 }
