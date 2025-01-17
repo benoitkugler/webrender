@@ -328,7 +328,7 @@ var InitialValues = Properties{
 
 	// Fonts 3 (REC): https://www.w3.org/TR/css-fonts-3/
 	PFontFamily:            Strings{"serif"}, // depends on user agent
-	PFontFeatureSettings:   SIntStrings{String: "normal"},
+	PFontFeatureSettings:   FontFeatures{},
 	PFontKerning:           String("auto"),
 	PFontLanguageOverride:  String("normal"),
 	PFontSize:              FToV(16), // actually medium, but we define medium from this

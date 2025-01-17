@@ -1082,17 +1082,17 @@ func (s *AnonymousStyle) SetFontFamily(v pr.Strings) {
 	s.propsCache.known[pr.PFontFamily] = v
 }
 
-func (s *ComputedStyle) GetFontFeatureSettings() pr.SIntStrings {
-	return s.Get(pr.PFontFeatureSettings.Key()).(pr.SIntStrings)
+func (s *ComputedStyle) GetFontFeatureSettings() pr.FontFeatures {
+	return s.Get(pr.PFontFeatureSettings.Key()).(pr.FontFeatures)
 }
-func (s *ComputedStyle) SetFontFeatureSettings(v pr.SIntStrings) {
+func (s *ComputedStyle) SetFontFeatureSettings(v pr.FontFeatures) {
 	s.propsCache.known[pr.PFontFeatureSettings] = v
 }
 
-func (s *AnonymousStyle) GetFontFeatureSettings() pr.SIntStrings {
-	return s.Get(pr.PFontFeatureSettings.Key()).(pr.SIntStrings)
+func (s *AnonymousStyle) GetFontFeatureSettings() pr.FontFeatures {
+	return s.Get(pr.PFontFeatureSettings.Key()).(pr.FontFeatures)
 }
-func (s *AnonymousStyle) SetFontFeatureSettings(v pr.SIntStrings) {
+func (s *AnonymousStyle) SetFontFeatureSettings(v pr.FontFeatures) {
 	s.propsCache.known[pr.PFontFeatureSettings] = v
 }
 

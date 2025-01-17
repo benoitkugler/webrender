@@ -1949,21 +1949,21 @@ func fontVariantNumeric(tokens []Token, _ string) pr.CssProperty {
 // @validator()
 // “font-feature-settings“ property validation.
 func fontFeatureSettings(tokens []Token, _ string) pr.CssProperty {
-	s := _fontFeatureSettings(tokens)
-	if s.IsNone() {
+	s, ok := _fontFeatureSettings(tokens)
+	if !ok {
 		return nil
 	}
 	return s
 }
 
-func _fontFeatureSettings(tokens []Token) pr.SIntStrings {
+func _fontFeatureSettings(tokens []Token) (pr.FontFeatures, bool) {
 	if len(tokens) == 1 && getKeyword(tokens[0]) == "normal" {
-		return pr.SIntStrings{String: "normal"}
+		return nil, true
 	}
 
-	fontFeatureSettingsList := func(tokens []Token) pr.IntString {
+	fontFeatureSettingsList := func(tokens []Token) pr.FontFeature {
 		var token Token
-		feature, value := "", 0
+		feature, value := [4]byte{}, uint32(0)
 
 		if len(tokens) == 2 {
 			tokens, token = tokens[0:1], tokens[1]
@@ -1976,7 +1976,7 @@ func _fontFeatureSettings(tokens []Token) pr.SIntStrings {
 				}
 			case pa.Number:
 				if tt.IsInt() && tt.Int() >= 0 {
-					value = tt.Int()
+					value = uint32(tt.Int())
 				}
 			}
 		} else if len(tokens) == 1 {
@@ -1985,36 +1985,28 @@ func _fontFeatureSettings(tokens []Token) pr.SIntStrings {
 
 		if len(tokens) == 1 {
 			token = tokens[0]
-			tt, ok := token.(pa.String)
-			if ok && len(tt.Value) == 4 {
-				ok := true
+			if tt, ok := token.(pa.String); ok && len(tt.Value) == 4 {
 				for _, letter := range tt.Value {
 					if !(0x20 <= letter && letter <= 0x7f) {
-						ok = false
-						break
+						return pr.FontFeature{}
 					}
 				}
-				if ok {
-					feature = tt.Value
-				}
+				copy(feature[:], tt.Value)
 			}
 		}
 
-		if feature != "" {
-			return pr.IntString{String: feature, Int: value}
-		}
-		return pr.IntString{}
+		return pr.FontFeature{Tag: feature, Value: value}
 	}
 
-	var out pr.SIntStrings
+	var out pr.FontFeatures
 	for _, part := range pa.SplitOnComma(tokens) {
 		result := fontFeatureSettingsList(pa.RemoveWhitespace(part))
-		if (result == pr.IntString{}) {
-			return pr.SIntStrings{}
+		if result.Tag == ([4]byte{}) { // invalid tag
+			return nil, false
 		}
-		out.Values = append(out.Values, result)
+		out = append(out, result)
 	}
-	return out
+	return out, len(out) != 0
 }
 
 // @validator()

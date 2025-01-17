@@ -235,10 +235,10 @@ func (s Properties) SetFloat(v String) { s[PFloat] = v }
 func (s Properties) GetFontFamily() Strings  { return s[PFontFamily].(Strings) }
 func (s Properties) SetFontFamily(v Strings) { s[PFontFamily] = v }
 
-func (s Properties) GetFontFeatureSettings() SIntStrings {
-	return s[PFontFeatureSettings].(SIntStrings)
+func (s Properties) GetFontFeatureSettings() FontFeatures {
+	return s[PFontFeatureSettings].(FontFeatures)
 }
-func (s Properties) SetFontFeatureSettings(v SIntStrings) { s[PFontFeatureSettings] = v }
+func (s Properties) SetFontFeatureSettings(v FontFeatures) { s[PFontFeatureSettings] = v }
 
 func (s Properties) GetFontKerning() String  { return s[PFontKerning].(String) }
 func (s Properties) SetFontKerning(v String) { s[PFontKerning] = v }
@@ -775,8 +775,8 @@ type StyleAccessor interface {
 	GetFontFamily() Strings
 	SetFontFamily(v Strings)
 
-	GetFontFeatureSettings() SIntStrings
-	SetFontFeatureSettings(v SIntStrings)
+	GetFontFeatureSettings() FontFeatures
+	SetFontFeatureSettings(v FontFeatures)
 
 	GetFontKerning() String
 	SetFontKerning(v String)

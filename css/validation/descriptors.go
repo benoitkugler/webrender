@@ -55,7 +55,7 @@ type FontFaceDescriptors struct {
 	FontStyle           pr.String
 	FontWeight          pr.IntString
 	FontStretch         pr.String
-	FontFeatureSettings pr.SIntStrings
+	FontFeatureSettings pr.FontFeatures
 	FontVariant         []NamedProp
 }
 
@@ -196,8 +196,8 @@ func fontStretchDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) e
 // @descriptor("font-feature-settings")
 // “font-feature-settings“ descriptor validation.
 func fontFeatureSettingsDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
-	s := _fontFeatureSettings(tokens)
-	if s.IsNone() {
+	s, ok := _fontFeatureSettings(tokens)
+	if !ok {
 		return ErrInvalidValue
 	}
 	out.FontFeatureSettings = s

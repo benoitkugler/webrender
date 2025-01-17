@@ -110,6 +110,18 @@ type Limits struct {
 	Total, Left, Right int
 }
 
+type FontFeature struct {
+	Tag   [4]byte
+	Value uint32
+}
+
+func (ft FontFeature) String() string {
+	return fmt.Sprintf("'%s'=%d", ft.Tag[:], ft.Value)
+}
+
+// An empty slice means 'normal'
+type FontFeatures []FontFeature
+
 type Page string
 
 // Dimension or "auto" or "cover" or "contain"
@@ -601,6 +613,7 @@ func (Point) isCssProperty()             {}
 func (Quotes) isCssProperty()            {}
 func (Repeats) isCssProperty()           {}
 func (SContent) isCssProperty()          {}
+func (FontFeatures) isCssProperty()      {}
 func (SIntStrings) isCssProperty()       {}
 func (SStrings) isCssProperty()          {}
 func (Sizes) isCssProperty()             {}
@@ -646,6 +659,7 @@ func (Point) isDeclaredValue()             {}
 func (Quotes) isDeclaredValue()            {}
 func (Repeats) isDeclaredValue()           {}
 func (SContent) isDeclaredValue()          {}
+func (FontFeatures) isDeclaredValue()      {}
 func (SIntStrings) isDeclaredValue()       {}
 func (SStrings) isDeclaredValue()          {}
 func (Sizes) isDeclaredValue()             {}
