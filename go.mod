@@ -12,6 +12,4 @@ require (
 	golang.org/x/text v0.21.0
 )
 
-// replace github.com/go-text/typesetting => ../../go-text/typesetting
-
-// replace github.com/benoitkugler/textprocessing => ../../benoitkugler/textprocessing
+replace github.com/go-text/typesetting => ../../go-text/typesetting
