@@ -42,15 +42,18 @@ type TextBox struct {
 	InlineLevelBox
 	BoxFields
 
-	TextLayout text.EngineLayout
-	Text       string
+	TextLayout text.EngineLayout // setup during layout
+
+	Text []rune
 }
 
 func TextBoxAnonymousFrom(parent Box, text string) *TextBox {
 	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
-	out := NewTextBox(style, parent.Box().Element, parent.Box().PseudoType, text)
+	out := NewTextBox(style, parent.Box().Element, parent.Box().PseudoType, []rune(text))
 	return out
 }
+
+func (tb *TextBox) TextS() string { return string(tb.Text) }
 
 type InlineBlockBox struct {
 	BoxFields
@@ -231,7 +234,7 @@ func NewInlineBox(style pr.ElementStyle, element *html.Node, pseudoType string, 
 	return &out
 }
 
-func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, text string) *TextBox {
+func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, text []rune) *TextBox {
 	if len(text) == 0 {
 		panic("NewTextBox called with empty text")
 	}
@@ -241,7 +244,7 @@ func NewTextBox(style pr.ElementStyle, element *html.Node, pseudoType string, te
 }
 
 // Return a new TextBox identical to this one except for the text.
-func (b TextBox) CopyWithText(text string) *TextBox {
+func (b TextBox) CopyWithText(text []rune) *TextBox {
 	if len(text) == 0 {
 		panic("empty text")
 	}

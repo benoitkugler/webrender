@@ -202,7 +202,7 @@ func TestMarginBoxes(t *testing.T) {
 	_, topCenter := page2.Children[0], page2.Children[1]
 	lineBox := unpack1(topCenter)
 	textBox, _ := unpack1(lineBox).(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "Title")
+	assertText(t, textBox, "Title")
 }
 
 func TestMarginBoxStringSet1(t *testing.T) {
@@ -235,7 +235,7 @@ func TestMarginBoxStringSet1(t *testing.T) {
 	_, bottomCenter := page2.Children[0], page2.Children[1]
 	lineBox := unpack1(bottomCenter)
 	textBox, _ := unpack1(lineBox).(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first assignment")
+	assertText(t, textBox, "first assignment")
 
 	if len(page1.Children) != 2 {
 		t.Fatalf("expected two children, got %v", page1.Children)
@@ -244,7 +244,7 @@ func TestMarginBoxStringSet1(t *testing.T) {
 
 	lineBox = unpack1(bottomCenter)
 	textBox, _ = unpack1(lineBox).(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first assignment")
+	assertText(t, textBox, "first assignment")
 }
 
 func TestMarginBoxStringSet2(t *testing.T) {
@@ -268,9 +268,9 @@ func TestMarginBoxStringSet2(t *testing.T) {
 		lineBox := unpack1(topCenter)
 		textBox := unpack1(lineBox).(*bo.TextBox)
 		if contentVal == "before" || contentVal == "after" {
-			tu.AssertEqual(t, textBox.Text, "pseudo")
+			assertText(t, textBox, "pseudo")
 		} else {
-			tu.AssertEqual(t, textBox.Text, "first assignment")
+			assertText(t, textBox, "first assignment")
 		}
 	}
 
@@ -303,7 +303,7 @@ func TestMarginBoxStringSet3(t *testing.T) {
 	topCenter := page1.Children[1]
 	lineBox := unpack1(topCenter)
 	textBox := unpack1(lineBox).(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first assignment")
+	assertText(t, textBox, "first assignment")
 }
 
 func TestMarginBoxStringSet4(t *testing.T) {
@@ -336,7 +336,7 @@ func TestMarginBoxStringSet4(t *testing.T) {
 	topCenter = page2.Box().Children[1]
 	lineBox := unpack1(topCenter)
 	textBox := unpack1(lineBox).(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "first_excepted")
+	assertText(t, textBox, "first_excepted")
 }
 
 func TestMarginBoxStringSet5(t *testing.T) {
@@ -358,7 +358,7 @@ func TestMarginBoxStringSet5(t *testing.T) {
 	topCenter := page1.Children[1]
 	lineBox := unpack1(topCenter)
 	textBox := unpack1(lineBox).(*bo.TextBox)
-	tu.AssertEqual(t, textBox.Text, "Second assignment")
+	assertText(t, textBox, "Second assignment")
 }
 
 func TestMarginBoxStringSet6(t *testing.T) {
@@ -397,11 +397,11 @@ func TestMarginBoxStringSet6(t *testing.T) {
 	topCenter, bottomCenter := page1.Children[1], page1.Children[2]
 	topLineBox := unpack1(topCenter)
 	topTextBox := unpack1(topLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, topTextBox.Text, "before!-first-after!I.1")
+	assertText(t, topTextBox, "before!-first-after!I.1")
 
 	bottomLineBox := unpack1(bottomCenter)
 	bottomTextBox := unpack1(bottomLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, bottomTextBox.Text, "before!last-secondclass2|1/I")
+	assertText(t, bottomTextBox, "before!last-secondclass2|1/I")
 }
 
 func TestMarginBoxStringSet7(t *testing.T) {
@@ -420,11 +420,11 @@ func TestMarginBoxStringSet7(t *testing.T) {
 	topLeft, topRight := page1.Children[1], page1.Children[2]
 	leftLineBox := unpack1(topLeft)
 	leftTextBox := unpack1(leftLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[Chocolate]")
+	assertText(t, leftTextBox, "[Chocolate]")
 
 	rightLineBox := unpack1(topRight)
 	rightTextBox := unpack1(rightLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, rightTextBox.Text, "{Cake}")
+	assertText(t, rightTextBox, "{Cake}")
 }
 
 func TestMarginBoxStringSet8(t *testing.T) {
@@ -452,17 +452,17 @@ func TestMarginBoxStringSet8(t *testing.T) {
 	topLeft := page1.Box().Children[1]
 	leftLineBox := unpack1(topLeft)
 	leftTextBox := unpack1(leftLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[initial]")
+	assertText(t, leftTextBox, "[initial]")
 
 	topLeft = page2.Box().Children[1]
 	leftLineBox = unpack1(topLeft)
 	leftTextBox = unpack1(leftLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[]")
+	assertText(t, leftTextBox, "[]")
 
 	topLeft = page3.Box().Children[1]
 	leftLineBox = unpack1(topLeft)
 	leftTextBox = unpack1(leftLineBox).(*bo.TextBox)
-	tu.AssertEqual(t, leftTextBox.Text, "[ ]")
+	assertText(t, leftTextBox, "[ ]")
 }
 
 func TestMarginBoxStringSet9(t *testing.T) {
@@ -488,7 +488,7 @@ func TestMarginBoxStringSet9(t *testing.T) {
 	lineBox := unpack1(topCenter)
 	textBox := unpack1(lineBox).(*bo.TextBox)
 
-	tu.AssertEqual(t, textBox.Text, "first assignment second assignment")
+	assertText(t, textBox, "first assignment second assignment")
 }
 
 func TestMarginBoxStringSet10(t *testing.T) {

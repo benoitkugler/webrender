@@ -867,6 +867,17 @@ func (fc *FontConfigurationPango) splitFirstLine(hyphenCache map[HyphenDictKey]h
 	return firstLineMetrics(firstLine, text, layout, resumeIndex, spaceCollapse, style, hyphenated, hyphenateCharacter)
 }
 
+// split word on each hyphen occurence, starting by the end
+func hyphenDictionaryIterationsOld(word string, hyphen rune) (out []string) {
+	wordRunes := []rune(word)
+	for i := len(wordRunes) - 1; i >= 0; i-- {
+		if wordRunes[i] == hyphen {
+			out = append(out, string(wordRunes[:i+1]))
+		}
+	}
+	return out
+}
+
 var bidiMarkReplacer = strings.NewReplacer(
 	"\u202a", "\u200b",
 	"\u202b", "\u200b",

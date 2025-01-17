@@ -274,7 +274,7 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 				// TextBox is a leaf in inheritance tree, so we can type assert against the concrete type
 				// instead of using interfaces.
 				if ct, ok := children[len(children)-1].(*TextBox); ok {
-					ct.Text += textBox.Text
+					ct.Text = append(ct.Text, textBox.Text...)
 				} else {
 					children = append(children, textBox)
 				}
@@ -537,7 +537,7 @@ func computeContentList(contentList pr.ContentProperties, parentBox Box, counter
 		}
 		if L := len(contentBoxes); L != 0 {
 			if textBox, ok := contentBoxes[L-1].(*TextBox); ok {
-				textBox.Text += text
+				textBox.Text = append(textBox.Text, []rune(text)...)
 				return
 			}
 		}
@@ -818,13 +818,13 @@ func computeStringSet(element *utils.HTMLNode, box Box, stringName string, conte
 	boxList := computeContentList(contentList, box, counterValues, cssToken, parseAgain,
 		targetCollector, cs, URLResolver{}, nil, pr.Quotes{}, pr.TaggedString{}, nil, nil)
 	if boxList != nil {
-		var builder strings.Builder
+		var builder []rune
 		for _, box1 := range boxList {
 			if textBox, ok := box1.(*TextBox); ok {
-				builder.WriteString(textBox.Text)
+				builder = append(builder, textBox.Text...)
 			}
 		}
-		string_ := builder.String()
+		string_ := string(builder)
 		// Avoid duplicates, care for parseAgain and missing counters, don't
 		// change the pointer
 		newStringSet := make(pr.ContentProperties, 0, len(box.Box().StringSet))
@@ -859,13 +859,13 @@ func computeBookmarkLabel(element *utils.HTMLNode, box Box, contentList pr.Conte
 	boxList := computeContentList(contentList, box, counterValues, cssToken, parseAgain, targetCollector, cs,
 		URLResolver{}, nil, pr.Quotes{}, pr.TaggedString{}, nil, nil)
 
-	var builder strings.Builder
+	var builder []rune
 	for _, box := range boxList {
 		if textBox, ok := box.(*TextBox); ok {
-			builder.WriteString(textBox.Text)
+			builder = append(builder, textBox.Text...)
 		}
 	}
-	box.Box().BookmarkLabel = builder.String()
+	box.Box().BookmarkLabel = string(builder)
 }
 
 // Set the content-lists values.
@@ -949,7 +949,7 @@ func isWhitespace(box Box, hasNonWhitespace func(string) bool) bool {
 		hasNonWhitespace = hasNonWhitespaceDefault
 	}
 	textBox, is := box.(*TextBox)
-	return is && !hasNonWhitespace(textBox.Text)
+	return is && !hasNonWhitespace(textBox.TextS())
 }
 
 type wrapImproperIterator struct {
@@ -1556,7 +1556,7 @@ func flexChildren(box Box, children []Box) []Box {
 
 			if textBox, ok := child.(*TextBox); ok {
 				// https://www.w3.org/TR/css-flexbox-1/#flex-items
-				if strings.Trim(textBox.Text, " ") == "" {
+				if strings.Trim(textBox.TextS(), " ") == "" {
 					continue
 				}
 			}
@@ -1596,7 +1596,7 @@ func gridChildren(box Box, children []Box) []Box {
 			if !child.Box().IsAbsolutelyPositioned() {
 				child.Box().IsGridItem = true
 			}
-			if text, ok := child.(*TextBox); ok && strings.Trim(text.Text, " ") == "" {
+			if text, ok := child.(*TextBox); ok && strings.Trim(text.TextS(), " ") == "" {
 				// TODO: ignore texts only containing "characters that can be
 				// affected by the white-space property"
 				// https://drafts.csswg.org/css-grid-2/#grid-item
@@ -1623,8 +1623,8 @@ func gridChildren(box Box, children []Box) []Box {
 // The default value of followingCollapsibleSpace shoud be `false`.
 func ProcessWhitespace(box Box, followingCollapsibleSpace bool) bool {
 	if box_, isTextBox := box.(*TextBox); isTextBox {
-		text := box_.Text
-		if text == "" {
+		text := box_.TextS()
+		if len(text) == 0 {
 			return followingCollapsibleSpace
 		}
 
@@ -1657,7 +1657,7 @@ func ProcessWhitespace(box Box, followingCollapsibleSpace bool) bool {
 		} else {
 			followingCollapsibleSpace = false
 		}
-		box_.Text = text
+		box_.Text = []rune(text)
 	} else {
 		for _, child := range box.Box().Children {
 			switch child.(type) {
@@ -1696,7 +1696,7 @@ func capitalize(text string) string {
 
 func ProcessTextTransform(box Box) {
 	if tb, ok := box.(*TextBox); ok {
-		text, style := tb.Text, tb.Style
+		text, style := tb.TextS(), tb.Style
 		textTransform := tb.Style.GetTextTransform()
 		if textTransform != "none" {
 			switch textTransform {
@@ -1720,7 +1720,7 @@ func ProcessTextTransform(box Box) {
 		if style.GetHyphens() == "none" {
 			text = strings.ReplaceAll(text, "\u00AD", "") //  U+00AD SOFT HYPHEN (SHY)
 		}
-		tb.Text = text
+		tb.Text = []rune(text)
 	} else if !box.Box().IsRunning() {
 		// recursion
 		for _, child := range box.Box().Children {
@@ -1788,7 +1788,7 @@ func InlineInBlock(box Box) Box {
 			child.Box().LeadingCollapsibleSpace = true
 		}
 
-		if textBox, isTextBox := child.(*TextBox); isTextBox && textBox.Text == "" {
+		if textBox, isTextBox := child.(*TextBox); isTextBox && len(textBox.Text) == 0 {
 			trailingCollapsibleSpace = child.Box().LeadingCollapsibleSpace
 		} else {
 			trailingCollapsibleSpace = false
@@ -1817,7 +1817,7 @@ func InlineInBlock(box Box) Box {
 			childTextBox, isTextBox := childBox.(*TextBox)
 			st := childBox.Box().Style.GetWhiteSpace()
 			// Sequence of white-space was collapsed to a single space by ProcessWhitespace().
-			if len(newLineChildren) > 0 || !(isTextBox && childTextBox.Text == " " && (st == "normal" || st == "nowrap" || st == "pre-line")) {
+			if len(newLineChildren) > 0 || !(isTextBox && childTextBox.TextS() == " " && (st == "normal" || st == "nowrap" || st == "pre-line")) {
 				newLineChildren = append(newLineChildren, childBox)
 			}
 		} else {
@@ -2050,18 +2050,18 @@ func setViewportOverflow(rootBox Box) Box {
 
 func boxText(box Box) string {
 	if tBox, is := box.(*TextBox); is {
-		return tBox.Text
+		return tBox.TextS()
 	}
-	var builder strings.Builder
+	var builder []rune
 	if ParentT.IsInstance(box) {
 		for _, child := range Descendants(box) {
 			pt := child.Box().PseudoType
 			if child, ok := child.(*TextBox); ok && pt != "before" && pt != "after" && pt != "marker" {
-				builder.WriteString(child.Text)
+				builder = append(builder, child.Text...)
 			}
 		}
 	}
-	return builder.String()
+	return string(builder)
 }
 
 func extractText(textPart string, box Box) string {

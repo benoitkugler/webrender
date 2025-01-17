@@ -1588,7 +1588,7 @@ func (ctx drawContext) drawText(textbox *bo.TextBox, offsetX fl, textOverflow st
 
 func (ctx drawContext) drawFirstLine(textbox *bo.TextBox, textOverflow string, blockEllipsis pr.TaggedString, x, y pr.Fl) {
 	// Don’t draw lines with only invisible characters
-	if strings.TrimSpace(textbox.Text) == "" {
+	if strings.TrimSpace(textbox.TextS()) == "" {
 		return
 	}
 

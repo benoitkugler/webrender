@@ -459,17 +459,17 @@ func TestFloatInInline1(t *testing.T) {
 
 	p1, a, p2 := unpack3(line1)
 	tu.AssertEqual(t, p1.Box().Width, Fl(6*20))
-	tu.AssertEqual(t, p1.(*bo.TextBox).Text, "aa bb ")
+	assertText(t, p1, "aa bb ")
 	tu.AssertEqual(t, p1.Box().PositionX, Fl(0*20))
 	tu.AssertEqual(t, p2.Box().Width, Fl(3*20))
-	tu.AssertEqual(t, p2.(*bo.TextBox).Text, " ee")
+	assertText(t, p2, " ee")
 	tu.AssertEqual(t, p2.Box().PositionX, Fl(9*20))
 	span, aText := unpack1(a), a.Box().Children[1]
 	tu.AssertEqual(t, aText.Box().Width, Fl(3*20))
-	tu.AssertEqual(t, aText.(*bo.TextBox).Text, "ddd")
+	assertText(t, aText, "ddd")
 	tu.AssertEqual(t, aText.Box().PositionX, Fl(6*20))
 	tu.AssertEqual(t, span.Box().Width, Fl(2*20))
-	tu.AssertEqual(t, unpack1(span.Box().Children[0]).(*bo.TextBox).Text, "cc")
+	assertText(t, unpack1(span.Box().Children[0]), "cc")
 	tu.AssertEqual(t, span.Box().PositionX, Fl(12*20))
 
 	p3 := unpack1(line2)
@@ -506,11 +506,11 @@ func TestFloatInInline_2(t *testing.T) {
 	line1, line2 := unpack2(article)
 	span1 := unpack1(line1)
 	div, text := unpack2(span1)
-	tu.AssertEqual(t, strings.TrimSpace(unpack1(unpack1(div)).(*bo.TextBox).Text), "a b c")
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "1 2 3")
+	tu.AssertEqual(t, strings.TrimSpace(unpack1(unpack1(div)).(*bo.TextBox).TextS()), "a b c")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).TextS()), "1 2 3")
 	span2 := unpack1(line2)
 	text = unpack1(span2)
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "4 5 6")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).TextS()), "4 5 6")
 }
 
 func TestFloatInInline_3(t *testing.T) {
@@ -542,11 +542,11 @@ func TestFloatInInline_3(t *testing.T) {
 	line1, line2 := unpack2(article)
 	span1 := unpack1(line1)
 	text, div := unpack2(span1)
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "1 2 3")
-	tu.AssertEqual(t, strings.TrimSpace(unpack1(unpack1(div)).(*bo.TextBox).Text), "a b c")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).TextS()), "1 2 3")
+	tu.AssertEqual(t, strings.TrimSpace(unpack1(unpack1(div)).(*bo.TextBox).TextS()), "a b c")
 	span2 := unpack1(line2)
 	text = unpack1(span2)
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "4 5 6")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).TextS()), "4 5 6")
 }
 
 func TestFloatInInline_4(t *testing.T) {
@@ -578,13 +578,13 @@ func TestFloatInInline_4(t *testing.T) {
 	line1, line2 := unpack2(article)
 	span1, div := unpack2(line1)
 	text1, text2 := unpack2(span1)
-	tu.AssertEqual(t, strings.TrimSpace(text1.(*bo.TextBox).Text), "1 2 3 4")
-	tu.AssertEqual(t, strings.TrimSpace(text2.(*bo.TextBox).Text), "5")
+	tu.AssertEqual(t, strings.TrimSpace(text1.(*bo.TextBox).TextS()), "1 2 3 4")
+	tu.AssertEqual(t, strings.TrimSpace(text2.(*bo.TextBox).TextS()), "5")
 	tu.AssertEqual(t, div.Box().PositionY, Fl(16))
-	tu.AssertEqual(t, strings.TrimSpace(unpack1(unpack1(div)).(*bo.TextBox).Text), "a b c")
+	tu.AssertEqual(t, strings.TrimSpace(unpack1(unpack1(div)).(*bo.TextBox).TextS()), "a b c")
 	span2 := unpack1(line2)
 	text := unpack1(span2)
-	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).Text), "6")
+	tu.AssertEqual(t, strings.TrimSpace(text.(*bo.TextBox).TextS()), "6")
 }
 
 func TestFloatNextLine(t *testing.T) {

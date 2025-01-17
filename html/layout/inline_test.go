@@ -155,7 +155,7 @@ func TestBreakingLineboxRegression1(t *testing.T) {
 	var texts []string
 	for _, line := range lines {
 		textBox := unpack1(line)
-		texts = append(texts, textBox.(*bo.TextBox).Text)
+		texts = append(texts, textBox.(*bo.TextBox).TextS())
 	}
 	tu.AssertEqual(t, texts, []string{"a", "b", "c", "d", "e"})
 }
@@ -180,64 +180,64 @@ func TestBreakingLineboxRegression2(t *testing.T) {
 			line1, line2, line3, line4 := unpack4(p)
 
 			textbox1 := unpack1(line1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "ab")
+			assertText(t, textbox1, "ab")
 
 			span1 := unpack1(line2)
 			textbox1 = unpack1(span1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "c")
+			assertText(t, textbox1, "c")
 
 			span1, textbox2 := unpack2(line3)
 			textbox1 = unpack1(span1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "def")
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "g")
+			assertText(t, textbox1, "def")
+			assertText(t, textbox2, "g")
 
 			textbox1 = unpack1(line4)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "hi")
+			assertText(t, textbox1, "hi")
 		} else if i <= 8 {
 			line1, line2, line3 := unpack3(p)
 			textbox1, span1 := unpack2(line1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "ab ")
+			assertText(t, textbox1, "ab ")
 			textbox2 := unpack1(span1)
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "c")
+			assertText(t, textbox2, "c")
 
 			span1, textbox2 = unpack2(line2)
 			textbox1 = unpack1(span1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "def")
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "g")
+			assertText(t, textbox1, "def")
+			assertText(t, textbox2, "g")
 
 			textbox1 = unpack1(line3)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "hi")
+			assertText(t, textbox1, "hi")
 		} else if i <= 10 {
 			line1, line2 := unpack2(p)
 
 			textbox1, span1 := unpack2(line1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "ab ")
+			assertText(t, textbox1, "ab ")
 			textbox2 := unpack1(span1)
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "c")
+			assertText(t, textbox2, "c")
 
 			span1, textbox2 = unpack2(line2)
 			textbox1 = unpack1(span1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "def")
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "g hi")
+			assertText(t, textbox1, "def")
+			assertText(t, textbox2, "g hi")
 		} else if i <= 13 {
 			line1, line2 := unpack2(p)
 
 			textbox1, span1, textbox3 := unpack3(line1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "ab ")
+			assertText(t, textbox1, "ab ")
 			textbox2 := unpack1(span1)
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "c def")
-			tu.AssertEqual(t, textbox3.(*bo.TextBox).Text, "g")
+			assertText(t, textbox2, "c def")
+			assertText(t, textbox3, "g")
 
 			textbox1 = unpack1(line2)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "hi")
+			assertText(t, textbox1, "hi")
 		} else {
 			line1 := unpack1(p)
 
 			textbox1, span1, textbox3 := unpack3(line1)
-			tu.AssertEqual(t, textbox1.(*bo.TextBox).Text, "ab ")
+			assertText(t, textbox1, "ab ")
 			textbox2 := unpack1(span1)
-			tu.AssertEqual(t, textbox2.(*bo.TextBox).Text, "c def")
-			tu.AssertEqual(t, textbox3.(*bo.TextBox).Text, "g hi")
+			assertText(t, textbox2, "c def")
+			assertText(t, textbox3, "g hi")
 		}
 	}
 }
@@ -256,13 +256,13 @@ func TestBreakingLineboxRegression3(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	line1, line2, line3, line4 := unpack4(div)
-	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, unpack1(line2).(*bo.TextBox).Text)
-	tu.AssertEqual(t, unpack1(line2).(*bo.TextBox).Text, "aaaa")
-	tu.AssertEqual(t, unpack1(line3).(*bo.TextBox).Text, "a")
+	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).TextS(), unpack1(line2).(*bo.TextBox).TextS())
+	assertText(t, unpack1(line2), "aaaa")
+	assertText(t, unpack1(line3), "a")
 	text1, span, text2 := unpack3(line4)
-	tu.AssertEqual(t, text1.(*bo.TextBox).Text, "[")
-	tu.AssertEqual(t, text2.(*bo.TextBox).Text, "]")
-	tu.AssertEqual(t, unpack1(span).(*bo.TextBox).Text, "aaa")
+	assertText(t, text1, "[")
+	assertText(t, text2, "]")
+	assertText(t, unpack1(span), "aaa")
 }
 
 func TestBreakingLineboxRegression4(t *testing.T) {
@@ -279,11 +279,11 @@ func TestBreakingLineboxRegression4(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	line1, line2, line3 := unpack3(div)
-	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, "aaaa")
-	tu.AssertEqual(t, unpack1(line2).(*bo.TextBox).Text, "a ")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[1]).(*bo.TextBox).Text, "b")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0]).(*bo.TextBox).Text, "c")
-	tu.AssertEqual(t, line3.Box().Children[1].(*bo.TextBox).Text, "d")
+	assertText(t, unpack1(line1), "aaaa")
+	assertText(t, unpack1(line2), "a ")
+	assertText(t, unpack1(line2.Box().Children[1]), "b")
+	assertText(t, unpack1(line3.Box().Children[0]), "c")
+	assertText(t, line3.Box().Children[1], "d")
 }
 
 func TestBreakingLineboxRegression5(t *testing.T) {
@@ -300,11 +300,11 @@ func TestBreakingLineboxRegression5(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	line1, line2, line3, line4 := unpack4(div)
-	tu.AssertEqual(t, unpack1(line1.Box().Children[0]).(*bo.TextBox).Text, "aaaa")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0]).(*bo.TextBox).Text, "aaaa")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0]).(*bo.TextBox).Text, "a a")
-	tu.AssertEqual(t, unpack1(line4.Box().Children[0]).(*bo.TextBox).Text, "a")
-	tu.AssertEqual(t, unpack1(line4.Box().Children[1]).(*bo.TextBox).Text, "bc")
+	assertText(t, unpack1(line1.Box().Children[0]), "aaaa")
+	assertText(t, unpack1(line2.Box().Children[0]), "aaaa")
+	assertText(t, unpack1(line3.Box().Children[0]), "a a")
+	assertText(t, unpack1(line4.Box().Children[0]), "a")
+	assertText(t, unpack1(line4.Box().Children[1]), "bc")
 }
 
 func TestBreakingLineboxRegression6(t *testing.T) {
@@ -321,8 +321,8 @@ func TestBreakingLineboxRegression6(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	line1, line2 := unpack2(div)
-	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, "a a")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0]).(*bo.TextBox).Text, "/ccc")
+	assertText(t, unpack1(line1), "a a")
+	assertText(t, unpack1(line2.Box().Children[0]), "/ccc")
 }
 
 func TestBreakingLineboxRegression7(t *testing.T) {
@@ -339,10 +339,10 @@ func TestBreakingLineboxRegression7(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	line1, line2, line3 := unpack3(div)
-	tu.AssertEqual(t, unpack1(line1.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "abc")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "d")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "e")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[1]).(*bo.TextBox).Text, "f")
+	assertText(t, unpack1(line1.Box().Children[0].Box().Children[0]), "abc")
+	assertText(t, unpack1(line2.Box().Children[0].Box().Children[0]), "d")
+	assertText(t, unpack1(line3.Box().Children[0].Box().Children[0]), "e")
+	assertText(t, unpack1(line3.Box().Children[1]), "f")
 }
 
 func TestBreakingLineboxRegression8(t *testing.T) {
@@ -386,7 +386,7 @@ func TestBreakingLineboxRegression8(t *testing.T) {
 //     body :=  unpack1(html)
 //     p := unpack1(body)
 //     line1, line2 = p.Box().Children
-//     tu.AssertEqual(t, unpack1(line1.Box().Children[0]).(*bo.TextBox).Text , ()
+// assertText.AssertEqual(t, unpack1(line1.Box().Children[0]) , ()
 //         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbb")
 //     tu.AssertEqual(t, unpack1(line2.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text , "cccc")
 //     tu.AssertEqual(t, line2.Box().Children[1].(*bo.TextBox).Text , "ddd")
@@ -410,10 +410,10 @@ func TestBreakingLineboxRegression10(t *testing.T) {
 	body := unpack1(html)
 	p := unpack1(body)
 	line1, line2, line3, line4 := unpack4(p)
-	tu.AssertEqual(t, unpack1(line1.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "xxxxxx YYY")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, "yyyyyy yyy")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0]).(*bo.TextBox).Text, "ZZZZZZ zzzzz")
-	tu.AssertEqual(t, unpack1(line4).(*bo.TextBox).Text, ")x")
+	assertText(t, unpack1(line1.Box().Children[0].Box().Children[0]), "xxxxxx YYY")
+	assertText(t, unpack1(line2.Box().Children[0].Box().Children[0]), "yyyyyy yyy")
+	assertText(t, unpack1(line3.Box().Children[0]), "ZZZZZZ zzzzz")
+	assertText(t, unpack1(line4), ")x")
 }
 
 func TestBreakingLineboxRegression11(t *testing.T) {
@@ -431,10 +431,10 @@ func TestBreakingLineboxRegression11(t *testing.T) {
 	body := unpack1(html)
 	p := unpack1(body)
 	line1, line2, line3 := unpack3(p)
-	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, "line 1")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0]).(*bo.TextBox).Text, "123 567")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0]).(*bo.TextBox).Text, "90")
-	tu.AssertEqual(t, line3.Box().Children[1].(*bo.TextBox).Text, "x")
+	assertText(t, unpack1(line1), "line 1")
+	assertText(t, unpack1(line2.Box().Children[0]), "123 567")
+	assertText(t, unpack1(line3.Box().Children[0]), "90")
+	assertText(t, line3.Box().Children[1], "x")
 }
 
 func TestBreakingLineboxRegression12(t *testing.T) {
@@ -452,9 +452,9 @@ func TestBreakingLineboxRegression12(t *testing.T) {
 	body := unpack1(html)
 	p := unpack1(body)
 	_, line2, line3 := unpack3(p)
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0]).(*bo.TextBox).Text, "123 567")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0]).(*bo.TextBox).Text, "90")
-	tu.AssertEqual(t, line3.Box().Children[1].(*bo.TextBox).Text, "x")
+	assertText(t, unpack1(line2.Box().Children[0]), "123 567")
+	assertText(t, unpack1(line3.Box().Children[0]), "90")
+	assertText(t, line3.Box().Children[1], "x")
 }
 
 func TestBreakingLineboxRegression13(t *testing.T) {
@@ -472,10 +472,10 @@ func TestBreakingLineboxRegression13(t *testing.T) {
 	body := unpack1(html)
 	p := unpack1(body)
 	line1, line2, line3 := unpack3(p)
-	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, "123 567 90")
-	tu.AssertEqual(t, unpack1(line2.Box().Children[0]).(*bo.TextBox).Text, "123 567")
-	tu.AssertEqual(t, unpack1(line3.Box().Children[0]).(*bo.TextBox).Text, "90")
-	tu.AssertEqual(t, line3.Box().Children[1].(*bo.TextBox).Text, "x")
+	assertText(t, unpack1(line1), "123 567 90")
+	assertText(t, unpack1(line2.Box().Children[0]), "123 567")
+	assertText(t, unpack1(line3.Box().Children[0]), "90")
+	assertText(t, line3.Box().Children[1], "x")
 }
 
 func TestBreakingLineboxRegression14(t *testing.T) {
@@ -510,10 +510,10 @@ func TestBreakingLineboxRegression15(t *testing.T) {
 	body := unpack1(html)
 	pre := unpack1(body)
 	line1, line2, line3, line4 := unpack4(pre)
-	tu.AssertEqual(t, unpack1(line1).(*bo.TextBox).Text, "ab©")
-	tu.AssertEqual(t, unpack1(line2).(*bo.TextBox).Text, "déf")
-	tu.AssertEqual(t, unpack1(line3).(*bo.TextBox).Text, "ghïj")
-	tu.AssertEqual(t, unpack1(line4).(*bo.TextBox).Text, "klm")
+	assertText(t, unpack1(line1), "ab©")
+	assertText(t, unpack1(line2), "déf")
+	assertText(t, unpack1(line3), "ghïj")
+	assertText(t, unpack1(line4), "klm")
 	tu.AssertEqual(t, unpack1(line1).Box().Width, Fl(4*3))
 	tu.AssertEqual(t, unpack1(line2).Box().Width, Fl(4*3))
 	tu.AssertEqual(t, unpack1(line3).Box().Width, Fl(4*4))
@@ -569,7 +569,7 @@ func TestLineboxText(t *testing.T) {
 		s := ""
 		for _, box := range bo.Descendants(line) {
 			if box, ok := box.(*bo.TextBox); ok {
-				s += box.Text
+				s += box.TextS()
 			}
 		}
 		chunks = append(chunks, s)
@@ -692,7 +692,7 @@ func TestInlineboxSplitting(t *testing.T) {
 		for _, line := range lines {
 			strong := unpack1(line)
 			text := unpack1(strong)
-			textParts = append(textParts, text.(*bo.TextBox).Text)
+			textParts = append(textParts, text.(*bo.TextBox).TextS())
 		}
 		tu.AssertEqual(t, strings.Join(textParts, " "),
 			"WeasyPrint is a frée softwäre ./ visual "+
@@ -711,7 +711,7 @@ func TestWhitespaceProcessing(t *testing.T) {
 		line := unpack1(p)
 		em := unpack1(line)
 		text := unpack1(em)
-		tu.AssertEqual(t, text.(*bo.TextBox).Text, "a")
+		assertText(t, text, "a")
 
 		page = renderOnePage(t, fmt.Sprintf(
 			`<p style="white-space: pre-line">

@@ -260,8 +260,8 @@ func newPropsCache() propsCache {
 }
 
 func (c propsCache) get(key pr.PropKey) (out pr.CssProperty, ok bool) {
-	if k := int(key.KnownProp); k != 0 {
-		if k >= len(c.known) {
+	if k := key.KnownProp; k != 0 {
+		if int(k) >= len(c.known) {
 			return
 		}
 		out = c.known[k]
@@ -806,7 +806,7 @@ func findStyleAttributes(tree *utils.HTMLNode, presentationalHints bool, baseUrl
 				relativePlus := strings.HasPrefix(size, "+")
 				relativeMinus := strings.HasPrefix(size, "-")
 				if relativePlus || relativeMinus {
-					size = strings.TrimSpace(string([]rune(size)[1:]))
+					size = strings.TrimSpace(size[1:])
 				}
 				sizeI, err := strconv.Atoi(size)
 				if err != nil {

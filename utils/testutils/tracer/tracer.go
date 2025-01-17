@@ -61,7 +61,7 @@ func (t Tracer) DumpTree(box boxes.Box, context string) {
 			FormatMaybeFloat(box.Box().BorderLeftWidth),
 		)
 		if tb, ok := box.(*boxes.TextBox); ok {
-			fmt.Fprintln(t.out, tb.Text)
+			fmt.Fprintln(t.out, tb.TextS())
 		}
 
 		for _, child := range box.Box().Children {

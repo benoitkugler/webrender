@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text"
@@ -244,7 +243,7 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 	return line_, resumeAt
 }
 
-// Return the “skipStack“ to start just after the remove spaces
+// Return the “skipStack“ to start just after the removed spaces
 // at the beginning of the line.
 // See https://www.w3.org/TR/CSS21/text.html#white-space-model
 func skipFirstWhitespace(box Box, skipStack tree.ResumeStack) (tree.ResumeStack, bool) {
@@ -260,7 +259,7 @@ func skipFirstWhitespace(box Box, skipStack tree.ResumeStack) (tree.ResumeStack,
 			panic(fmt.Sprintf("expected nil nextSkipStack, got %v", nextSkipStack))
 		}
 		whiteSpace := textBox.Style.GetWhiteSpace()
-		text := []rune(textBox.Text)
+		text := textBox.Text
 		length := len(text)
 		if index == length {
 			// Starting a the end of the TextBox, no text to see: Continue
@@ -319,13 +318,13 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 	if ws := box.Box().Style.GetWhiteSpace(); !(ok && (ws == "normal" || ws == "nowrap" || ws == "pre-line")) {
 		return
 	}
-	newText := strings.TrimRight(textBox.Text, " ")
+	newText := strings.TrimRight(textBox.TextS(), " ")
 	var spaceWidth pr.Float
 	if newText != "" {
-		if len(newText) == len(textBox.Text) {
+		if len(newText) == len(textBox.TextS()) {
 			return
 		}
-		textBox.Text = newText
+		textBox.Text = []rune(newText)
 		newBox, resume, _, firstLineIsRTL := splitTextBox(context, textBox, nil, 0, true)
 		if newBox == nil || resume != -1 {
 			panic(fmt.Sprintf("expected newBox and no resume, got %v, %v", newBox, resume))
@@ -345,7 +344,7 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 	} else {
 		spaceWidth = textBox.Width.V()
 		textBox.Width = pr.Float(0)
-		textBox.Text = ""
+		textBox.Text = nil
 
 		// RTL line, the textbox with a trailing space is now empty at the left
 		// of the line. We have to translate the line to align it with the right
@@ -389,8 +388,8 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 		if strings.HasSuffix(textBox.ElementTag(), "::first-letter") {
 			letterBox := bo.NewInlineBox(letterStyle, textBox.Element, "first-letter", []Box{child})
 			box.Box().Children[0] = letterBox
-		} else if textBox.Text != "" {
-			text := []rune(textBox.Text)
+		} else if len(textBox.Text) != 0 {
+			text := textBox.Text
 			characterFound := false
 			if skipStack != nil {
 				_, childSkipStack = skipStack.Unpack()
@@ -412,14 +411,14 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 				firstLetter += string(nextLetter)
 				text = text[1:]
 			}
-			textBox.Text = string(text)
+			textBox.Text = text
 			if strings.TrimLeft(firstLetter, "\n") != "" {
 				// "This type of initial letter is similar to an
 				// inline-level element if its "float" property is "none",
 				// otherwise it is similar to a floated element."
 				if firstLetterStyle.GetFloat() == "none" {
 					letterBox := bo.NewInlineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
-					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
+					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", []rune(firstLetter))
 					letterBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				} else {
@@ -427,7 +426,7 @@ func firstLetterToBox(context *layoutContext, box Box, skipStack tree.ResumeStac
 					letterBox.FirstLetterStyle = nil
 					lineBox := bo.NewLineBox(firstLetterStyle, textBox.Element, "first-letter", nil)
 					letterBox.Children = []Box{&lineBox}
-					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", firstLetter)
+					textBox = bo.NewTextBox(letterStyle, textBox.Element, "first-letter", []rune(firstLetter))
 					lineBox.Children = []Box{textBox}
 					textBox.Children = append([]Box{letterBox}, textBox.Children...)
 				}
@@ -626,7 +625,7 @@ func splitInlineLevel(context *layoutContext, box_ Box, positionX, maxX, bottomS
 		if newTextBox != nil { // we dont want a non nil interface value with a nil pointer
 			newBox = newTextBox
 		}
-		if text := []rune(textBox.Text); len(text) != 0 {
+		if text := textBox.Text; len(text) != 0 {
 			firstLetter = text[0]
 			if skip == -1 {
 				lastLetter = text[len(text)-1]
@@ -777,9 +776,8 @@ func breakWaitingChildren(context *layoutContext, box Box, bottomSpace pr.Float,
 	return nil
 }
 
-func lastRune(s string) rune {
-	r, _ := utf8.DecodeLastRuneInString(s)
-	return r
+func lastRune(s []rune) rune {
+	return s[len(s)-1]
 }
 
 // Same behavior as splitInlineLevel.
@@ -923,7 +921,7 @@ func splitInlineBox(context *layoutContext, box_ Box, positionX, maxX, bottomSpa
 			}
 			// TODO: we should try to find a better condition here.
 			newChildTB, ok := newChild.(*bo.TextBox)
-			trailingWhitespace := ok && newChildTB.Text != "" && unicode.Is(unicode.Zs, lastRune(newChildTB.Text))
+			trailingWhitespace := ok && len(newChildTB.Text) != 0 && unicode.Is(unicode.Zs, lastRune(newChildTB.Text))
 
 			marginWidth := newChild.Box().MarginWidth()
 			newPositionX := newChild.Box().PositionX + marginWidth
@@ -1161,7 +1159,7 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 	skip int, isLineStart bool,
 ) (_ *bo.TextBox, _ int, _ bool, firstLineIsRTL bool) {
 	fontSize := box.Style.GetFontSize()
-	text_ := []rune(box.Text)[skip:]
+	text_ := box.Text[skip:]
 	if fontSize == pr.FToV(0) || len(text_) == 0 {
 		return nil, -1, false, false
 	}
@@ -1172,7 +1170,7 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 	}
 
 	if newText := layout.Text(); length > 0 {
-		box = box.CopyWithText(string(newText))
+		box = box.CopyWithText(newText)
 		box.Width = width
 		box.TextLayout = layout
 		// "The height of the content area should be based on the font,
@@ -1447,7 +1445,7 @@ func justifyLine(context *layoutContext, line Box, extraWidth pr.Float) {
 func countSpaces(box Box) int {
 	if textBox, isTextBox := box.(*bo.TextBox); isTextBox {
 		// TODO: remove trailing spaces correctly
-		return strings.Count(textBox.Text, " ")
+		return strings.Count(textBox.TextS(), " ")
 	} else if IsLine(box) {
 		var sum int
 		for _, child := range box.Box().Children {
@@ -1518,7 +1516,7 @@ func canBreakInside(ctx *layoutContext, box Box) pr.MaybeBool {
 	if bo.AtomicInlineLevelT.IsInstance(box) {
 		return pr.False
 	} else if textWrap && isTextBox {
-		return ctx.Fonts().CanBreakText([]rune(textBox.Text))
+		return ctx.Fonts().CanBreakText(textBox.Text)
 	} else if textWrap && bo.ParentT.IsInstance(box) {
 		for _, child := range box.Box().Children {
 			if canBreakInside(ctx, child) == pr.True {

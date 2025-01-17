@@ -57,7 +57,7 @@ func TestShrinkToFitFloatingPointError2(t *testing.T) {
 			p := unpack1(body)
 			tu.AssertEqual(t, len(p.Box().Children) == 1 || len(p.Box().Children) == 2, true)
 			tu.AssertEqual(t, len(unpack1(p).Box().Children), 2)
-			text := unpack1(p.Box().Children[0].Box().Children[1]).(*bo.TextBox).Text
+			text := unpack1(p.Box().Children[0].Box().Children[1]).(*bo.TextBox).TextS()
 			tu.AssertEqual(t, len(text) > 0, true)
 			if strings.HasSuffix(text, "i") {
 				break

@@ -2240,7 +2240,7 @@ func TestTablePageBreaksComplex1(t *testing.T) {
 					cell := unpack1(row)
 					line := unpack1(cell)
 					text := unpack1(line)
-					rows = append(rows, text.(*bo.TextBox).Text)
+					rows = append(rows, text.(*bo.TextBox).TextS())
 				}
 				groups = append(groups, rows)
 			}
@@ -2306,7 +2306,7 @@ func TestTablePageBreaksComplex2(t *testing.T) {
 					cell := unpack1(row)
 					line := unpack1(cell)
 					text := unpack1(line)
-					rows = append(rows, text.(*bo.TextBox).Text)
+					rows = append(rows, text.(*bo.TextBox).TextS())
 				}
 				groups = append(groups, rows)
 			}
@@ -2906,7 +2906,7 @@ func TestTableEmptyBody(t *testing.T) {
 					cell := unpack1(row)
 					line := unpack1(cell)
 					text := unpack1(line)
-					rows = append(rows, text.(*bo.TextBox).Text)
+					rows = append(rows, text.(*bo.TextBox).TextS())
 				}
 			}
 			tu.AssertEqual(t, rows, data.rowsExpected[i])

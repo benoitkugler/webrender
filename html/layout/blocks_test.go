@@ -945,11 +945,11 @@ func TestBlockInBlockWithBottomPadding(t *testing.T) {
 	anonBody, div := unpack2(body)
 	line := unpack1(anonBody)
 	tu.AssertEqual(t, line.Box().Height, Fl(16))
-	tu.AssertEqual(t, unpack1(line).(*bo.TextBox).Text, "abc def")
+	assertText(t, unpack1(line), "abc def")
 	p := unpack1(div)
 	line = unpack1(p)
 	tu.AssertEqual(t, line.Box().Height, Fl(16))
-	tu.AssertEqual(t, unpack1(line).(*bo.TextBox).Text, "ghi jkl")
+	assertText(t, unpack1(line), "ghi jkl")
 
 	html = unpack1(page2)
 	body = unpack1(html)
@@ -957,11 +957,11 @@ func TestBlockInBlockWithBottomPadding(t *testing.T) {
 	p = unpack1(div)
 	line = unpack1(p)
 	tu.AssertEqual(t, line.Box().Height, Fl(16))
-	tu.AssertEqual(t, unpack1(line).(*bo.TextBox).Text, "mno pqr")
+	assertText(t, unpack1(line), "mno pqr")
 	line = unpack1(anonBody)
 	tu.AssertEqual(t, line.Box().Height, Fl(16))
 	tu.AssertEqual(t, line.Box().ContentBoxY(), Fl(16+16)) // p content  + div padding
-	tu.AssertEqual(t, unpack1(line).(*bo.TextBox).Text, "stu vwx")
+	assertText(t, unpack1(line), "stu vwx")
 }
 
 func TestPageBreaks1(t *testing.T) {

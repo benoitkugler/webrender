@@ -3,7 +3,6 @@ package layout
 import (
 	"testing"
 
-	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -32,13 +31,13 @@ func TestTargetCounter(t *testing.T) {
 	body := unpack1(html)
 	div1, div2, div3, div4 := unpack4(body)
 	before := unpack1(div1.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "4")
+	assertText(t, before, "4")
 	before = unpack1(div2.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "test 1")
+	assertText(t, before, "test 1")
 	before = unpack1(div3.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "iv")
+	assertText(t, before, "iv")
 	before = unpack1(div4.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "3")
+	assertText(t, before, "3")
 }
 
 func TestTargetCounterAttr(t *testing.T) {
@@ -64,13 +63,13 @@ func TestTargetCounterAttr(t *testing.T) {
 	body := unpack1(html)
 	div1, div2, div3, div4 := unpack4(body)
 	before := unpack1(div1.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "4")
+	assertText(t, before, "4")
 	before = unpack1(div2.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "1")
+	assertText(t, before, "1")
 	before = unpack1(div3.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "2")
+	assertText(t, before, "2")
 	before = unpack1(div4.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "c")
+	assertText(t, before, "c")
 }
 
 func TestTargetCounters(t *testing.T) {
@@ -101,13 +100,13 @@ func TestTargetCounters(t *testing.T) {
 	body := unpack1(html)
 	div1, div2, div3, div4 := unpack4(body)
 	before := unpack1(div1.Box().Children[1].Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "4.2")
+	assertText(t, before, "4.2")
 	before = unpack1(div2.Box().Children[0].Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "3")
+	assertText(t, before, "3")
 	before = unpack1(div3.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "b.a")
+	assertText(t, before, "b.a")
 	before = unpack1(div4.Box().Children[1].Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "12")
+	assertText(t, before, "12")
 }
 
 func TestTargetText(t *testing.T) {
@@ -139,12 +138,12 @@ func TestTargetText(t *testing.T) {
 	body := unpack1(html)
 	a1, _, a2, _, _, a3, _, a4 := unpack8(body)
 	before := unpack1(a1.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "test 4 Chapter 4")
+	assertText(t, before, "test 4 Chapter 4")
 	before = unpack1(a2.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "wow")
+	assertText(t, before, "wow")
 	tu.AssertEqual(t, len(unpack1(unpack1(a3)).Box().Children), 0)
 	before = unpack1(a4.Box().Children[0].Box().Children[0])
-	tu.AssertEqual(t, before.(*bo.TextBox).Text, "1")
+	assertText(t, before, "1")
 }
 
 func TestTargetFloat(t *testing.T) {
@@ -167,8 +166,8 @@ func TestTargetFloat(t *testing.T) {
 	line := unpack1(div)
 	inline := unpack1(line)
 	textBox, after := unpack2(inline)
-	tu.AssertEqual(t, textBox.(*bo.TextBox).Text, "link")
-	tu.AssertEqual(t, unpack1(after.Box().Children[0]).(*bo.TextBox).Text, "1")
+	assertText(t, textBox, "link")
+	assertText(t, unpack1(after.Box().Children[0]), "1")
 }
 
 func TestTargetAbsolute(t *testing.T) {

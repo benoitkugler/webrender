@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -45,10 +44,10 @@ func testCounterSymbols(t *testing.T, arguments string, values [4]string) {
 	body := unpack1(html)
 	ol := unpack1(body).Box()
 	li1, li2, li3, li4 := ol.Children[0], ol.Children[1], ol.Children[2], ol.Children[3]
-	tu.AssertEqual(t, unpack1(li1.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[0])
-	tu.AssertEqual(t, unpack1(li2.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[1])
-	tu.AssertEqual(t, unpack1(li3.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[2])
-	tu.AssertEqual(t, unpack1(li4.Box().Children[0].Box().Children[0]).(*bo.TextBox).Text, values[3])
+	assertText(t, unpack1(li1.Box().Children[0].Box().Children[0]), values[0])
+	assertText(t, unpack1(li2.Box().Children[0].Box().Children[0]), values[1])
+	assertText(t, unpack1(li3.Box().Children[0].Box().Children[0]), values[2])
+	assertText(t, unpack1(li4.Box().Children[0].Box().Children[0]), values[3])
 }
 
 func TestCounterSet(t *testing.T) {

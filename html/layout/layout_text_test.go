@@ -93,9 +93,9 @@ func TestTextSpacedInlines(t *testing.T) {
 	line := unpack1(paragraph)
 	start, i, space, b, end := unpack5(line)
 
-	tu.AssertEqual(t, start.(*bo.TextBox).Text, "start ")
-	tu.AssertEqual(t, space.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, end.(*bo.TextBox).Text, " end")
+	assertText(t, start, "start ")
+	assertText(t, space, " ")
+	assertText(t, end, " end")
 	if w := space.Box().Width.V(); w <= 0 {
 		t.Fatalf("expected positive width, got %f", w)
 	}
@@ -103,15 +103,15 @@ func TestTextSpacedInlines(t *testing.T) {
 	bi1, space, bi2 := unpack3(i)
 	bi1 = unpack1(bi1)
 	bi2 = unpack1(bi2)
-	tu.AssertEqual(t, bi1.(*bo.TextBox).Text, "bi1")
-	tu.AssertEqual(t, space.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, bi2.(*bo.TextBox).Text, "bi2")
+	assertText(t, bi1, "bi1")
+	assertText(t, space, " ")
+	assertText(t, bi2, "bi2")
 	if w := space.Box().Width.V(); w <= 0 {
 		t.Fatalf("expected positive width, got %f", w)
 	}
 
 	b1 := unpack1(b)
-	tu.AssertEqual(t, b1.(*bo.TextBox).Text, "b1")
+	assertText(t, b1, "b1")
 }
 
 func TestTextAlignLeft(t *testing.T) {
@@ -219,9 +219,9 @@ func TestTextAlignJustify(t *testing.T) {
 	image1, space1, strong := unpack3(line1)
 	image2, space2, image3, space3, image4 := unpack5(strong)
 	image5 := unpack1(line2)
-	tu.AssertEqual(t, space1.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space2.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space3.(*bo.TextBox).Text, " ")
+	assertText(t, space1, " ")
+	assertText(t, space2, " ")
+	assertText(t, space3, " ")
 
 	tu.AssertEqual(t, image1.Box().PositionX, Fl(0))
 	tu.AssertEqual(t, space1.Box().PositionX, Fl(40))
@@ -257,10 +257,10 @@ func TestTextAlignJustifyAll(t *testing.T) {
 	image1, space1, strong := unpack3(line1)
 	image2, space2, image3, space3, image4 := unpack5(strong)
 	image5, space4, image6 := unpack3(line2)
-	tu.AssertEqual(t, space1.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space2.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space3.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space4.(*bo.TextBox).Text, " ")
+	assertText(t, space1, " ")
+	assertText(t, space2, " ")
+	assertText(t, space3, " ")
+	assertText(t, space4, " ")
 
 	tu.AssertEqual(t, image1.Box().PositionX, Fl(0))
 	tu.AssertEqual(t, space1.Box().PositionX, Fl(40))
@@ -300,9 +300,9 @@ func TestTextAlignAllLast(t *testing.T) {
 	image2, space2, image3, space3, image4 := unpack5(strong)
 	image5, image6 := unpack1(line2), line2.Box().Children[1]
 
-	tu.AssertEqual(t, space1.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space2.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space3.(*bo.TextBox).Text, " ")
+	assertText(t, space1, " ")
+	assertText(t, space2, " ")
+	assertText(t, space3, " ")
 
 	tu.AssertEqual(t, image1.Box().PositionX, Fl(0))
 	tu.AssertEqual(t, space1.Box().PositionX, Fl(40))
@@ -376,9 +376,9 @@ func TestTextAlignJustifyTextIndent(t *testing.T) {
 	image2, space2, image3, space3, image4 := unpack5(strong)
 	image5 := unpack1(line2)
 
-	tu.AssertEqual(t, space1.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space2.(*bo.TextBox).Text, " ")
-	tu.AssertEqual(t, space3.(*bo.TextBox).Text, " ")
+	assertText(t, space1, " ")
+	assertText(t, space2, " ")
+	assertText(t, space3, " ")
 
 	tu.AssertEqual(t, image1.Box().PositionX, Fl(3))
 	tu.AssertEqual(t, space1.Box().PositionX, Fl(43))
@@ -608,12 +608,12 @@ func testHyphenateCharacter(t *testing.T, hyphChar string, replacer func(s strin
 	if !(len(lines) > 1) {
 		t.Fatalf("expected > 1, got %v", lines)
 	}
-	if text := unpack1(lines[0]).(*bo.TextBox).Text; !strings.HasSuffix(text, hyphChar) {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, hyphChar) {
 		t.Fatalf("unexpected %s", text)
 	}
 	fullText := ""
 	for _, line := range lines {
-		fullText += unpack1(line).(*bo.TextBox).Text
+		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
 	tu.AssertEqual(t, replacer(fullText), "hyphénation")
 }
@@ -658,12 +658,12 @@ func TestHyphenateManual1(t *testing.T) {
 			if !(len(lines) > 1) {
 				t.Fatalf("expected > 1, got %v", lines)
 			}
-			if text := unpack1(lines[0]).(*bo.TextBox).Text; !strings.HasSuffix(text, hyphenateCharacter) {
+			if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, hyphenateCharacter) {
 				t.Fatalf("unexpected %s", text)
 			}
 			fullText := ""
 			for _, line := range lines {
-				fullText += unpack1(line).(*bo.TextBox).Text
+				fullText += unpack1(line).(*bo.TextBox).TextS()
 			}
 			tu.AssertEqual(t, strings.ReplaceAll(fullText, hyphenateCharacter, ""), word)
 
@@ -696,12 +696,12 @@ func TestHyphenateManual2(t *testing.T) {
 				fullText += textFromBoxes(line.Box().Children)
 			}
 			fullText = strings.ReplaceAll(fullText, hyphenateCharacter, "")
-			if text := unpack1(lines[0]).(*bo.TextBox).Text; strings.HasSuffix(text, hyphenateCharacter) {
+			if text := unpack1(lines[0]).(*bo.TextBox).TextS(); strings.HasSuffix(text, hyphenateCharacter) {
 				tu.AssertEqual(t, fullText, word)
 			} else {
 				tu.AssertEqual(t, strings.HasSuffix(strings.TrimSuffix(text, "\u00ad"), "y"), true)
 				if len(lines) == 3 {
-					if text := unpack1(lines[1]).(*bo.TextBox).Text; !strings.HasSuffix(strings.TrimSuffix(text, "\u00ad"), hyphenateCharacter) {
+					if text := unpack1(lines[1]).(*bo.TextBox).TextS(); !strings.HasSuffix(strings.TrimSuffix(text, "\u00ad"), hyphenateCharacter) {
 						t.Fatalf("unexpected %s", text)
 					}
 				}
@@ -756,12 +756,12 @@ func TestHyphenateLimitZone1(t *testing.T) {
 	lines := body.Box().Children
 	tu.AssertEqual(t, len(lines), 2)
 
-	if text := unpack1(lines[0]).(*bo.TextBox).Text; !strings.HasSuffix(text, "-") {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "-") {
 		t.Fatalf("unexpected <%s>", text)
 	}
 	fullText := ""
 	for _, line := range lines {
-		fullText += unpack1(line).(*bo.TextBox).Text
+		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
 	tu.AssertEqual(t, strings.ReplaceAll(fullText, "-", ""), "mmmmm hyphénation")
 }
@@ -780,12 +780,12 @@ func TestHyphenateLimitZone2(t *testing.T) {
 	lines := body.Box().Children
 	tu.AssertEqual(t, len(lines), 2)
 
-	if text := unpack1(lines[0]).(*bo.TextBox).Text; !strings.HasSuffix(text, "mm") {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "mm") {
 		t.Fatalf("unexpected <%s>", text)
 	}
 	fullText := ""
 	for _, line := range lines {
-		fullText += unpack1(line).(*bo.TextBox).Text
+		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
 	tu.AssertEqual(t, fullText, "mmmmmhyphénation")
 }
@@ -804,12 +804,12 @@ func TestHyphenateLimitZone3(t *testing.T) {
 	lines := body.Box().Children
 	tu.AssertEqual(t, len(lines), 2)
 
-	if text := unpack1(lines[0]).(*bo.TextBox).Text; !strings.HasSuffix(text, "-") {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "-") {
 		t.Fatalf("unexpected <%s>", text)
 	}
 	fullText := ""
 	for _, line := range lines {
-		fullText += unpack1(line).(*bo.TextBox).Text
+		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
 	tu.AssertEqual(t, strings.ReplaceAll(fullText, "-", ""), "mmmmm hyphénation")
 }
@@ -829,12 +829,12 @@ func TestHyphenateLimitZone4(t *testing.T) {
 	lines := body.Box().Children
 	tu.AssertEqual(t, len(lines), 2)
 
-	if text := unpack1(lines[0]).(*bo.TextBox).Text; !strings.HasSuffix(text, "mm") {
+	if text := unpack1(lines[0]).(*bo.TextBox).TextS(); !strings.HasSuffix(text, "mm") {
 		t.Fatalf("unexpected <%s>", text)
 	}
 	fullText := ""
 	for _, line := range lines {
-		fullText += unpack1(line).(*bo.TextBox).Text
+		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
 	tu.AssertEqual(t, fullText, "mmmmmhyphénation")
 }
@@ -923,7 +923,7 @@ func TestOverflowWrap(t *testing.T) {
 		for _, line := range body.Box().Children {
 			box := unpack1(line)
 			textBox := unpack1(box).(*bo.TextBox)
-			lines = append(lines, textBox.Text)
+			lines = append(lines, textBox.TextS())
 		}
 		if !v.test(len(lines)) {
 			t.Fatal()
@@ -997,7 +997,7 @@ func TestWrapOverflowWordBreak(t *testing.T) {
 		for _, line := range body.Box().Children {
 			lineText := ""
 			for _, span_box := range line.Box().Children {
-				lineText += unpack1(span_box).(*bo.TextBox).Text
+				lineText += unpack1(span_box).(*bo.TextBox).TextS()
 			}
 			lines = append(lines, lineText)
 		}
@@ -1052,7 +1052,7 @@ func testWhiteSpaceLines(t *testing.T, width int, space string, expected []strin
 	for i, line := range body.Box().Children {
 		box := unpack1(line)
 		text := unpack1(box)
-		tu.AssertEqual(t, text.(*bo.TextBox).Text, expected[i])
+		assertText(t, text, expected[i])
 	}
 }
 
@@ -1156,9 +1156,9 @@ func TestWhiteSpace12(t *testing.T) {
 	pre := unpack1(body)
 	line1 := unpack1(pre)
 	text1, span, text2 := unpack3(line1)
-	tu.AssertEqual(t, text1.(*bo.TextBox).Text, "This is ")
+	assertText(t, text1, "This is ")
 	tu.AssertEqual(t, span.Box().ElementTag(), "span")
-	tu.AssertEqual(t, text2.(*bo.TextBox).Text, " text")
+	assertText(t, text2, " text")
 }
 
 func TestTabSize(t *testing.T) {
@@ -1214,8 +1214,7 @@ func TestTextTransform(t *testing.T) {
 	tu.AssertEqual(t, len(body.Box().Children), len(expected))
 	for i, child := range body.Box().Children {
 		line := unpack1(child)
-		text := unpack1(line).(*bo.TextBox)
-		tu.AssertEqual(t, text.Text, expected[i])
+		assertText(t, unpack1(line), expected[i])
 	}
 }
 
@@ -1248,7 +1247,7 @@ func TestLeaderContent(t *testing.T) {
 		line := unpack1(div)
 		after := unpack1(line)
 		inline := unpack1(after)
-		tu.AssertEqual(t, unpack1(inline).(*bo.TextBox).Text, v.content)
+		assertText(t, unpack1(inline), v.content)
 	}
 }
 
@@ -1307,6 +1306,6 @@ func TestContinue(t *testing.T) {
 	line1, line2 := unpack1(p), p.Box().Children[1]
 	text1 := unpack1(line1)
 	text2 := unpack1(line2)
-	tu.AssertEqual(t, text1.(*bo.TextBox).Text, "abcd")
-	tu.AssertEqual(t, text2.(*bo.TextBox).Text, "efgh")
+	assertText(t, text1, "abcd")
+	assertText(t, text2, "efgh")
 }

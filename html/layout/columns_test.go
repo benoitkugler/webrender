@@ -20,7 +20,7 @@ func assertText(t *testing.T, box Box, exp string) {
 	t.Helper()
 	tb, ok := box.(*bo.TextBox)
 	tu.AssertEqual(t, ok, true)
-	tu.AssertEqual(t, tb.Text, exp)
+	tu.AssertEqual(t, tb.TextS(), exp)
 }
 
 func columnsMetrics(columns []Box) (widths, heights, xs, ys []pr.Float) {
@@ -991,7 +991,7 @@ func TestColumnsRegression1(t *testing.T) {
 	body := unpack1(html)
 	div := unpack1(body)
 	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
-	tu.AssertEqual(t, unpack1(div.Box().Children[0]).(*bo.TextBox).Text, "A")
+	assertText(t, unpack1(div.Box().Children[0]), "A")
 
 	html = unpack1(page2)
 	body = unpack1(html)
@@ -1005,15 +1005,15 @@ func TestColumnsRegression1(t *testing.T) {
 	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div2.Box().PositionY, Fl(20))
-	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B1")
-	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B2")
-	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B3")
+	assertText(t, unpack1(div1.Box().Children[0]), "B1")
+	assertText(t, unpack1(div2.Box().Children[0]), "B2")
+	assertText(t, unpack1(div3.Box().Children[0]), "B3")
 
 	html = unpack1(page3)
 	body = unpack1(html)
 	div = unpack1(body)
 	tu.AssertEqual(t, div.Box().PositionY, Fl(0))
-	tu.AssertEqual(t, unpack1(div.Box().Children[0]).(*bo.TextBox).Text, "C")
+	assertText(t, unpack1(div.Box().Children[0]), "C")
 }
 
 func TestColumnsRegression2(t *testing.T) {
@@ -1046,9 +1046,9 @@ func TestColumnsRegression2(t *testing.T) {
 	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div2.Box().PositionY, Fl(20))
-	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B1")
-	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B2")
-	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B3")
+	assertText(t, unpack1(div1.Box().Children[0]), "B1")
+	assertText(t, unpack1(div2.Box().Children[0]), "B2")
+	assertText(t, unpack1(div3.Box().Children[0]), "B3")
 
 	html = unpack1(page2)
 	body = unpack1(html)
@@ -1059,7 +1059,7 @@ func TestColumnsRegression2(t *testing.T) {
 	div1 = unpack1(column1)
 	tu.AssertEqual(t, div1.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
-	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B4")
+	assertText(t, unpack1(div1.Box().Children[0]), "B4")
 }
 
 func TestColumnsRegression3(t *testing.T) {
@@ -1090,9 +1090,9 @@ func TestColumnsRegression3(t *testing.T) {
 	tu.AssertEqual(t, div3.Box().PositionY, Fl(0))
 	tu.AssertEqual(t, div2.Box().PositionY, Fl(30))
 	tu.AssertEqual(t, div.Box().Height, Fl(5+20+5+60))
-	tu.AssertEqual(t, unpack1(div1.Box().Children[0]).(*bo.TextBox).Text, "B1")
-	tu.AssertEqual(t, unpack1(div2.Box().Children[0]).(*bo.TextBox).Text, "B2")
-	tu.AssertEqual(t, unpack1(div3.Box().Children[0]).(*bo.TextBox).Text, "B3")
+	assertText(t, unpack1(div1.Box().Children[0]), "B1")
+	assertText(t, unpack1(div2.Box().Children[0]), "B2")
+	assertText(t, unpack1(div3.Box().Children[0]), "B3")
 }
 
 func TestColumnsRegression4(t *testing.T) {

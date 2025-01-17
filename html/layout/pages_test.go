@@ -237,7 +237,7 @@ func TestPageBreaksComplex1(t *testing.T) {
 	line := unpack1(div)
 	text := unpack1(line)
 	tu.AssertEqual(t, div.Box().ElementTag(), "div")
-	tu.AssertEqual(t, text.(*bo.TextBox).Text, "1")
+	assertText(t, text, "1")
 
 	html = unpack1(page2)
 	tu.AssertEqual(t, page2.Box().MarginLeft, Fl(10))
@@ -1070,7 +1070,7 @@ func TestPageAndLineboxBreaking(t *testing.T) {
 			var lineTexts []string
 			for _, child := range bo.Descendants(line) {
 				if child, ok := child.(*bo.TextBox); ok {
-					lineTexts = append(lineTexts, child.Text)
+					lineTexts = append(lineTexts, child.TextS())
 				}
 			}
 			texts = append(texts, strings.Join(lineTexts, "a"))
@@ -1116,7 +1116,7 @@ func TestMarginBoxesFixedDimension1(t *testing.T) {
 		marginBox := []Box{topLeft, topRight, bottomLeft, bottomRight}[i]
 		line := unpack1(marginBox)
 		text := unpack1(line)
-		tu.AssertEqual(t, text.(*bo.TextBox).Text, textExp)
+		assertText(t, text, textExp)
 	}
 
 	// Check positioning && Rule 1 for fixed dimensions
@@ -1483,7 +1483,7 @@ func textFromBoxes(boxes []Box) string {
 	var s strings.Builder
 	for _, box := range boxes {
 		if box, ok := box.(*bo.TextBox); ok {
-			s.WriteString(box.Text)
+			s.WriteString(box.TextS())
 		}
 	}
 	return s.String()
@@ -1566,7 +1566,7 @@ func TestMarginBoxesRunningElement(t *testing.T) {
 	var footer1Text string
 	for _, node := range bo.Descendants(pages[0].Box().Children[1]) {
 		if node, ok := node.(*bo.TextBox); ok {
-			footer1Text += node.Text
+			footer1Text += node.TextS()
 		}
 	}
 	tu.AssertEqual(t, footer1Text, "1 of 3")
@@ -1574,7 +1574,7 @@ func TestMarginBoxesRunningElement(t *testing.T) {
 	var footer2Text string
 	for _, node := range bo.Descendants(pages[1].Box().Children[1]) {
 		if node, ok := node.(*bo.TextBox); ok {
-			footer2Text += node.Text
+			footer2Text += node.TextS()
 		}
 	}
 	tu.AssertEqual(t, footer2Text, "2 of 3")
@@ -1582,7 +1582,7 @@ func TestMarginBoxesRunningElement(t *testing.T) {
 	var footer3Text string
 	for _, node := range bo.Descendants(pages[2].Box().Children[1]) {
 		if node, ok := node.(*bo.TextBox); ok {
-			footer3Text += node.Text
+			footer3Text += node.TextS()
 		}
 	}
 	tu.AssertEqual(t, footer3Text, "Static")
@@ -1674,17 +1674,17 @@ func TestRunningElementsDisplay(t *testing.T) {
 	var leftT, centerT, rightT string
 	for _, node := range bo.Descendants(left) {
 		if node, ok := node.(*bo.TextBox); ok {
-			leftT += node.Text
+			leftT += node.TextS()
 		}
 	}
 	for _, node := range bo.Descendants(center) {
 		if node, ok := node.(*bo.TextBox); ok {
-			centerT += node.Text
+			centerT += node.TextS()
 		}
 	}
 	for _, node := range bo.Descendants(right) {
 		if node, ok := node.(*bo.TextBox); ok {
-			rightT += node.Text
+			rightT += node.TextS()
 		}
 	}
 	tu.AssertEqual(t, leftT, "inline")

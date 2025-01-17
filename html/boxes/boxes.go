@@ -692,7 +692,7 @@ func Serialize(boxList []Box) []SerBox {
 		out[i].Type = box.Type()
 		// all concrete boxes are either text, replaced, column or parent.
 		if boxT, ok := box.(*TextBox); ok {
-			out[i].Content.Text = boxT.Text
+			out[i].Content.Text = boxT.TextS()
 		} else if _, ok := box.(ReplacedBoxITF); ok {
 			out[i].Content.Text = "<replaced>"
 		} else {

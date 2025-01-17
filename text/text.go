@@ -66,17 +66,6 @@ type FirstLine struct {
 }
 
 // split word on each hyphen occurence, starting by the end
-func hyphenDictionaryIterationsOld(word string, hyphen rune) (out []string) {
-	wordRunes := []rune(word)
-	for i := len(wordRunes) - 1; i >= 0; i-- {
-		if wordRunes[i] == hyphen {
-			out = append(out, string(wordRunes[:i+1]))
-		}
-	}
-	return out
-}
-
-// split word on each hyphen occurence, starting by the end
 func hyphenDictionaryIterations(word []rune, hyphen rune) (out []string) {
 	for i := len(word) - 1; i >= 0; i-- {
 		if word[i] == hyphen {

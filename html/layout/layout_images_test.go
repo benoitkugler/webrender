@@ -87,7 +87,7 @@ func TestImages3(t *testing.T) {
 		tu.AssertEqual(t, len(capt.Logs()), 1)
 		tu.AssertEqual(t, img.Type(), bo.InlineT) // not a replaced box
 		text := unpack1(img)
-		tu.AssertEqual(t, text.(*bo.TextBox).Text, "invalid image")
+		assertText(t, text, "invalid image")
 	}
 }
 

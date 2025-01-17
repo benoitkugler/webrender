@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	bo "github.com/benoitkugler/webrender/html/boxes"
 	tu "github.com/benoitkugler/webrender/utils/testutils"
 )
 
@@ -48,8 +47,8 @@ func TestListsStyle(t *testing.T) {
 				markerLine := unpack1(marker)
 				markerText = unpack1(markerLine)
 			}
-			tu.AssertEqual(t, markerText.(*bo.TextBox).Text, character)
-			tu.AssertEqual(t, content.(*bo.TextBox).Text, "abc")
+			assertText(t, markerText, character)
+			assertText(t, content, "abc")
 		}
 	}
 }
