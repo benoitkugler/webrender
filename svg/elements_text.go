@@ -104,7 +104,7 @@ func newTextSpan(node *cascadedNode) (drawable, error) {
 func (t *textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, dims drawingDims) []vertex {
 	t.style.SetFontSize(pr.FToV(dims.fontSize))
 
-	splitted := text.SplitFirstLine(t.text, t.style, svg.textContext, pr.Inf, false, true)
+	splitted := text.SplitFirstLine([]rune(t.text), t.style, svg.textContext, pr.Inf, false, true)
 	width, height := Fl(splitted.Width), Fl(splitted.Height)
 
 	// Get rotations and translations
@@ -214,7 +214,7 @@ func (t *textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, di
 			svg.cursorDPosition.y += dys[i]
 		}
 
-		splitted := text.SplitFirstLine(string(r), t.style, svg.textContext, pr.Inf, false, true)
+		splitted := text.SplitFirstLine([]rune{r}, t.style, svg.textContext, pr.Inf, false, true)
 		layout := splitted.Layout
 		width, height = Fl(splitted.Width), Fl(splitted.Height)
 

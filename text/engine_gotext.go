@@ -525,7 +525,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 // splitFirstLineGotext fit as much text from [text_] as possible in the available width given by [maxWidth].
 // minimum should defaults to false
-func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text_ string, style *TextStyle,
+func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	// See https://www.w3.org/TR/css-text-3/#white-space-property
@@ -534,7 +534,6 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 		originalMaxWidth = maxWidth
 		fontSize         = pr.Float(style.Size)
 		firstLine        FirstLine
-		text             = []rune(text_)
 	)
 	if !textWrap {
 		maxWidth = nil
@@ -542,10 +541,10 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 	// Step #1: Get a draft layout with the first line
 	if maxWidth, ok := maxWidth.(pr.Float); ok && maxWidth != pr.Inf && fontSize != 0 {
 		// Try to use a small amount of text instead of the whole text
-		shortText := shortTextHint(text_, maxWidth, fontSize)
+		shortText := shortTextHint(text, maxWidth, fontSize)
 
-		firstLine = fc.wrap([]rune(shortText), style, maxWidth)
-		if firstLine.ResumeAt == -1 && len(shortText) != len(text_) {
+		firstLine = fc.wrap(shortText, style, maxWidth)
+		if firstLine.ResumeAt == -1 && len(shortText) != len(text) {
 			// The small amount of text fits in one line, give up and use the whole text
 			firstLine = fc.wrap(text, style, maxWidth)
 		}

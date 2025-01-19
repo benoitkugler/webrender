@@ -48,7 +48,7 @@ type FontConfiguration interface {
 	// returns the height and baseline of a line containing a single space (" ")
 	spaceHeight(style *TextStyle) (height, baseline pr.Float)
 
-	splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text_ string, style *TextStyle,
+	splitFirstLine(hyphenCache map[HyphenDictKey]hyphen.Hyphener, text []rune, style *TextStyle,
 		maxWidth pr.MaybeFloat, minimum, isLineStart bool) FirstLine
 
 	// compute the unicode propery of the given runes,

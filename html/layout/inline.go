@@ -318,13 +318,13 @@ func removeLastWhitespace(context *layoutContext, box Box) {
 	if ws := box.Box().Style.GetWhiteSpace(); !(ok && (ws == "normal" || ws == "nowrap" || ws == "pre-line")) {
 		return
 	}
-	newText := strings.TrimRight(textBox.TextS(), " ")
+	newText := text.TrimRight(textBox.Text, ' ')
 	var spaceWidth pr.Float
-	if newText != "" {
-		if len(newText) == len(textBox.TextS()) {
+	if L := len(newText); L != 0 {
+		if L == len(textBox.Text) {
 			return
 		}
-		textBox.Text = []rune(newText)
+		textBox.Text = newText
 		newBox, resume, _, firstLineIsRTL := splitTextBox(context, textBox, nil, 0, true)
 		if newBox == nil || resume != -1 {
 			panic(fmt.Sprintf("expected newBox and no resume, got %v, %v", newBox, resume))
@@ -1163,7 +1163,7 @@ func splitTextBox(context *layoutContext, box *bo.TextBox, availableWidth pr.May
 	if fontSize == pr.FToV(0) || len(text_) == 0 {
 		return nil, -1, false, false
 	}
-	v := text.SplitFirstLine(string(text_), box.Style, context, availableWidth, false, isLineStart)
+	v := text.SplitFirstLine(text_, box.Style, context, availableWidth, false, isLineStart)
 	layout, length, resumeIndex, width, height, baseline := v.Layout, v.Length, v.ResumeAt, v.Width, v.Height, v.Baseline
 	if resumeIndex == 0 {
 		panic("resumeAt should not be 0 here")

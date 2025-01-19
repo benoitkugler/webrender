@@ -354,11 +354,11 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 					panic(fmt.Sprintf("expected empty SkipStack, got %v", skipStack))
 				}
 			}
-			childText := string(textBox.Text[skip:])
+			childText := textBox.Text[skip:]
 			if isLineStart && spaceCollapse {
-				childText = strings.TrimLeft(childText, " ")
+				childText = text.TrimLeft(childText, ' ')
 			}
-			if minimum && childText == " " {
+			if minimum && len(childText) == 1 && childText[0] == ' ' {
 				lines = []pr.Float{0, 0}
 			} else {
 				var maxWidth pr.MaybeFloat
@@ -367,10 +367,10 @@ func inlineLineWidths(context *layoutContext, box_ Box, outer, isLineStart,
 				}
 				resumeIndex := 0
 				newResumeIndex := 0
-				textRunes := []rune(childText)
+				textRunes := childText
 				for newResumeIndex != -1 {
 					resumeIndex += newResumeIndex
-					tmp := text.SplitFirstLine(string(textRunes[resumeIndex:]), textBox.Style,
+					tmp := text.SplitFirstLine(textRunes[resumeIndex:], textBox.Style,
 						context, maxWidth, true, isLineStart)
 					newResumeIndex = tmp.ResumeAt
 					lines = append(lines, tmp.Width)
@@ -900,8 +900,8 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 		(ws == "normal" || ws == "nowrap" || ws == "pre-line")) {
 		return 0
 	}
-	strippedText := strings.TrimRight(textBox.TextS(), " ")
-	if box.Box().Style.GetFontSize() == pr.FToV(0) || len(strippedText) == len(textBox.TextS()) {
+	strippedText := text.TrimRight(textBox.Text, ' ')
+	if box.Box().Style.GetFontSize() == pr.FToV(0) || len(strippedText) == len(textBox.Text) {
 		return 0
 	}
 	if len(strippedText) != 0 {
@@ -914,7 +914,7 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 		if oldBox == nil {
 			panic("oldBox can't be nil")
 		}
-		strippedBox := textBox.CopyWithText([]rune(strippedText))
+		strippedBox := textBox.CopyWithText(strippedText)
 		strippedBox, resume, _, _ = splitTextBox(context, strippedBox, nil, oldResume, true)
 		if strippedBox == nil {
 			// oldBox split just before the trailing spaces
@@ -926,7 +926,7 @@ func trailingWhitespaceSize(context *layoutContext, box Box) pr.Float {
 			return oldBox.Box().Width.V() - strippedBox.Box().Width.V()
 		}
 	} else {
-		spli := text.SplitFirstLine(textBox.TextS(), textBox.Style, context, nil, false, true)
+		spli := text.SplitFirstLine(textBox.Text, textBox.Style, context, nil, false, true)
 		return spli.Width
 	}
 }

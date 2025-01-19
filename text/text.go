@@ -81,13 +81,13 @@ type HyphenDictKey struct {
 }
 
 // returns a prefix of text
-func shortTextHint(text string, maxWidth, fontSize pr.Float) string {
+func shortTextHint(text []rune, maxWidth, fontSize pr.Float) []rune {
 	cut := len(text)
 	if maxWidth <= 0 {
 		// Trying to find minimum size, let's naively split on spaces and
 		// keep one word + one letter
 
-		if spaceIndex := strings.IndexByte(text, ' '); spaceIndex != -1 {
+		if spaceIndex := indexRune(text, ' '); spaceIndex != -1 {
 			cut = spaceIndex + 2 // index + space + one letter
 		}
 	} else {
@@ -103,7 +103,7 @@ func shortTextHint(text string, maxWidth, fontSize pr.Float) string {
 
 // SplitFirstLine fit as much text from [text] as possible in the available width given by [maxWidth].
 // minimum should default to [false]
-func SplitFirstLine(text string, style_ pr.StyleAccessor, context TextLayoutContext,
+func SplitFirstLine(text []rune, style_ pr.StyleAccessor, context TextLayoutContext,
 	maxWidth pr.MaybeFloat, minimum, isLineStart bool,
 ) FirstLine {
 	style := NewTextStyle(style_, false)
@@ -204,4 +204,27 @@ func CharacterRatio(style_ pr.ElementStyle, cache pr.TextRatioCache, isCh bool, 
 
 func (style *TextStyle) cacheKey() string {
 	return string(append(style.FontDescription.binary(nil, false), featuresBinary(style.FontFeatures)...))
+}
+
+func indexRune(text []rune, s rune) int {
+	for i, v := range text {
+		if v == s {
+			return i
+		}
+	}
+	return -1
+}
+
+func TrimRight(s []rune, r rune) []rune {
+	for len(s) > 0 && s[len(s)-1] == r {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
+func TrimLeft(s []rune, r rune) []rune {
+	for len(s) > 0 && s[0] == r {
+		s = s[1:]
+	}
+	return s
 }
