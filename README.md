@@ -4,7 +4,7 @@ This module implements a static renderer for the HTML, CSS and SVG formats.
 
 It consists for the main part of a Golang port of the awesome [Weasyprint](https://github.com/Kozea/WeasyPrint) python Html to Pdf library.
 
-This is an **ongoing work**, not production ready just yet.
+The project is usable, but you should use it carefully in production; breaking changes may also be committed on the fly.
 
 ## Scope
 
