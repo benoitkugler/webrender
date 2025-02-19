@@ -103,13 +103,14 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 	)
 
 	fontSize := style.FontDescription.Size
+	textRunes := pl.Text
 
 	output.FontSize = fontSize
 	output.ScaleX = scaleX
 	output.X, output.Y = x, y
 	output.Angle = angle
+	output.Text = textRunes
 
-	textRunes := pl.Text
 	for run := firstLine.Runs; run != nil; run = run.Next {
 
 		// Pango objects

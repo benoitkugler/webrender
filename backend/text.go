@@ -13,6 +13,8 @@ type TextDrawing struct {
 	FontSize, ScaleX Fl
 	X, Y             Fl // origin
 	Angle            Fl // (optional) rotation
+
+	Text []rune
 }
 
 // Matrix return the transformation scaling the text by [FontSize],
