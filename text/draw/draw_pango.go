@@ -184,6 +184,7 @@ func (ctx Context) createFirstLinePango(layout *text.TextLayoutPango,
 
 			// Mapping between glyphs and characters
 			utf8Position := utf8Positions[i]
+			outGlyph.TextOffset, outGlyph.TextLength = prevUtf8Position, utf8Position-prevUtf8Position
 			if _, in := outFont.Cmap[outGlyph.Glyph]; !in {
 				outFont.Cmap[outGlyph.Glyph] = textRunes[prevUtf8Position:utf8Position]
 			}

@@ -42,6 +42,10 @@ type TextGlyph struct {
 	Offset   Fl // normalized by FontSize
 	Rise     Fl
 	XAdvance Fl // how much to move before drawing, used for emojis
+
+	// TextDrawing.Text[TextOffset:TextOffset+TextLength]
+	// gives the runes yielding the glyph.
+	TextOffset, TextLength int
 }
 
 // GlyphExtents exposes glyph metrics, normalized by the font size.
