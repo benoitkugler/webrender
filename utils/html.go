@@ -189,16 +189,15 @@ func (element HTMLNode) GetText() string {
 }
 
 // Transform (only) ASCII letters to lower case: A-Z is mapped to a-z.
+// This is used for `ASCII case-insensitive
+// <http://whatwg.org/C#ascii-case-insensitive>`_ matching.
+// This is different from the strings.ToLower function
+// which also affect non-ASCII characters, sometimes mapping them into the ASCII range:
 //
-//	This is used for `ASCII case-insensitive
-//	<http://whatwg.org/C#ascii-case-insensitive>`_ matching.
-//	This is different from the strings.ToLower function
-//	which also affect non-ASCII characters,
-//	sometimes mapping them into the ASCII range:
-//			keyword = u"Bac\u212Aground"
-//			assert strings.ToLower(keyword) == u"background"
-//			assert asciiLower(keyword) != strings.ToLower(keyword)
-//			assert asciiLower(keyword) == u"bac\u212Aground"
+//	keyword := "Bac\u212Aground"
+//	strings.ToLower(keyword) == "background"
+//	AsciiLower(keyword) != strings.ToLower(keyword)
+//	AsciiLower(keyword) == "bac\u212Aground"
 func AsciiLower(s string) string {
 	rs := []rune(s)
 	out := make([]rune, len(rs))
