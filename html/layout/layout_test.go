@@ -111,6 +111,11 @@ func unpack8(box Box) (c1, c2, c3, c4, c5, c6, c7, c8 Box) {
 	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6], box.Box().Children[7]
 }
 
+// unpack 9 children
+func unpack9(box Box) (c1, c2, c3, c4, c5, c6, c7, c8, c9 Box) {
+	return unpack1(box), box.Box().Children[1], box.Box().Children[2], box.Box().Children[3], box.Box().Children[4], box.Box().Children[5], box.Box().Children[6], box.Box().Children[7], box.Box().Children[8]
+}
+
 func asBoxes(pages []*bo.PageBox) []Box {
 	out := make([]Box, len(pages))
 	for i, p := range pages {
@@ -405,7 +410,7 @@ func TestMarginBoxStringSet6(t *testing.T) {
 }
 
 func TestMarginBoxStringSet7(t *testing.T) {
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/722
+	// Regression test for #722
 	page1 := renderOnePage(t, `
       <style>
         img { string-set: left attr(alt) }
@@ -430,7 +435,7 @@ func TestMarginBoxStringSet7(t *testing.T) {
 func TestMarginBoxStringSet8(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/726
+	// Regression test for #726
 	pages := renderPages(t, `
       <style>
         @page { @top-left  { content: "[" string(left) "]" } }

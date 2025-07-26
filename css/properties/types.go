@@ -373,6 +373,10 @@ func (u Unit) String() string {
 		return "ch"
 	case Rem:
 		return "rem"
+	case Lh:
+		return "lh"
+	case Rlh:
+		return "rlh"
 	case Px:
 		return "px"
 	case Pt:

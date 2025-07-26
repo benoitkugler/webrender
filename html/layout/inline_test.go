@@ -670,9 +670,8 @@ func TestForcedLineBreaksParagraph(t *testing.T) {
 
 func TestInlineboxSplitting(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-
-	// The text is strange to test some corner cases
-	// See https://github.com/Kozea/WeasyPrint/issues/389
+	// The text is strange to test some corner cases.
+	// Regression test for #389.
 	for _, width := range []int{10000, 100, 10, 0} {
 		page := renderOnePage(t, fmt.Sprintf(`
           <style>p { font-family:%s; width: %dpx; }</style>
@@ -1230,4 +1229,19 @@ func TestBidiPositionXInvariant(t *testing.T) {
 	tu.AssertEqual(t, block_ltr.Box().PositionX, block_rtl.Box().PositionX)
 	tu.AssertEqual(t, line_ltr.Box().PositionX, line_rtl.Box().PositionX)
 	tu.AssertEqual(t, text_ltr.Box().PositionX, text_rtl.Box().PositionX)
+}
+
+// Regression test for #2275.
+func TestNestedWaitingChildrenWidth(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	page := renderOnePage(t,
+		`<body style="width: 3em; font-family: weasyprint">`+
+			`<b><i style="width: 100%">a b</i>c`)
+	html := unpack1(page)
+	body := unpack1(html)
+	line1, line2 := unpack2(body)
+	assertText(t, unpack1(unpack1(unpack1(line1))), "a")
+	assertText(t, unpack1(unpack1(unpack1(line2))), "b")
+	assertText(t, unpack1(line2).Box().Children[1], "c")
 }

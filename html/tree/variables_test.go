@@ -134,7 +134,7 @@ func TestVariableChain(t *testing.T) {
 }
 
 func TestVariableChainRoot(t *testing.T) {
-	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1656
+	// Regression test for #1656.
 	style, _ := setupVar(t, `
       <style>
         html { --var2: 10px; --var1: var(--var2); width: var(--var1) }
@@ -155,13 +155,13 @@ func TestVariableSelf(t *testing.T) {
 func TestVariableLoop(t *testing.T) {
 	_, _ = setupVar(t, `
       <style>
-        html { --var1: var(--var2); --var2: var(--var1) }
+        html { --var1: var(--var2); --var2: var(--var1); padding: var(--var1) }
       </style>
     `)
 }
 
 func TestVariableChainRootMissing(t *testing.T) {
-	// Regression test for https://github.com/Kozea/WeasyPrint/issues/1656
+	// Regression test for #1656.
 	_, _ = setupVar(t, `
       <style>
         html { --var1: var(--var-missing); width: var(--var1) }
@@ -355,7 +355,7 @@ func TestVariableShorthandBackgroundInvalid(t *testing.T) {
 
 func TestVariableInitial(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Regression test for https://github.com/Kozea/WeasyPrint/issues/2075
+	// Regression test for #2075.
 	html, p := setupVar(t, `
       <style>
         html { --var: initial }
@@ -368,7 +368,7 @@ func TestVariableInitial(t *testing.T) {
 
 func TestVariableInitialDefault(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Regression test for https://github.com/Kozea/WeasyPrint/issues/2075
+	// Regression test for #2075.
 	html, p := setupVar(t, `
 	<style>
 	p { --var: initial; width: var(--var, 10px) }
@@ -381,7 +381,7 @@ func TestVariableInitialDefault(t *testing.T) {
 
 func TestVariableInitialDefaultVar(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Regression test for https://github.com/Kozea/WeasyPrint/issues/2075
+	// Regression test for #2075.
 	html, style := setupVar(t, `
       <style>
         p { --var: initial; width: var(--var, var(--var)) }

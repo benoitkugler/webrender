@@ -2272,6 +2272,20 @@ func (s *AnonymousStyle) SetTextDecorationStyle(v pr.String) {
 	s.propsCache.known[pr.PTextDecorationStyle] = v
 }
 
+func (s *ComputedStyle) GetTextDecorationThickness() pr.DimOrS {
+	return s.Get(pr.PTextDecorationThickness.Key()).(pr.DimOrS)
+}
+func (s *ComputedStyle) SetTextDecorationThickness(v pr.DimOrS) {
+	s.propsCache.known[pr.PTextDecorationThickness] = v
+}
+
+func (s *AnonymousStyle) GetTextDecorationThickness() pr.DimOrS {
+	return s.Get(pr.PTextDecorationThickness.Key()).(pr.DimOrS)
+}
+func (s *AnonymousStyle) SetTextDecorationThickness(v pr.DimOrS) {
+	s.propsCache.known[pr.PTextDecorationThickness] = v
+}
+
 func (s *ComputedStyle) GetTextIndent() pr.DimOrS {
 	return s.Get(pr.PTextIndent.Key()).(pr.DimOrS)
 }
@@ -2312,6 +2326,20 @@ func (s *AnonymousStyle) GetTextTransform() pr.String {
 }
 func (s *AnonymousStyle) SetTextTransform(v pr.String) {
 	s.propsCache.known[pr.PTextTransform] = v
+}
+
+func (s *ComputedStyle) GetTextUnderlineOffset() pr.DimOrS {
+	return s.Get(pr.PTextUnderlineOffset.Key()).(pr.DimOrS)
+}
+func (s *ComputedStyle) SetTextUnderlineOffset(v pr.DimOrS) {
+	s.propsCache.known[pr.PTextUnderlineOffset] = v
+}
+
+func (s *AnonymousStyle) GetTextUnderlineOffset() pr.DimOrS {
+	return s.Get(pr.PTextUnderlineOffset.Key()).(pr.DimOrS)
+}
+func (s *AnonymousStyle) SetTextUnderlineOffset(v pr.DimOrS) {
+	s.propsCache.known[pr.PTextUnderlineOffset] = v
 }
 
 func (s *ComputedStyle) GetTop() pr.DimOrS {

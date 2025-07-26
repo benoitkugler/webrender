@@ -50,6 +50,11 @@ func testCounterSymbols(t *testing.T, arguments string, values [4]string) {
 	assertText(t, unpack1(li4.Box().Children[0].Box().Children[0]), values[3])
 }
 
+// Regression test for #1883.
+func TestListStyleTypeEmptyString(t *testing.T) {
+	renderPages(t, `<ul><li style="list-style-type: ''">`)
+}
+
 func TestCounterSet(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 

@@ -13,7 +13,7 @@ import (
 func TestLineBreakingNbsp(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1561
+	// Regression test for #1561
 	page := renderOnePage(t, `
       <style>
         @font-face {src: url(weasyprint.otf); font-family: weasyprint}
@@ -32,7 +32,7 @@ func TestLineBreakingNbsp(t *testing.T) {
 }
 
 func TestLineBreakBeforeTrailingSpace(t *testing.T) {
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1852
+	// Regression test for #1852
 	page := renderOnePage(t, `
         <p style="display: inline-block">test\u2028 </p>a
         <p style="display: inline-block">test\u2028</p>a
@@ -42,6 +42,18 @@ func TestLineBreakBeforeTrailingSpace(t *testing.T) {
 	line := unpack1(body)
 	p1, _, p2, _ := unpack4(line)
 	tu.AssertEqual(t, p1.Box().Width, p2.Box().Width)
+}
+
+// Regression test for #2448.
+func TestLineBreakBeforeNestedTrailingSpace(t *testing.T) {
+	page := renderOnePage(t, `
+    <div style="font: 2px weasyprint; width: 6px">
+      AA <span><b><i>BBB</i></b> </span></div>
+   `)
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, len(div.Box().Children), 2)
 }
 
 func TestTextFontSizeZero(t *testing.T) {
@@ -66,7 +78,7 @@ func TestTextFontSizeZero(t *testing.T) {
 func TestTextFontSizeVerySmall(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1499
+	// Regression test for #1499
 	page := renderOnePage(t, `
       <style>
         p { font-size: 0.00000001px }
@@ -398,7 +410,7 @@ func TestTextAlignJustifyNoBreakBetweenChildren(t *testing.T) {
 
 	// Test justification when line break happens between two inline children
 	// that must stay together.
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/637
+	// Regression test for #637
 	page := renderOnePage(t, `
       <style>
         @font-face {src: url(weasyprint.otf); font-family: weasyprint}
@@ -546,7 +558,7 @@ func TestTextIndent(t *testing.T) {
 
 func TestTextIndentInline(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1000
+	// Regression test for #1000
 	page := renderOnePage(t, `
         <style>
             @font-face { src: url(weasyprint.otf); font-family: weasyprint }
@@ -564,7 +576,7 @@ func TestTextIndentInline(t *testing.T) {
 
 func TestTextIndentMultipage(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/706
+	// Regression test for #706
 
 	for _, indent := range []string{"12px", "6%"} {
 		pages := renderPages(t, fmt.Sprintf(`
@@ -730,7 +742,7 @@ func TestHyphenateManual3(t *testing.T) {
 
 func TestHyphenateManual4(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1878
+	// Regression test for #1878
 	page := renderOnePage(t,
 		`<html style="width: 0.1em" lang="en">
         <body style="hyphens: auto">test&shy;`)
@@ -837,6 +849,22 @@ func TestHyphenateLimitZone4(t *testing.T) {
 		fullText += unpack1(line).(*bo.TextBox).TextS()
 	}
 	tu.AssertEqual(t, fullText, "mmmmmhyphénation")
+}
+
+// Regression test for #1817.
+func TestHyphenNbsp(t *testing.T) {
+	page := renderOnePage(t, `
+      <style>
+        body {width: 20px; font: 2px weasyprint}
+      </style>
+      <body style="hyphens: auto;" lang="en">
+        <span>this&nbsp;hyphenation
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	line1, line2 := unpack2(body)
+	assertText(t, unpack1(unpack1(line1)), "this hy‐")
+	assertText(t, unpack1(unpack1(line2)), "phenation")
 }
 
 func TestHyphenateLimitChars(t *testing.T) {
@@ -1126,7 +1154,7 @@ func TestWhiteSpace10(t *testing.T) {
 
 func TestWhiteSpace11(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/813
+	// Regression test for #813
 	page := renderOnePage(t, `
       <style>
         pre { width: 0 }
@@ -1145,7 +1173,7 @@ func TestWhiteSpace11(t *testing.T) {
 
 func TestWhiteSpace12(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/813
+	// Regression test for #813
 	page := renderOnePage(t, `
       <style>
         pre { width: 0 }
@@ -1221,7 +1249,7 @@ func TestTextTransform(t *testing.T) {
 func TestTextFloatingPreLine(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/610
+	// Regression test for #610
 	_ = renderOnePage(t, `
       <div style="float: left; white-space: pre-line">This is
       oh this end </div>

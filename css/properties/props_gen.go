@@ -498,6 +498,9 @@ func (s Properties) SetTextDecorationLine(v Decorations) { s[PTextDecorationLine
 func (s Properties) GetTextDecorationStyle() String  { return s[PTextDecorationStyle].(String) }
 func (s Properties) SetTextDecorationStyle(v String) { s[PTextDecorationStyle] = v }
 
+func (s Properties) GetTextDecorationThickness() DimOrS  { return s[PTextDecorationThickness].(DimOrS) }
+func (s Properties) SetTextDecorationThickness(v DimOrS) { s[PTextDecorationThickness] = v }
+
 func (s Properties) GetTextIndent() DimOrS  { return s[PTextIndent].(DimOrS) }
 func (s Properties) SetTextIndent(v DimOrS) { s[PTextIndent] = v }
 
@@ -506,6 +509,9 @@ func (s Properties) SetTextOverflow(v String) { s[PTextOverflow] = v }
 
 func (s Properties) GetTextTransform() String  { return s[PTextTransform].(String) }
 func (s Properties) SetTextTransform(v String) { s[PTextTransform] = v }
+
+func (s Properties) GetTextUnderlineOffset() DimOrS  { return s[PTextUnderlineOffset].(DimOrS) }
+func (s Properties) SetTextUnderlineOffset(v DimOrS) { s[PTextUnderlineOffset] = v }
 
 func (s Properties) GetTop() DimOrS  { return s[PTop].(DimOrS) }
 func (s Properties) SetTop(v DimOrS) { s[PTop] = v }
@@ -1030,6 +1036,9 @@ type StyleAccessor interface {
 	GetTextDecorationStyle() String
 	SetTextDecorationStyle(v String)
 
+	GetTextDecorationThickness() DimOrS
+	SetTextDecorationThickness(v DimOrS)
+
 	GetTextIndent() DimOrS
 	SetTextIndent(v DimOrS)
 
@@ -1038,6 +1047,9 @@ type StyleAccessor interface {
 
 	GetTextTransform() String
 	SetTextTransform(v String)
+
+	GetTextUnderlineOffset() DimOrS
+	SetTextUnderlineOffset(v DimOrS)
 
 	GetTop() DimOrS
 	SetTop(v DimOrS)
@@ -1239,9 +1251,11 @@ var propsNames = [...]string{
 	PTextDecorationColor:     "text-decoration-color",
 	PTextDecorationLine:      "text-decoration-line",
 	PTextDecorationStyle:     "text-decoration-style",
+	PTextDecorationThickness: "text-decoration-thickness",
 	PTextIndent:              "text-indent",
 	PTextOverflow:            "text-overflow",
 	PTextTransform:           "text-transform",
+	PTextUnderlineOffset:     "text-underline-offset",
 	PTop:                     "top",
 	PTransform:               "transform",
 	PTransformOrigin:         "transform-origin",
@@ -1420,9 +1434,11 @@ var PropsFromNames = map[string]KnownProp{
 	"text-decoration-color":      PTextDecorationColor,
 	"text-decoration-line":       PTextDecorationLine,
 	"text-decoration-style":      PTextDecorationStyle,
+	"text-decoration-thickness":  PTextDecorationThickness,
 	"text-indent":                PTextIndent,
 	"text-overflow":              PTextOverflow,
 	"text-transform":             PTextTransform,
+	"text-underline-offset":      PTextUnderlineOffset,
 	"top":                        PTop,
 	"transform":                  PTransform,
 	"transform-origin":           PTransformOrigin,

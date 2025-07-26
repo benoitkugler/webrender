@@ -43,6 +43,24 @@ func TestInlineTable(t *testing.T) {
 	tu.AssertEqual(t, text.Box().PositionX, Fl(90))
 }
 
+func TestInlineTableWidth(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	page := renderOnePage(t, `
+      <div style="font: 2px weasyprint; width: 20px">
+        <table style="display: inline-table; width: 20%"><tr><td>A</tr></td></table>
+        <table style="display: inline-table; width: 20%"><tr><td>B</tr></td></table>
+      </div>`)
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	line := unpack1(div)
+	table_wrapper1, _, table_wrapper2, _ := unpack4(line)
+	tu.AssertEqual(t, table_wrapper1.Box().Width, pr.Float(4))
+	tu.AssertEqual(t, table_wrapper2.Box().Width, pr.Float(4))
+	tu.AssertEqual(t, table_wrapper1.Box().PositionX, pr.Float(0))
+	tu.AssertEqual(t, table_wrapper2.Box().PositionX, pr.Float(6))
+}
+
 func TestImplicitWidthTableColPercent(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
@@ -1081,7 +1099,7 @@ func TestLayoutTableAuto25(t *testing.T) {
 func TestLayoutTableAuto26(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/307
+	// Regression test for #307
 	// Table with a cell larger than the table"s max-width
 	_ = renderOnePage(t, `
       <table style="max-width: 300px">
@@ -1295,7 +1313,7 @@ func TestLayoutTableAuto39(t *testing.T) {
 func TestLayoutTableAuto40(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/368
+	// Regression test for #368
 	// Check that white-space is used for the shrink-to-fit algorithm
 	page := renderOnePage(t, `
       <style>
@@ -1948,7 +1966,7 @@ func TestTableRowHeight2(t *testing.T) {
 func TestTableRowHeight3(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/937
+	// Regression test for #937
 	page := renderOnePage(t, `
       <style>
         @font-face { src: url(weasyprint.otf); font-family: weasyprint }
@@ -2159,6 +2177,29 @@ func TestTablePageBreaks(t *testing.T) {
 		   `,
 			[]int{1, 2},
 			[]pr.Float{30, 0, 80},
+		},
+		{
+			`
+			<style>
+			  @page { size: 100px }
+			  h1 { height: 30px }
+			  td { line-height: 40px }
+			  table { table-layout: fixed; width: 100% }
+			  thead { display: table-row-group; break-after: avoid }
+			  thead tr { break-after: avoid }
+			</style>
+			<h1>Dummy title</h1>
+			<table>
+			  <thead>
+				<tr><td>r1l1</td></tr>
+			  </thead>
+			  <tbody>
+				<tr><td>r2l1</td></tr>
+			  </tbody>
+			</table>
+		   `,
+			[]int{0, 2},
+			[]pr.Float{0, 40},
 		},
 	} {
 		pages := renderPages(t, data.html)
@@ -2743,6 +2784,78 @@ func testTablePageBreakAvoid(t *testing.T, html string, rows []int) {
 	tu.AssertEqual(t, rowsPerPage, rows)
 }
 
+func TestTablePageBreakAvoidBeforeTable(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	pages := renderPages(t, `
+      <style>
+        @page { size: 100px }
+        h1 { height: 30px }
+        td, p { font: 20px / 1 weasyprint }
+        tr { break-after: avoid }
+        table { table-layout: fixed; width: 100%; break-before: avoid }
+      </style>
+      <h1>Dummy title</h1>
+      <p>paragraph</p>
+      <table>
+        <tbody>
+          <tr><td>row 1</td></tr>
+        </tbody>
+        <tbody>
+          <tr><td>row 2</td></tr>
+          <tr><td>row 3</td></tr>
+        </tbody>
+      </table>
+     `)
+	page1, page2 := pages[0], pages[1]
+	html := unpack1(page1)
+	body := unpack1(html)
+	h1 := unpack1(body)
+
+	tu.AssertEqual(t, h1.Box().ElementTag, "h1")
+
+	html = unpack1(page2)
+	body = unpack1(html)
+	p, table_wrapper := unpack2(body)
+	tu.AssertEqual(t, p.Box().ElementTag, "p")
+	tu.AssertEqual(t, table_wrapper.Box().ElementTag, "table")
+}
+
+func TestTablePageBreakAvoidBeforeTbody(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	pages := renderPages(t, `
+      <style>
+        @page { size: 100px }
+        h1 { height: 30px }
+        td, p { height: 20px }
+        tr { break-after: avoid }
+        tbody { break-before: avoid }
+      </style>
+      <h1>Dummy title</h1>
+      <p>paragraph</p>
+      <table>
+        <tbody>
+          <tr><td>row 1</td></tr>
+        </tbody>
+        <tbody>
+          <tr><td>row 2</td></tr>
+          <tr><td>row 3</td></tr>
+        </tbody>
+      </table>
+     `)
+	page1, page2 := pages[0], pages[1]
+	html := unpack1(page1)
+	body := unpack1(html)
+	h1 := unpack1(body)
+
+	tu.AssertEqual(t, h1.Box().ElementTag, "h1")
+
+	html = unpack1(page2)
+	body = unpack1(html)
+	p, table_wrapper := unpack2(body)
+	tu.AssertEqual(t, p.Box().ElementTag, "p")
+	tu.AssertEqual(t, table_wrapper.Box().ElementTag, "table")
+}
+
 func TestInlineTableBaseline(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
@@ -2915,7 +3028,7 @@ func TestTableEmptyBody(t *testing.T) {
 }
 
 func TestTableBreakChildrenMargin(t *testing.T) {
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1254
+	// Regression test for #1254
 	html := `
       <style>
         @page { size: 100px }
@@ -2931,7 +3044,7 @@ func TestTableBreakChildrenMargin(t *testing.T) {
 }
 
 func TestTableTdBreakInsideAvoid(t *testing.T) {
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1547
+	// Regression test for #1547
 	html := `
 	<style>
 		@page { size: 4cm }

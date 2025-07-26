@@ -156,6 +156,8 @@ const (
 	PTextDecorationLine
 	PTextDecorationColor
 	PTextDecorationStyle
+	PTextDecorationThickness
+	PTextUnderlineOffset
 
 	PBreakAfter
 	PBreakBefore
@@ -450,10 +452,12 @@ var InitialValues = Properties{
 	PColumnGap:      DimOrS{S: "normal"},
 	PRowGap:         DimOrS{S: "normal"},
 
-	// Text Decoration Module 3 (CR): https://www.w3.org/TR/css-text-decor-3/
-	PTextDecorationLine:  Decorations(0),
-	PTextDecorationColor: CurrentColor,
-	PTextDecorationStyle: String("solid"),
+	// Text Decoration Module 3/4 (CR/WD): https://www.w3.org/TR/css-text-decor-4/
+	PTextDecorationLine:      Decorations(0),
+	PTextDecorationColor:     CurrentColor,
+	PTextDecorationStyle:     String("solid"),
+	PTextDecorationThickness: DimOrS{S: "auto"},
+	PTextUnderlineOffset:     DimOrS{S: "auto"},
 
 	// Overflow Module 3 (WD): https://www.w3.org/TR/css-overflow-3/
 	PBlockEllipsis: TaggedString{Tag: None},

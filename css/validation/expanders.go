@@ -42,7 +42,7 @@ var expanders = [...]expander{
 		pr.PFontVariantNumeric, pr.PFontVariantPosition)(_fontVariant),
 	pr.SFont: genericExpander(pr.PFontStyle, pr.PFontVariantCaps, pr.PFontWeight, pr.PFontStretch, pr.PFontSize,
 		pr.PLineHeight, pr.PFontFamily)(_expandFont),
-	pr.STextDecoration: genericExpander(pr.PTextDecorationLine, pr.PTextDecorationColor, pr.PTextDecorationStyle)(_expandTextDecoration),
+	pr.STextDecoration: genericExpander(pr.PTextDecorationLine, pr.PTextDecorationColor, pr.PTextDecorationStyle, pr.PTextDecorationThickness)(_expandTextDecoration),
 	pr.SFlex:           genericExpander(pr.PFlexGrow, pr.PFlexShrink, pr.PFlexBasis)(_expandFlex),
 	pr.SFlexFlow:       genericExpander(pr.PFlexDirection, pr.PFlexWrap)(_expandFlexFlow),
 	pr.SLineClamp:      genericExpander(pr.PMaxLines, pr.PContinue, pr.PBlockEllipsis)(_expandLineClamp),
@@ -750,48 +750,57 @@ func expandBackground(baseURL string, shortand pr.Shortand, tokens []Token) (out
 // @expander("text-decoration")
 func _expandTextDecoration(_ string, _ pr.Shortand, tokens []Token) (out []namedTokens, err error) {
 	var (
-		textDecorationLine  []Token
-		textDecorationColor []Token
-		textDecorationStyle []Token
-		noneInLine          bool
+		lines      []Token
+		colors     []Token
+		styles     []Token
+		thickness  []Token
+		noneInLine bool
 	)
 
 	for _, token := range tokens {
 		keyword := getKeyword(token)
 		switch keyword {
 		case "none", "underline", "overline", "line-through", "blink":
-			textDecorationLine = append(textDecorationLine, token)
+			lines = append(lines, token)
 			if noneInLine {
 				return nil, ErrInvalidValue
 			} else if keyword == "none" {
 				noneInLine = true
 			}
 		case "solid", "double", "dotted", "dashed", "wavy":
-			if len(textDecorationStyle) != 0 {
+			if len(styles) != 0 {
 				return nil, ErrInvalidValue
 			} else {
-				textDecorationStyle = append(textDecorationStyle, token)
+				styles = append(styles, token)
 			}
 		default:
-			color := pa.ParseColor(token)
-			if color.IsNone() {
-				return nil, ErrInvalidValue
-			} else if len(textDecorationColor) != 0 {
-				return nil, ErrInvalidValue
+			if color := pa.ParseColor(token); !color.IsNone() {
+				if len(colors) != 0 {
+					return nil, ErrInvalidValue
+				}
+				colors = append(colors, token)
+			} else if th := textDecorationThickness([]Token{token}, ""); th != nil {
+				if len(thickness) != 0 {
+					return nil, ErrInvalidValue
+				}
+				thickness = append(thickness, token)
 			} else {
-				textDecorationColor = append(textDecorationColor, token)
+				return nil, ErrInvalidValue
 			}
 		}
 	}
 
-	if len(textDecorationLine) != 0 {
-		out = append(out, namedTokens{name: pr.PTextDecorationLine, tokens: textDecorationLine})
+	if len(lines) != 0 {
+		out = append(out, namedTokens{name: pr.PTextDecorationLine, tokens: lines})
 	}
-	if len(textDecorationColor) != 0 {
-		out = append(out, namedTokens{name: pr.PTextDecorationColor, tokens: textDecorationColor})
+	if len(colors) != 0 {
+		out = append(out, namedTokens{name: pr.PTextDecorationColor, tokens: colors})
 	}
-	if len(textDecorationStyle) != 0 {
-		out = append(out, namedTokens{name: pr.PTextDecorationStyle, tokens: textDecorationStyle})
+	if len(styles) != 0 {
+		out = append(out, namedTokens{name: pr.PTextDecorationStyle, tokens: styles})
+	}
+	if len(thickness) != 0 {
+		out = append(out, namedTokens{name: pr.PTextDecorationThickness, tokens: thickness})
 	}
 
 	return out, nil
@@ -978,7 +987,7 @@ func _expandFont(_ string, _ pr.Shortand, tokens []Token) ([]namedTokens, error)
 		var suffix pr.KnownProp
 		if fontStyle([]Token{token}, "") != nil {
 			suffix = pr.PFontStyle
-		} else if kw == "normal" || kw == "small-caps" {
+		} else if fontVariantCaps([]Token{token}, "") != nil {
 			suffix = pr.PFontVariantCaps
 		} else if fontWeight([]Token{token}, "") != nil {
 			suffix = pr.PFontWeight

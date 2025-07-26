@@ -1058,6 +1058,7 @@ func TestGridTemplateAreas(t *testing.T) {
 		{`"head head" "nav main" "foot ...."`, pr.GridTemplateAreas{{"head", "head"}, {"nav", "main"}, {"foot", ""}}},
 		{`"title board" "stats board"`, pr.GridTemplateAreas{{"title", "board"}, {"stats", "board"}}},
 		{`". a" "b a" ".a"`, pr.GridTemplateAreas{{"", "a"}, {"b", "a"}, {"", "a"}}},
+		{`"a b b" "c b b" "d e f"`, pr.GridTemplateAreas{{"a", "b", "b"}, {"c", "b", "b"}, {"d", "e", "f"}}},
 	} {
 		assertValidDict(t, fmt.Sprintf("grid-template-areas: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{
 			pr.PGridTemplateAreas: test.value,
@@ -1084,12 +1085,12 @@ func TestGridLine(t *testing.T) {
 	}{
 		{"auto", pr.GridLine{Tag: pr.Auto}},
 		{"4", pr.GridLine{Val: 4}},
-		{"C", pr.GridLine{Ident: "c"}},
+		{"C", pr.GridLine{Ident: "C"}},
 		{"4 c", pr.GridLine{Val: 4, Ident: "c"}},
 		{"col -4", pr.GridLine{Val: -4, Ident: "col"}},
 		{"span c 4", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "c"}},
 		{"span 4 c", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "c"}},
-		{"4 span c", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "c"}},
+		{"4 span C", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "C"}},
 		{"super 4 span", pr.GridLine{Tag: pr.Span, Val: 4, Ident: "super"}},
 	} {
 		assertValidDict(t, fmt.Sprintf("grid-row-start: %s", test.css), map[pr.KnownProp]pr.DeclaredValue{

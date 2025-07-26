@@ -79,27 +79,29 @@ var (
 		pr.PBreakBefore: break_,
 		pr.PBreakAfter:  break_,
 
-		pr.PTop:                length,
-		pr.PRight:              length,
-		pr.PLeft:               length,
-		pr.PBottom:             length,
-		pr.PMarginTop:          length,
-		pr.PMarginRight:        length,
-		pr.PMarginBottom:       length,
-		pr.PMarginLeft:         length,
-		pr.PHeight:             length,
-		pr.PWidth:              length,
-		pr.PMinWidth:           length,
-		pr.PMinHeight:          length,
-		pr.PMaxWidth:           length,
-		pr.PMaxHeight:          length,
-		pr.PPaddingTop:         length,
-		pr.PPaddingRight:       length,
-		pr.PPaddingBottom:      length,
-		pr.PPaddingLeft:        length,
-		pr.PTextIndent:         length,
-		pr.PHyphenateLimitZone: length,
-		pr.PFlexBasis:          length,
+		pr.PTop:                     length,
+		pr.PRight:                   length,
+		pr.PLeft:                    length,
+		pr.PBottom:                  length,
+		pr.PMarginTop:               length,
+		pr.PMarginRight:             length,
+		pr.PMarginBottom:            length,
+		pr.PMarginLeft:              length,
+		pr.PHeight:                  length,
+		pr.PWidth:                   length,
+		pr.PMinWidth:                length,
+		pr.PMinHeight:               length,
+		pr.PMaxWidth:                length,
+		pr.PMaxHeight:               length,
+		pr.PPaddingTop:              length,
+		pr.PPaddingRight:            length,
+		pr.PPaddingBottom:           length,
+		pr.PPaddingLeft:             length,
+		pr.PTextIndent:              length,
+		pr.PHyphenateLimitZone:      length,
+		pr.PFlexBasis:               length,
+		pr.PTextUnderlineOffset:     length,
+		pr.PTextDecorationThickness: length,
 
 		pr.PBleedLeft:         bleed,
 		pr.PBleedRight:        bleed,
@@ -308,7 +310,7 @@ func asPixels(v pr.DimOrS, pixelsOnly bool) pr.DimOrS {
 // Always returns a Value which is interpreted as float64 if Unit is zero.
 // pixelsOnly=false
 func length_(computer *ComputedStyle, value pr.DimOrS, fontSize pr.Float, pixelsOnly bool) pr.DimOrS {
-	if value.S == "auto" || value.S == "content" {
+	if value.S == "auto" || value.S == "content" || value.S == "from-font" {
 		return value
 	}
 	if value.Value == 0 {
@@ -322,7 +324,7 @@ func length_(computer *ComputedStyle, value pr.DimOrS, fontSize pr.Float, pixels
 	case pr.Pt, pr.Pc, pr.In, pr.Cm, pr.Mm, pr.Q:
 		// Convert absolute lengths to pixels
 		result = value.Value * pr.LengthsToPixels[unit]
-	case pr.Em, pr.Ex, pr.Ch, pr.Rem:
+	case pr.Em, pr.Ex, pr.Ch, pr.Rem, pr.Lh, pr.Rlh:
 		if fontSize < 0 {
 			fontSize = computer.GetFontSize().Value
 		}
@@ -340,7 +342,13 @@ func length_(computer *ComputedStyle, value pr.DimOrS, fontSize pr.Float, pixels
 		case pr.Em:
 			result = value.Value * fontSize
 		case pr.Rem:
-			result = value.Value * computer.rootStyle.fontSize.Value
+			result = value.Value * computer.rootStyle.GetFontSize().Value
+		case pr.Lh:
+			line := text.StrutLayout(computer, computer.textContext)
+			result = value.Value * line[0]
+		case pr.Rlh:
+			line := text.StrutLayout(computer.rootStyle, computer.textContext)
+			result = value.Value * line[0]
 		}
 
 	default:

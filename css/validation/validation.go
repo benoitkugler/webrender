@@ -26,7 +26,7 @@ const proprietaryPrefix = "-weasy-"
 var (
 	ErrInvalidValue = errors.New("invalid or unsupported values for a known CSS property")
 
-	LENGTHUNITS = map[string]pr.Unit{"ex": pr.Ex, "em": pr.Em, "ch": pr.Ch, "rem": pr.Rem, "px": pr.Px, "pt": pr.Pt, "pc": pr.Pc, "in": pr.In, "cm": pr.Cm, "mm": pr.Mm, "q": pr.Q}
+	LENGTHUNITS = map[string]pr.Unit{"ex": pr.Ex, "em": pr.Em, "ch": pr.Ch, "rem": pr.Rem, "lh": pr.Lh, "rlh": pr.Rlh, "px": pr.Px, "pt": pr.Pt, "pc": pr.Pc, "in": pr.In, "cm": pr.Cm, "mm": pr.Mm, "q": pr.Q}
 	AngleUnits  = map[string]pr.Unit{"rad": pr.Rad, "turn": pr.Turn, "deg": pr.Deg, "grad": pr.Grad}
 	// keyword -> (open, insert)
 	contentQuoteKeywords = map[string]pr.Quote{
@@ -160,6 +160,7 @@ var (
 		pr.PMarginRight:             lengthPercOrAuto,
 		pr.PMarginBottom:            lengthPercOrAuto,
 		pr.PMarginLeft:              lengthPercOrAuto,
+		pr.PTextUnderlineOffset:     lengthPercOrAuto,
 		pr.PHeight:                  widthHeight,
 		pr.PWidth:                   widthHeight,
 		pr.PColumnFill:              columnFill,
@@ -209,6 +210,7 @@ var (
 		pr.PTextAlignLast:           textAlignLast,
 		pr.PTextDecorationLine:      textDecorationLine,
 		pr.PTextDecorationStyle:     textDecorationStyle,
+		pr.PTextDecorationThickness: textDecorationThickness,
 		pr.PTextIndent:              textIndent,
 		pr.PTextTransform:           textTransform,
 		pr.PVerticalAlign:           verticalAlign,
@@ -463,7 +465,7 @@ var notPrintMedia = utils.NewSet(
 	"caret-shape",
 	"cursor",
 	"field-sizing",
-	"pointer-event",
+	"pointer-events",
 	"resize",
 	"touch-action",
 	// Browser viewport scrolling
@@ -2601,6 +2603,25 @@ func textDecorationStyle(tokens []Token, _ string) pr.CssProperty {
 	}
 }
 
+// @single_token
+// “text-decoration-thickness“ property validation.
+func textDecorationThickness(tokens []Token, _ string) pr.CssProperty {
+	if len(tokens) != 1 {
+		return nil
+	}
+	token := tokens[0]
+
+	length := getLength(token, true, true)
+	if !length.IsNone() {
+		return length.ToValue()
+	}
+	switch keyword := getKeyword(token); keyword {
+	case "auto", "from-font":
+		return pr.DimOrS{S: keyword}
+	}
+	return nil
+}
+
 // @validator()
 // @singleToken
 // “text-indent“ property validation.
@@ -3138,13 +3159,18 @@ func gridTemplateAreas(tokens []Token, _ string) pr.CssProperty {
 			}
 			areas[area] = true
 			coordinates[[2]int{x, y}] = true
-			nx := x + 1
+			nx := x
+			hasBroken := false
 			for ; nx < len(row); nx++ {
 				narea := row[nx]
 				if narea != area {
+					hasBroken = true
 					break
 				}
 				coordinates[[2]int{nx, y}] = true
+			}
+			if hasBroken {
+				nx += 1
 			}
 			for ny := y + 1; ny < len(gridAreas); ny++ {
 				nrow := gridAreas[ny]
@@ -3181,7 +3207,7 @@ func gridLineImpl(tokens []Token) (pr.GridLine, bool) {
 			if keyword == "auto" {
 				return pr.GridLine{Tag: pr.Auto}, true
 			} else if keyword != "span" {
-				return pr.GridLine{Ident: keyword}, true
+				return pr.GridLine{Ident: token.(pa.Ident).Value}, true
 			}
 		} else if number, ok := token.(pa.Number); ok && number.IsInt() && number.ValueF != 0 {
 			return pr.GridLine{Val: number.Int()}, true
@@ -3205,7 +3231,7 @@ func gridLineImpl(tokens []Token) (pr.GridLine, bool) {
 					continue
 				}
 			} else if ident == "" {
-				ident = keyword
+				ident = token.(pa.Ident).Value
 				continue
 			}
 		} else if nbT, ok := token.(pa.Number); ok && nbT.IsInt() && nbT.ValueF != 0 {

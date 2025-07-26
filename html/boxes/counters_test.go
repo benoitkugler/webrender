@@ -197,6 +197,8 @@ func TestCounters6(t *testing.T) {
 	})
 }
 
+// Regression test for #827.
+// Test that counters are case-sensitive.
 func TestCounters7(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 

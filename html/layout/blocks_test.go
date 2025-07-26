@@ -829,7 +829,7 @@ func TestOverflowHiddenOutOfFlowLayout(t *testing.T) {
 	tu.AssertEqual(t, parentDiv.Box().Height, Fl(3))
 }
 
-// Test regression: https://github.com/Kozea/WeasyPrint/issues/943
+// Regression test for #943
 func TestBoxMarginTopRepagination(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
@@ -920,7 +920,7 @@ func TestContinueDiscardChildren(t *testing.T) {
 }
 
 func TestBlockInBlockWithBottomPadding(t *testing.T) {
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1476
+	// Regression test for #1476
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
 	pages := renderPages(t, `
@@ -1088,4 +1088,34 @@ func TestPageBreaks3(t *testing.T) {
 		positionsY = append(positionsY, divPos)
 	}
 	tu.AssertEqual(t, positionsY, [][]pr.Float{{10}, {10}, {10}})
+}
+
+// Regression test for #2453.
+func TestPageBreakChildMarginNoCollapse(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	pages := renderPages(t, `
+      <style>
+        @page{ size: 6px }
+      </style>
+      <body>
+        <div style="height: 2px"></div>
+        <section>
+          <div style="height: 3px; margin-bottom: 2px"></div>
+          <div style="display: flex">
+            <span style="font: 2px weasyprint">a</span>
+          </div>
+        </section>
+      </body>
+    `)
+	page1, page2 := pages[0], pages[1]
+	html := unpack1(page1)
+	body := unpack1(html)
+	_, section := unpack2(body)
+	_ = unpack1(section)
+
+	html = unpack1(page2)
+	body = unpack1(html)
+	section = unpack1(body)
+	_ = unpack1(section)
 }

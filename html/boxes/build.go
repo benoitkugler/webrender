@@ -441,10 +441,11 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 				counterValue_ = []int{0}
 			}
 			counterValue := counterValue_[len(counterValue_)-1]
-			markerText := cs.RenderMarker(style.GetListStyleType(), counterValue)
-			markerBox := TextBoxAnonymousFrom(box, markerText)
-			markerBox.Box().Style.SetWhiteSpace("pre-wrap")
-			*children = append(*children, markerBox)
+			if markerText := cs.RenderMarker(style.GetListStyleType(), counterValue); markerText != "" {
+				markerBox := TextBoxAnonymousFrom(box, markerText)
+				markerBox.Box().Style.SetWhiteSpace("pre-wrap")
+				*children = append(*children, markerBox)
+			}
 		}
 	}
 

@@ -936,6 +936,31 @@ func TestColumnsPadding(t *testing.T) {
 	tu.AssertEqual(t, ys, []pr.Float{1, 1, 1})
 }
 
+func TestColumnsBottomMargin(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	page := renderOnePage(t, `
+      <style>
+        div { columns: 2; column-gap: 1px }
+        body { margin: 0; font: 2px / 1 weasyprint }
+        p { margin-bottom: 1em }
+        @page { margin: 0; size: 5px 7px; font-size: 1px }
+      </style>
+      <div><p>a b c</p></div>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	column1, column2 := unpack2(div)
+	p := unpack1(column1)
+	line1, line2 := unpack2(p)
+	assertText(t, unpack1(line1), "a")
+	assertText(t, unpack1(line2), "b")
+	p = unpack1(column2)
+	line1 = unpack1(p)
+	assertText(t, unpack1(line1), "c")
+}
+
 func TestColumnsRelative(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 

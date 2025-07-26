@@ -507,7 +507,7 @@ func TestPageBreaksComplex8(t *testing.T) {
 
 func TestPageBreaksComplex_9(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1979
+	// Regression test for #1979
 	pages := renderPages(t, `
       <style>
         @page { size: 75px; margin: 0 }
@@ -966,7 +966,7 @@ func TestPageNames9(t *testing.T) {
 	tu.AssertEqual(t, article.Box().ElementTag(), "article")
 }
 
-func TestPageNames_10(t *testing.T) {
+func TestPageNames10(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	pages := renderPages(t, `
       <style>
@@ -1002,6 +1002,158 @@ func TestPageNames_10(t *testing.T) {
 	section = body.Box().Children[0]
 	article := section.Box().Children[0]
 	tu.AssertEqual(t, article.Box().ElementTag(), "article")
+}
+
+func TestPageGroups(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	pages := renderPages(t, `
+      <style>
+        @page { size: 200px 200px }
+        @page small { size: 100px 100px }
+        @page :nth(1 of small) { size: 50px 50px }
+        section { page: small }
+        div, div section { break-after: page }
+      </style>
+      <div></div>
+      <article></article>
+      <section>
+        <div></div>
+        <div></div>
+      </section>
+      <section>
+      </section>
+      <div></div>
+      <div></div>
+      <section>
+        <div></div>
+      </section>
+      <div>
+        <section></section>
+        <section></section>
+      </div>
+    `)
+	page1, page2, page3, page4, page5, page6, page7, page8, page9 := pages[0], pages[1], pages[2], pages[3], pages[4], pages[5], pages[6], pages[7], pages[8]
+
+	tu.AssertEqual(t, [2]pr.Float{page1.Box().Width.V(), page1.Box().Height.V()}, [2]pr.Float{200, 200})
+	div := unpack1(unpack1(unpack1(page1)))
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+
+	tu.AssertEqual(t, [2]pr.Float{page2.Box().Width.V(), page2.Box().Height.V()}, [2]pr.Float{200, 200})
+	article := unpack1(unpack1(unpack1(page2)))
+	tu.AssertEqual(t, article.Box().ElementTag, "article")
+
+	tu.AssertEqual(t, [2]pr.Float{page3.Box().Width.V(), page3.Box().Height.V()}, [2]pr.Float{50, 50})
+	section := unpack1(unpack1(unpack1(page3)))
+	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	div = unpack1(section)
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+
+	tu.AssertEqual(t, [2]pr.Float{page4.Box().Width.V(), page4.Box().Height.V()}, [2]pr.Float{100, 100})
+	section = unpack1(unpack1(unpack1(page4)))
+	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	div = unpack1(section)
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+
+	tu.AssertEqual(t, [2]pr.Float{page5.Box().Width.V(), page5.Box().Height.V()}, [2]pr.Float{50, 50})
+	section, div = unpack2(unpack1(unpack1(page5)))
+	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+
+	tu.AssertEqual(t, [2]pr.Float{page6.Box().Width.V(), page6.Box().Height.V()}, [2]pr.Float{200, 200})
+	div = unpack1(unpack1(unpack1(page6)))
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+
+	tu.AssertEqual(t, [2]pr.Float{page7.Box().Width.V(), page7.Box().Height.V()}, [2]pr.Float{50, 50})
+	section = unpack1(unpack1(unpack1(page7)))
+	tu.AssertEqual(t, section.Box().ElementTag, "section")
+	div = unpack1(section)
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+
+	tu.AssertEqual(t, [2]pr.Float{page8.Box().Width.V(), page8.Box().Height.V()}, [2]pr.Float{50, 50})
+	div = unpack1(unpack1(unpack1(page8)))
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	section = unpack1(div)
+	tu.AssertEqual(t, section.Box().ElementTag, "section")
+
+	tu.AssertEqual(t, [2]pr.Float{page9.Box().Width.V(), page9.Box().Height.V()}, [2]pr.Float{50, 50})
+	div = unpack1(unpack1(unpack1(page9)))
+	tu.AssertEqual(t, div.Box().ElementTag, "div")
+	section = unpack1(div)
+	tu.AssertEqual(t, section.Box().ElementTag, "section")
+}
+
+// Regression test for #1076.
+func TestPageGroupsBlankInside(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	pages := renderPages(t, `
+      <style>
+        @page { size: 100px }
+        @page div { size: 50px }
+        div { page: div }
+        p { break-before: right }
+      </style>
+      <div>
+        <p>1</p>
+        <p>2</p>
+      </div>
+    `)
+	tu.AssertEqual(t, len(pages), 3)
+	for _, page := range pages {
+		tu.AssertEqual(t, [2]pr.Float{page.Box().Width.V(), page.Box().Height.V()}, [2]pr.Float{50, 50})
+	}
+}
+
+func TestPageGroupsBlankOutside(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	pages := renderPages(t, `
+      <style>
+        @page { size: 100px }
+        @page p { size: 50px }
+        p { page: p; break-before: right }
+      </style>
+      <div>
+        <p>1</p>
+        <p>2</p>
+      </div>
+    `)
+	tu.AssertEqual(t, len(pages), 3)
+	page1, page2, page3 := pages[0], pages[1], pages[2]
+	tu.AssertEqual(t, [2]pr.Float{page1.Box().Width.V(), page1.Box().Height.V()}, [2]pr.Float{50, 50})
+	tu.AssertEqual(t, [2]pr.Float{page2.Box().Width.V(), page2.Box().Height.V()}, [2]pr.Float{100, 100})
+	tu.AssertEqual(t, [2]pr.Float{page3.Box().Width.V(), page3.Box().Height.V()}, [2]pr.Float{50, 50})
+}
+
+// Regression test for #2429.
+func TestPageGroupsFirstNth(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+
+	pages := renderPages(t, `
+      <style>
+        @page { size: 100px }
+        @page div { size: 50px }
+        @page :nth(2n+1 of div) { size: 30px }
+        div { page: div; break-before: right }
+        p { break-before: page }
+      </style>
+      <div>
+        <p>1</p>
+        <p>2</p>
+        <p>3</p>
+      </div>
+      <div>
+        <p>4</p>
+        <p>5</p>
+      </div>
+    `)
+	tu.AssertEqual(t, [2]pr.Float{pages[0].Box().Width.V(), pages[0].Box().Height.V()}, [2]pr.Float{30, 30})
+	tu.AssertEqual(t, [2]pr.Float{pages[1].Box().Width.V(), pages[1].Box().Height.V()}, [2]pr.Float{50, 50})
+	tu.AssertEqual(t, [2]pr.Float{pages[2].Box().Width.V(), pages[2].Box().Height.V()}, [2]pr.Float{30, 30})
+	tu.AssertEqual(t, [2]pr.Float{pages[3].Box().Width.V(), pages[3].Box().Height.V()}, [2]pr.Float{100, 100})
+	tu.AssertEqual(t, [2]pr.Float{pages[4].Box().Width.V(), pages[4].Box().Height.V()}, [2]pr.Float{30, 30})
+	tu.AssertEqual(t, [2]pr.Float{pages[5].Box().Width.V(), pages[5].Box().Height.V()}, [2]pr.Float{50, 50})
 }
 
 func TestOrphansWidowsAvoid(t *testing.T) {
@@ -1727,7 +1879,7 @@ func TestRunningImg(t *testing.T) {
 func TestRunningAbsolute(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1540
+	// Regression test for #1540
 	_ = renderPages(t, `
       <style>
         footer {

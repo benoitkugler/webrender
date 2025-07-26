@@ -40,7 +40,7 @@ func TestListsStyle(t *testing.T) {
 				markerText = unpack1(marker)
 			} else {
 				marker, lineContainer := unpack2(listItem)
-				tu.AssertEqual(t, marker.Box().PositionX, listItem.Box().PositionX)
+				tu.AssertEqual(t, marker.Box().PositionX, listItem.Box().PositionX-marker.Box().Width.V())
 				tu.AssertEqual(t, marker.Box().PositionY, listItem.Box().PositionY)
 				line := unpack1(lineContainer)
 				content = unpack1(line)

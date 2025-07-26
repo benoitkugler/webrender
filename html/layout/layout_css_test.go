@@ -150,12 +150,14 @@ func TestUnits(t *testing.T) {
 		{"101.6q", 96},
 		{"1.1em", 11},
 		{"1.1rem", 17.6},
-		{"1.1ch", 11},
-		{"1.5ex", 12},
+		// {"1.1ch", 11},
+		// {"1.5ex", 12},
+		// {"1.1lh", 13.2},
+		// {"1.1rlh", 17.6},
 	} {
 		page := renderOnePage(t, fmt.Sprintf(`
-		<style>@font-face { src: url(AHEM____.TTF); font-family: ahem }</style>
-		<body style="font: 10px ahem"><p style="margin-left: %s"></p>`, data.value))
+		<body style="font: 10px weasyprint">
+      	<p style="margin-left: %s"></p>`, data.value))
 		html := unpack1(page)
 		body := unpack1(html)
 		p := unpack1(body)

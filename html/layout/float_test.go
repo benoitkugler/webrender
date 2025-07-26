@@ -239,11 +239,10 @@ func TestFloats8(t *testing.T) {
 	_ = unpack1(line)
 }
 
+// Regression test for #263.
 func TestFloats9(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Regression test
-	// https://github.com/Kozea/WeasyPrint/issues/263
 	_ = renderOnePage(t, `<div style="top:100%; float:left">`)
 }
 
@@ -781,3 +780,57 @@ func TestFloatTextIndent3(t *testing.T) {
 //     body :=  unpack1(html)
 //     paragraph := unpack1(body)
 //     line1, line2, line3 = paragraph.Box().Children
+
+func TestFloatTableAbortedRow(t *testing.T) {
+	pages := renderPages(t, `
+      <style>
+        @page {size: 10px 7px}
+        body {font-family: weasyprint; font-size: 2px; line-height: 1}
+        div {float: right; orphans: 1}
+        td {break-inside: avoid}
+      </style>
+      <table><tbody>
+        <tr><td>abc</td></tr>
+        <tr><td>abc</td></tr>
+        <tr><td>def <div>f<br>g</div> ghi</td></tr>
+      </tbody></table>
+    `)
+	page1, page2 := pages[0], pages[1]
+
+	html := unpack1(page1)
+	body := unpack1(html)
+	table_wrapper := unpack1(body)
+	table := unpack1(table_wrapper)
+	tbody := unpack1(table)
+	for _, tr := range tbody.Box().Children {
+		td := unpack1(tr)
+		line := unpack1(td)
+		textbox := unpack1(line)
+		assertText(t, textbox, "abc")
+	}
+	html = unpack1(page2)
+	body = unpack1(html)
+	table_wrapper = unpack1(body)
+	table = unpack1(table_wrapper)
+	tbody = unpack1(table)
+	tr := unpack1(tbody)
+	td := unpack1(tr)
+	line1, line2 := unpack2(td)
+	textbox, div := unpack2(line1)
+	assertText(t, textbox, "def ")
+	textbox = unpack1(line2)
+	assertText(t, textbox, "ghi")
+	line1, line2 = unpack2(div)
+	textbox, _ = unpack2(line1)
+	assertText(t, textbox, "f")
+	textbox = unpack1(line2)
+	assertText(t, textbox, "g")
+}
+
+func TestFormattingContextAvoidRtl(t *testing.T) {
+	renderPages(t, `
+      <div style="direction: rtl">
+        <div style="overflow: hidden"></div>
+      </div>
+    `)
+}

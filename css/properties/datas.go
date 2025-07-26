@@ -11,6 +11,8 @@ const ( // zero field corresponds to null content
 	Em
 	Ch
 	Rem
+	Lh
+	Rlh
 	Px
 	Pt
 	Pc
@@ -166,6 +168,7 @@ var (
 		PTextAlignLast,
 		PTextIndent,
 		PTextTransform,
+		PTextUnderlineOffset,
 		PVisibility,
 		PWhiteSpace,
 		PWidows,

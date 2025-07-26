@@ -337,7 +337,7 @@ func TestImages17(t *testing.T) {
 func TestImages18(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1050
+	// Regression test for #1050
 	_ = renderOnePage(t, `
         <img style="position: absolute" src="
             data:image/svg+xml,`+url.PathEscape(`<svg viewBox="0 0 20 10"></svg>`)+`

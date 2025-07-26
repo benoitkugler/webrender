@@ -155,25 +155,23 @@ func (sf *StyleFor) setComputedStyles(element, parent Element,
 ) {
 	var (
 		parentStyle pr.ElementStyle
-		rootStyle_  rootStyle
+		rootStyle_  pr.StyleAccessor
 	)
 	if element == root && pseudoType == "" {
 		if node, ok := parent.(*utils.HTMLNode); parent != nil && (ok && node != nil) {
 			panic("parent should be nil here")
 		}
-		rootStyle_ = rootStyle{
+		rootStyle_ = pr.Properties{
 			// When specified on the font-size property of the Root Element, the
 			// rem units refer to the property’s initial value.
-			fontSize: pr.InitialValues.GetFontSize(),
+			pr.PFontSize: pr.InitialValues.GetFontSize(),
 		}
 	} else {
 		if parent == nil {
 			panic("parent shouldn't be nil here")
 		}
 		parentStyle = sf.computedStyles[parent.ToKey("")]
-		rootStyle_ = rootStyle{
-			fontSize: sf.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}].GetFontSize(),
-		}
+		rootStyle_ = sf.computedStyles[utils.ElementKey{Element: root, PseudoType: ""}]
 	}
 	key := element.ToKey(pseudoType)
 	cascaded, in := sf.cascadedStyles[key]
@@ -314,11 +312,6 @@ func (c *propsCache) updateWith(other propsCache) {
 	}
 }
 
-// subset of properties of the root element
-type rootStyle struct {
-	fontSize pr.DimOrS
-}
-
 // ComputedStyle provides on demand access of computed properties
 type ComputedStyle struct {
 	propsCache
@@ -329,8 +322,11 @@ type ComputedStyle struct {
 
 	cache pr.TextRatioCache
 
-	variables  map[string]pr.RawTokens
-	rootStyle  rootStyle
+	variables map[string]pr.RawTokens
+
+	// subset of properties of the root element
+	rootStyle pr.StyleAccessor
+
 	cascaded   cascadedStyle
 	pseudoType string
 	baseUrl    string
@@ -338,7 +334,7 @@ type ComputedStyle struct {
 }
 
 func newComputedStyle(parentStyle pr.ElementStyle, cascaded cascadedStyle,
-	element Element, pseudoType string, rootStyle rootStyle, baseUrl string, textContext text.TextLayoutContext,
+	element Element, pseudoType string, rootStyle pr.StyleAccessor, baseUrl string, textContext text.TextLayoutContext,
 ) *ComputedStyle {
 	out := &ComputedStyle{
 		propsCache: newPropsCache(),
@@ -421,7 +417,7 @@ func (c *ComputedStyle) cascadeValue(key pr.PropKey) (value pr.DeclaredValue, sa
 	if rawTokens, isPending := value.(pr.RawTokens); isPending { // Property with pending values, validate them.
 		var solvedTokens []Token
 		for _, token := range rawTokens {
-			tokens := resolveVar(c.variables, token)
+			tokens := resolveVar(c.variables, token, utils.Set{})
 			if tokens == nil {
 				solvedTokens = append(solvedTokens, token)
 			} else {
@@ -642,7 +638,7 @@ func textDecoration(key pr.KnownProp, value, parentValue pr.CssProperty, cascade
 	// See https://drafts.csswg.org/css-text-decor-3/#line-decoration
 	// TODO: these rules don’t follow the specification.
 	switch key {
-	case pr.PTextDecorationColor, pr.PTextDecorationStyle:
+	case pr.PTextDecorationColor, pr.PTextDecorationStyle, pr.PTextDecorationThickness:
 		if !cascaded {
 			value = parentValue
 		}
@@ -1059,10 +1055,10 @@ func declarationPrecedence(origin string, importance bool) uint8 {
 // Get a dict of computed style mixed from parent and cascaded styles.
 func ComputedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, textContext text.TextLayoutContext,
 ) pr.ElementStyle {
-	return computedFromCascaded(element, cascaded, parentStyle, rootStyle{}, "", "", nil, textContext)
+	return computedFromCascaded(element, cascaded, parentStyle, pr.Properties{}, "", "", nil, textContext)
 }
 
-func computedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, rootStyle_ rootStyle, pseudoType, baseUrl string,
+func computedFromCascaded(element Element, cascaded cascadedStyle, parentStyle pr.ElementStyle, rootStyle_ pr.StyleAccessor, pseudoType, baseUrl string,
 	targetCollector *TargetCollector, textContext text.TextLayoutContext,
 ) pr.ElementStyle {
 	if cascaded == nil && parentStyle != nil {
@@ -1263,8 +1259,17 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []pa.
 ) {
 	for _, rule := range stylesheetRules {
 		atRule, isAtRule := rule.(pa.AtRule)
-		if _isContentNone(rule) && (!isAtRule || utils.AsciiLower(atRule.AtKeyword) != "import") {
-			continue
+		if _isContentNone(rule) {
+			if err, isErr := rule.(pa.ParseError); isErr {
+				logger.WarningLogger.Printf("Parse error at %d:%d: %s\n", err.Pos().Line, err.Pos().Column, err.Message)
+			}
+			if !isAtRule {
+				continue
+			}
+			if utils.AsciiLower(atRule.AtKeyword) != "import" {
+				logger.WarningLogger.Printf("Unknown empty rule %s at %d:%d\n", pa.Serialize(atRule.Content), atRule.Pos().Line, atRule.Pos().Column)
+				continue
+			}
 		}
 
 		switch rule := rule.(type) {
@@ -1420,6 +1425,8 @@ func preprocessStylesheet(deviceMediaType, baseUrl string, stylesheetRules []pa.
 
 				counterStyle[name] = ruleDescriptors
 			}
+		default:
+			logger.WarningLogger.Printf("Unknown rule %s at %d:%d\n", pa.Serialize(atRule.Content), atRule.Pos().Line, atRule.Pos().Column)
 		}
 	}
 }
@@ -1502,7 +1509,7 @@ func (styleFor StyleFor) SetPageComputedStylesT(pageType utils.PageElement, html
 }
 
 // Return tokens with resolved CSS variables.
-func resolveVar(computed map[string]pr.RawTokens, token Token) []Token {
+func resolveVar(computed map[string]pr.RawTokens, token Token, knownVariables utils.Set) []Token {
 	if !validation.HasVar(token) {
 		return nil
 	}
@@ -1511,14 +1518,14 @@ func resolveVar(computed map[string]pr.RawTokens, token Token) []Token {
 	if utils.AsciiLower(fn.Name) != "var" {
 		arguments := []Token{}
 		for _, argument := range fn.Arguments {
-			if fna, isFunction := argument.(pa.FunctionBlock); isFunction && utils.AsciiLower(fna.Name) == "var" {
-				arguments = append(arguments, resolveVar(computed, argument)...)
+			if _, isFunction := argument.(pa.FunctionBlock); isFunction {
+				arguments = append(arguments, resolveVar(computed, argument, knownVariables)...)
 			} else {
 				arguments = append(arguments, argument)
 			}
 		}
 		token = pa.NewFunctionBlock(token.Pos(), fn.Name, arguments)
-		if resolved := resolveVar(computed, token); len(resolved) != 0 {
+		if resolved := resolveVar(computed, token, knownVariables); len(resolved) != 0 {
 			return resolved
 		}
 		return []Token{token}
@@ -1528,6 +1535,11 @@ func resolveVar(computed map[string]pr.RawTokens, token Token) []Token {
 	// first arg is name, next args are default value
 	varNameToken, default_ := args[0], args[1:]
 	variableName := varNameToken.(pa.Ident).Value
+	if knownVariables.Has(variableName) {
+		return nil // endless recursion, returned value is nothing
+	} else {
+		knownVariables.Add(variableName)
+	}
 
 	source := default_
 	if l := computed[variableName]; len(l) != 0 {
@@ -1535,7 +1547,7 @@ func resolveVar(computed map[string]pr.RawTokens, token Token) []Token {
 	}
 	computedValue := []Token{}
 	for _, value := range source {
-		if resolved := resolveVar(computed, value); resolved != nil {
+		if resolved := resolveVar(computed, value, knownVariables); resolved != nil {
 			computedValue = append(computedValue, resolved...)
 		} else {
 			computedValue = append(computedValue, value)

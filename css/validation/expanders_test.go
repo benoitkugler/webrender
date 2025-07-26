@@ -39,16 +39,25 @@ func TestTextDecoration(t *testing.T) {
 	assertValidDict(t, "text-decoration: red", toValidated(pr.Properties{
 		pr.PTextDecorationColor: pr.NewColor(1, 0, 0, 1),
 	}))
+	assertValidDict(t, "text-decoration: blue 1px", map[pr.KnownProp]pr.DeclaredValue{
+		pr.PTextDecorationColor:     pr.NewColor(0, 0, 1, 1),
+		pr.PTextDecorationThickness: pr.FToPx(1),
+	})
+	assertValidDict(t, "text-decoration: 100% none", map[pr.KnownProp]pr.DeclaredValue{
+		pr.PTextDecorationLine:      pr.Decorations(0),
+		pr.PTextDecorationThickness: pr.Dimension{Value: 100, Unit: pr.Perc}.ToValue(),
+	})
 	assertValidDict(t, "text-decoration: inherit", map[pr.KnownProp]pr.DeclaredValue{
-		pr.PTextDecorationColor: pr.Inherit,
-		pr.PTextDecorationLine:  pr.Inherit,
-		pr.PTextDecorationStyle: pr.Inherit,
+		pr.PTextDecorationColor:     pr.Inherit,
+		pr.PTextDecorationLine:      pr.Inherit,
+		pr.PTextDecorationStyle:     pr.Inherit,
+		pr.PTextDecorationThickness: pr.Inherit,
 	})
 
 	assertInvalid(t, "text-decoration: solid solid", "invalid")
 	assertInvalid(t, "text-decoration: red red", "invalid")
-	assertInvalid(t, "text-decoration: 1px", "invalid")
 	assertInvalid(t, "text-decoration: underline none", "invalid")
+	assertInvalid(t, "text-decoration: 1px 100%", "invalid")
 	assertInvalid(t, "text-decoration: none none", "invalid")
 }
 

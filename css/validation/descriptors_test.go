@@ -59,7 +59,7 @@ func TestFontFace(t *testing.T) {
 	checkNameDescriptor(pr.String("Gentium Hard"), l.FontFamily, t)
 	checkNameDescriptor([]pr.NamedString{{Name: "local", String: ""}}, l.Src, t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/487
+	// Regression test for #487
 	l = processFontFace(`@font-face {
 		font-family: Gentium Hard;
 		src: local(Gentium Hard);
@@ -67,7 +67,7 @@ func TestFontFace(t *testing.T) {
 	checkNameDescriptor(pr.String("Gentium Hard"), l.FontFamily, t)
 	checkNameDescriptor([]pr.NamedString{{Name: "local", String: "Gentium Hard"}}, l.Src, t)
 
-	// Test regression: https://github.com/Kozea/WeasyPrint/issues/1653
+	// Regression test for #1653
 	capt := tu.CaptureLogs()
 	l = processFontFace(`@font-face {
           font-family: Gentium Hard;

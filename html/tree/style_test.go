@@ -449,43 +449,40 @@ func TestPageSelectors(t *testing.T) {
 	capt.AssertNoLogs(t)
 }
 
-type testWarnings struct {
-	sel string
-	out []string
-}
-
-var testsWarnings = [6]testWarnings{
-	{
-		sel: ":lipsum { margin: 2cm",
-		out: []string{"Invalid or unsupported selector"},
-	},
-	{
-		sel: "::lipsum { margin: 2cm",
-		out: []string{"Invalid or unsupported selector"},
-	},
-	{
-		sel: "foo { margin-color: red",
-		out: []string{"Ignored", "unknown property"},
-	},
-	{
-		sel: "foo { margin-top: red",
-		out: []string{"Ignored", "invalid value"},
-	},
-	{
-		sel: `@import "relative-uri.css"`,
-		out: []string{"Relative URI reference without a base URI"},
-	},
-	{
-		sel: `@import "invalid-protocol://absolute-URL"`,
-		out: []string{"Failed to load stylesheet at"},
-	},
-}
-
-// @assertNoLogs
 // Check that appropriate warnings are logged.
 func TestWarnings(t *testing.T) {
-	for _, te := range testsWarnings {
-
+	for _, te := range [...]struct {
+		sel string
+		out []string
+	}{
+		{
+			sel: ":lipsum { margin: 2cm",
+			out: []string{"Invalid or unsupported selector"},
+		},
+		{
+			sel: "::lipsum { margin: 2cm",
+			out: []string{"Invalid or unsupported selector"},
+		},
+		{
+			sel: "foo { margin-color: red",
+			out: []string{"Ignored", "unknown property"},
+		},
+		{
+			sel: "foo { margin-top: red",
+			out: []string{"Ignored", "invalid value"},
+		},
+		{
+			sel: `@import "relative-uri.css"`,
+			out: []string{"Relative URI reference without a base URI"},
+		},
+		{
+			sel: `@import "invalid-protocol://absolute-URL"`,
+			out: []string{"Failed to load stylesheet at"},
+		},
+		{sel: "test", out: []string{"WARNING: Parse error"}},
+		{sel: "@test", out: []string{"WARNING: Unknown empty rule"}},
+		{sel: "@test {}", out: []string{"WARNING: Unknown rule"}},
+	} {
 		capt := tu.CaptureLogs()
 		_, err := NewCSSDefault(utils.InputString(te.sel))
 		if err != nil {

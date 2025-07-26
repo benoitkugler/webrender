@@ -110,6 +110,21 @@ func TestVariableInFunction(t *testing.T) {
 	assertText(t, unpack1(unpack1(unpack1(div2))), "2")
 }
 
+func TestVariableInNestedFunction(t *testing.T) {
+	defer tu.CaptureLogs().AssertNoLogs(t)
+	page := renderOnePage(t, `
+      <style>
+        body { --var: 255 0 0 }
+        div { background-image: linear-gradient(rgba(var(--var))) }
+      </style>
+      <div></div>
+    `)
+	html := unpack1(page)
+	body := unpack1(html)
+	div := unpack1(body)
+	tu.AssertEqual(t, div.Box().Style.GetBackgroundImage()[0].(pr.LinearGradient).ColorStops[0].Color, pr.NewColor(1, 0, 0, 1))
+}
+
 func TestVariableInFunctionMultipleValues(t *testing.T) {
 	defer tu.CaptureLogs().AssertNoLogs(t)
 	page := renderOnePage(t, `

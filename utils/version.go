@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	Version = "0.62"
+	Version = "0.69"
 )
 
 // Used for "User-Agent" in HTTP

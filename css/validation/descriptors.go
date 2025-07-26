@@ -29,6 +29,7 @@ var (
 		"font-stretch":          fontStretchDescriptor,
 		"font-feature-settings": fontFeatureSettingsDescriptor,
 		"font-variant":          fontVariant,
+		"unicode-range":         unicodeRange,
 	}
 
 	counterStyleDescriptors = map[string]counterStyleDescriptorParser{
@@ -57,11 +58,11 @@ type FontFaceDescriptors struct {
 	FontStretch         pr.String
 	FontFeatureSettings pr.FontFeatures
 	FontVariant         []NamedProp
+	UnicodeRange        []pa.UnicodeRange
 }
 
 type fontFaceDescriptorParser = func(tokens []Token, baseUrl string, out *FontFaceDescriptors) error
 
-// @descriptor()
 // “font-family“ descriptor validation.
 // allowSpaces = false
 func _fontFamilyDesc(tokens []Token, allowSpaces bool) string {
@@ -98,8 +99,6 @@ func fontFamilyDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 	return nil
 }
 
-// @descriptor(wantsBaseUrl=true)
-// @commaSeparatedList
 // “src“ descriptor validation.
 func _src(tokens []Token, baseUrl string) (pr.InnerContent, error) {
 	if L := len(tokens); L == 1 || L == 2 {
@@ -139,8 +138,6 @@ func src(tokens []Token, baseUrl string, out *FontFaceDescriptors) error {
 	return nil
 }
 
-// @descriptor()
-// @singleKeyword
 // “font-style“ descriptor validation.
 func fontStyleDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	keyword := getSingleKeyword(tokens)
@@ -153,8 +150,6 @@ func fontStyleDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) err
 	}
 }
 
-// @descriptor()
-// @singleToken
 // “font-weight“ descriptor validation.
 func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	if len(tokens) != 1 {
@@ -177,8 +172,6 @@ func fontWeightDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) er
 	return ErrInvalidValue
 }
 
-// @descriptor()
-// @singleKeyword
 // Validation for the “font-stretch“ descriptor.
 func fontStretchDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	keyword := getSingleKeyword(tokens)
@@ -193,7 +186,6 @@ func fontStretchDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) e
 	}
 }
 
-// @descriptor("font-feature-settings")
 // “font-feature-settings“ descriptor validation.
 func fontFeatureSettingsDescriptor(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	s, ok := _fontFeatureSettings(tokens)
@@ -204,7 +196,6 @@ func fontFeatureSettingsDescriptor(tokens []Token, _ string, out *FontFaceDescri
 	return nil
 }
 
-// @descriptor()
 // “font-variant“ descriptor validation.
 func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	if len(tokens) == 1 {
@@ -227,6 +218,36 @@ func fontVariant(tokens []Token, _ string, out *FontFaceDescriptors) error {
 	}
 	out.FontVariant = values
 	return nil
+}
+
+// “unicode_range“ descriptor validation.
+func unicodeRange(tokens []Token, _ string, out *FontFaceDescriptors) error {
+	var l []pa.UnicodeRange
+	for _, part := range pa.SplitOnComma(tokens) {
+		result, err := unicodeRange_(pa.RemoveWhitespace(part))
+		if err != nil {
+			return err
+		}
+		if result, ok := result.(pa.UnicodeRange); ok {
+			l = append(l, result)
+		} else {
+			return ErrInvalidValue
+		}
+	}
+	out.UnicodeRange = append(out.UnicodeRange, l...)
+	return nil
+}
+
+func unicodeRange_(tokens []Token) (Token, error) {
+	if len(tokens) != 1 {
+		return nil, ErrInvalidValue
+	}
+	token := tokens[0]
+
+	if token.Kind() == pa.KUnicodeRange {
+		return token, nil
+	}
+	return nil, nil
 }
 
 func PreprocessFontFaceDescriptors(baseUrl string, descriptors []pa.Compound) FontFaceDescriptors {
