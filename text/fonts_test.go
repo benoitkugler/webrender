@@ -205,7 +205,7 @@ func TestResolveFont(t *testing.T) {
 		{[]string{"Helvetica"}, "Nimbus Sans"},
 		{[]string{"BlinkMacSystemFont", "Helvetica"}, "Nimbus Sans"},
 		{[]string{"Times"}, "Nimbus Roman"},
-		{[]string{"Mononoki"}, "DejaVu Sans"},
+		{[]string{"Mononoki"}, "Noto Sans"},
 	} {
 		fc := NewFontConfigurationGotext(fontmapGotext)
 		fc.fm.SetQuery(fontscan.Query{Families: test.query})
