@@ -276,6 +276,18 @@ type brokenBox struct {
 	resumeAt        tree.ResumeStack
 }
 
+type shapeList struct {
+	list     []*bo.BoxFields
+	isFrozen bool
+}
+
+func (sl *shapeList) append(box *bo.BoxFields) {
+	if sl.isFrozen {
+		return
+	}
+	sl.list = append(sl.list, box)
+}
+
 // layoutContext stores the global context needed during layout,
 // such as various caches.
 type layoutContext struct {
@@ -292,8 +304,8 @@ type layoutContext struct {
 	dictionaries        map[text.HyphenDictKey]hyphen.Hyphener
 	styleFor            *tree.StyleFor
 	pageMaker           []tree.PageMaker
-	excludedShapes      *[]*bo.BoxFields
-	excludedShapesLists [][]*bo.BoxFields
+	excludedShapes      *shapeList
+	excludedShapesLists []shapeList
 	brokenOutOfFlow     map[Box]brokenBox
 
 	footnotes            []Box
@@ -361,17 +373,17 @@ func (l *layoutContext) overflowsPage(bottomSpace, positionY pr.Float) bool {
 }
 
 func (l *layoutContext) createBlockFormattingContext() {
-	l.excludedShapesLists = append(l.excludedShapesLists, nil)
+	l.excludedShapesLists = append(l.excludedShapesLists, shapeList{})
 	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
 }
 
 func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 	// See https://www.w3.org/TR/CSS2/visudet.html#root-height
 	rootBox := rootBox_.Box()
-	if rootBox.Style.GetHeight().S == "auto" && len(*l.excludedShapes) != 0 {
+	if rootBox.Style.GetHeight().S == "auto" && len(l.excludedShapes.list) != 0 {
 		boxBottom := rootBox.ContentBoxY() + rootBox.Height.V()
 		maxShapeBottom := boxBottom
-		for _, shape := range *l.excludedShapes {
+		for _, shape := range l.excludedShapes.list {
 			v := shape.PositionY + shape.MarginHeight()
 			if v > maxShapeBottom {
 				maxShapeBottom = v
@@ -379,6 +391,20 @@ func (l *layoutContext) finishBlockFormattingContext(rootBox_ Box) {
 		}
 		rootBox.Height = rootBox.Height.V() + maxShapeBottom - boxBottom
 	}
+	l.excludedShapesLists = l.excludedShapesLists[:len(l.excludedShapesLists)-1]
+	if L := len(l.excludedShapesLists); L != 0 {
+		l.excludedShapes = &l.excludedShapesLists[L-1]
+	} else {
+		l.excludedShapes = nil
+	}
+}
+
+func (l *layoutContext) createFlexFormattingContext() {
+	l.excludedShapesLists = append(l.excludedShapesLists, shapeList{isFrozen: true})
+	l.excludedShapes = &l.excludedShapesLists[len(l.excludedShapesLists)-1]
+}
+
+func (l *layoutContext) finishFlexFormattingContext(rootBox_ Box) {
 	l.excludedShapesLists = l.excludedShapesLists[:len(l.excludedShapesLists)-1]
 	if L := len(l.excludedShapesLists); L != 0 {
 		l.excludedShapes = &l.excludedShapesLists[L-1]
@@ -515,9 +541,11 @@ func (l *layoutContext) updateFootnoteArea() bool {
 			l.pageBottom -= footnoteArea.Box().MarginHeight()
 		}
 		lastChild := footnoteArea.Box().Children[len(footnoteArea.Box().Children)-1]
-		overflow := (lastChild.Box().PositionY+lastChild.Box().MarginHeight() >
-			footnoteArea.Box().PositionY+footnoteArea.Box().MarginHeight()-
-				footnoteArea.Box().MarginBottom.V())
+		lastChildBottom := lastChild.Box().PositionY + lastChild.Box().MarginHeight() -
+			lastChild.Box().MarginBottom.V()
+		footnoteAreaBottom := footnoteArea.Box().PositionY + footnoteArea.Box().MarginHeight() -
+			footnoteArea.Box().MarginBottom.V()
+		overflow := lastChildBottom > footnoteAreaBottom
 		return overflow
 	} else {
 		l.currentFootnoteArea.Height = pr.Float(0)

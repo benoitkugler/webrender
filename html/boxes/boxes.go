@@ -167,6 +167,7 @@ type BoxFields struct {
 	IsForRootElement bool
 	IsColumn         bool
 	IsLeader         bool
+	IsOutsideMarker  bool
 
 	properTableChild       bool
 	internalTableOrCaption bool

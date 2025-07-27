@@ -12,7 +12,7 @@ type AtomicInlineLevelBoxITF interface {
 }
 
 // A block-level box that is also a block container.
-// A non-replaced element with a ``display`` value of ``block``, ``list-item``
+// A non-replaced element with a “display“ value of “block“, “list-item“
 // generates a block box.
 type BlockBoxITF interface {
 	BlockContainerBoxITF
@@ -37,8 +37,8 @@ func BlockBoxAnonymousFrom(parent Box, children []Box) *BlockBox {
 // A box that contains only block-level boxes or only line boxes.
 // A box that either contains only block-level boxes or establishes an inline
 // formatting context and thus contains only line boxes.
-// A non-replaced element with a ``display`` value of ``block``,
-// ``list-item``, ``inline-block`` or 'table-cell' generates a block container
+// A non-replaced element with a “display“ value of “block“,
+// “list-item“, “inline-block“ or 'table-cell' generates a block container
 // box.
 type BlockContainerBoxITF interface {
 	ParentBoxITF
@@ -46,8 +46,8 @@ type BlockContainerBoxITF interface {
 }
 
 // A box that participates in an block formatting context.
-// An element with a ``display`` value of ``block``, ``list-item`` or
-// ``table`` generates a block-level box.
+// An element with a “display“ value of “block“, “list-item“ or
+// “table“ generates a block-level box.
 type BlockLevelBoxITF interface {
 	BoxITF
 	isBlockLevelBox()
@@ -55,8 +55,8 @@ type BlockLevelBoxITF interface {
 }
 
 // A box that is both replaced and block-level.
-// A replaced element with a ``display`` value of ``block``, ``liste-item`` or
-// ``table`` generates a block-level replaced box.
+// A replaced element with a “display“ value of “block“, “liste-item“ or
+// “table“ generates a block-level replaced box.
 type BlockReplacedBoxITF interface {
 	BlockLevelBoxITF
 	ReplacedBoxITF
@@ -169,7 +169,7 @@ func InlineBlockBoxAnonymousFrom(parent Box, children []Box) *InlineBlockBox {
 // An inline box with inline children.
 // A box that participates in an inline formatting context and whose content
 // also participates in that inline formatting context.
-// A non-replaced element with a ``display`` value of ``inline`` generates an
+// A non-replaced element with a “display“ value of “inline“ generates an
 // inline box.
 type InlineBoxITF interface {
 	InlineLevelBoxITF
@@ -237,16 +237,16 @@ func InlineGridBoxAnonymousFrom(parent Box, children []Box) *InlineGridBox {
 // A box that participates in an inline formatting context.
 // An inline-level box that is not an inline box is said to be "atomic". Such
 // boxes are inline blocks, replaced elements and inline tables.
-// An element with a ``display`` value of ``inline``, ``inline-table``, or
-// ``inline-block`` generates an inline-level box.
+// An element with a “display“ value of “inline“, “inline-table“, or
+// “inline-block“ generates an inline-level box.
 type InlineLevelBoxITF interface {
 	BoxITF
 	isInlineLevelBox()
 }
 
 // A box that is both replaced and inline-level.
-// A replaced element with a ``display`` value of ``inline``,
-// ``inline-table``, or ``inline-block`` generates an inline-level replaced
+// A replaced element with a “display“ value of “inline“,
+// “inline-table“, or “inline-block“ generates an inline-level replaced
 // box.
 type InlineReplacedBoxITF interface {
 	AtomicInlineLevelBoxITF
@@ -262,7 +262,7 @@ func (InlineReplacedBox) isAtomicInlineLevelBox() {}
 func (InlineReplacedBox) isInlineLevelBox()       {}
 func (InlineReplacedBox) isReplacedBox()          {}
 
-// Box for elements with ``display: inline-table``
+// Box for elements with “display: inline-table“
 type InlineTableBoxITF interface {
 	TableBoxITF
 	isInlineTableBox()
@@ -332,7 +332,7 @@ type ParentBoxITF interface {
 }
 
 // A box whose content is replaced.
-// For example, ``<img>`` are replaced: their content is rendered externally
+// For example, “<img>“ are replaced: their content is rendered externally
 // and is opaque from CSS’s point of view.
 type ReplacedBoxITF interface {
 	BoxITF
@@ -345,7 +345,7 @@ func (b *ReplacedBox) Box() *BoxFields { return &b.BoxFields }
 func (b ReplacedBox) Copy() Box        { return &b }
 func (ReplacedBox) isReplacedBox()     {}
 
-// Box for elements with ``display: table``
+// Box for elements with “display: table“
 type TableBoxITF interface {
 	BlockLevelBoxITF
 	ParentBoxITF
@@ -366,7 +366,7 @@ func TableBoxAnonymousFrom(parent Box, children []Box) *TableBox {
 	return out
 }
 
-// Box for elements with ``display: table-caption``
+// Box for elements with “display: table-caption“
 type TableCaptionBoxITF interface {
 	BlockBoxITF
 	isTableCaptionBox()
@@ -387,7 +387,7 @@ func TableCaptionBoxAnonymousFrom(parent Box, children []Box) *TableCaptionBox {
 	return out
 }
 
-// Box for elements with ``display: table-cell``
+// Box for elements with “display: table-cell“
 type TableCellBoxITF interface {
 	BlockContainerBoxITF
 	isTableCellBox()
@@ -406,7 +406,7 @@ func TableCellBoxAnonymousFrom(parent Box, children []Box) *TableCellBox {
 	return out
 }
 
-// Box for elements with ``display: table-column``
+// Box for elements with “display: table-column“
 type TableColumnBoxITF interface {
 	ParentBoxITF
 	isTableColumnBox()
@@ -424,7 +424,7 @@ func TableColumnBoxAnonymousFrom(parent Box, children []Box) *TableColumnBox {
 	return out
 }
 
-// Box for elements with ``display: table-column-group``
+// Box for elements with “display: table-column-group“
 type TableColumnGroupBoxITF interface {
 	ParentBoxITF
 	isTableColumnGroupBox()
@@ -442,7 +442,7 @@ func TableColumnGroupBoxAnonymousFrom(parent Box, children []Box) *TableColumnGr
 	return out
 }
 
-// Box for elements with ``display: table-row``
+// Box for elements with “display: table-row“
 type TableRowBoxITF interface {
 	ParentBoxITF
 	isTableRowBox()
@@ -460,7 +460,7 @@ func TableRowBoxAnonymousFrom(parent Box, children []Box) *TableRowBox {
 	return out
 }
 
-// Box for elements with ``display: table-row-group``
+// Box for elements with “display: table-row-group“
 type TableRowGroupBoxITF interface {
 	ParentBoxITF
 	isTableRowGroupBox()

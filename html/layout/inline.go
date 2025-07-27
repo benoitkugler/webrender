@@ -119,7 +119,7 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 
 	linebox.PositionY = positionY
 
-	if len(*context.excludedShapes) != 0 {
+	if len(context.excludedShapes.list) != 0 {
 		// Width and height must be calculated to avoid floats
 		linebox.Width = inlineMinContentWidth(context, linebox, true, skipStack, true, false)
 		linebox.Height = text.StrutLayout(linebox.Style, context)[0]
@@ -132,7 +132,7 @@ func getNextLinebox(context *layoutContext, linebox *bo.LineBox, positionY, bott
 
 	candidateHeight := linebox.Height
 
-	excludedShapes := append([]*bo.BoxFields{}, *context.excludedShapes...)
+	excludedShapes := shapeList{list: append([]*bo.BoxFields{}, context.excludedShapes.list...), isFrozen: context.excludedShapes.isFrozen}
 
 	var (
 		linePlaceholders, lineAbsolutes, lineFixed []*AbsolutePlaceholder

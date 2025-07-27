@@ -88,7 +88,9 @@ func _absoluteWidth(box_ Box, context *layoutContext, containingBlock containing
 		}
 		availableWidth := cbWidth - (paddingsBorders + box.MarginLeft.V() + box.MarginRight.V())
 		box.Width = shrinkToFit(context, box_, availableWidth)
-		if !ltr {
+		if box.IsOutsideMarker {
+			translateBoxWidth = ltr
+		} else if !ltr {
 			translateBoxWidth = true
 			translateX = defaultTranslateX + availableWidth
 		}
@@ -254,7 +256,7 @@ func absoluteBlock(context *layoutContext, box_ Box, containingBlock block, fixe
 		newBox, bl, _ = blockContainerLayout(context, box_, bottomSpace, skipStack, true,
 			&absoluteBoxes, fixedBoxes, new([]pr.Float), false, -1)
 	} else if bo.FlexContainerT.IsInstance(box_) {
-		newBox, bl = flexLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes)
+		newBox, bl = flexLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes, false)
 	} else if bo.GridContainerT.IsInstance(box_) {
 		newBox, bl = gridLayout(context, box_, bottomSpace, skipStack, containingBlock, true, &absoluteBoxes, fixedBoxes)
 	}

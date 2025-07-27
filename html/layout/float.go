@@ -92,7 +92,7 @@ func floatLayout(context *layoutContext, box_ Box, containingBlock *bo.BoxFields
 
 	box_ = findFloatPosition(context, box_, containingBlock)
 
-	*context.excludedShapes = append(*context.excludedShapes, box_.Box())
+	context.excludedShapes.append(box_.Box())
 
 	return box_, resumeAt
 }
@@ -106,8 +106,8 @@ func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.Box
 	// containing box top position, with collapsing margins handled
 
 	// Points 5 and 6, box.positionY is set to the highest positionY possible
-	if L := len(*context.excludedShapes); L != 0 {
-		highestY := (*context.excludedShapes)[L-1].PositionY
+	if L := len(context.excludedShapes.list); L != 0 {
+		highestY := (context.excludedShapes.list)[L-1].PositionY
 		if box.PositionY < highestY {
 			box_.Translate(box_, 0, highestY-box.PositionY, false)
 		}
@@ -132,7 +132,7 @@ func findFloatPosition(context *layoutContext, box_ Box, containingBlock *bo.Box
 func getClearance(context *layoutContext, box *bo.BoxFields, collapsedMargin pr.Float) (clearance pr.MaybeFloat) {
 	hypotheticalPosition := box.PositionY + collapsedMargin
 	// Hypothetical position is the position of the top border edge
-	for _, excludedShape := range *context.excludedShapes {
+	for _, excludedShape := range context.excludedShapes.list {
 		if clear := box.Style.GetClear(); clear == excludedShape.Style.GetFloat() || clear == "both" {
 			y, h := excludedShape.PositionY, excludedShape.MarginHeight()
 			if hypotheticalPosition < y+h {
@@ -166,7 +166,7 @@ func avoidCollisions(context *layoutContext, box_ Box, containingBlock *bo.BoxFi
 	var maxLeftBound, maxRightBound pr.Float
 	for {
 		var collidingShapes []*bo.BoxFields
-		for _, shape := range *excludedShapes {
+		for _, shape := range excludedShapes.list {
 			// Assign locals to avoid slow attribute lookups.
 			shapePositionY := shape.PositionY
 			shapeMarginHeight := shape.MarginHeight()

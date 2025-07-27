@@ -532,9 +532,9 @@ func blockContainerLayout(context *layoutContext, box_ Box, bottomSpace pr.Float
 	newBox_.RemoveDecoration(newBox, !isStart, boxIsFragmented && !discard)
 
 	if newBox.Height == pr.AutoF {
-		if len(*context.excludedShapes) != 0 && newBox.Style.GetOverflow() != "visible" {
+		if len(context.excludedShapes.list) != 0 && newBox.Style.GetOverflow() != "visible" {
 			maxFloatPositionY := -pr.Inf
-			for _, floatBox := range *context.excludedShapes {
+			for _, floatBox := range context.excludedShapes.list {
 				v := floatBox.PositionY + floatBox.MarginHeight()
 				if v > maxFloatPositionY {
 					maxFloatPositionY = v

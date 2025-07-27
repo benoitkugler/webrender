@@ -287,8 +287,8 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 				footnote := childBoxes[0]
 				footnote.Box().Style.SetFloat("none")
 				(*footnotes) = append(*footnotes, footnote)
-				callStyle := styleFor.Get(element, "footnote-call")
-				footnoteCall, err := makeBox(callStyle, nil, element, "footnote-call")
+				callStyle := styleFor.Get((*utils.HTMLNode)(footnote.Box().Element), "footnote-call")
+				footnoteCall, err := makeBox(callStyle, nil, (*utils.HTMLNode)(footnote.Box().Element), "footnote-call")
 				if err != nil {
 					logger.WarningLogger.Println(err)
 					return nil
@@ -349,7 +349,7 @@ func elementToBox(element *utils.HTMLNode, styleFor styleForI,
 			return nil
 		}
 		marker.Box().Children = ContentToBoxes(
-			markerStyle, box, state.QuoteDepth, state.CounterValues, resolver,
+			markerStyle, marker, state.QuoteDepth, state.CounterValues, resolver,
 			targetCollector, cs, nil, nil)
 		box.Box().Children = append([]Box{marker}, box.Box().Children...)
 	}
@@ -458,12 +458,13 @@ func markerToBox(element *utils.HTMLNode, state *tree.PageState, parentStyle pr.
 		// We can safely edit everything that can't be changed by user style
 		// See https://drafts.csswg.org/css-pseudo-4/#marker-pseudo
 		markerBox.Box().Style.SetPosition(pr.BoolString{String: "absolute"})
-		translateX := pr.Dimension{Value: 100, Unit: pr.Perc}
-		if parentStyle.GetDirection() == "ltr" {
-			translateX = pr.Dimension{Value: -100, Unit: pr.Perc}
-		}
-		translateY := pr.ZeroPixels
-		markerBox.Box().Style.SetTransform(pr.Transforms{{String: "translate", Dimensions: pr.Dimensions{translateX, translateY}}})
+		markerBox.Box().IsOutsideMarker = true
+		// translateX := pr.Dimension{Value: 100, Unit: pr.Perc}
+		// if parentStyle.GetDirection() == "ltr" {
+		// 	translateX = pr.Dimension{Value: -100, Unit: pr.Perc}
+		// }
+		// translateY := pr.ZeroPixels
+		// markerBox.Box().Style.SetTransform(pr.Transforms{{String: "translate", Dimensions: pr.Dimensions{translateX, translateY}}})
 	} else {
 		markerBox = InlineBoxAnonymousFrom(box, *children)
 	}
@@ -986,15 +987,7 @@ func (iter *wrapImproperIterator) Next() bool {
 			}
 			return true
 		} else {
-			// Whitespace either fail the test or were removed earlier,
-			// so there is no need to take special care with the definition
-			// of "consecutive".
-			if FlexContainerT.IsInstance(iter.box) {
-				// The display value of a flex item must be "blockified", see
-				// https://www.w3.org/TR/css-flexbox-1/#flex-items
-			} else {
-				iter.improper = append(iter.improper, child)
-			}
+			iter.improper = append(iter.improper, child)
 		}
 	}
 
@@ -1308,6 +1301,35 @@ func wrapTable(box TableBoxITF, children boxIterator) Box {
 	return wrapper
 }
 
+// Turn an inline box into a block box.
+// isLayoutFlex : flex or grid
+func blockify(box Box, isLayoutFlex bool) Box {
+	// See https://drafts.csswg.org/css-display-4/#blockify.
+	var anonymous Box
+	if InlineBlockT.IsInstance(box) {
+		anonymous = BlockBoxAnonymousFrom(box, box.Box().Children)
+	} else if replaced, ok := box.(InlineReplacedBoxITF); ok {
+		replacement := replaced.Replaced().Replacement
+		anonymous = BlockReplacedBoxAnonymousFrom(box, replacement)
+	} else if InlineLevelT.IsInstance(box) {
+		anonymous = BlockBoxAnonymousFrom(box, []Box{box})
+		if isLayoutFlex {
+			box.Box().IsFlexItem = false
+		} else {
+			box.Box().IsGridItem = false
+		}
+	} else {
+		return box
+	}
+	anonymous.Box().Style = box.Box().Style
+	if isLayoutFlex {
+		anonymous.Box().IsFlexItem = true
+	} else {
+		anonymous.Box().IsGridItem = true
+	}
+	return anonymous
+}
+
 type Score [3]float64
 
 func (s Score) Lower(other Score) bool {
@@ -1551,7 +1573,7 @@ func flexChildren(box Box, children []Box) []Box {
 	if _, isFlexCont := box.(FlexContainerBoxITF); isFlexCont {
 		var flexChildren []Box
 		for _, child := range children {
-			if !child.Box().IsAbsolutelyPositioned() {
+			if child.Box().IsInNormalFlow() {
 				child.Box().IsFlexItem = true
 			}
 
@@ -1562,13 +1584,7 @@ func flexChildren(box Box, children []Box) []Box {
 				}
 			}
 
-			if _, ok := child.(InlineLevelBoxITF); ok {
-				anonymous := BlockBoxAnonymousFrom(box, []Box{child})
-				anonymous.IsFlexItem = true
-				flexChildren = append(flexChildren, anonymous)
-			} else {
-				flexChildren = append(flexChildren, child)
-			}
+			flexChildren = append(flexChildren, blockify(child, true))
 		}
 		return flexChildren
 	}
@@ -1594,7 +1610,7 @@ func gridChildren(box Box, children []Box) []Box {
 	if GridContainerT.IsInstance(box) {
 		var gridChildren []Box
 		for _, child := range children {
-			if !child.Box().IsAbsolutelyPositioned() {
+			if child.Box().IsInNormalFlow() {
 				child.Box().IsGridItem = true
 			}
 			if text, ok := child.(*TextBox); ok && strings.Trim(text.TextS(), " ") == "" {
@@ -1603,15 +1619,8 @@ func gridChildren(box Box, children []Box) []Box {
 				// https://drafts.csswg.org/css-grid-2/#grid-item
 				continue
 			}
-			if InlineLevelT.IsInstance(child) {
-				anonymous := BlockBoxAnonymousFrom(child, []Box{child})
-				anonymous.Box().Style = child.Box().Style
-				child.Box().IsGridItem = false
-				anonymous.Box().IsGridItem = true
-				gridChildren = append(gridChildren, anonymous)
-			} else {
-				gridChildren = append(gridChildren, child)
-			}
+
+			gridChildren = append(gridChildren, blockify(child, false))
 		}
 		return gridChildren
 	}

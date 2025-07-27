@@ -53,7 +53,7 @@ func handleLeader(context *layoutContext, line *bo.LineBox, containingBlock cont
 		extraWidth = cbWidth.V() - sum
 
 		// Take care of excluded shapes
-		for _, shape := range *context.excludedShapes {
+		for _, shape := range context.excludedShapes.list {
 			if shape.PositionY+shape.Height.V() > line.PositionY {
 				extraWidth -= shape.Width.V()
 			}

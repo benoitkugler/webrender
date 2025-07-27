@@ -285,6 +285,12 @@ func NewBlockReplacedBox(style pr.ElementStyle, element *html.Node, pseudoType s
 	return out
 }
 
+func BlockReplacedBoxAnonymousFrom(parent Box, replacement images.Image) *BlockReplacedBox {
+	style := tree.ComputedFromCascaded(nil, nil, parent.Box().Style, nil)
+	out := NewBlockReplacedBox(style, parent.Box().Element, parent.Box().PseudoType, replacement)
+	return &out
+}
+
 func NewInlineReplacedBox(style pr.ElementStyle, element *html.Node, pseudoType string, replacement images.Image) InlineReplacedBox {
 	out := InlineReplacedBox{ReplacedBox: NewReplacedBox(style, element, pseudoType, replacement)}
 	return out

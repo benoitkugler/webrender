@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+func Assert(t *testing.T, b bool) {
+	t.Helper()
+	if !b {
+		t.Fatal("assertion failed")
+	}
+}
+
 func AssertEqual(t *testing.T, got, exp interface{}) {
 	t.Helper()
 	if !reflect.DeepEqual(exp, got) {

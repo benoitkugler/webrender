@@ -200,13 +200,13 @@ func columnsLayout(context *layoutContext, box_ bo.BlockBoxITF, bottomSpace pr.F
 		// height step by step
 		columnSkipStack = skipStack
 		lostSpace := pr.Inf
-		originalExcludedShapes := append([]*bo.BoxFields(nil), *context.excludedShapes...) // copy
+		originalExcludedShapes := append([]*bo.BoxFields(nil), context.excludedShapes.list...) // copy
 		originalPageIsEmpty := pageIsEmpty
 		pageIsEmpty = false
 		stopRendering, balancing := false, false
 		for {
 			// Remove extra excluded shapes introduced during the previous loop
-			*context.excludedShapes = (*context.excludedShapes)[:len(originalExcludedShapes)]
+			context.excludedShapes.list = (context.excludedShapes.list)[:len(originalExcludedShapes)]
 
 			// Render the columns
 			columnSkipStack = skipStack
