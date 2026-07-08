@@ -8,7 +8,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/benoitkugler/textlayout/language"
+	"github.com/go-text/typesetting/language"
 )
 
 var (

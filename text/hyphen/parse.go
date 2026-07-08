@@ -2,15 +2,12 @@ package hyphen
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"io/fs"
 	"math"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/benoitkugler/textlayout/language"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/unicode"
@@ -42,26 +39,14 @@ func parseHyphDic(datas fs.FS, filename string) (out hyphDicReference, err error
 		return out, nil
 	}
 
-	header, patterns := lines[0], lines[1:]
-	cs := strings.ToLower(strings.TrimSpace(string(header)))
-	enco := encodings[cs]
-	if enco == nil {
-		enco = unicode.UTF8
-	}
-	dec := enco.NewDecoder()
-
-	out.Patterns = make(map[string]pattern, len(patterns)/2)
+	out.Patterns = make(map[string]pattern, len(lines)/2)
 	var (
 		tags    []string
 		values  []dataOrInt
 		matches [][2]rune
 	)
-	for _, line := range patterns {
-		utf8Pattern, err := dec.Bytes(line)
-		if err != nil {
-			return out, fmt.Errorf("invalid pattern: %s (%s)", line, err)
-		}
-		pat := string(bytes.TrimSpace(utf8Pattern))
+	for _, line := range lines {
+		pat := string(bytes.TrimSpace(line))
 		if pat == "" || strings.HasPrefix(pat, "%") || strings.HasPrefix(pat, "#") || strings.HasPrefix(pat, "LEFTHYPHENMIN") ||
 			strings.HasPrefix(pat, "RIGHTHYPHENMIN") || strings.HasPrefix(pat, "COMPOUNDLEFTHYPHENMIN") || strings.HasPrefix(pat, "COMPOUNDRIGHTHYPHENMIN") {
 			continue
@@ -189,33 +174,6 @@ func (p *alternativeParser) parse(c rune) dataOrInt {
 		data = &tmp // copy
 	}
 	return dataOrInt{V: v, Data: data}
-}
-
-func getLanguages(dir embed.FS) (map[language.Language]string, error) {
-	l, err := fs.ReadDir(dir, "dictionaries")
-	if err != nil {
-		return nil, err
-	}
-
-	out := map[language.Language]string{}
-
-	for _, file := range l {
-		filename := file.Name()
-		if !strings.HasSuffix(filename, ".dic") {
-			continue
-		}
-
-		name := language.NewLanguage(filename[5 : len(filename)-4])
-		fullPath := filepath.Join("dictionaries", filename)
-
-		out[name] = fullPath
-		shortName := language.NewLanguage(strings.Split(string(name), "-")[0])
-		if _, ok := out[shortName]; !ok {
-			out[shortName] = fullPath
-		}
-	}
-
-	return out, nil
 }
 
 func parsePattern(pat string, out [][2]rune) [][2]rune {

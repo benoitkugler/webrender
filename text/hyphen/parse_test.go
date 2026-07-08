@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
-	"strings"
 	"testing"
-
-	"golang.org/x/text/encoding/unicode"
 )
 
 var parseHex = regexp.MustCompile(`\^{2}([0-9a-f]{2})`)
@@ -24,21 +21,8 @@ func assertNoHexEscape(datas fs.FS, filename string) error {
 		return nil
 	}
 
-	header, patterns := lines[0], lines[1:]
-	cs := strings.ToLower(strings.TrimSpace(string(header)))
-	enco := encodings[cs]
-	if enco == nil {
-		enco = unicode.UTF8
-	}
-	dec := enco.NewDecoder()
-
-	for _, line := range patterns {
-		utf8Pattern, err := dec.Bytes(line)
-		if err != nil {
-			return fmt.Errorf("invalid pattern: %s (%s)", line, err)
-		}
-		pat := string(bytes.TrimSpace(utf8Pattern))
-
+	for _, line := range lines {
+		pat := string(bytes.TrimSpace(line))
 		if parseHex.MatchString(pat) {
 			return fmt.Errorf("unsupported escape sequence in: %s", pat)
 		}
@@ -70,14 +54,6 @@ func BenchmarkParse(b *testing.B) {
 			parseHyphDic(dictionaries, v)
 		}
 	}
-}
-
-func TestLanguages(t *testing.T) {
-	l, err := getLanguages(dictionaries)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("Languages available :", len(l))
 }
 
 var patternSamples = []string{

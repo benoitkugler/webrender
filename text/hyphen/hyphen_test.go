@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/benoitkugler/textlayout/language"
+	"github.com/go-text/typesetting/language"
 )
 
 // def test_inserted():

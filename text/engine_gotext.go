@@ -9,7 +9,6 @@ import (
 	"slices"
 	"sort"
 
-	bkLang "github.com/benoitkugler/textlayout/language"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/css/validation"
 	"github.com/benoitkugler/webrender/logger"
@@ -753,7 +752,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 
 	// Step #4: Try to hyphenate
 	hyphens := style.Hyphens
-	lang := bkLang.NewLanguage(style.Lang)
+	lang := language.NewLanguage(style.Lang)
 	if lang != "" {
 		lang = hyphen.LanguageFallback(lang)
 	}

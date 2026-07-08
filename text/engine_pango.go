@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/benoitkugler/textlayout/fonts"
-	"github.com/benoitkugler/textlayout/language"
+	bkLang "github.com/benoitkugler/textlayout/language"
 	fc "github.com/benoitkugler/textprocessing/fontconfig"
 	"github.com/benoitkugler/textprocessing/pango"
 	"github.com/benoitkugler/textprocessing/pango/fcfonts"
@@ -19,6 +19,7 @@ import (
 	"github.com/benoitkugler/webrender/logger"
 	"github.com/benoitkugler/webrender/text/hyphen"
 	"github.com/benoitkugler/webrender/utils"
+	"github.com/go-text/typesetting/language"
 )
 
 func PangoUnitsFromFloat(v pr.Fl) int32 { return int32(v*pango.Scale + 0.5) }
@@ -482,9 +483,9 @@ func (p *TextLayoutPango) setup(fonts FontConfiguration, style *TextStyle) {
 
 	var lang pango.Language
 	if flo := style.FontLanguageOverride; (flo != fontLanguageOverride{}) {
-		lang = language.NewLanguage(lstToISO[flo])
+		lang = bkLang.NewLanguage(lstToISO[flo])
 	} else if lg := style.Lang; lg != "" {
-		lang = language.NewLanguage(lg)
+		lang = bkLang.NewLanguage(lg)
 	} else {
 		lang = pango.DefaultLanguage()
 	}
