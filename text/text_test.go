@@ -614,6 +614,7 @@ func BenchmarkWrap(b *testing.B) {
 	fcG := NewFontConfigurationGotext(fontmapGotext)
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 	const text = "Une superbe phrase en français ! And also some english and שלום أهلا שלום أه"
+	text_ := []rune(text)
 	b.ResetTimer()
 
 	b.Run("pango", func(b *testing.B) {
@@ -645,7 +646,7 @@ func BenchmarkWrap(b *testing.B) {
 							Stretch: FStr_Normal,
 							Size:    s * 100,
 						}}
-						_ = fcG.wrap([]rune(text), style, pr.Inf)
+						_ = fcG.wrap(text_, style, pr.Inf)
 					}
 				}
 			}
