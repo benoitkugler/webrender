@@ -338,8 +338,6 @@ func TestLayoutFirstLine(t *testing.T) {
 	newStyle.SetWhiteSpace(pr.Normal)
 	ts := NewTextStyle(newStyle, false)
 
-	fmt.Println(ts)
-
 	ct := newContextWithWeasyFont(t)
 
 	layout := createLayout("a a ", ts, ct.Fonts(), pr.Float(63))
@@ -565,8 +563,6 @@ func assertApprox(t *testing.T, got, exp pr.Float, context string) {
 }
 
 func TestWrap(t *testing.T) {
-	t.Skip()
-
 	fcG := NewFontConfigurationGotext(fontmapGotext)
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 
@@ -581,44 +577,34 @@ func TestWrap(t *testing.T) {
 				}}
 
 				for _, text := range textSamples {
-					// no max width
-
-					ref := wrapPango(fcPango, text, style, nil)
-
-					line := fcG.wrap([]rune(text), style, pr.Inf)
-					tu.AssertEqual(t, line.Length, len([]rune(text)))
-					tu.AssertEqual(t, line.ResumeAt, -1)
-					// for _, run := range line.Layout.(layoutGotext).line {
-					// 	fmt.Println(run.GlyphBounds, fixedToFloat(run.GlyphBounds.LineThickness()))
-					// }
-
-					// lineP , _ := ref.Layout.(*TextLayoutPango).GetFirstLine()
-					// for run := lineP.Runs; run != nil; run = run.Next {
-					// 	fmt.Println(run.Data.Glyphs.Extents())
-					// }
-
-					fmt.Println(text, style)
-					assertApprox(t, line.Width, ref.Width, "")
-					assertApprox(t, line.Height, ref.Height, "")
-					assertApprox(t, line.Baseline, ref.Baseline, "")
-
-					for _, maxWidth := range []pr.Float{10, 50, 101, 201, 1000} {
-						line := fcG.wrap([]rune(text), style, maxWidth)
-						ref := wrapPango(fcPango, text, style, maxWidth)
-
-						fmt.Println(maxWidth, ref.Width, line.Width)
-						fmt.Println(string([]rune(text)[:ref.Length]))
-						fmt.Println(string([]rune(text)[:line.Length]))
-						tu.AssertEqual(t, line.Length, ref.Length)
-						tu.AssertEqual(t, line.ResumeAt, ref.ResumeAt)
-
-						assertApprox(t, line.Width, ref.Width, fmt.Sprintf("FirstLine.Width for %v", maxWidth))
-						assertApprox(t, line.Height, ref.Height, fmt.Sprintf("FirstLine.Height for %v", maxWidth))
-						assertApprox(t, line.Baseline, ref.Baseline, fmt.Sprintf("FirstLine.Baseline for %v", maxWidth))
+					if text == "ខ្ញុំអាចញុំកញ្ចក់បាន ដោយគ្មានបញ្ហារ" || text == "ຂອ້ຍກິນແກ້ວໄດ້ໂດຍທີ່ມັນບໍ່ໄດ້ເຮັດໃຫ້ຂອ້ຍເຈັບ" {
+						// pango does not select the same fonts
+						continue
 					}
 
-				}
+					// no max width
+					refPango := wrapPango(fcPango, text, style, nil)
+					lineGotext := fcG.wrap([]rune(text), style, pr.Inf)
 
+					tu.AssertEqual(t, lineGotext.Length, len([]rune(text)))
+					tu.AssertEqual(t, lineGotext.ResumeAt, -1)
+
+					assertApprox(t, lineGotext.Width, refPango.Width, "Width")
+					assertApprox(t, lineGotext.Height, refPango.Height, "Height")
+					assertApprox(t, lineGotext.Baseline, refPango.Baseline, "Baseline")
+
+					for _, maxWidth := range []pr.Float{10, 50, 101, 201, 1000} {
+						refPango := wrapPango(fcPango, text, style, maxWidth)
+						lineGotext := fcG.wrap([]rune(text), style, maxWidth)
+
+						tu.AssertEqual(t, lineGotext.Length, refPango.Length)
+						tu.AssertEqual(t, lineGotext.ResumeAt, refPango.ResumeAt)
+
+						assertApprox(t, lineGotext.Width, refPango.Width, fmt.Sprintf("Width for %v", maxWidth))
+						assertApprox(t, lineGotext.Height, refPango.Height, fmt.Sprintf("Height for %v", maxWidth))
+						assertApprox(t, lineGotext.Baseline, refPango.Baseline, fmt.Sprintf("Baseline for %v", maxWidth))
+					}
+				}
 			}
 		}
 	}
@@ -713,7 +699,7 @@ func BenchmarkSplitFirstLine(b *testing.B) {
 }
 
 func TestLetterAndWordSpacing(t *testing.T) {
-	t.Skip()
+	t.Skip("TODO: investigate")
 
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
@@ -748,38 +734,7 @@ func TestWordBoundaries(t *testing.T) {
 	}
 }
 
-func TestDebug(t *testing.T) {
-	fcGotext := NewFontConfigurationGotext(fontmapGotext)
-	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
-	style := &TextStyle{FontDescription: FontDescription{
-		Family:  []string{"Nimbus Sans"},
-		Weight:  400,
-		Stretch: FStr_Normal,
-		Size:    12,
-	}}
-	const text = "다람쥐 헌 쳇바퀴에 타고파"
-
-	style.LetterSpacing = 10
-	lineP := wrapPango(fcPango, text, style, nil)
-	lineG := fcGotext.wrap([]rune(text), style, pr.Inf)
-	fmt.Printf("%s :\n%v\n%v\n\n", text, lineP.Width, lineG.Width)
-
-	style.LetterSpacing = 10
-	style.WordSpacing = 2
-	lineP = wrapPango(fcPango, text, style, nil)
-	lineG = fcGotext.wrap([]rune(text), style, pr.Inf)
-	fmt.Printf("%s :\n%v\n%v\n\n", text, lineP.Width, lineG.Width)
-
-	style.LetterSpacing = 10
-	style.WordSpacing = 4
-	lineP = wrapPango(fcPango, text, style, nil)
-	lineG = fcGotext.wrap([]rune(text), style, pr.Inf)
-	fmt.Printf("%s :\n%v\n%v\n\n", text, lineP.Width, lineG.Width)
-}
-
 func TestResolveFace(t *testing.T) {
-	t.Skip() // TODO:
-
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
 	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
 	style := &TextStyle{FontDescription: FontDescription{
@@ -789,19 +744,25 @@ func TestResolveFace(t *testing.T) {
 		Stretch: FStr_Normal,
 		Size:    12,
 	}}
-	for _, text := range textSamples {
-		lineP := resolveFacePango(fcPango, text, style)
-		lineG := resolveFaceGotext(fcGotext, text, style)
-		tu.AssertEqual(t, lineG, lineP)
-	}
+	t.Run("style normal", func(t *testing.T) {
+		for _, text := range textSamples {
+			lineP := resolveFacePango(fcPango, text, style)
+			lineG := resolveFaceGotext(fcGotext, text, style)
+			tu.AssertEqualG(t, lineG, lineP)
+		}
+	})
 
-	// style.Weight = 700
-	// for _, text := range textSamples {
-	// 	lineP := resolveFacePango(fcPango, text, style)
-	// 	lineG := resolveFaceGotext(fcGotext, text, style)
-	// 	fmt.Printf("%s :\n%v\n%v\n\n", text, lineP, lineG)
-	// 	tu.AssertEqual(t, lineG, lineP)
-	// }
+	t.Run("style bold", func(t *testing.T) {
+		style.Weight = 700 // Bold
+		for _, text := range textSamples {
+			if text == "ខ្ញុំអាចញុំកញ្ចក់បាន ដោយគ្មានបញ្ហារ" || text == "いろはにほへと ちりぬるを 色は匂へど 散りぬるを" { // ignore this test since Pango does not produce sounds results
+				continue
+			}
+			lineP := resolveFacePango(fcPango, text, style)
+			lineG := resolveFaceGotext(fcGotext, text, style)
+			tu.AssertEqual(t, lineG, lineP)
+		}
+	})
 }
 
 type faceRun struct {
@@ -811,13 +772,42 @@ type faceRun struct {
 
 func resolveFacePango(fc *FontConfigurationPango, text string, style *TextStyle) (out []faceRun) {
 	fixExp := func(s string) string {
-		switch [2]string{text, s} {
-		case [...]string{"ဘာသာပြန်နှင့် စာပေပြုစုရေး ကော်မရှင်", "Padauk"}:
-			return "Noto Sans Myanmar"
-		case [...]string{"હું કાચ ખાઇ શકુ છુ અને તેનાથી મને દર્દ નથી થતુ.", "padmaa"}: // font weight issue
-			return "Lohit Gujarati"
+		switch style.Weight {
+		case 700:
+			// pango does not find some bold fonts
+			switch [2]string{text, s} {
+			case [...]string{"আমি কাঁচ খেতে পারি, তাতে আমার কোনো ক্ষতি হয় না।", "Lohit Bengali"}:
+				return "Mukti"
+			case [...]string{"नहीं नजर किसी की बुरी नहीं किसी का मुँह काला जो करे सो उपर वाला", "Lohit Devanagari"}:
+				return "Annapurna SIL"
+			case [...]string{"मी काच खाऊ शकतो, मला ते दुखत नाही.", "Lohit Devanagari"}:
+				return "Annapurna SIL"
+			case [...]string{"काचं शक्नोम्यत्तुम् । नोपहिनस्ति माम् ॥", "Lohit Devanagari"}:
+				return "Annapurna SIL"
+			case [...]string{"ನಾನು ಗಾಜನ್ನು ತಿನ್ನಬಲ್ಲೆ ಮತ್ತು ಅದರಿಂದ ನನಗೆ ನೋವಾಗುವುದಿಲ್ಲ.", "Lohit Kannada"}:
+				return "FreeSerif"
+			case [...]string{"ਮੈਂ ਗਲਾਸ ਖਾ ਸਕਦਾ ਹਾਂ ਅਤੇ ਇਸ ਨਾਲ ਮੈਨੂੰ ਕੋਈ ਤਕਲੀਫ ਨਹੀਂ.", "Lohit Gurmukhi"}:
+				return "FreeSerif"
+			case [...]string{"நான் கண்ணாடி சாப்பிடுவேன், அதனால் எனக்கு ஒரு கேடும் வராது.", "Lohit Tamil"}:
+				return "FreeSerif"
+			case [...]string{"വേദനയില്ലാതെ കുപ്പിചില്ലു് എനിയ്ക്കു് കഴിയ്ക്കാം.", "Meera"}:
+				return "Manjari"
+			case [...]string{"ମୁଁ କାଚ ଖାଇପାରେ ଏବଂ ତାହା ମୋର କ୍ଷତି କରିନଥାଏ।.", "Lohit Odia"}:
+				return "Noto Sans Oriya"
+			case [...]string{"నేను గాజు తినగలను అయినా నాకు యేమీ కాదు.", "Lohit Telugu"}:
+				return "Noto Sans Telugu"
+			default:
+				return s
+			}
 		default:
-			return s
+			switch [2]string{text, s} {
+			case [...]string{"ဘာသာပြန်နှင့် စာပေပြုစုရေး ကော်မရှင်", "Padauk"}:
+				return "Noto Sans Myanmar"
+			case [...]string{"હું કાચ ખાઇ શકુ છુ અને તેનાથી મને દર્દ નથી થતુ.", "padmaa"}: // font weight issue
+				return "Lohit Gujarati"
+			default:
+				return s
+			}
 		}
 	}
 
@@ -948,4 +938,34 @@ func TestSegmentRTL(t *testing.T) {
 	runs := gotext.Layout.(TextLayoutGotext).Line
 	tu.Assert(t, len(runs) == 2 && runs[0].Face == runs[1].Face) // dont change for "\u200f"
 	tu.AssertEqualG(t, gotext.Height, 10)
+}
+
+func TestDebug(t *testing.T) {
+	t.Skip("dev test only")
+
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
+	style := &TextStyle{FontDescription: FontDescription{
+		Family:  []string{"Liberation Mono"},
+		Weight:  400,
+		Stretch: FStr_Normal,
+		Size:    12,
+	}}
+	const text = "ខ្ញុំអាចញុំកញ្ចក់បាន ដោយគ្មានបញ្ហារ"
+
+	lineP := wrapPango(fcPango, text, style, nil)
+	lineG := fcGotext.wrap([]rune(text), style, pr.Inf)
+	fmt.Printf("%s :\n%v\n%v\n\n", text, lineP.Width, lineG.Width)
+
+	// style.LetterSpacing = 10
+	// style.WordSpacing = 2
+	// lineP = wrapPango(fcPango, text, style, nil)
+	// lineG = fcGotext.wrap([]rune(text), style, pr.Inf)
+	// fmt.Printf("%s :\n%v\n%v\n\n", text, lineP.Width, lineG.Width)
+
+	// style.LetterSpacing = 10
+	// style.WordSpacing = 4
+	// lineP = wrapPango(fcPango, text, style, nil)
+	// lineG = fcGotext.wrap([]rune(text), style, pr.Inf)
+	// fmt.Printf("%s :\n%v\n%v\n\n", text, lineP.Width, lineG.Width)
 }

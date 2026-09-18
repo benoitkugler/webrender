@@ -4,9 +4,9 @@ import (
 	"math"
 	"strings"
 
-	"github.com/benoitkugler/textlayout/language"
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/text/hyphen"
+	"github.com/go-text/typesetting/language"
 )
 
 type TextLayoutContext interface {
