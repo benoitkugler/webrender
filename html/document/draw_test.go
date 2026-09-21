@@ -174,14 +174,17 @@ func TestLeaderCrash(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	t.Skip("dev only test")
+	// t.Skip("dev only test")
 
 	input := `
       <style>
-        @page { size: 15px 5px }
+        @page { size: 58px 10px }
         body { font-family: weasyprint; color: blue; font-size: 5px; line-height: 1 }
+        span { color: red }
       </style>
-      اب
+      <div style="direction: rtl; text-align: justify">
+        اب <span>اب</span> اب <span>با اب</span> اب
+      </div>
     `
 
 	parsedHTML, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
@@ -194,9 +197,9 @@ func TestDebug(t *testing.T) {
 	finalDoc.Write(&rec, 4./30, nil)
 	for _, text := range rec.texts {
 		for _, runs := range text {
-			fmt.Println(runs.X, runs.Y, runs.Matrix())
+			fmt.Println("runs position :", runs.X, runs.Y, runs.Matrix())
 			for _, r := range runs.Runs {
-				fmt.Println(r.Font.Origin(), r.Glyphs)
+				fmt.Println("font", r.Font.Origin(), "glyphs", r.Glyphs)
 			}
 		}
 	}

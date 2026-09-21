@@ -58,7 +58,7 @@ func fontStyle(s font.Style) text.FontStyle {
 
 const notFound font.GID = 0xFFFFFFFF
 
-func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
+func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 	textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
 	fts := ctx.Fonts.(*text.FontConfigurationGotext)
@@ -187,9 +187,11 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 			}
 
 			// Kerning, word spacing, letter spacing
+			fmt.Println(glyph, glyphInfo.XOffset, glyphInfo.XBearing, glyphInfo.Width, fixedToFloat(glyphInfo.Advance), face.HorizontalAdvance(glyph)/float32(face.Upem())*fontSize)
 			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - gAdvance*1000/fontSize + outGlyph.Offset)
 			// advance
 			outGlyph.XAdvance = xAdvance
+			fmt.Println(outGlyph.Kerning, outGlyph.Offset)
 			xAdvance += gAdvance*1000/fontSize + outGlyph.Offset - pr.Fl(outGlyph.Kerning)
 		}
 	}

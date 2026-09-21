@@ -825,7 +825,7 @@ func resolveFacePango(fc *FontConfigurationPango, text string, style *TextStyle)
 
 func resolveFaceGotext(fc *FontConfigurationGotext, text string, style *TextStyle) (out []faceRun) {
 	lineG := fc.wrap([]rune(text), style, pr.Inf)
-	line := lineG.Layout.(TextLayoutGotext).Line
+	line := lineG.Layout.(*TextLayoutGotext).Line
 	for _, run := range line {
 		out = append(out, faceRun{
 			run.Runes.Offset, run.Runes.Count,
@@ -916,7 +916,7 @@ func TestSplitRTL(t *testing.T) {
 	tu.Assert(t, runP0.Item.Analysis.Level%2 == 1 && runP1.Item.Analysis.Level%2 == 0) // RTL, LTR
 
 	tu.AssertEqual(t, gotext.FirstLineRTL, true)
-	runsGotext := gotext.Layout.(TextLayoutGotext).Line
+	runsGotext := gotext.Layout.(*TextLayoutGotext).Line
 	runG0, runG1 := runsGotext[0], runsGotext[1]
 	tu.AssertEqual(t, len(runsGotext), 2)
 	tu.Assert(t, runG0.Runes.Count == 1 && runG1.Runes.Count == 3)
@@ -936,7 +936,7 @@ func TestSegmentRTL(t *testing.T) {
 	}}
 
 	gotext := fcGotext.wrap([]rune("\u200fabc"), style, pr.Inf)
-	runs := gotext.Layout.(TextLayoutGotext).Line
+	runs := gotext.Layout.(*TextLayoutGotext).Line
 	tu.Assert(t, len(runs) == 2 && runs[0].Face == runs[1].Face) // dont change for "\u200f"
 	tu.AssertEqualG(t, gotext.Height, 10)
 }

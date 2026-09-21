@@ -27,7 +27,7 @@ import (
 
 var (
 	_ FontConfiguration = (*FontConfigurationGotext)(nil)
-	_ EngineLayout      = TextLayoutGotext{}
+	_ EngineLayout      = (*TextLayoutGotext)(nil)
 )
 
 type FontConfigurationGotext struct {
@@ -175,6 +175,8 @@ type TextLayoutGotext struct {
 	Line  shaping.Line
 
 	MaxWidth pr.Float // input constraint, not always respected. Inf for no constraint
+
+	justification pr.Float
 }
 
 // Text returns a readonly slice of the text in the layout
@@ -200,14 +202,18 @@ func (l TextLayoutGotext) Metrics() LineMetrics {
 }
 
 // Justification returns the current justification
-func (TextLayoutGotext) Justification() pr.Float { return 0 }
+func (l TextLayoutGotext) Justification() pr.Float { return l.justification }
 
 // SetJustification add an additional spacing between words
 // to justify text. Depending on the implementation, it
 // may be ignored until [ApplyJustification] is called.
-func (TextLayoutGotext) SetJustification(spacing pr.Float) {}
+func (l *TextLayoutGotext) SetJustification(spacing pr.Float) {
+	l.justification = spacing
+}
 
-func (TextLayoutGotext) ApplyJustification() {}
+func (l *TextLayoutGotext) ApplyJustification() {
+	shaping.AddSpacing(l.Line, l.text, floatToFixed(pr.Fl(l.justification)), 0)
+}
 
 func newAspect(style FontStyle, weight uint16, stretch FontStretch) font.Aspect {
 	aspect := font.Aspect{
@@ -446,7 +452,7 @@ type textKey struct {
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	if len(text) == 0 {
 		return FirstLine{
-			Layout:   TextLayoutGotext{Style: style, MaxWidth: maxWidth},
+			Layout:   &TextLayoutGotext{Style: style, MaxWidth: maxWidth},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -529,7 +535,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 
 	if len(line) == 0 {
 		return FirstLine{
-			Layout:   TextLayoutGotext{Style: style, MaxWidth: maxWidth},
+			Layout:   &TextLayoutGotext{Style: style, MaxWidth: maxWidth},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -620,7 +626,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	out := FirstLine{
-		Layout:       TextLayoutGotext{text: text[:firstLineLength], Style: style, Line: outLine, MaxWidth: maxWidth},
+		Layout:       &TextLayoutGotext{text: text[:firstLineLength], Style: style, Line: outLine, MaxWidth: maxWidth},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: style.Direction == pr.Rtl,

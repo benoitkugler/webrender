@@ -20,7 +20,7 @@ func (ctx Context) CreateFirstLine(layout text.EngineLayout, textOverflow string
 ) backend.TextDrawing {
 	if layoutP, ok := layout.(*text.TextLayoutPango); ok {
 		return ctx.createFirstLinePango(layoutP, textOverflow, blockEllipsis, scaleX, x, y, angle)
-	} else if layoutG, ok := layout.(text.TextLayoutGotext); ok {
+	} else if layoutG, ok := layout.(*text.TextLayoutGotext); ok {
 		return ctx.createFirstLineGotext(layoutG, textOverflow, blockEllipsis, scaleX, x, y, angle)
 	}
 	return backend.TextDrawing{}

@@ -575,7 +575,7 @@ func TestWhitespace(t *testing.T) {
 	linebox := unpack1(unpack1(unpack1(unpack1(page))))
 	layout := unpack1(linebox).(*bo.TextBox).TextLayout
 	switch layout := layout.(type) {
-	case text.TextLayoutGotext:
+	case *text.TextLayoutGotext:
 		run1, _ := layout.Line[0], layout.Line[1]
 		g := run1.Glyphs[0]
 		tu.AssertEqualG(t, g.GlyphID, 1)
