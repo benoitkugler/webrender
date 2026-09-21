@@ -173,6 +173,8 @@ type TextLayoutGotext struct {
 	text  []rune
 	Style *TextStyle
 	Line  shaping.Line
+
+	MaxWidth pr.Float // input constraint, not always respected. Inf for no constraint
 }
 
 // Text returns a readonly slice of the text in the layout
@@ -444,7 +446,7 @@ type textKey struct {
 func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	if len(text) == 0 {
 		return FirstLine{
-			Layout:   TextLayoutGotext{Style: style},
+			Layout:   TextLayoutGotext{Style: style, MaxWidth: maxWidth},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -455,14 +457,6 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	key := textKey{string(text), style.key(), maxWidth, allowWordBreak}
 	if l, ok := fc.textLayoutCache[key]; ok {
 		return l
-	}
-
-	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
-	const maxFixed = math.MaxInt32 >> 6 // max value for fixed.Int26_6
-	mw := fixed.I(maxFixed)
-	if textWrap && maxWidth <= maxFixed {
-		// use maxWidth
-		mw = floatToFixed(pr.Fl(maxWidth))
 	}
 
 	var lang language.Language
@@ -524,21 +518,18 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	// now we can wrap the runs
-	config := shaping.WrapConfig{
-		Direction:                     dir,           // overall direction of the text
-		BreakPolicy:                   shaping.Never, // mimic the default pango behavior
-		DisableTrailingWhitespaceTrim: !spaceCollapse,
+	textWrap, spaceCollapse := style.textWrap(), style.spaceCollapse()
+	// resolve the wraping width, ignoring the constraint when not wraping
+	wrapingMaxWidth := maxWidth
+	if !textWrap {
+		wrapingMaxWidth = pr.Inf
 	}
-	if allowWordBreak {
-		config.BreakPolicy = shaping.Always
-	}
-	fc.lineWrapper.Prepare(config, text, shaping.NewSliceIterator(outputs))
-	wLine, fitsOnFirstLine := fc.lineWrapper.WrapNextLineF(mw)
+	mw, wLine, fitsOnFirstLine := fc.LineWrap(text, style, outputs, wrapingMaxWidth, allowWordBreak)
 	line := wLine.Line
 
 	if len(line) == 0 {
 		return FirstLine{
-			Layout:   TextLayoutGotext{Style: style},
+			Layout:   TextLayoutGotext{Style: style, MaxWidth: maxWidth},
 			Length:   0,
 			ResumeAt: -1,
 			Width:    0, Height: 0, Baseline: 0,
@@ -629,7 +620,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	}
 
 	out := FirstLine{
-		Layout:       TextLayoutGotext{text: text[:firstLineLength], Style: style, Line: outLine},
+		Layout:       TextLayoutGotext{text: text[:firstLineLength], Style: style, Line: outLine, MaxWidth: maxWidth},
 		Length:       firstLineLength,
 		ResumeAt:     resumeAt,
 		FirstLineRTL: style.Direction == pr.Rtl,
@@ -641,6 +632,34 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	fc.textLayoutCache[key] = out
 
 	return out
+}
+
+func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs shaping.Line, maxWidth pr.Float, allowWordBreak bool) (usedMaxWidth fixed.Int26_6, _ shaping.WrappedLine, _ bool) {
+	dir := di.DirectionLTR
+	if style.Direction == pr.Rtl {
+		dir = di.DirectionRTL
+	}
+
+	// convert to fixed; properly handling large overflow
+	const maxFixed = math.MaxInt32 >> 6 // max value for fixed.Int26_6
+	mw := fixed.I(maxFixed)
+	if maxWidth <= maxFixed {
+		mw = floatToFixed(pr.Fl(maxWidth))
+	}
+
+	spaceCollapse := style.spaceCollapse()
+	config := shaping.WrapConfig{
+		Direction:                     dir,           // overall direction of the text
+		BreakPolicy:                   shaping.Never, // mimic the default pango behavior
+		DisableTrailingWhitespaceTrim: !spaceCollapse,
+	}
+	if allowWordBreak {
+		config.BreakPolicy = shaping.Always
+	}
+
+	fc.lineWrapper.Prepare(config, text, shaping.NewSliceIterator(runs))
+	line, done := fc.lineWrapper.WrapNextLineF(mw)
+	return mw, line, done
 }
 
 // splitFirstLineGotext fit as much text from [text_] as possible in the available width given by [maxWidth].

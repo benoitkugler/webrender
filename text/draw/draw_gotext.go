@@ -56,35 +56,41 @@ func fontStyle(s font.Style) text.FontStyle {
 	}
 }
 
+const notFound font.GID = 0xFFFFFFFF
+
 func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 	textOverflow string, blockEllipsis pr.TaggedString, scaleX, x, y, angle pr.Fl,
 ) backend.TextDrawing {
 	fts := ctx.Fonts.(*text.FontConfigurationGotext)
 	style := layout.Style
+	textRunes := layout.Text()
+
+	// fmt.Println("text foverwlo", textOverflow, blockEllipsis, layout.MaxWidth)
 
 	// var ellipsis string
-	// if textOverflow == "ellipsis" || blockEllipsis.Tag != pr.None {
-	// 	// assert layout.maxWidth is not nil
-	// 	// maxWidth := layout.MaxWidth.V()
-	// 	// pl.SetWidth(pango.Unit(text.PangoUnitsFromFloat(pr.Fl(maxWidth))))
-	// 	if textOverflow == "ellipsis" {
-	// 		pl.SetEllipsize(pango.ELLIPSIZE_END)
-	// 	} else {
-	// 		ellipsis = blockEllipsis.S
-	// 		if blockEllipsis.Tag == pr.Auto {
-	// 			ellipsis = "…"
-	// 		}
-	// 		// Remove last word if hyphenated
-	// 		newText := layout.Text()
-	// 		if hyph := style.HyphenateCharacter; strings.HasSuffix(string(newText), hyph) {
-	// 			lastWordEnd := fts.GetLastWordEnd(newText[:len(newText)-len([]rune(hyph))])
-	// 			if lastWordEnd != -1 && lastWordEnd != 0 {
-	// 				newText = newText[:lastWordEnd]
-	// 			}
-	// 		}
-	// 		layout.SetText(string(newText) + ellipsis)
-	// 	}
-	// }
+	visualLine := layout.Line
+	if textOverflow == "ellipsis" || blockEllipsis.Tag != pr.None {
+		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true)
+		visualLine = wrapped.Line
+		// if textOverflow == "ellipsis" {
+		// 	pl.SetEllipsize(pango.ELLIPSIZE_END)
+		// } else {
+		// TODO
+		// ellipsis = blockEllipsis.S
+		// if blockEllipsis.Tag == pr.Auto {
+		// 	ellipsis = "…"
+		// }
+		// // Remove last word if hyphenated
+		// newText := layout.Text()
+		// if hyph := style.HyphenateCharacter; strings.HasSuffix(string(newText), hyph) {
+		// 	lastWordEnd := fts.GetLastWordEnd(newText[:len(newText)-len([]rune(hyph))])
+		// 	if lastWordEnd != -1 && lastWordEnd != 0 {
+		// 		newText = newText[:lastWordEnd]
+		// 	}
+		// }
+		// layout.SetText(string(newText) + ellipsis)
+		// }
+	}
 
 	// firstLine, index := layout.GetFirstLine()
 	// if blockEllipsis.Tag != pr.None {
@@ -107,7 +113,6 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 	)
 
 	fontSize := style.FontDescription.Size
-	textRunes := layout.Text()
 
 	output.FontSize = fontSize
 	output.ScaleX = scaleX
@@ -115,13 +120,7 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 	output.Angle = angle
 	output.Text = textRunes
 
-	for _, run := range layout.Line {
-
-		// Pango objects
-		// glyphItem := run.Data
-		// glyphString := glyphItem.Glyphs
-		// offset := glyphItem.Item.Offset
-
+	for _, run := range visualLine {
 		// Font content
 		face := run.Face
 		outFont := lastFontChars
@@ -147,49 +146,48 @@ func (ctx Context) createFirstLineGotext(layout text.TextLayoutGotext,
 			outGlyph := &runDst.Glyphs[currentL+i]
 			gAdvance := fixedToFloat(glyphInfo.Advance)
 			glyph := glyphInfo.GlyphID
-
-			// if glyph == pango.GLYPH_EMPTY || glyph&pango.GLYPH_UNKNOWN_FLAG != 0 {
-			// 	outGlyph.Offset = pr.Fl(width) / fontSize
-			// 	outGlyph.Glyph = backend.GID(fonts.EmptyGlyph)
-			// 	continue
-			// }
+			if glyph == 0 {
+				glyph = notFound
+			}
 
 			outGlyph.Offset = fixedToFloat(glyphInfo.XOffset) / fontSize
 			outGlyph.Rise = fixedToFloat(glyphInfo.YOffset)
 			outGlyph.Glyph = backend.GID(glyph)
 
-			// Ink bounding box and logical widths in font
-			if _, in := outFont.Extents[outGlyph.Glyph]; !in {
-				extents, _ := face.GlyphExtents(glyph)
-				x1, y1, x2, y2 := extents.XBearing, -extents.YBearing-extents.Height,
-					extents.XBearing+extents.Width, -extents.YBearing
-				if int(x1) < outFont.Bbox[0] {
-					outFont.Bbox[0] = int(x1 * 1000 / fontSize)
+			if glyph != notFound {
+				// Ink bounding box and logical widths in font
+				if _, in := outFont.Extents[outGlyph.Glyph]; !in {
+					extents, _ := face.GlyphExtents(glyph)
+					x1, y1, x2, y2 := extents.XBearing, -extents.YBearing-extents.Height,
+						extents.XBearing+extents.Width, -extents.YBearing
+					if int(x1) < outFont.Bbox[0] {
+						outFont.Bbox[0] = int(x1 * 1000 / fontSize)
+					}
+					if int(y1) < outFont.Bbox[1] {
+						outFont.Bbox[1] = int(y1 * 1000 / fontSize)
+					}
+					if int(x2) > outFont.Bbox[2] {
+						outFont.Bbox[2] = int(x2 * 1000 / fontSize)
+					}
+					if int(y2) > outFont.Bbox[3] {
+						outFont.Bbox[3] = int(y2 * 1000 / fontSize)
+					}
+					outFont.Extents[outGlyph.Glyph] = backend.GlyphExtents{
+						Width:  int(extents.Width / 1024 * 1000),
+						Y:      int(extents.YBearing / 1024 * 1000),
+						Height: int(extents.Height / 1024 * 1000),
+					}
 				}
-				if int(y1) < outFont.Bbox[1] {
-					outFont.Bbox[1] = int(y1 * 1000 / fontSize)
-				}
-				if int(x2) > outFont.Bbox[2] {
-					outFont.Bbox[2] = int(x2 * 1000 / fontSize)
-				}
-				if int(y2) > outFont.Bbox[3] {
-					outFont.Bbox[3] = int(y2 * 1000 / fontSize)
-				}
-				outFont.Extents[outGlyph.Glyph] = backend.GlyphExtents{
-					Width:  int(extents.Width / 1024 * 1000),
-					Y:      int(extents.YBearing / 1024 * 1000),
-					Height: int(extents.Height / 1024 * 1000),
+
+				// Mapping between glyphs and characters
+				outGlyph.TextOffset, outGlyph.TextLength = glyphInfo.TextIndex(), glyphInfo.RunesCount()
+				if _, in := outFont.Cmap[outGlyph.Glyph]; !in {
+					outFont.Cmap[outGlyph.Glyph] = textRunes[outGlyph.TextOffset : outGlyph.TextOffset+outGlyph.TextLength]
 				}
 			}
 
 			// Kerning, word spacing, letter spacing
 			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - gAdvance*1000/fontSize + outGlyph.Offset)
-
-			// Mapping between glyphs and characters
-			outGlyph.TextOffset, outGlyph.TextLength = glyphInfo.TextIndex(), glyphInfo.RunesCount()
-			if _, in := outFont.Cmap[outGlyph.Glyph]; !in {
-				outFont.Cmap[outGlyph.Glyph] = textRunes[outGlyph.TextOffset : outGlyph.TextOffset+outGlyph.TextLength]
-			}
 			// advance
 			outGlyph.XAdvance = xAdvance
 			xAdvance += gAdvance*1000/fontSize + outGlyph.Offset - pr.Fl(outGlyph.Kerning)
