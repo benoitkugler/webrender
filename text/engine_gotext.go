@@ -530,7 +530,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	if !textWrap {
 		wrapingMaxWidth = pr.Inf
 	}
-	mw, wLine, fitsOnFirstLine := fc.LineWrap(text, style, outputs, wrapingMaxWidth, allowWordBreak)
+	mw, wLine, fitsOnFirstLine := fc.LineWrap(text, style, outputs, wrapingMaxWidth, allowWordBreak, nil)
 	line := wLine.Line
 
 	if len(line) == 0 {
@@ -571,9 +571,11 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	if !fitsOnFirstLine && spaceCollapse {
 		// remove the space runes...
 		text = trimTrailingSpaces(text[:firstLineLength])
+		trimmed := firstLineLength - len(text)
 		firstLineLength = len(text)
 		// and the matching glyphs
 		lastRun := &line[len(line)-1]
+		lastRun.Runes.Count -= trimmed // we assume all spaces are on the same run
 		i := len(lastRun.Glyphs) - 1
 		for ; i >= 0; i-- {
 			if lastRun.Glyphs[i].Width != 0 {
@@ -592,7 +594,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 		// directly fetch line bounds, to avoid rounding errors
 		height, top pr.Float
 	)
-	for _, run := range line {
+	for _, run := range outLine {
 		width += run.Advance
 
 		extents, _ := run.Face.FontHExtents()
@@ -640,7 +642,9 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	return out
 }
 
-func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs shaping.Line, maxWidth pr.Float, allowWordBreak bool) (usedMaxWidth fixed.Int26_6, _ shaping.WrappedLine, _ bool) {
+func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs shaping.Line, maxWidth pr.Float, allowWordBreak bool,
+	ellipsis []rune,
+) (usedMaxWidth fixed.Int26_6, _ shaping.WrappedLine, _ bool) {
 	dir := di.DirectionLTR
 	if style.Direction == pr.Rtl {
 		dir = di.DirectionRTL
@@ -661,6 +665,22 @@ func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs 
 	}
 	if allowWordBreak {
 		config.BreakPolicy = shaping.Always
+	}
+
+	if len(ellipsis) != 0 {
+		// we follow the Python implementation by just adding
+		// the ellipsis at the end of the line, before wrapping
+		lastRun := runs[len(runs)-1]
+		L := len(text)
+		text = append(text, ellipsis...)
+		runs = append(runs, fc.shaper.Shape(shaping.Input{
+			Text:      text,
+			RunStart:  L,
+			RunEnd:    len(text),
+			Direction: dir,
+			Face:      lastRun.Face,
+			Size:      lastRun.Size,
+		}))
 	}
 
 	fc.lineWrapper.Prepare(config, text, shaping.NewSliceIterator(runs))

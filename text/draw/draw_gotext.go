@@ -69,18 +69,19 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 
 	// var ellipsis string
 	visualLine := layout.Line
-	if textOverflow == "ellipsis" || blockEllipsis.Tag != pr.None {
-		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true)
+	if textOverflow == "ellipsis" {
+		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true, nil)
 		visualLine = wrapped.Line
-		// if textOverflow == "ellipsis" {
-		// 	pl.SetEllipsize(pango.ELLIPSIZE_END)
-		// } else {
+	} else if blockEllipsis.Tag != pr.None {
+		ellipsis := blockEllipsis.S
+		if blockEllipsis.Tag == pr.Auto {
+			ellipsis = "…"
+		}
+
+		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true, []rune(ellipsis))
+		visualLine = wrapped.Line
+		// Remove last word if hyphenated
 		// TODO
-		// ellipsis = blockEllipsis.S
-		// if blockEllipsis.Tag == pr.Auto {
-		// 	ellipsis = "…"
-		// }
-		// // Remove last word if hyphenated
 		// newText := layout.Text()
 		// if hyph := style.HyphenateCharacter; strings.HasSuffix(string(newText), hyph) {
 		// 	lastWordEnd := fts.GetLastWordEnd(newText[:len(newText)-len([]rune(hyph))])
@@ -89,7 +90,6 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 		// 	}
 		// }
 		// layout.SetText(string(newText) + ellipsis)
-		// }
 	}
 
 	// firstLine, index := layout.GetFirstLine()
@@ -187,11 +187,9 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 			}
 
 			// Kerning, word spacing, letter spacing
-			fmt.Println(glyph, glyphInfo.XOffset, glyphInfo.XBearing, glyphInfo.Width, fixedToFloat(glyphInfo.Advance), face.HorizontalAdvance(glyph)/float32(face.Upem())*fontSize)
 			outGlyph.Kerning = int(pr.Fl(outFont.Extents[outGlyph.Glyph].Width) - gAdvance*1000/fontSize + outGlyph.Offset)
 			// advance
 			outGlyph.XAdvance = xAdvance
-			fmt.Println(outGlyph.Kerning, outGlyph.Offset)
 			xAdvance += gAdvance*1000/fontSize + outGlyph.Offset - pr.Fl(outGlyph.Kerning)
 		}
 	}
