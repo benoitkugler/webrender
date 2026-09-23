@@ -177,14 +177,17 @@ func TestDebug(t *testing.T) {
 	// t.Skip("dev only test")
 
 	input := `
-      <style>
-        @page { size: 58px 10px }
-        body { font-family: weasyprint; color: blue; font-size: 5px; line-height: 1 }
-        span { color: red }
+    <style>
+        @font-face { src: url(../resources_test/weasyprint.otf); font-family: weasyprint }
+        @page { size: 20px 4px }
+        svg { display: block }
       </style>
-      <div style="direction: rtl; text-align: justify">
-        اب <span>اب</span> اب <span>با اب</span> اب
-      </div>
+      <svg width="20px" height="4px" xmlns="http://www.w3.org/2000/svg">
+        <text x="2" y="2.5" font-family="weasyprint" font-size="2"
+              fill="transparent" stroke="blue" stroke-width="2">
+          A B C
+        </text>
+      </svg>
     `
 
 	parsedHTML, err := tree.NewHTML(utils.InputString(input), baseUrl, nil, "")
@@ -197,7 +200,7 @@ func TestDebug(t *testing.T) {
 	finalDoc.Write(&rec, 4./30, nil)
 	for _, text := range rec.texts {
 		for _, runs := range text {
-			fmt.Println("runs position :", runs.X, runs.Y, runs.Matrix())
+			fmt.Println("runs position :", runs.Matrix())
 			for _, r := range runs.Runs {
 				fmt.Println("font", r.Font.Origin(), "glyphs", r.Glyphs)
 			}
