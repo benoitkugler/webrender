@@ -30,6 +30,7 @@ var (
 	_ EngineLayout      = (*TextLayoutGotext)(nil)
 )
 
+// FontConfigurationGotext is NOT safe for concurrent use
 type FontConfigurationGotext struct {
 	fm         *fontscan.FontMap
 	shaper     shaping.HarfbuzzShaper
