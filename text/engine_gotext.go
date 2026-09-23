@@ -435,7 +435,7 @@ func trimTrailingSpaces(text []rune) []rune {
 // secondLineIndex is -1 if the whole [text] fits into the first line
 // pass pr.Inf to remove width constraint
 func (fc *FontConfigurationGotext) wrap(text []rune, style *TextStyle, maxWidth pr.Float) FirstLine {
-	return fc.wrapWordBreak(text, style, maxWidth, false)
+	return fc.WrapWordBreak(text, style, maxWidth, false)
 }
 
 func floatToFixed(v pr.Fl) fixed.Int26_6    { return fixed.Int26_6(v * 64) }
@@ -449,7 +449,7 @@ type textKey struct {
 }
 
 // same as wrap, but may allows break inside words
-func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
+func (fc *FontConfigurationGotext) WrapWordBreak(text []rune, style *TextStyle, maxWidth pr.Float, allowWordBreak bool) FirstLine {
 	if len(text) == 0 {
 		return FirstLine{
 			Layout:   &TextLayoutGotext{Style: style, MaxWidth: maxWidth},
@@ -530,7 +530,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	if !textWrap {
 		wrapingMaxWidth = pr.Inf
 	}
-	mw, wLine, fitsOnFirstLine := fc.LineWrap(text, style, outputs, wrapingMaxWidth, allowWordBreak, nil)
+	mw, wLine, fitsOnFirstLine := fc.LineWrap(text, style, outputs, wrapingMaxWidth, allowWordBreak)
 	line := wLine.Line
 
 	if len(line) == 0 {
@@ -642,9 +642,7 @@ func (fc *FontConfigurationGotext) wrapWordBreak(text []rune, style *TextStyle, 
 	return out
 }
 
-func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs shaping.Line, maxWidth pr.Float, allowWordBreak bool,
-	ellipsis []rune,
-) (usedMaxWidth fixed.Int26_6, _ shaping.WrappedLine, _ bool) {
+func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs shaping.Line, maxWidth pr.Float, allowWordBreak bool) (usedMaxWidth fixed.Int26_6, _ shaping.WrappedLine, _ bool) {
 	dir := di.DirectionLTR
 	if style.Direction == pr.Rtl {
 		dir = di.DirectionRTL
@@ -665,22 +663,6 @@ func (fc *FontConfigurationGotext) LineWrap(text []rune, style *TextStyle, runs 
 	}
 	if allowWordBreak {
 		config.BreakPolicy = shaping.Always
-	}
-
-	if len(ellipsis) != 0 {
-		// we follow the Python implementation by just adding
-		// the ellipsis at the end of the line, before wrapping
-		lastRun := runs[len(runs)-1]
-		L := len(text)
-		text = append(text, ellipsis...)
-		runs = append(runs, fc.shaper.Shape(shaping.Input{
-			Text:      text,
-			RunStart:  L,
-			RunEnd:    len(text),
-			Direction: dir,
-			Face:      lastRun.Face,
-			Size:      lastRun.Size,
-		}))
 	}
 
 	fc.lineWrapper.Prepare(config, text, shaping.NewSliceIterator(runs))
@@ -928,7 +910,7 @@ func (fc *FontConfigurationGotext) splitFirstLine(hyphenCache map[HyphenDictKey]
 	if space < 0 && canBreak {
 		// Is it really OK to remove hyphenation for word-break ?
 		hyphenated = false
-		firstLine = fc.wrapWordBreak(text, style, maxWidthV, true)
+		firstLine = fc.WrapWordBreak(text, style, maxWidthV, true)
 	}
 
 	if hyphenated {

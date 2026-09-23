@@ -3,6 +3,7 @@ package text
 import (
 	"math"
 	"strings"
+	"unicode"
 
 	pr "github.com/benoitkugler/webrender/css/properties"
 	"github.com/benoitkugler/webrender/text/hyphen"
@@ -221,6 +222,15 @@ func indexRune(text []rune, s rune) int {
 		}
 	}
 	return -1
+}
+
+func IsWhitespace(s []rune) bool {
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func HasPrefix(s []rune, r rune) bool {

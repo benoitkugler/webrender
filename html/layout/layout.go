@@ -30,7 +30,7 @@ import (
 
 // if true, save a structured trace in an external file
 // this is a costly operation, and should only be used for debugging purpose
-const traceMode = true
+const traceMode = false
 
 var traceLogger tracer.Tracer // used only when traceMode is true
 

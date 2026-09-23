@@ -249,8 +249,10 @@ func (t *textSpan) draw(dst backend.Canvas, attrs *attributes, svg *SVGImage, di
 
 		doFill, doStroke := svg.applyPainters(dst, &svgNode{graphicContent: t, attributes: *attrs}, dims)
 		dst.State().SetTextPaint(newPaintOp(doFill, doStroke, false))
-		texts = append(texts,
-			drawer.CreateFirstLine(layout, "none", pr.TaggedString{Tag: pr.None}, scaleX, xPosition, yPosition, angle))
+		text := drawer.CreateFirstLine(layout, "none", pr.TaggedString{Tag: pr.None}, scaleX, xPosition, yPosition, angle)
+		if len(text.Runs) != 0 { // do not draw empty content
+			texts = append(texts, text)
+		}
 	}
 
 	dst.OnNewStack(func() {

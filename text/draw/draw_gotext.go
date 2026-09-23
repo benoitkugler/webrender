@@ -65,21 +65,34 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 	style := layout.Style
 	textRunes := layout.Text()
 
+	if text.IsWhitespace(textRunes) {
+		return backend.TextDrawing{}
+	}
+
 	// fmt.Println("text foverwlo", textOverflow, blockEllipsis, layout.MaxWidth)
 
-	// var ellipsis string
-	visualLine := layout.Line
+	var (
+		visualLine = layout.Line
+		index      int
+		ellipsis   []rune
+	)
 	if textOverflow == "ellipsis" {
-		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true, nil)
+		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true)
 		visualLine = wrapped.Line
-	} else if blockEllipsis.Tag != pr.None {
-		ellipsis := blockEllipsis.S
-		if blockEllipsis.Tag == pr.Auto {
-			ellipsis = "…"
+		index = wrapped.NextLine
+		if index == len(textRunes) {
+			index = -1
 		}
-
-		_, wrapped, _ := fts.LineWrap(textRunes, style, layout.Line, layout.MaxWidth, true, []rune(ellipsis))
-		visualLine = wrapped.Line
+	} else if blockEllipsis.Tag != pr.None {
+		if blockEllipsis.Tag == pr.Auto {
+			ellipsis = []rune("…")
+		} else {
+			ellipsis = []rune(blockEllipsis.S)
+		}
+		textRunes = slices.Concat(textRunes, ellipsis)
+		line := fts.WrapWordBreak(textRunes, style, layout.MaxWidth, true)
+		visualLine = line.Layout.(*text.TextLayoutGotext).Line
+		index = line.ResumeAt
 		// Remove last word if hyphenated
 		// TODO
 		// newText := layout.Text()
@@ -92,18 +105,18 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 		// layout.SetText(string(newText) + ellipsis)
 	}
 
-	// firstLine, index := layout.GetFirstLine()
-	// if blockEllipsis.Tag != pr.None {
-	// 	for index != 0 && index != -1 {
-	// 		lastWordEnd := text.GetLastWordEnd(fts, pl.Text[:len(pl.Text)-len([]rune(ellipsis))])
-	// 		if lastWordEnd == -1 {
-	// 			break
-	// 		}
-	// 		newText := pl.Text[:lastWordEnd]
-	// 		layout.SetText(string(newText) + ellipsis)
-	// 		firstLine, index = layout.GetFirstLine()
-	// 	}
-	// }
+	if blockEllipsis.Tag != pr.None {
+		for index != 0 && index != -1 {
+			lastWordEnd := fts.GetLastWordEnd(textRunes[:len(textRunes)-len(ellipsis)])
+			if lastWordEnd == -1 {
+				break
+			}
+			textRunes = slices.Concat(textRunes[:lastWordEnd], ellipsis)
+			line := fts.WrapWordBreak(textRunes, style, layout.MaxWidth, true)
+			index = line.ResumeAt
+			visualLine = line.Layout.(*text.TextLayoutGotext).Line
+		}
+	}
 
 	var (
 		output        backend.TextDrawing
@@ -150,8 +163,8 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 				glyph = notFound
 			}
 
-			outGlyph.Offset = fixedToFloat(glyphInfo.XOffset) / fontSize
-			outGlyph.Rise = fixedToFloat(glyphInfo.YOffset)
+			outGlyph.Offset = fixedToFloat(glyphInfo.XOffset) * 1000 / fontSize
+			outGlyph.Rise = fixedToFloat(glyphInfo.YOffset) * 1000 / fontSize
 			outGlyph.Glyph = backend.GID(glyph)
 
 			if glyph != notFound {
