@@ -69,8 +69,6 @@ func (ctx Context) createFirstLineGotext(layout *text.TextLayoutGotext,
 		return backend.TextDrawing{}
 	}
 
-	// fmt.Println("text foverwlo", textOverflow, blockEllipsis, layout.MaxWidth)
-
 	var (
 		visualLine = layout.Line
 		index      int
