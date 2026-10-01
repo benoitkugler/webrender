@@ -1,0 +1,1142 @@
+[
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 62.9,
+ "Width0": 66.7,
+ "Height": 120,
+ "Baseline": 87.5
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 68.1,
+ "Width0": 72.3,
+ "Height": 130,
+ "Baseline": 94.8
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 83.8,
+ "Width0": 89,
+ "Height": 160,
+ "Baseline": 116.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 94.3,
+ "Width0": 100.1,
+ "Height": 180,
+ "Baseline": 131.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 167.7,
+ "Width0": 177.9,
+ "Height": 320,
+ "Baseline": 233.3
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 172.9,
+ "Width0": 183.5,
+ "Height": 330,
+ "Baseline": 240.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 64.8,
+ "Width0": 66.7,
+ "Height": 120,
+ "Baseline": 87.5
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 70.2,
+ "Width0": 72.3,
+ "Height": 130,
+ "Baseline": 94.8
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 86.4,
+ "Width0": 89,
+ "Height": 160,
+ "Baseline": 116.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 97.2,
+ "Width0": 100.1,
+ "Height": 180,
+ "Baseline": 131.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 172.8,
+ "Width0": 177.9,
+ "Height": 320,
+ "Baseline": 233.3
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 178.2,
+ "Width0": 183.5,
+ "Height": 330,
+ "Baseline": 240.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 54,
+ "Width0": 60,
+ "Height": 120,
+ "Baseline": 82
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 58.5,
+ "Width0": 65,
+ "Height": 130,
+ "Baseline": 88.8
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 72,
+ "Width0": 80,
+ "Height": 160,
+ "Baseline": 109.3
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 81,
+ "Width0": 90,
+ "Height": 180,
+ "Baseline": 122.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 144,
+ "Width0": 160,
+ "Height": 320,
+ "Baseline": 218.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 148.5,
+ "Width0": 165,
+ "Height": 330,
+ "Baseline": 225.4
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 55.3,
+ "Width0": 60,
+ "Height": 120,
+ "Baseline": 81.1
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 59.9,
+ "Width0": 65,
+ "Height": 130,
+ "Baseline": 87.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 73.8,
+ "Width0": 80,
+ "Height": 160,
+ "Baseline": 108.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 83,
+ "Width0": 90,
+ "Height": 180,
+ "Baseline": 121.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 147.5,
+ "Width0": 160,
+ "Height": 320,
+ "Baseline": 216.3
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Nimbus Roman"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 152.1,
+ "Width0": 165,
+ "Height": 330,
+ "Baseline": 223.1
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 65.6,
+ "Width0": 76.3,
+ "Height": 139.7,
+ "Baseline": 111.4
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 71.1,
+ "Width0": 82.7,
+ "Height": 151.3,
+ "Baseline": 120.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 87.5,
+ "Width0": 101.8,
+ "Height": 186.3,
+ "Baseline": 148.5
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 98.4,
+ "Width0": 114.5,
+ "Height": 209.5,
+ "Baseline": 167.1
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 175,
+ "Width0": 203.6,
+ "Height": 372.5,
+ "Baseline": 297
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 180.5,
+ "Width0": 210,
+ "Height": 384.1,
+ "Baseline": 306.3
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 65.6,
+ "Width0": 83.5,
+ "Height": 139.7,
+ "Baseline": 111.4
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 71.1,
+ "Width0": 90.5,
+ "Height": 151.3,
+ "Baseline": 120.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 87.5,
+ "Width0": 111.3,
+ "Height": 186.3,
+ "Baseline": 148.5
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 98.4,
+ "Width0": 125.2,
+ "Height": 209.5,
+ "Baseline": 167.1
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 175,
+ "Width0": 222.7,
+ "Height": 372.5,
+ "Baseline": 297
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "DejaVu Sans"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 180.5,
+ "Width0": 229.6,
+ "Height": 384.1,
+ "Baseline": 306.3
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 63.4,
+ "Width0": 72,
+ "Height": 135.9,
+ "Baseline": 99.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 68.7,
+ "Width0": 78,
+ "Height": 147.3,
+ "Baseline": 108.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 84.5,
+ "Width0": 96,
+ "Height": 181.3,
+ "Baseline": 133.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 95.1,
+ "Width0": 108,
+ "Height": 203.9,
+ "Baseline": 149.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 169.1,
+ "Width0": 192,
+ "Height": 362.5,
+ "Baseline": 266.4
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 174.3,
+ "Width0": 198,
+ "Height": 373.8,
+ "Baseline": 274.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 63.4,
+ "Width0": 72,
+ "Height": 135.9,
+ "Baseline": 99.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 68.7,
+ "Width0": 78,
+ "Height": 147.3,
+ "Baseline": 108.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 84.5,
+ "Width0": 96,
+ "Height": 181.3,
+ "Baseline": 133.2
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 95.1,
+ "Width0": 108,
+ "Height": 203.9,
+ "Baseline": 149.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 169.1,
+ "Width0": 192,
+ "Height": 362.5,
+ "Baseline": 266.4
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Liberation Mono"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 174.3,
+ "Width0": 198,
+ "Height": 373.8,
+ "Baseline": 274.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 63.4,
+ "Width0": 66.7,
+ "Height": 134.1,
+ "Baseline": 108.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 68.7,
+ "Width0": 72.3,
+ "Height": 145.2,
+ "Baseline": 117.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 84.5,
+ "Width0": 89,
+ "Height": 178.8,
+ "Baseline": 144.8
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 95.1,
+ "Width0": 100.1,
+ "Height": 201.1,
+ "Baseline": 162.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 169.1,
+ "Width0": 178,
+ "Height": 357.5,
+ "Baseline": 289.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 400,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 174.3,
+ "Width0": 183.5,
+ "Height": 368.7,
+ "Baseline": 298.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 120,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 63.4,
+ "Width0": 66.7,
+ "Height": 134.1,
+ "Baseline": 108.6
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 130,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 68.7,
+ "Width0": 72.3,
+ "Height": 145.2,
+ "Baseline": 117.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 160,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 84.5,
+ "Width0": 89,
+ "Height": 178.8,
+ "Baseline": 144.8
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 180,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 95.1,
+ "Width0": 100.1,
+ "Height": 201.1,
+ "Baseline": 162.9
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 320,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 169.1,
+ "Width0": 178,
+ "Height": 357.5,
+ "Baseline": 289.7
+ }
+ },
+ {
+ "Description": {
+ "Family": [
+ "Arimo"
+ ],
+ "Style": 0,
+ "Stretch": 4,
+ "Weight": 700,
+ "Size": 330,
+ "VariationSettings": null,
+ "VariantCaps": 0
+ },
+ "Metrics": {
+ "Heightx": 174.3,
+ "Width0": 183.5,
+ "Height": 368.7,
+ "Baseline": 298.7
+ }
+ }
+ ]

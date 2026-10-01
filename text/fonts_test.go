@@ -163,28 +163,63 @@ func newMetrics(fc FontConfiguration, desc FontDescription) metrics {
 	}
 }
 
-// func TestGenerateMetrics(t *testing.T) {
-// 	var descriptions []FontDescription
-// 	loadJson(t, "font_descriptions.json", &descriptions)
+type descriptionAndMetrics struct {
+	Description FontDescription
+	Metrics     metrics
+}
 
-// 	fc := &FontConfigurationPango{fontmap: fontmap}
-// 	mets := make([]metrics, len(descriptions))
-// 	for i, desc := range descriptions {
-// 		mets[i] = newMetrics(fc, desc)
-// 	}
+func TestGenerateGoldenMetrics(t *testing.T) {
+	t.Skip("dev only")
 
-// 	f, err := os.Create("testdata/metrics_linux.json")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer f.Close()
-// 	enc := json.NewEncoder(f)
-// 	enc.SetIndent(" ", "")
-// 	err = enc.Encode(mets)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// }
+	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
+	desc := FontDescription{
+		Style:   FSty_Normal,
+		Stretch: FStr_Normal,
+	}
+
+	var out []descriptionAndMetrics
+	// we assume we have the following fonts
+	//	- urw-base35/NimbusSans-Regular.otf
+	//	- urw-base35/NimbusRoman-Regular.otf
+	// 	- dejavu/DejaVuSans.ttf
+	// 	- liberation2/LiberationMono-Regular.ttf
+	//  - croscore/Arimo-Regular.ttf
+	for _, family := range []string{"Nimbus Sans", "Nimbus Roman", "DejaVu Sans", "Liberation Mono", "Arimo"} {
+		for _, w := range []uint16{400, 700} { // weights
+			for _, s := range []pr.Fl{12, 13, 16, 18, 32, 33} { // sizes
+				desc.Family = []string{family}
+				desc.Weight = w
+				desc.Size = s * 10 // remove some pesky rounding errors
+				exp := newMetrics(fcPango, desc)
+				out = append(out, descriptionAndMetrics{desc, exp})
+			}
+		}
+	}
+	f, err := os.Create("testdata/descriptions_metrics_linux.json")
+	tu.AssertNoErr(t, err)
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	enc.SetIndent(" ", "")
+	err = enc.Encode(out)
+	tu.AssertNoErr(t, err)
+}
+
+func TestMetricsLinuxFonts(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("linux is required")
+	}
+
+	fcGotext := NewFontConfigurationGotext(fontmapGotext)
+
+	var descriptions []descriptionAndMetrics
+	loadJson(t, "descriptions_metrics_linux.json", &descriptions)
+
+	for _, test := range descriptions {
+		got := newMetrics(fcGotext, test.Description)
+		tu.AssertEqual(t, got, test.Metrics)
+	}
+}
 
 func TestResolveFont(t *testing.T) {
 	if runtime.GOOS != "linux" {
@@ -205,38 +240,6 @@ func TestResolveFont(t *testing.T) {
 		fm.SetQuery(fontscan.Query{Families: test.query})
 		face := fm.ResolveFace('a')
 		tu.AssertEqual(t, face.Font.Describe().Family, test.resolved)
-	}
-}
-
-func TestMetricsLinuxFonts(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("linux is required")
-	}
-	fcPango := &FontConfigurationPango{fontmap: fontmapPango}
-	fcGotext := NewFontConfigurationGotext(fontmapGotext)
-
-	desc := FontDescription{
-		Style:   FSty_Normal,
-		Stretch: FStr_Normal,
-	}
-
-	// we assume we have the following fonts
-	//	- urw-base35/NimbusSans-Regular.otf
-	//	- urw-base35/NimbusRoman-Regular.otf
-	// 	- dejavu/DejaVuSans.ttf
-	// 	- liberation2/LiberationMono-Regular.ttf
-	//  - croscore/Arimo-Regular.ttf
-	for _, family := range []string{"Nimbus Sans", "Nimbus Roman", "DejaVu Sans", "Liberation Mono", "Arimo"} {
-		for _, w := range []uint16{400, 700} { // weights
-			for _, s := range []pr.Fl{12, 13, 16, 18, 32, 33} { // sizes
-				desc.Family = []string{family}
-				desc.Weight = w
-				desc.Size = s * 10 // remove some pesky rounding errors
-				exp := newMetrics(fcPango, desc)
-				got := newMetrics(fcGotext, desc)
-				tu.AssertEqual(t, got, exp)
-			}
-		}
 	}
 }
 
@@ -261,8 +264,8 @@ func Test_heightx(t *testing.T) {
 }
 
 func BenchmarkMetrics(b *testing.B) {
-	var descriptions []FontDescription
-	loadJson(b, "font_descriptions.json", &descriptions)
+	var descriptions []descriptionAndMetrics
+	loadJson(b, "descriptions_metrics_linux.json", &descriptions)
 
 	fc := &FontConfigurationPango{fontmap: fontmapPango}
 	fcGotext := NewFontConfigurationGotext(fontmapGotext)
@@ -270,7 +273,7 @@ func BenchmarkMetrics(b *testing.B) {
 	b.Run("Pango", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for _, desc := range descriptions {
-				_ = newMetrics(fc, desc)
+				_ = newMetrics(fc, desc.Description)
 			}
 		}
 	})
@@ -278,7 +281,7 @@ func BenchmarkMetrics(b *testing.B) {
 	b.Run("go-text", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for _, desc := range descriptions {
-				_ = newMetrics(fcGotext, desc)
+				_ = newMetrics(fcGotext, desc.Description)
 			}
 		}
 	})
